@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheda Consulenza - Credipass App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* ================= STILE A SCHERMO (ALLARGATO PER PC A 1400px) ================= */
+        body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
+        .app-container { background-color: #f8f9fa; width: 100%; max-width: 1400px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; border: 8px solid #333; }
+
+        /* ================= NUOVO HEADER A BOX SEPARATI ================= */
+        .header { 
+            background-color: #002d72; 
+            color: white; 
+            padding: 15px 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            gap: 20px;
+            border-bottom: 3px solid #C99700;
+        }
+
+        .header-box { 
+            background: rgba(255, 255, 255, 0.1); 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            border-left: 5px solid #C99700; 
+            flex: 1;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 80px;
+        }
+
+        .header-box span.ruolo { 
+            display: block; font-size: 9px; text-transform: uppercase; color: rgba(255, 255, 255, 0.7); letter-spacing: 1px; margin-bottom: 2px;
+        }
+
+        .header-editable { background-color: transparent !important; border: none !important; font-family: 'Poppins', sans-serif !important; padding: 0 !important; margin: 0 !important; width: 100% !important; outline: none !important; display: block; }
+        #campo_referente { color: #C99700 !important; font-size: 18px; font-weight: 700; text-transform: uppercase; }
+        .info-sub { color: #ffffff !important; font-size: 11px !important; font-weight: 400; opacity: 0.9; margin-top: 1px; }
+
+        .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
+        .logo-area-stack img.logo-main { width: 160px; height: auto; }
+        .logo-area-stack img.logo-anniv { width: 110px; height: auto; }
+
+        /* ================= RESTO DELL'APP (INVARIATO) ================= */
+        .main-title { text-align: center; padding: 15px; background: white; font-weight: 700; font-size: 18px; letter-spacing: 1px; border-bottom: 1px solid #ddd; }
+        .content { padding: 20px 30px; }
+
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #C99700; }
+        .card-title { font-size: 16px; font-weight: 700; color: #002d72; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: #C99700; font-size: 18px; }
+
+        .separated-box { border: 1px solid #ced4da; padding: 15px; border-radius: 8px; background: #fdfdfd; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        .separated-box-title { font-size: 12px; font-weight: bold; color: #002d72; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #e9ecef; padding-bottom: 5px; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+
+        .richiedente-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .richiedente-title { font-size: 14px; font-weight: bold; color: #002d72; margin-top: 0; margin-bottom: 12px; border-bottom: 2px solid #C99700; padding-bottom: 5px; display: inline-block; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 5px; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 14px; background-color: white; font-family: 'Poppins', sans-serif;
+        }
+
+        .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+        .toggle-group input[type="radio"] { display: none; }
+        .toggle-group label {
+            padding: 8px 12px; background-color: white; color: #495057; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ced4da; transition: all 0.2s; flex-grow: 1; text-align: center;
+        }
+        .toggle-group input[type="radio"]:checked + label { background-color: #C99700; color: white; border-color: #C99700; }
+        .toggle-group.blue input[type="radio"]:checked + label { background-color: #002d72; border-color: #002d72; color: white; }
+
+        hr { border: 0; border-top: 1px solid #e9ecef; margin: 20px 0; }
+        .mt-10 { margin-top: 10px; }
+
+        .btn-wrapper { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .btn-action {
+            display: block; width: 100%; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; text-align: center; font-family: 'Poppins', sans-serif;
+        }
+        .btn-action i { margin-right: 8px; }
+        .btn-pdf { background: #002d72; }
+        .btn-wa { background: #C99700; }
+        .btn-email { background: #28a745; }
+
+        /* ================= MODALE ANTEPRIMA (INVARIATA) ================= */
+        #custom-preview-modal {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 999999;
+            flex-direction: column;
+        }
+
+        .modal-toolbar {
+            background: #1a1a1a; padding: 15px 25px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10;
+        }
+
+        .modal-toolbar .modal-title { color: #C99700; font-weight: bold; font-size: 18px; }
+        
+        .modal-scroll-area {
+            flex-grow: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px;
+        }
+
+        /* ================= MODALE WHATSAPP ================= */
+        #wa-choice-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wa-modal-box {
+            width: min(92vw, 520px);
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+        .wa-modal-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #002d72;
+            margin: 0 0 10px;
+            text-align: center;
+        }
+        .wa-modal-sub {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin: 0 0 24px;
+            line-height: 1.5;
+        }
+        .wa-modal-buttons { display: grid; gap: 12px; }
+        .wa-option-btn {
+            border: none;
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+        }
+        .wa-option-backoffice { background: #002d72; color: #fff; }
+        .wa-option-diretto { background: #C99700; color: #fff; }
+        .wa-option-cancel { background: #e9ecef; color: #333; }
+
+        /* ================= LOADING MAIL ================= */
+        #loading-overlay-mail {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            z-index: 9999999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        #loading-overlay-mail i { font-size: 42px; color: #C99700; }
+
+        /* ================= FOGLIO A4 ================= */
+        #print-sheet {
+            width: 800px;
+            height: 1131px;
+            background: white;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform-origin: top center;
+        }
+
+        .p-sidebar {
+            width: 270px; flex-shrink: 0; background-color: #002d72; color: white; padding: 40px 25px; box-sizing: border-box; display: flex; flex-direction: column; border-right: 5px solid #C99700;
+        }
+        .p-logo { width: 100%; max-width: 170px; margin-bottom: 30px; }
+        .p-side-block { margin-bottom: 25px; }
+        .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
+        .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
+        .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
+        .p-side-item strong { color: white; font-weight: 600; display: block; font-size: 13px; margin-top: 1px; }
+        .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
+        .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
+
+        .p-main {
+            width: 530px; flex-shrink: 0; padding: 40px 30px; background-color: white; box-sizing: border-box; display: flex; flex-direction: column;
+        }
+
+        .p-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+        .p-main-title { font-size: 26px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.2; }
+        .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 4px; }
+
+        .p-section-title { font-size: 15px; font-weight: 700; color: #002d72; margin: 10px 0 8px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 4px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+        .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+        .p-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .p-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+
+        .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
+        .p-card-gold { background: #fffdf5; border: 1px solid #C99700; }
+        .p-card-title { font-size: 12px; font-weight: 700; color: #C99700; margin-bottom: 8px; border-bottom: 1px solid #e9ecef; padding-bottom: 4px; }
+        .p-data-row { display: flex; flex-direction: column; margin-bottom: 8px; }
+        .p-data-row span { font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
+        .p-data-row strong { font-size: 13px; color: #111; font-weight: 600; }
+
+        .p-notes-box { min-height: 120px; border: 2px dashed #ccc; background: #fff; border-radius: 8px; margin-top: 5px; }
+        .p-footer { margin-top: auto; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="emoji-store" style="display:none;"></div>
+
+<div id="custom-preview-modal">
+    <div class="modal-toolbar">
+        <div class="modal-title" id="modal_title_text"><i class="fas fa-spinner fa-spin"></i> Generazione PDF in corso... Attendere</div>
+    </div>
+    
+    <div class="modal-scroll-area" id="modal_scroll_area">
+        <div id="print-sheet">
+            <div class="p-sidebar">
+                <img src="https://i.postimg.cc/hjX28x4r/Logo-Credipass-Negativo-per-Web.png" class="p-logo" alt="Credipass" crossorigin="anonymous">
+
+                <div class="p-side-block">
+                    <div class="p-side-title">RIFERIMENTI</div>
+                    <div class="p-side-item"><i class="fas fa-user-tie"></i> <strong style="font-size:14px;" id="p_referente"></strong></div>
+                    <div class="p-side-item"><i class="fas fa-map-marker-alt"></i> <strong id="p_luogo"></strong></div>
+                    <div class="p-side-item"><i class="fas fa-calendar-alt"></i> <strong id="p_data"></strong></div>
+                </div>
+
+                <div class="p-side-block">
+                    <div class="p-side-title">COSTI E IMPEGNI</div>
+                    <div class="p-side-item">Mutuo in corso: <strong id="p_mutuo_corso"></strong></div>
+                    <div class="p-side-item">Finanziamenti: <strong id="p_finanziamenti"></strong></div>
+                    <div class="p-side-line"></div>
+
+                    <div class="p-side-item">Polizza Incendio e scoppio:<br><span id="p_tipo_inc" style="display:block; margin:2px 0;"></span><strong id="p_imp_inc"></strong></div>
+                    <div class="p-side-item" style="margin-top:10px;">Polizza Vita:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
+                    <div class="p-side-line"></div>
+
+                    <div class="p-side-item">Istruttoria Banca: <strong id="p_istr"></strong></div>
+                    <div class="p-side-item">Perizia: <strong id="p_perizia"></strong></div>
+                    <div class="p-side-item">Imposta Sostitutiva: <strong id="p_imposta"></strong></div>
+                    <div class="p-side-item">Mediazione Credipass: <strong id="p_mediazione"></strong></div>
+                    <div class="p-side-item">Certificazione Doc.: <strong style="font-size:14px;">76,00 € per richiedente</strong></div>
+                </div>
+
+                <div class="p-side-block" id="p_note_block" style="flex-grow: 1;">
+                    <div class="p-side-title">NOTE CONSULENZA</div>
+                    <div class="p-notes" id="p_note"></div>
+                </div>
+            </div>
+
+            <div class="p-main">
+                <div class="p-header-top">
+                    <div>
+                        <h1 class="p-main-title">SCHEDA DI CONSULENZA</h1>
+                        <span class="p-titolo-nomi" id="p_titolo_nomi"></span>
+                    </div>
+                </div>
+
+                <div class="p-section-title"><i class="fas fa-users"></i> Anagrafica Clienti</div>
+                <div class="p-grid-2">
+                    <div class="p-card">
+                        <div class="p-card-title">1° RICHIEDENTE</div>
+                        <div class="p-data-row"><span>Nome e Cognome</span> <strong id="p_nome1"></strong></div>
+                        <div class="p-data-row"><span>Cellulare</span> <strong id="p_cell1"></strong></div>
+                        <div class="p-data-row"><span>Email</span> <strong id="p_email1"></strong></div>
+                    </div>
+                    <div class="p-card">
+                        <div class="p-card-title">2° RICHIEDENTE</div>
+                        <div class="p-data-row"><span>Nome e Cognome</span> <strong id="p_nome2"></strong></div>
+                        <div class="p-data-row"><span>Cellulare</span> <strong id="p_cell2"></strong></div>
+                        <div class="p-data-row"><span>Email</span> <strong id="p_email2"></strong></div>
+                    </div>
+                </div>
+
+                <div class="p-section-title"><i class="fas fa-briefcase"></i> Lavoro e Reddito</div>
+                <div class="p-grid-2">
+                    <div class="p-card">
+                        <div class="p-data-row"><span>Contratto 1° Richiedente</span> <strong id="p_lav1"></strong></div>
+                        <div class="p-data-row"><span>Reddito Netto Mensile</span> <strong id="p_redd1"></strong></div>
+                    </div>
+                    <div class="p-card">
+                        <div class="p-data-row"><span>Contratto 2° Richiedente</span> <strong id="p_lav2"></strong></div>
+                        <div class="p-data-row"><span>Reddito Netto Mensile</span> <strong id="p_redd2"></strong></div>
+                    </div>
+                </div>
+
+                <div class="p-section-title"><i class="fas fa-home"></i> Stato Civile e Famiglia</div>
+                <div class="p-card">
+                    <div class="p-grid-4">
+                        <div class="p-data-row"><span>Stato Civile</span> <strong id="p_stato"></strong></div>
+                        <div class="p-data-row"><span>Nucleo</span> <strong id="p_componenti"></strong></div>
+                        <div class="p-data-row"><span>Assegno Unico</span> <strong id="p_assegno"></strong></div>
+                        <div class="p-data-row"><span>Età Figli</span> <strong id="p_figli"></strong></div>
+                    </div>
+                </div>
+
+                <div class="p-section-title" style="color: #C99700; border-bottom: 2px solid #C99700;"><i class="fas fa-file-signature"></i> Dettagli Mutuo Richiesto</div>
+                <div class="p-card p-card-gold">
+                    <div class="p-grid-2" style="margin-bottom: 12px;">
+                        <div class="p-data-row"><span>Finalità del Mutuo</span> <strong id="p_finalita"></strong></div>
+                        <div class="p-data-row"><span>Prodotto Bancario</span> <strong id="p_prodotto"></strong></div>
+                    </div>
+                    <div class="p-grid-3">
+                        <div class="p-data-row"><span>Importo Mutuo</span> <strong id="p_importo" style="font-size:16px; color:#002d72;"></strong></div>
+                        <div class="p-data-row"><span>Prezzo Acquisto</span> <strong id="p_comprav"></strong></div>
+                        <div class="p-data-row"><span>Valore Immobile</span> <strong id="p_valore"></strong></div>
+
+                        <div class="p-data-row"><span>Durata Anni</span> <strong id="p_durata"></strong></div>
+                        <div class="p-data-row"><span>Tipologia Tasso</span> <strong id="p_tasso"></strong></div>
+                    </div>
+                </div>
+
+                <div class="p-section-title"><i class="fas fa-edit"></i> Note Aggiuntive Bancarie</div>
+                <div class="p-notes-box"></div>
+
+                <div class="p-footer">
+                    <div>Documento generato da app.credipass.it il <span id="p_generato_il"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="wa-choice-modal">
+    <div class="wa-modal-box">
+        <h2 class="wa-modal-title">Invio WhatsApp</h2>
+        <p class="wa-modal-sub">
+            Scegli come gestire il messaggio documentale per <strong id="wa_modal_cliente_nome">il cliente</strong>.
+        </p>
+        <div class="wa-modal-buttons">
+            <button type="button" class="wa-option-btn wa-option-backoffice" id="btn_wa_backoffice">
+                <i class="fas fa-briefcase"></i> Back office
+            </button>
+            <button type="button" class="wa-option-btn wa-option-diretto" id="btn_wa_diretto">
+                <i class="fab fa-whatsapp"></i> Diretto
+            </button>
+            <button type="button" class="wa-option-btn wa-option-cancel" id="btn_wa_cancel">
+                Annulla
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay-mail">
+    <i class="fas fa-spinner fa-spin"></i>
+    <div>Preparazione allegato in corso...</div>
+</div>
+
+<div class="app-container" id="app_main_container">
+    
+    <div class="header">
+        <div class="header-box">
+            <span class="ruolo">Referente Consulenza</span>
+            <input type="text" id="campo_referente" class="header-editable" value="PIETRO LO IACONO">
+            <span class="ruolo" style="margin-top: 5px;">Email e Contatti</span>
+            <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
+            <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
+        </div>
+
+        <div class="header-box">
+            <span class="ruolo">Email Automazione</span>
+            <input type="text" id="campo_email_auto" class="header-editable info-sub" value="segreteria.passaretti@credipass.it">
+            <span class="ruolo" style="margin-top: 8px;">WhatsApp Automazione</span>
+            <input type="text" id="campo_wa_auto" class="header-editable info-sub" value="393760552826">
+        </div>
+
+        <div class="logo-area-stack">
+            <img src="https://i.postimg.cc/hjX28x4r/Logo-Credipass-Negativo-per-Web.png" class="logo-main" alt="Credipass">
+            <img src="https://i.postimg.cc/rF7M5C8j/Logo-Oro-20-anni-Credipass.png" class="logo-anniv" alt="20 Anni">
+        </div>
+    </div>
+
+    <div class="main-title">SCHEDA DI CONSULENZA</div>
+
+    <div class="content">
+        <div class="grid-2" style="margin-bottom: 20px;">
+            <div class="form-group"><label><i class="fas fa-map-marker-alt" style="color:#C99700;"></i> Luogo Incontro</label><input type="text" id="campo_luogo" placeholder="Città..."></div>
+            <div class="form-group"><label><i class="fas fa-calendar-alt" style="color:#C99700;"></i> Data</label><input type="text" id="campo_data"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-user"></i> DATI DEI RICHIEDENTI</div>
+            <div class="grid-2">
+                <div class="richiedente-box">
+                    <div class="richiedente-title">1° RICHIEDENTE</div>
+                    <div class="form-group"><label>Nominativo</label><input type="text" id="cliente_nome"></div>
+                    <div class="form-group"><label>Email</label><input type="text" id="cliente_email"></div>
+                    <div class="form-group"><label>Cellulare</label><input type="text" id="cliente_cell"></div>
+                </div>
+                <div class="richiedente-box">
+                    <div class="richiedente-title">2° RICHIEDENTE</div>
+                    <div class="form-group"><label>Nominativo</label><input type="text" id="cliente2_nome"></div>
+                    <div class="form-group"><label>Email</label><input type="text" id="cliente2_email"></div>
+                    <div class="form-group"><label>Cellulare</label><input type="text" id="cliente2_cell"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-briefcase"></i> SITUAZIONE LAVORATIVA & REDDITO</div>
+            <div class="grid-2">
+                <div class="richiedente-box">
+                    <div class="richiedente-title">1° RICHIEDENTE</div>
+                    <div class="form-group">
+                        <label>Contratto</label>
+                        <div class="toggle-group blue">
+                            <input type="radio" id="ind1" name="lav1" value="INDETERMINATO"><label for="ind1">Indet.</label>
+                            <input type="radio" id="det1" name="lav1" value="DETERMINATO"><label for="det1">Det.</label>
+                            <input type="radio" id="sta1" name="lav1" value="STATALE"><label for="sta1">Statale</label>
+                            <input type="radio" id="aut1" name="lav1" value="AUTONOMO"><label for="aut1">Auton.</label>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Reddito Netto €</label><input type="text" id="cliente_reddito"></div>
+                </div>
+                <div class="richiedente-box">
+                    <div class="richiedente-title">2° RICHIEDENTE</div>
+                    <div class="form-group">
+                        <label>Contratto</label>
+                        <div class="toggle-group blue">
+                            <input type="radio" id="ind2" name="lav2" value="INDETERMINATO"><label for="ind2">Indet.</label>
+                            <input type="radio" id="det2" name="lav2" value="DETERMINATO"><label for="det2">Det.</label>
+                            <input type="radio" id="sta2" name="lav2" value="STATALE"><label for="sta2">Statale</label>
+                            <input type="radio" id="aut2" name="lav2" value="AUTONOMO"><label for="aut2">Auton.</label>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Reddito Netto €</label><input type="text" id="cliente2_reddito"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-users"></i> STATO CIVILE E NUCLEO FAMILIARE</div>
+            <div class="form-group">
+                <label>Stato Civile Principale</label>
+                <div class="toggle-group">
+                    <input type="radio" id="c_sep" name="stato" value="SEPARAZIONE"><label for="c_sep">Coniugato/a Sep. Beni</label>
+                    <input type="radio" id="c_com" name="stato" value="COMUNIONE"><label for="c_com">Coniugato/a Com. Beni</label>
+                    <input type="radio" id="cel" name="stato" value="CELIBE"><label for="cel">Celibe/Nubile</label>
+                    <input type="radio" id="div" name="stato" value="DIVORZIATO"><label for="div">Divorziato/a</label>
+                </div>
+            </div>
+            <hr>
+            <div class="grid-3" style="align-items: center;">
+                <div class="form-group"><label>Componenti</label><input type="number" id="num_componenti"></div>
+                <div class="form-group">
+                    <label>Assegno Unico?</label>
+                    <div class="toggle-group blue">
+                        <input type="radio" id="ass_si" name="assegno" value="Sì"><label for="ass_si">Sì</label>
+                        <input type="radio" id="ass_no" name="assegno" value="No" checked><label for="ass_no">No</label>
+                    </div>
+                </div>
+                <div class="form-group"><label>Importo (€)</label><input type="text" id="assegno_importo"></div>
+            </div>
+            <div class="grid-3">
+                <div class="form-group"><label>Età 1° Figlio</label><input type="number" id="eta_f1"></div>
+                <div class="form-group"><label>Età 2° Figlio</label><input type="number" id="eta_f2"></div>
+                <div class="form-group"><label>Età 3° Figlio</label><input type="number" id="eta_f3"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-home"></i> DETTAGLI RICHIESTA MUTUO</div>
+            <div class="form-group">
+                <label>Finalità</label>
+                <div class="toggle-group" id="finalita_group">
+                    <input type="radio" id="acq" name="fin" value="ACQUISTO" checked><label for="acq">Acquisto</label>
+                    <input type="radio" id="sur" name="fin" value="SURROGA"><label for="sur">Surroga</label>
+                    <input type="radio" id="liq" name="fin" value="LIQUIDITÀ"><label for="liq">Liquidità</label>
+                    <input type="radio" id="vou" name="fin" value="VOUCHER"><label for="vou">Voucher</label>
+                    <input type="radio" id="cons" name="fin" value="CONSOLIDAMENTO"><label for="cons">Consolidamento</label>
+                </div>
+            </div>
+            <div class="grid-4">
+                <div class="form-group"><label>Importo Mutuo €</label><input type="text" id="mutuo_importo"></div>
+                <div class="form-group"><label>Compravendita €</label><input type="text" id="mutuo_compravendita"></div>
+                <div class="form-group"><label>Valore Immobile €</label><input type="text" id="immobile_valore"></div>
+                <div class="form-group"><label>Durata (Anni)</label><input type="number" id="mutuo_durata"></div>
+            </div>
+            <div class="grid-2 mt-10">
+                <div class="separated-box">
+                    <div class="separated-box-title">Tipologia Tasso</div>
+                    <div class="toggle-group blue">
+                        <input type="radio" id="t_fisso" name="tasso" value="FISSO" checked><label for="t_fisso">Fisso</label>
+                        <input type="radio" id="t_var" name="tasso" value="VARIABILE"><label for="t_var">Variabile</label>
+                        <input type="radio" id="t_rineg" name="tasso" value="FISSO RINEGOZIA"><label for="t_rineg">Rinegoziabile</label>
+                    </div>
+                </div>
+                <div class="separated-box">
+                    <div class="separated-box-title">Prodotto Bancario</div>
+                    <div class="toggle-group blue" id="prodotto_bancario_group">
+                        <input type="radio" id="p_consap" name="prodotto" value="CONSAP 100%"><label for="p_consap">CONSAP 100%</label>
+                        <input type="radio" id="p_ltc" name="prodotto" value="LTC (95%)"><label for="p_ltc">LTC (95%)</label>
+                        <input type="radio" id="p_hltv" name="prodotto" value="HLTV (95%)"><label for="p_hltv">HLTV (95%)</label>
+                        <input type="radio" id="p_ltv" name="prodotto" value="LTV (80%)"><label for="p_ltv">LTV (80%)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-file-invoice-dollar"></i> IMPEGNI FINANZIARI E COSTI ACCESSORI</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Già titolare di mutuo?</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div class="toggle-group"><input type="radio" id="mutuo_si" name="gia_mutuo" value="Sì"><label for="mutuo_si">Sì</label><input type="radio" id="mutuo_no" name="gia_mutuo" value="No" checked><label for="mutuo_no">No</label></div>
+                        <input type="text" id="rata_mutuo_pre" placeholder="Rata €">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Finanziamenti in corso?</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div class="toggle-group"><input type="radio" id="fin_si" name="fin_corso" value="Sì"><label for="fin_si">Sì</label><input type="radio" id="fin_no" name="fin_corso" value="No" checked><label for="fin_no">No</label></div>
+                        <input type="text" id="rata_fin_pre" placeholder="Rata €">
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Polizza Incendio e scoppio</label>
+                    <select id="tipo_incendio">
+                        <option value=" ">- Seleziona -</option>
+                        <option value="Banca">Banca</option>
+                        <option value="Premio Rateizzato">Premio Rateizzato</option>
+                        <option value="Premio Totale">Premio Totale</option>
+                    </select>
+                    <select id="importo_incendio" style="margin-top:5px;"><option value=" "></option></select>
+                </div>
+                <div class="form-group">
+                    <label>Polizza Vita</label>
+                    <select id="tipo_vita">
+                        <option value=" ">- Seleziona -</option>
+                        <option value="No Polizza">No Polizza</option>
+                        <option value="Banca">Banca</option>
+                        <option value="Premio Rateizzato">Premio Rateizzato</option>
+                        <option value="Premio Totale">Premio Totale</option>
+                    </select>
+                    <select id="importo_vita" style="margin-top:5px;"><option value=" "></option></select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>Istruttoria Banca</label><input type="text" id="istr_banca" placeholder="€"></div>
+                <div class="form-group"><label>Perizia</label><input type="text" id="perizia_costo" placeholder="€"></div>
+            </div>
+            <div class="grid-3" style="margin-top:10px;">
+                <div class="separated-box">
+                    <div class="separated-box-title">Imposta Sostitutiva</div>
+                    <div class="toggle-group blue" style="flex-direction: column;">
+                        <input type="radio" id="imp_prima" name="imposta" value="Prima Casa (0,25%)"><label for="imp_prima">Prima Casa (0,25%)</label>
+                        <input type="radio" id="imp_altra" name="imposta" value="Seconda/Altro"><label for="imp_altra">Altra Finalità (2%)</label>
+                    </div>
+                </div>
+
+                <div class="separated-box">
+                    <div class="separated-box-title">Mediazione Credipass</div>
+                    <div class="toggle-group blue" style="flex-direction: column; gap: 5px;">
+                        <input type="radio" id="med_2" name="mediazione" value="2%"><label for="med_2">2%</label>
+                        <input type="radio" id="med_3" name="mediazione" value="3%"><label for="med_3">3%</label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="radio" id="med_altro" name="mediazione" value="Altro">
+                            <label for="med_altro" style="flex:0 0 auto; min-width:80px;">Altro</label>
+                            <input type="text" id="mediazione_custom" placeholder="Es. 1.5%" style="flex:1; padding:8px; border:1px solid #ced4da; border-radius:6px; font-size:13px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="separated-box" style="background:#e9ecef; justify-content:center; text-align:center; font-weight:bold; color:#002d72; padding:10px; border-radius:6px;">
+                    € 76,00 per richiedente<br>CERTIFICAZIONE DOCUMENTALE
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-pen"></i> NOTE</div>
+            <textarea id="note_consulenza" placeholder="Inserisci qui eventuali note o accordi particolari..." style="width:100%; min-height:80px; padding:10px; border-radius:6px; border:1px solid #ced4da; font-family:inherit;"></textarea>
+        </div>
+
+        <div class="btn-wrapper">
+            <button class="btn-action btn-pdf" id="btn_stampa_pdf"><i class="fas fa-file-pdf"></i> 1. SALVA E SCARICA IL PDF</button>
+            <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP</button>
+            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL (Allega PDF)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    // --- Memoria Campi ---
+    const fields = {
+        'campo_referente': 'ref_n',
+        'campo_email': 'ref_e',
+        'campo_email_auto': 'ref_ea',
+        'campo_cellulare': 'ref_c',
+        'campo_wa_auto': 'ref_wa'
+    };
+
+    Object.keys(fields).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const saved = localStorage.getItem(fields[id]);
+            if (saved) el.value = saved;
+            el.addEventListener('input', () => localStorage.setItem(fields[id], el.value));
+        }
+    });
+
+    document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
+
+    // --- Geolocalizzazione ---
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
+                .then(response => response.json())
+                .then(data => {
+                    const citta = data.city || data.locality || data.principalSubdivision;
+                    if (citta) document.getElementById('campo_luogo').value = citta;
+                }).catch(e => console.log(e));
+        }, function(error) {});
+    }
+
+    // --- Helper JS ---
+    const e = (hex) => decodeURIComponent(hex);
+    const I = { doc: e('%F0%9F%93%84'), usr: e('%F0%9F%91%A4'), map: e('%F0%9F%93%8D'), grp: e('%F0%9F%91%A5'), phn: e('%F0%9F%93%B1'), mon: e('%F0%9F%92%B0'), brf: e('%F0%9F%92%BC'), eur: e('%F0%9F%92%B6'), rng: e('%F0%9F%92%8D'), fam: e('%F0%9F%91%AA'), bb: e('%F0%9F%91%B6'), ck: e('%F0%9F%8E%82'), hm: e('%F0%9F%8F%A1'), trg: e('%F0%9F%8E%AF'), clk: e('%E2%8F%B3'), up: e('%F0%9F%93%88'), bar: e('%F0%9F%93%8A'), time: e('%F0%9F%95%92') };
+
+    const getR = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : "N/D"; };
+
+    const formatNum = (val) => {
+        if (!val || val === "-" || String(val).trim() === "") return val;
+        let clean = String(val).replace(/\./g, '').trim();
+        let parts = clean.split(',');
+        let intPart = parseInt(parts[0].replace(/\D/g, ''), 10);
+        if (isNaN(intPart)) return val;
+        let formattedInt = intPart.toLocaleString('it-IT');
+        return parts.length > 1 ? formattedInt + ',' + parts[1] : formattedInt;
+    };
+
+    const V = (id, fallback = "-") => { const el = document.getElementById(id); if (!el) return fallback; const value = (el.value || "").trim(); return value !== "" ? value : fallback; };
+    const S = (name, fallback = "-") => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : fallback; };
+    const setPrint = (id, value) => { const el = document.getElementById(id); if (el) el.innerHTML = value || "-"; };
+
+    function normalizePhone(raw) {
+        let s = String(raw || '').replace(/\D/g, '');
+        if (!s) return '';
+        if (s.startsWith('39')) return s;
+        return '39' + s;
+    }
+
+    // --- Listener per lo slot Custom della Mediazione ---
+    const medCustom = document.getElementById('mediazione_custom');
+    const medAltroRadio = document.getElementById('med_altro');
+    if (medCustom && medAltroRadio) {
+        medCustom.addEventListener('focus', () => { medAltroRadio.checked = true; });
+        medCustom.addEventListener('input', () => { medAltroRadio.checked = true; });
+    }
+
+    // --- LOGICA DI SALVATAGGIO TASTO 1 (ORIGINALE INTATTA) ---
+    function adjustPreviewScale() {
+        const wrapper = document.getElementById('modal_scroll_area');
+        const sheet = document.getElementById('print-sheet');
+        if(!wrapper || !sheet) return;
+        
+        const availableWidth = wrapper.clientWidth - 40;
+        if (availableWidth < 800) {
+            const scale = availableWidth / 800;
+            sheet.style.transform = `scale(${scale})`;
+            sheet.style.marginBottom = `-${1131 * (1 - scale)}px`; 
+        } else {
+            sheet.style.transform = 'none';
+            sheet.style.marginBottom = '0';
+        }
+    }
+    window.addEventListener('resize', adjustPreviewScale);
+
+    document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
+        let includeNotes = confirm("Vuoi stampare anche le Note della consulenza nel PDF?\n\n- Clicca OK per includerle.\n- Clicca ANNULLA per ometterle.");
+        document.getElementById('p_note_block').style.display = includeNotes ? 'block' : 'none';
+
+        // Popola Dati
+        setPrint('p_referente', V('campo_referente'));
+        setPrint('p_luogo', V('campo_luogo'));
+        setPrint('p_data', V('campo_data'));
+        setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
+        setPrint('p_finanziamenti', S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : ''));
+        setPrint('p_tipo_inc', V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna');
+        setPrint('p_imp_inc', V('importo_incendio') !== '-' ? V('importo_incendio') : '');
+        setPrint('p_tipo_vita', V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna');
+        setPrint('p_imp_vita', V('importo_vita') !== '-' ? V('importo_vita') : '');
+        setPrint('p_istr', formatNum(V('istr_banca', '0')) + ' €');
+        setPrint('p_perizia', formatNum(V('perizia_costo', '0')) + ' €');
+        setPrint('p_imposta', S('imposta'));
+
+        let valMediazione = S('mediazione');
+        if (valMediazione === 'Altro') {
+            let customMed = V('mediazione_custom', '');
+            valMediazione = (customMed !== '-' && customMed !== '') ? customMed : 'Da definire';
+        }
+        setPrint('p_mediazione', valMediazione);
+
+        let note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
+        setPrint('p_note', note.replace(/\n/g, '<br>'));
+        setPrint('p_nome1', V('cliente_nome'));
+        setPrint('p_cell1', V('cliente_cell'));
+        setPrint('p_email1', V('cliente_email'));
+        setPrint('p_lav1', S('lav1'));
+        setPrint('p_redd1', formatNum(V('cliente_reddito', '0')) + ' €');
+        setPrint('p_nome2', V('cliente2_nome', '-'));
+        setPrint('p_cell2', V('cliente2_cell', '-'));
+        setPrint('p_email2', V('cliente2_email', '-'));
+        setPrint('p_lav2', S('lav2', '-'));
+        let redd2 = formatNum(V('cliente2_reddito', ''));
+        setPrint('p_redd2', redd2 ? redd2 + ' €' : '-');
+
+        let nome1 = V('cliente_nome', '');
+        let nome2 = V('cliente2_nome', '');
+        let titoliNomi = nome1 + (nome2 !== '' && nome2 !== '-' ? ' e ' + nome2 : '');
+        setPrint('p_titolo_nomi', titoliNomi);
+
+        setPrint('p_stato', S('stato'));
+        setPrint('p_componenti', V('num_componenti', '0'));
+        setPrint('p_assegno', S('assegno') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : ''));
+        setPrint('p_figli', [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(e => e !== "-").join(', ') || '-');
+        setPrint('p_finalita', S('fin'));
+        setPrint('p_prodotto', S('prodotto'));
+        setPrint('p_importo', formatNum(V('mutuo_importo', '0')) + ' €');
+        setPrint('p_comprav', formatNum(V('mutuo_compravendita', '0')) + ' €');
+        setPrint('p_valore', formatNum(V('immobile_valore', '0')) + ' €');
+        setPrint('p_durata', V('mutuo_durata', '0') + ' Anni');
+        setPrint('p_tasso', S('tasso'));
+        setPrint('p_generato_il', new Date().toLocaleString('it-IT'));
+
+        document.getElementById('app_main_container').style.display = 'none';
+        document.getElementById('custom-preview-modal').style.display = 'flex';
+        adjustPreviewScale();
+
+        setTimeout(async () => {
+            const sheet = document.getElementById('print-sheet');
+            const scrollArea = document.getElementById('modal_scroll_area');
+            
+            sheet.style.transform = 'none';
+            sheet.style.marginBottom = '0';
+            scrollArea.scrollTop = 0;
+            scrollArea.scrollLeft = 0;
+
+            const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
+            const opt = {
+                margin: 0,
+                filename: pdfFileName,
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, width: 800, height: 1131, scrollX: 0, scrollY: 0 },
+                jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(sheet).save();
+            } catch (err) {
+                alert("Errore nella generazione del PDF: " + err);
+            } finally {
+                document.getElementById('custom-preview-modal').style.display = 'none';
+                document.getElementById('app_main_container').style.display = 'block';
+            }
+        }, 1500); 
+    });
+
+    // --- TASTO 2: SCELTA BACK OFFICE / DIRETTO ---
+    function openWaChoiceModal() {
+        const nomeCliente = V('cliente_nome', 'il cliente');
+        document.getElementById('wa_modal_cliente_nome').textContent = nomeCliente;
+        document.getElementById('wa-choice-modal').style.display = 'flex';
+    }
+
+    function closeWaChoiceModal() {
+        document.getElementById('wa-choice-modal').style.display = 'none';
+    }
+
+    function buildSchedaMessaggio(destPhone) {
+        const nome = document.getElementById('cliente_nome').value.trim();
+        const cell = document.getElementById('cliente_cell').value.trim();
+        const nome2 = document.getElementById('cliente2_nome').value.trim();
+        const cell2 = document.getElementById('cliente2_cell').value.trim();
+        const ref = document.getElementById('campo_referente').value.trim();
+        const loc = document.getElementById('campo_luogo').value.trim();
+
+        const r1 = document.getElementById('cliente_reddito').value || '0';
+        const r2 = document.getElementById('cliente2_reddito').value || '0';
+        const nC = document.getElementById('num_componenti').value || '0';
+        const aI = document.getElementById('assegno_importo').value || '0';
+        const f1 = document.getElementById('eta_f1').value || '0';
+        const f2 = document.getElementById('eta_f2').value || '0';
+        const f3 = document.getElementById('eta_f3').value || '0';
+        const mI = document.getElementById('mutuo_importo').value || '0';
+        const mC = document.getElementById('mutuo_compravendita').value || '0';
+        const vI = document.getElementById('immobile_valore').value || '0';
+        const dur = document.getElementById('mutuo_durata').value || '0';
+
+        let m = `${I.doc} SCHEDA CONSULENZA CREDIPASS\n\n`;
+        m += `${I.usr} Referente: ${ref}\n`;
+        m += `${I.map} Luogo: ${loc}\n\n`;
+        m += `${I.grp} CLIENTI:\n\n`;
+        m += `${I.usr} 1°: ${nome} (${I.phn} ${cell})\n`;
+        if (nome2) {
+            m += `${I.usr} 2°: ${nome2}`;
+            if (cell2) m += ` (${I.phn} ${cell2})`;
+            m += `\n`;
+        }
+
+        m += `\n${I.mon} REDDITO E FAMIGLIA:\n\n`;
+        m += `${I.brf} Contratto 1: ${getR('lav1')} (${I.eur} ${r1} €)\n`;
+        if (r2 !== '0') m += `${I.brf} Contratto 2: ${getR('lav2')} (${I.eur} ${r2} €)\n`;
+        m += `${I.rng} Stato Civile: ${getR('stato')}\n`;
+        m += `${I.fam} Nucleo: ${nC} pers. | ${I.bb} Assegno Unico: ${getR('assegno')} (${I.eur} ${aI} €)\n`;
+        m += `${I.ck} Età Figli: ${f1}, ${f2}, ${f3}\n`;
+
+        m += `\n${I.hm} DETTAGLI MUTUO:\n\n`;
+        m += `${I.trg} Finalità: ${getR('fin')}\n`;
+        m += `${I.eur} Importo: ${mI} € | ${I.mon} Prezzo: ${mC} €\n`;
+        m += `${I.hm} Valore Immobile: ${vI} €\n`;
+        m += `${I.clk} Durata: ${dur} anni | ${I.up} Tasso: ${getR('tasso')}\n`;
+        m += `${I.bar} Prodotto: ${getR('prodotto')}\n\n`;
+        m += `${I.time} _Inviato il: ${new Date().toLocaleString('it-IT')}_`;
+
+        return `https://wa.me/${destPhone}?text=${encodeURIComponent(m)}`;
+    }
+
+    function sendWhatsAppBackoffice() {
+        const nome = document.getElementById('cliente_nome').value.trim();
+        const cell = normalizePhone(document.getElementById('cliente_cell').value.trim());
+        const dest = normalizePhone(document.getElementById('campo_wa_auto').value.trim());
+
+        if (!nome || !cell) { alert('Inserisci Nome e Cellulare del cliente prima di procedere.'); return; }
+        if (!dest) { alert("Inserisci il numero WhatsApp di automazione nell'intestazione."); return; }
+
+        const linkCliente = buildSchedaMessaggio(cell);
+        const ref = document.getElementById('campo_referente').value.trim();
+        const finalita = getR('fin');
+
+        let backofficeMsg = `RICHIESTA INVIO DOCUMENTALE\n\n`;
+        backofficeMsg += `Cliente: ${nome}\n`;
+        backofficeMsg += `Numero cliente: ${cell}\n`;
+        backofficeMsg += `Referente: ${ref}\n`;
+        backofficeMsg += `Finalità: ${finalita}\n\n`;
+        backofficeMsg += `Link diretto WhatsApp da inviare al cliente:\n${linkCliente}\n\n`;
+        backofficeMsg += `Generato il: ${new Date().toLocaleString('it-IT')}`;
+
+        window.open(`https://wa.me/${dest}?text=${encodeURIComponent(backofficeMsg)}`, '_blank');
+        closeWaChoiceModal();
+    }
+
+    function sendWhatsAppDiretto() {
+        const nome = document.getElementById('cliente_nome').value.trim();
+        const cell = normalizePhone(document.getElementById('cliente_cell').value.trim());
+
+        if (!nome || !cell) { alert('Inserisci Nome e Cellulare del cliente prima di procedere.'); return; }
+
+        const directUrl = buildSchedaMessaggio(cell);
+        window.open(directUrl, '_blank');
+        closeWaChoiceModal();
+    }
+
+    document.getElementById('btn_elabora').addEventListener('click', () => {
+        const nome = document.getElementById('cliente_nome').value.trim();
+        const cell = document.getElementById('cliente_cell').value.trim();
+        if (!nome || !cell) {
+            alert('Inserisci Nome e Cellulare del cliente prima di procedere.');
+            return;
+        }
+        openWaChoiceModal();
+    });
+
+    document.getElementById('btn_wa_backoffice').addEventListener('click', sendWhatsAppBackoffice);
+    document.getElementById('btn_wa_diretto').addEventListener('click', sendWhatsAppDiretto);
+    document.getElementById('btn_wa_cancel').addEventListener('click', closeWaChoiceModal);
+    document.getElementById('wa-choice-modal').addEventListener('click', (ev) => {
+        if (ev.target.id === 'wa-choice-modal') closeWaChoiceModal();
+    });
+
+    // --- TASTO 3 NUOVO (EMAIL + CONDIVISIONE) ---
+    document.getElementById('btn_email').addEventListener('click', async () => {
+        let m1 = V('cliente_email', '');
+        let m2 = V('cliente2_email', '');
+        let mAuto = V('campo_email_auto', '');
+
+        let toList = [m1, m2].filter(m => m !== '' && m !== '-').join(',');
+        let bccList = (mAuto !== '' && mAuto !== '-') ? mAuto : '';
+
+        let subjectStr = "Scheda Consulenza Credipass - " + V('cliente_nome', '');
+        let bodyStr = "Buongiorno,\n\nin allegato trovate la scheda di consulenza in formato PDF con i dettagli riepilogativi della pratica.\n\nResto a disposizione per qualsiasi necessità.\n\nCordiali saluti.";
+
+        // 1. Copia indirizzi
+        try {
+            const allEmails = [toList, bccList].filter(Boolean).join(' ');
+            await navigator.clipboard.writeText(allEmails);
+        } catch (err) {}
+
+        let includeNotes = confirm("ATTENZIONE:\nGli indirizzi email sono stati copiati negli appunti.\n\nVuoi includere le Note della consulenza nel PDF che verrà allegato?");
+        
+        // 2. Popola Dati
+        document.getElementById('p_note_block').style.display = includeNotes ? 'block' : 'none';
+        setPrint('p_referente', V('campo_referente'));
+        setPrint('p_luogo', V('campo_luogo'));
+        setPrint('p_data', V('campo_data'));
+        setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
+        setPrint('p_finanziamenti', S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : ''));
+        setPrint('p_tipo_inc', V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna');
+        setPrint('p_imp_inc', V('importo_incendio') !== '-' ? V('importo_incendio') : '');
+        setPrint('p_tipo_vita', V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna');
+        setPrint('p_imp_vita', V('importo_vita') !== '-' ? V('importo_vita') : '');
+        setPrint('p_istr', formatNum(V('istr_banca', '0')) + ' €');
+        setPrint('p_perizia', formatNum(V('perizia_costo', '0')) + ' €');
+        setPrint('p_imposta', S('imposta'));
+        
+        let valMediazione = S('mediazione');
+        if (valMediazione === 'Altro') {
+            let customMed = V('mediazione_custom', '');
+            valMediazione = (customMed !== '-' && customMed !== '') ? customMed : 'Da definire';
+        }
+        setPrint('p_mediazione', valMediazione);
+
+        let note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
+        setPrint('p_note', note.replace(/\n/g, '<br>'));
+        setPrint('p_nome1', V('cliente_nome'));
+        setPrint('p_cell1', V('cliente_cell'));
+        setPrint('p_email1', V('cliente_email'));
+        setPrint('p_lav1', S('lav1'));
+        setPrint('p_redd1', formatNum(V('cliente_reddito', '0')) + ' €');
+        setPrint('p_nome2', V('cliente2_nome', '-'));
+        setPrint('p_cell2', V('cliente2_cell', '-'));
+        setPrint('p_email2', V('cliente2_email', '-'));
+        setPrint('p_lav2', S('lav2', '-'));
+        let redd2 = formatNum(V('cliente2_reddito', ''));
+        setPrint('p_redd2', redd2 ? redd2 + ' €' : '-');
+        let nome1 = V('cliente_nome', '');
+        let nome2 = V('cliente2_nome', '');
+        let titoliNomi = nome1 + (nome2 !== '' && nome2 !== '-' ? ' e ' + nome2 : '');
+        setPrint('p_titolo_nomi', titoliNomi);
+        setPrint('p_stato', S('stato'));
+        setPrint('p_componenti', V('num_componenti', '0'));
+        setPrint('p_assegno', S('assegno') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : ''));
+        setPrint('p_figli', [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(e => e !== "-").join(', ') || '-');
+        setPrint('p_finalita', S('fin'));
+        setPrint('p_prodotto', S('prodotto'));
+        setPrint('p_importo', formatNum(V('mutuo_importo', '0')) + ' €');
+        setPrint('p_comprav', formatNum(V('mutuo_compravendita', '0')) + ' €');
+        setPrint('p_valore', formatNum(V('immobile_valore', '0')) + ' €');
+        setPrint('p_durata', V('mutuo_durata', '0') + ' Anni');
+        setPrint('p_tasso', S('tasso'));
+        setPrint('p_generato_il', new Date().toLocaleString('it-IT'));
+
+        document.getElementById('loading-overlay-mail').style.display = 'flex';
+
+        setTimeout(async () => {
+            const sheet = document.getElementById('print-sheet');
+            const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
+            const opt = {
+                margin: 0,
+                filename: pdfFileName,
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, width: 800, height: 1131, scrollX: 0, scrollY: 0 },
+                jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+            };
+
+            try {
+                const pdfBlob = await html2pdf().set(opt).from(sheet).output('blob');
+                const file = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: subjectStr,
+                        text: 'Incolla gli indirizzi email appena copiati nel campo A e CCN.'
+                    });
+                } else {
+                    html2pdf().set(opt).from(sheet).save();
+                    window.location.href = `mailto:?subject=${encodeURIComponent(subjectStr)}&body=${encodeURIComponent(bodyStr)}`;
+                }
+            } catch (err) {
+                html2pdf().set(opt).from(sheet).save();
+                window.location.href = `mailto:?subject=${encodeURIComponent(subjectStr)}&body=${encodeURIComponent(bodyStr)}`;
+            } finally {
+                document.getElementById('loading-overlay-mail').style.display = 'none';
+            }
+        }, 1500);
+    });
+
+    // --- POLIZZE ---
+    const setupPol = (id, target) => {
+        document.getElementById(id).addEventListener('change', function() {
+            const sel = document.getElementById(target);
+            sel.innerHTML = '';
+            const opts = {
+                'Banca': ["Da verificare"],
+                'Premio Rateizzato': ["€ 100.000 (€ 25,61 X 72 MESI)", "€ 150.000 (€ 28,91 X 72 MESI)", "€ 200.000 (€ 34,30 X 72 MESI)"],
+                'Premio Totale': ["€ 100.000 (€ 1.280,00)", "€ 150.000 (€ 1.445,00)", "€ 200.000 (€ 1.714,00)"],
+                'No Polizza': [" "]
+            };
+            (opts[this.value] || [" "]).forEach(o => {
+                const el = document.createElement('option');
+                el.text = o; el.value = o; sel.add(el);
+            });
+            sel.value = opts[this.value] ? opts[this.value][0] : " ";
+        });
+    };
+    setupPol('tipo_incendio', 'importo_incendio');
+    setupPol('tipo_vita', 'importo_vita');
+});
+</script>
+</body>
+</html>
