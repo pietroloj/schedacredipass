@@ -1,242 +1,320 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scheda Consulenza - Credipass App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scheda Consulenza - Credipass App</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-    <style>
-        /* ================= STILE A SCHERMO (ALLARGATO PER PC A 1400px) ================= */
-        body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
-        .app-container { background-color: #f8f9fa; width: 100%; max-width: 1400px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; border: 8px solid #333; }
+<style>
+    body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
+    .app-container { background-color: #f8f9fa; width: 100%; max-width: 1400px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; border: 8px solid #333; }
 
-        /* ================= NUOVO HEADER A BOX SEPARATI ================= */
-        .header { 
-            background-color: #002d72; 
-            color: white; 
-            padding: 15px 30px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            gap: 20px;
-            border-bottom: 3px solid #C99700;
-        }
+    .header {
+        background-color: #002d72;
+        color: white;
+        padding: 15px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        border-bottom: 3px solid #C99700;
+    }
 
-        .header-box { 
-            background: rgba(255, 255, 255, 0.1); 
-            padding: 10px 20px; 
-            border-radius: 12px; 
-            border-left: 5px solid #C99700; 
-            flex: 1;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 80px;
-        }
+    .header-box {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px 20px;
+        border-radius: 12px;
+        border-left: 5px solid #C99700;
+        flex: 1;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 80px;
+    }
 
-        .header-box span.ruolo { 
-            display: block; font-size: 9px; text-transform: uppercase; color: rgba(255, 255, 255, 0.7); letter-spacing: 1px; margin-bottom: 2px;
-        }
+    .header-box span.ruolo {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 1px;
+        margin-bottom: 2px;
+    }
 
-        .header-editable { background-color: transparent !important; border: none !important; font-family: 'Poppins', sans-serif !important; padding: 0 !important; margin: 0 !important; width: 100% !important; outline: none !important; display: block; }
-        #campo_referente { color: #C99700 !important; font-size: 18px; font-weight: 700; text-transform: uppercase; }
-        .info-sub { color: #ffffff !important; font-size: 11px !important; font-weight: 400; opacity: 0.9; margin-top: 1px; }
+    .header-editable {
+        background-color: transparent !important;
+        border: none !important;
+        font-family: 'Poppins', sans-serif !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        outline: none !important;
+        display: block;
+    }
 
-        .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
-        .logo-area-stack img.logo-main { width: 160px; height: auto; }
-        .logo-area-stack img.logo-anniv { width: 110px; height: auto; }
+    #campo_referente {
+        color: #C99700 !important;
+        font-size: 18px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
 
-        /* ================= RESTO DELL'APP (INVARIATO) ================= */
-        .main-title { text-align: center; padding: 15px; background: white; font-weight: 700; font-size: 18px; letter-spacing: 1px; border-bottom: 1px solid #ddd; }
-        .content { padding: 20px 30px; }
+    .info-sub {
+        color: #ffffff !important;
+        font-size: 11px !important;
+        font-weight: 400;
+        opacity: 0.9;
+        margin-top: 1px;
+    }
 
-        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #C99700; }
-        .card-title { font-size: 16px; font-weight: 700; color: #002d72; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .card-title i { color: #C99700; font-size: 18px; }
+    .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
+    .logo-area-stack img.logo-main { width: 160px; height: auto; }
+    .logo-area-stack img.logo-anniv { width: 110px; height: auto; }
 
-        .separated-box { border: 1px solid #ced4da; padding: 15px; border-radius: 8px; background: #fdfdfd; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
-        .separated-box-title { font-size: 12px; font-weight: bold; color: #002d72; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #e9ecef; padding-bottom: 5px; }
+    .main-title { text-align: center; padding: 15px; background: white; font-weight: 700; font-size: 18px; letter-spacing: 1px; border-bottom: 1px solid #ddd; }
+    .content { padding: 20px 30px; }
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #C99700; }
+    .card-title { font-size: 16px; font-weight: 700; color: #002d72; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+    .card-title i { color: #C99700; font-size: 18px; }
 
-        .richiedente-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
-        .richiedente-title { font-size: 14px; font-weight: bold; color: #002d72; margin-top: 0; margin-bottom: 12px; border-bottom: 2px solid #C99700; padding-bottom: 5px; display: inline-block; }
+    .separated-box { border: 1px solid #ced4da; padding: 15px; border-radius: 8px; background: #fdfdfd; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+    .separated-box-title { font-size: 12px; font-weight: bold; color: #002d72; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #e9ecef; padding-bottom: 5px; }
 
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 5px; }
-        input[type="text"], input[type="number"], select, textarea {
-            width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 14px; background-color: white; font-family: 'Poppins', sans-serif;
-        }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
 
-        .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
-        .toggle-group input[type="radio"] { display: none; }
-        .toggle-group label {
-            padding: 8px 12px; background-color: white; color: #495057; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #ced4da; transition: all 0.2s; flex-grow: 1; text-align: center;
-        }
-        .toggle-group input[type="radio"]:checked + label { background-color: #C99700; color: white; border-color: #C99700; }
-        .toggle-group.blue input[type="radio"]:checked + label { background-color: #002d72; border-color: #002d72; color: white; }
+    .richiedente-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+    .richiedente-title { font-size: 14px; font-weight: bold; color: #002d72; margin-top: 0; margin-bottom: 12px; border-bottom: 2px solid #C99700; padding-bottom: 5px; display: inline-block; }
 
-        hr { border: 0; border-top: 1px solid #e9ecef; margin: 20px 0; }
-        .mt-10 { margin-top: 10px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 5px; }
 
-        .btn-wrapper { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .btn-action {
-            display: block; width: 100%; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; text-align: center; font-family: 'Poppins', sans-serif;
-        }
-        .btn-action i { margin-right: 8px; }
-        .btn-pdf { background: #002d72; }
-        .btn-wa { background: #C99700; }
-        .btn-email { background: #28a745; }
+    input[type="text"], input[type="number"], select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 14px;
+        background-color: white;
+        font-family: 'Poppins', sans-serif;
+    }
 
-        /* ================= MODALE ANTEPRIMA (INVARIATA) ================= */
-        #custom-preview-modal {
-            display: none; 
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 999999;
-            flex-direction: column;
-        }
+    .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .toggle-group input[type="radio"] { display: none; }
+    .toggle-group label {
+        padding: 8px 12px;
+        background-color: white;
+        color: #495057;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid #ced4da;
+        transition: all 0.2s;
+        flex-grow: 1;
+        text-align: center;
+    }
+    .toggle-group input[type="radio"]:checked + label { background-color: #C99700; color: white; border-color: #C99700; }
+    .toggle-group.blue input[type="radio"]:checked + label { background-color: #002d72; border-color: #002d72; color: white; }
 
-        .modal-toolbar {
-            background: #1a1a1a; padding: 15px 25px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10;
-        }
+    hr { border: 0; border-top: 1px solid #e9ecef; margin: 20px 0; }
+    .mt-10 { margin-top: 10px; }
 
-        .modal-toolbar .modal-title { color: #C99700; font-weight: bold; font-size: 18px; }
-        
-        .modal-scroll-area {
-            flex-grow: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px;
-        }
+    .btn-wrapper { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .btn-action {
+        display: block;
+        width: 100%;
+        color: white;
+        border: none;
+        padding: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.3s;
+        text-align: center;
+        font-family: 'Poppins', sans-serif;
+    }
+    .btn-action i { margin-right: 8px; }
+    .btn-pdf { background: #002d72; }
+    .btn-wa { background: #C99700; }
+    .btn-email { background: #28a745; }
 
-        /* ================= MODALE WHATSAPP ================= */
-        #wa-choice-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 999999;
-            align-items: center;
-            justify-content: center;
-        }
+    #custom-preview-modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 999999;
+        flex-direction: column;
+    }
 
-        .wa-modal-box {
-            width: min(92vw, 520px);
-            background: #fff;
-            border-radius: 16px;
-            padding: 28px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
-        }
-        .wa-modal-title {
-            font-size: 22px;
-            font-weight: 800;
-            color: #002d72;
-            margin: 0 0 10px;
-            text-align: center;
-        }
-        .wa-modal-sub {
-            font-size: 14px;
-            color: #666;
-            text-align: center;
-            margin: 0 0 24px;
-            line-height: 1.5;
-        }
-        .wa-modal-buttons { display: grid; gap: 12px; }
-        .wa-option-btn {
-            border: none;
-            border-radius: 12px;
-            padding: 16px 18px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-        }
-        .wa-option-backoffice { background: #002d72; color: #fff; }
-        .wa-option-diretto { background: #C99700; color: #fff; }
-        .wa-option-cancel { background: #e9ecef; color: #333; }
+    .modal-toolbar {
+        background: #1a1a1a;
+        padding: 15px 25px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        z-index: 10;
+    }
 
-        /* ================= LOADING MAIL ================= */
-        #loading-overlay-mail {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            color: white;
-            z-index: 9999999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-        #loading-overlay-mail i { font-size: 42px; color: #C99700; }
+    .modal-toolbar .modal-title { color: #C99700; font-weight: bold; font-size: 18px; }
 
-        /* ================= FOGLIO A4 ================= */
-        #print-sheet {
-            width: 800px;
-            height: 1131px;
-            background: white;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            position: relative;
-            flex-shrink: 0;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            transform-origin: top center;
-        }
+    .modal-scroll-area {
+        flex-grow: 1;
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 40px 20px;
+    }
 
-        .p-sidebar {
-            width: 270px; flex-shrink: 0; background-color: #002d72; color: white; padding: 40px 25px; box-sizing: border-box; display: flex; flex-direction: column; border-right: 5px solid #C99700;
-        }
-        .p-logo { width: 100%; max-width: 170px; margin-bottom: 30px; }
-        .p-side-block { margin-bottom: 25px; }
-        .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
-        .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
-        .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
-        .p-side-item strong { color: white; font-weight: 600; display: block; font-size: 13px; margin-top: 1px; }
-        .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
-        .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
+    #wa-choice-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 999999;
+        align-items: center;
+        justify-content: center;
+    }
 
-        .p-main {
-            width: 530px; flex-shrink: 0; padding: 40px 30px; background-color: white; box-sizing: border-box; display: flex; flex-direction: column;
-        }
+    .wa-modal-box {
+        width: min(92vw, 520px);
+        background: #fff;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .wa-modal-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #002d72;
+        margin: 0 0 10px;
+        text-align: center;
+    }
+    .wa-modal-sub {
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+        margin: 0 0 24px;
+        line-height: 1.5;
+    }
+    .wa-modal-buttons { display: grid; gap: 12px; }
+    .wa-option-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 16px 18px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+    }
+    .wa-option-backoffice { background: #002d72; color: #fff; }
+    .wa-option-diretto { background: #C99700; color: #fff; }
+    .wa-option-cancel { background: #e9ecef; color: #333; }
 
-        .p-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
-        .p-main-title { font-size: 26px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.2; }
-        .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 4px; }
+    #loading-overlay-mail {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        color: white;
+        z-index: 9999999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+    #loading-overlay-mail i { font-size: 42px; color: #C99700; }
 
-        .p-section-title { font-size: 15px; font-weight: 700; color: #002d72; margin: 10px 0 8px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 4px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
-        .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
-        .p-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-        .p-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    #print-sheet {
+        width: 800px;
+        height: 1131px;
+        background: white;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        position: relative;
+        flex-shrink: 0;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        transform-origin: top center;
+    }
 
-        .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
-        .p-card-gold { background: #fffdf5; border: 1px solid #C99700; }
-        .p-card-title { font-size: 12px; font-weight: 700; color: #C99700; margin-bottom: 8px; border-bottom: 1px solid #e9ecef; padding-bottom: 4px; }
-        .p-data-row { display: flex; flex-direction: column; margin-bottom: 8px; }
-        .p-data-row span { font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
-        .p-data-row strong { font-size: 13px; color: #111; font-weight: 600; }
+    .p-sidebar {
+        width: 270px;
+        flex-shrink: 0;
+        background-color: #002d72;
+        color: white;
+        padding: 40px 25px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        border-right: 5px solid #C99700;
+    }
+    .p-logo { width: 100%; max-width: 170px; margin-bottom: 30px; }
+    .p-side-block { margin-bottom: 25px; }
+    .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
+    .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
+    .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
+    .p-side-item strong { color: white; font-weight: 600; display: block; font-size: 13px; margin-top: 1px; }
+    .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
+    .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
 
-        .p-notes-box { min-height: 120px; border: 2px dashed #ccc; background: #fff; border-radius: 8px; margin-top: 5px; }
-        .p-footer { margin-top: auto; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-    </style>
+    .p-main {
+        width: 530px;
+        flex-shrink: 0;
+        padding: 40px 30px;
+        background-color: white;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .p-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+    .p-main-title { font-size: 26px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.2; }
+    .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 4px; }
+
+    .p-section-title { font-size: 15px; font-weight: 700; color: #002d72; margin: 10px 0 8px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 4px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+    .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+    .p-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .p-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+
+    .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
+    .p-card-gold { background: #fffdf5; border: 1px solid #C99700; }
+    .p-card-title { font-size: 12px; font-weight: 700; color: #C99700; margin-bottom: 8px; border-bottom: 1px solid #e9ecef; padding-bottom: 4px; }
+    .p-data-row { display: flex; flex-direction: column; margin-bottom: 8px; }
+    .p-data-row span { font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
+    .p-data-row strong { font-size: 13px; color: #111; font-weight: 600; }
+
+    .p-notes-box { min-height: 120px; border: 2px dashed #ccc; background: #fff; border-radius: 8px; margin-top: 5px; }
+    .p-footer { margin-top: auto; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+
+    @media (max-width: 1000px) {
+        .header { flex-direction: column; align-items: stretch; }
+        .header-box { max-width: 100%; }
+        .logo-area-stack { align-items: center; }
+        .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+</style>
 </head>
 <body>
-
-<div id="emoji-store" style="display:none;"></div>
 
 <div id="custom-preview-modal">
     <div class="modal-toolbar">
         <div class="modal-title" id="modal_title_text"><i class="fas fa-spinner fa-spin"></i> Generazione PDF in corso... Attendere</div>
     </div>
-    
+
     <div class="modal-scroll-area" id="modal_scroll_area">
         <div id="print-sheet">
             <div class="p-sidebar">
@@ -328,7 +406,6 @@
                         <div class="p-data-row"><span>Importo Mutuo</span> <strong id="p_importo" style="font-size:16px; color:#002d72;"></strong></div>
                         <div class="p-data-row"><span>Prezzo Acquisto</span> <strong id="p_comprav"></strong></div>
                         <div class="p-data-row"><span>Valore Immobile</span> <strong id="p_valore"></strong></div>
-
                         <div class="p-data-row"><span>Durata Anni</span> <strong id="p_durata"></strong></div>
                         <div class="p-data-row"><span>Tipologia Tasso</span> <strong id="p_tasso"></strong></div>
                     </div>
@@ -347,7 +424,7 @@
 
 <div id="wa-choice-modal">
     <div class="wa-modal-box">
-        <h2 class="wa-modal-title">Invio WhatsApp</h2>
+        <h2 class="wa-modal-title">💬 Invio WhatsApp</h2>
         <p class="wa-modal-sub">
             Scegli come gestire il messaggio documentale per <strong id="wa_modal_cliente_nome">il cliente</strong>.
         </p>
@@ -371,7 +448,6 @@
 </div>
 
 <div class="app-container" id="app_main_container">
-    
     <div class="header">
         <div class="header-box">
             <span class="ruolo">Referente Consulenza</span>
@@ -527,14 +603,20 @@
                 <div class="form-group">
                     <label>Già titolare di mutuo?</label>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <div class="toggle-group"><input type="radio" id="mutuo_si" name="gia_mutuo" value="Sì"><label for="mutuo_si">Sì</label><input type="radio" id="mutuo_no" name="gia_mutuo" value="No" checked><label for="mutuo_no">No</label></div>
+                        <div class="toggle-group">
+                            <input type="radio" id="mutuo_si" name="gia_mutuo" value="Sì"><label for="mutuo_si">Sì</label>
+                            <input type="radio" id="mutuo_no" name="gia_mutuo" value="No" checked><label for="mutuo_no">No</label>
+                        </div>
                         <input type="text" id="rata_mutuo_pre" placeholder="Rata €">
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Finanziamenti in corso?</label>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <div class="toggle-group"><input type="radio" id="fin_si" name="fin_corso" value="Sì"><label for="fin_si">Sì</label><input type="radio" id="fin_no" name="fin_corso" value="No" checked><label for="fin_no">No</label></div>
+                        <div class="toggle-group">
+                            <input type="radio" id="fin_si" name="fin_corso" value="Sì"><label for="fin_si">Sì</label>
+                            <input type="radio" id="fin_no" name="fin_corso" value="No" checked><label for="fin_no">No</label>
+                        </div>
                         <input type="text" id="rata_fin_pre" placeholder="Rata €">
                     </div>
                 </div>
@@ -610,7 +692,6 @@
 
 <script>
 window.addEventListener('DOMContentLoaded', () => {
-    // --- Memoria Campi ---
     const fields = {
         'campo_referente': 'ref_n',
         'campo_email': 'ref_e',
@@ -630,7 +711,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
 
-    // --- Geolocalizzazione ---
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(function(position) {
             fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
@@ -642,11 +722,32 @@ window.addEventListener('DOMContentLoaded', () => {
         }, function(error) {});
     }
 
-    // --- Helper JS ---
     const e = (hex) => decodeURIComponent(hex);
-    const I = { doc: e('%F0%9F%93%84'), usr: e('%F0%9F%91%A4'), map: e('%F0%9F%93%8D'), grp: e('%F0%9F%91%A5'), phn: e('%F0%9F%93%B1'), mon: e('%F0%9F%92%B0'), brf: e('%F0%9F%92%BC'), eur: e('%F0%9F%92%B6'), rng: e('%F0%9F%92%8D'), fam: e('%F0%9F%91%AA'), bb: e('%F0%9F%91%B6'), ck: e('%F0%9F%8E%82'), hm: e('%F0%9F%8F%A1'), trg: e('%F0%9F%8E%AF'), clk: e('%E2%8F%B3'), up: e('%F0%9F%93%88'), bar: e('%F0%9F%93%8A'), time: e('%F0%9F%95%92') };
+    const I = {
+        doc: e('%F0%9F%93%84'),
+        usr: e('%F0%9F%91%A4'),
+        map: e('%F0%9F%93%8D'),
+        grp: e('%F0%9F%91%A5'),
+        phn: e('%F0%9F%93%B1'),
+        mon: e('%F0%9F%92%B0'),
+        brf: e('%F0%9F%92%BC'),
+        eur: e('%F0%9F%92%B6'),
+        rng: e('%F0%9F%92%8D'),
+        fam: e('%F0%9F%91%AA'),
+        bb: e('%F0%9F%91%B6'),
+        ck: e('%F0%9F%8E%82'),
+        hm: e('%F0%9F%8F%A1'),
+        trg: e('%F0%9F%8E%AF'),
+        clk: e('%E2%8F%B3'),
+        up: e('%F0%9F%93%88'),
+        bar: e('%F0%9F%93%8A'),
+        time: e('%F0%9F%95%92')
+    };
 
-    const getR = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : "N/D"; };
+    const getR = (name) => {
+        const el = document.querySelector(`input[name="${name}"]:checked`);
+        return el ? el.value : "N/D";
+    };
 
     const formatNum = (val) => {
         if (!val || val === "-" || String(val).trim() === "") return val;
@@ -658,9 +759,22 @@ window.addEventListener('DOMContentLoaded', () => {
         return parts.length > 1 ? formattedInt + ',' + parts[1] : formattedInt;
     };
 
-    const V = (id, fallback = "-") => { const el = document.getElementById(id); if (!el) return fallback; const value = (el.value || "").trim(); return value !== "" ? value : fallback; };
-    const S = (name, fallback = "-") => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : fallback; };
-    const setPrint = (id, value) => { const el = document.getElementById(id); if (el) el.innerHTML = value || "-"; };
+    const V = (id, fallback = "-") => {
+        const el = document.getElementById(id);
+        if (!el) return fallback;
+        const value = (el.value || "").trim();
+        return value !== "" ? value : fallback;
+    };
+
+    const S = (name, fallback = "-") => {
+        const el = document.querySelector(`input[name="${name}"]:checked`);
+        return el ? el.value : fallback;
+    };
+
+    const setPrint = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = value || "-";
+    };
 
     function normalizePhone(raw) {
         let s = String(raw || '').replace(/\D/g, '');
@@ -669,7 +783,421 @@ window.addEventListener('DOMContentLoaded', () => {
         return '39' + s;
     }
 
-    // --- Listener per lo slot Custom della Mediazione ---
+    function getClientFirstName(fullName) {
+        const cleaned = String(fullName || '').trim();
+        if (!cleaned) return 'Cliente';
+        return cleaned.split(/\s+/)[0];
+    }
+
+    function hasSecondApplicant() {
+        return V('cliente2_nome', '') !== '-';
+    }
+
+    function hasDipendente() {
+        const types = [getR('lav1'), getR('lav2')];
+        return types.includes('INDETERMINATO') || types.includes('DETERMINATO') || types.includes('STATALE');
+    }
+
+    function hasAutonomo() {
+        const types = [getR('lav1'), getR('lav2')];
+        return types.includes('AUTONOMO');
+    }
+
+    function buildChecklistMessage() {
+        const fullName = V('cliente_nome', '');
+        const firstName = getClientFirstName(fullName);
+        const stato = getR('stato');
+        const finalita = getR('fin');
+        const secondApplicant = hasSecondApplicant();
+        const loans = getR('fin_corso') === 'Sì';
+        const mortgage = getR('gia_mutuo') === 'Sì';
+
+        let msg = `Ciao ${firstName} 😊\n\n`;
+        msg += `✉️ *CHECKLIST DOCUMENTALE*`;
+        if (finalita === 'VOUCHER') {
+            msg += ` – *VOUCHER / PREDELIBERA*`;
+        } else if (finalita !== 'N/D') {
+            msg += ` – *${finalita}*`;
+        }
+        msg += `\n\n`;
+        msg += `Come da accordi, ti invio la lista dei documenti necessari per procedere con la pratica`;
+        msg += secondApplicant ? ` per te e, se previsto, per il coobbligato 👇\n\n` : ` 👇\n\n`;
+
+        msg += `👤 *ANAGRAFICA*\n`;
+        msg += `• 🪪 Carta d’Identità (fronte/retro) in corso di validità\n`;
+        msg += `• 💳 Tessera Sanitaria (fronte/retro) in corso di validità\n`;
+        msg += `• 🏠 Certificato Cumulativo (Residenza e Stato di Famiglia)\n`;
+        if (stato === 'SEPARAZIONE') {
+            msg += `• 💍 Atto di matrimonio (solo se coniugato con separazione dei beni)\n`;
+        }
+        msg += `\n`;
+
+        if (hasDipendente()) {
+            msg += `💼 *REDDITI DIPENDENTI*\n`;
+            msg += `• 📄 Ultime 2 buste paga\n`;
+            msg += `• 📜 Ultimo CUD / CU disponibile\n`;
+            msg += `• 🏦 Estratto conto trimestrale\n`;
+            msg += `• 📊 Lista movimenti aggiornata con saldo iniziale e finale\n`;
+            msg += `• 📃 Contratto di lavoro o attestazione di servizio\n\n`;
+        }
+
+        if (hasAutonomo()) {
+            msg += `🧾 *REDDITI AUTONOMO / LIBERO PROFESSIONISTA*\n`;
+            msg += `• 🧾 Ultimi 2 Modelli Redditi / Unici\n`;
+            msg += `• 📤 Ricevute di trasmissione telematica\n`;
+            msg += `• 💰 Ultimi F24 versati\n`;
+            msg += `• 🏦 Estratti conto trimestrali\n`;
+            msg += `• 📊 Lista movimenti aggiornata con saldo iniziale e finale\n`;
+            msg += `• 📎 Visura Camerale aggiornata\n`;
+            msg += `• 💼 Contratti o parcelle principali\n\n`;
+        }
+
+        if (finalita !== 'VOUCHER') {
+            msg += `🏠 *DOCUMENTAZIONE IMMOBILIARE*\n`;
+            msg += `• 🧱 Atto di provenienza dell’immobile\n`;
+            msg += `• 📐 Planimetria catastale e visura aggiornata\n`;
+            msg += `• 🧾 Concessione edilizia / agibilità\n`;
+
+            if (finalita === 'ACQUISTO') {
+                msg += `• ✍️ Preliminare di compravendita o proposta accettata\n`;
+            }
+
+            if (finalita === 'SURROGA' || mortgage) {
+                msg += `• 📄 Atto di mutuo\n`;
+            }
+
+            msg += `\n`;
+        }
+
+        msg += `💳 *ALTRI DOCUMENTI*\n`;
+        if (loans) {
+            msg += `• 📋 Contratti finanziamenti in corso\n`;
+            msg += `• 📆 Conteggi estintivi aggiornati\n`;
+        }
+        msg += `• 🌐 CTC online (accesso tramite SPID)\n`;
+        msg += `  👉 https://www.ctconline.it\n\n`;
+
+        msg += `📝 *NOTA IMPORTANTE*\n`;
+        msg += `Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti (personali, aziendali e cointestati).\n`;
+        msg += `Devono risultare i saldi iniziali e finali per ogni periodo.\n\n`;
+
+        msg += `Per qualsiasi dubbio o supporto resto a disposizione 👋`;
+
+        return msg;
+    }
+
+    function buildBackofficeMessage() {
+        const clientName = V('cliente_nome', '');
+        const clientPhone = normalizePhone(V('cliente_cell', ''));
+        const referente = V('campo_referente', '');
+        const finalita = getR('fin');
+        const checklistMessage = buildChecklistMessage();
+        const waDirectLink = `https://wa.me/${clientPhone}?text=${encodeURIComponent(checklistMessage)}`;
+
+        let msg = `📥 *RICHIESTA INVIO DOCUMENTALE*\n\n`;
+        msg += `👤 Cliente: ${clientName}\n`;
+        msg += `📱 Numero cliente: ${clientPhone}\n`;
+        msg += `🤝 Referente: ${referente}\n`;
+        msg += `🎯 Finalità: ${finalita}\n\n`;
+        msg += `🔗 *Link diretto WhatsApp da inviare al cliente:*\n${waDirectLink}\n\n`;
+        msg += `🕒 Generato il: ${new Date().toLocaleString('it-IT')}`;
+
+        return msg;
+    }
+
+    function buildEmailHtml() {
+        const nome1 = V('cliente_nome', 'Cliente');
+        const email1 = V('cliente_email', '-');
+        const cell1 = V('cliente_cell', '-');
+
+        const nome2 = V('cliente2_nome', '-');
+        const email2 = V('cliente2_email', '-');
+        const cell2 = V('cliente2_cell', '-');
+
+        const luogo = V('campo_luogo', '-');
+        const data = V('campo_data', '-');
+        const referente = V('campo_referente', '-');
+        const refEmail = V('campo_email', 'pietro.loiacono@credipass.it');
+        const refCell = V('campo_cellulare', '3925701385');
+
+        const lav1 = S('lav1', '-');
+        const redd1 = formatNum(V('cliente_reddito', '0')) + ' €';
+
+        const lav2 = S('lav2', '-');
+        const redd2raw = V('cliente2_reddito', '');
+        const redd2 = redd2raw && redd2raw !== '-' ? (formatNum(redd2raw) + ' €') : '-';
+
+        const stato = S('stato', '-');
+        const componenti = V('num_componenti', '0');
+        const assegno = S('assegno', 'No') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : '');
+        const figli = [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(v => v !== '-').join(', ') || '-';
+
+        const finalita = S('fin', '-');
+        const prodotto = S('prodotto', '-');
+        const comprav = formatNum(V('mutuo_compravendita', '0')) + ' €';
+        const valore = formatNum(V('immobile_valore', '0')) + ' €';
+        const importo = formatNum(V('mutuo_importo', '0')) + ' €';
+        const durata = V('mutuo_durata', '0') + ' Anni';
+        const tasso = S('tasso', '-');
+
+        const mutuoCorso = S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : '');
+        const finanziamenti = S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : '');
+
+        const tipoInc = V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna';
+        const impInc = V('importo_incendio') !== '-' ? V('importo_incendio') : '-';
+        const tipoVita = V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna';
+        const impVita = V('importo_vita') !== '-' ? V('importo_vita') : '-';
+
+        const istr = formatNum(V('istr_banca', '0')) + ' €';
+        const perizia = formatNum(V('perizia_costo', '0')) + ' €';
+        const imposta = S('imposta', '-');
+
+        let mediazione = S('mediazione', '-');
+        if (mediazione === 'Altro') {
+            const customMed = V('mediazione_custom', '');
+            mediazione = (customMed && customMed !== '-') ? customMed : 'Da definire';
+        }
+
+        const note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
+
+        const safe = (txt) =>
+            String(txt || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+        const noteHtml = safe(note).replace(/\n/g, '<br>');
+        const figliHtml = safe(figli);
+
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riepilogo Scheda Consulenza - Credipass</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: Arial, Helvetica, sans-serif;">
+
+<table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 10px;">
+    <tr>
+        <td align="center">
+            
+            <table width="600" bgcolor="#ffffff" cellpadding="0" cellspacing="0" border="0" style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
+                
+                <tr>
+                    <td bgcolor="#002d72" align="center" style="padding: 30px 20px; border-bottom: 4px solid #C99700;">
+                        <img src="https://i.postimg.cc/hjX28x4r/Logo-Credipass-Negativo-per-Web.png" alt="Credipass" width="200" style="display: block; border: 0;">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 30px 30px 10px 30px;">
+                        <h1 style="color: #002d72; font-size: 22px; margin: 0 0 15px 0;">Scheda di Consulenza</h1>
+                        <p style="color: #555555; font-size: 15px; line-height: 1.5; margin: 0;">
+                            Gentile <strong>${safe(nome1)}</strong>,<br>
+                            di seguito riportiamo il riepilogo dettagliato dei dati emersi durante la nostra consulenza del <strong>${safe(data)}</strong> a <strong>${safe(luogo)}</strong>.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="border-bottom: 2px solid #C99700; padding-bottom: 5px;">
+                                    <h2 style="color: #002d72; font-size: 16px; margin: 0; text-transform: uppercase;">1. Anagrafica e Reddito</h2>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top: 10px;">
+                                    <table width="100%" cellpadding="5" cellspacing="0" border="0" style="font-size: 14px; color: #333; margin-bottom: 10px; background-color: #f8f9fa; border-radius: 6px; padding: 10px;">
+                                        <tr><td colspan="2"><strong style="color: #002d72; font-size: 12px; text-transform: uppercase;">1° Richiedente</strong></td></tr>
+                                        <tr>
+                                            <td width="40%" style="color: #666;">Nominativo:</td>
+                                            <td width="60%"><strong>${safe(nome1)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #666;">Contatti:</td>
+                                            <td><strong>${safe(cell1)} | ${safe(email1)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #666;">Professione:</td>
+                                            <td><strong>${safe(lav1)} (${safe(redd1)})</strong></td>
+                                        </tr>
+                                    </table>
+
+                                    <table width="100%" cellpadding="5" cellspacing="0" border="0" style="font-size: 14px; color: #333; background-color: #f8f9fa; border-radius: 6px; padding: 10px;">
+                                        <tr><td colspan="2"><strong style="color: #002d72; font-size: 12px; text-transform: uppercase;">2° Richiedente</strong></td></tr>
+                                        <tr>
+                                            <td width="40%" style="color: #666;">Nominativo:</td>
+                                            <td width="60%"><strong>${safe(nome2)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #666;">Contatti:</td>
+                                            <td><strong>${safe(cell2)} | ${safe(email2)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #666;">Professione:</td>
+                                            <td><strong>${safe(lav2)} (${safe(redd2)})</strong></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="border-bottom: 2px solid #C99700; padding-bottom: 5px;">
+                                    <h2 style="color: #002d72; font-size: 16px; margin: 0; text-transform: uppercase;">2. Famiglia e Stato Civile</h2>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top: 10px;">
+                                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 14px; color: #333;">
+                                        <tr>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Stato Civile:</span><br><strong>${safe(stato)}</strong></td>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Componenti Nucleo:</span><br><strong>${safe(componenti)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Età Figli:</span><br><strong>${figliHtml}</strong></td>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Assegno Unico:</span><br><strong>${safe(assegno)}</strong></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fffdf5; border: 1px solid #C99700; border-radius: 8px;">
+                            <tr>
+                                <td style="padding: 15px;">
+                                    <h2 style="color: #C99700; font-size: 16px; margin: 0 0 10px 0; text-transform: uppercase; border-bottom: 1px solid rgba(201, 151, 0, 0.3); padding-bottom: 5px;">3. Dettagli Mutuo</h2>
+                                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 14px; color: #333;">
+                                        <tr>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Finalità:</span><br><strong>${safe(finalita)}</strong></td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Prodotto:</span><br><strong>${safe(prodotto)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Prezzo Acquisto:</span><br><strong>${safe(comprav)}</strong></td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Valore Immobile:</span><br><strong>${safe(valore)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Importo Mutuo:</span><br><strong style="font-size: 18px; color: #002d72;">${safe(importo)}</strong></td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Durata e Tasso:</span><br><strong>${safe(durata)} - ${safe(tasso)}</strong></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="border-bottom: 2px solid #C99700; padding-bottom: 5px;">
+                                    <h2 style="color: #002d72; font-size: 16px; margin: 0; text-transform: uppercase;">4. Impegni, Polizze e Costi</h2>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top: 10px;">
+                                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 13px; color: #333;">
+                                        <tr>
+                                            <td width="60%" style="border-bottom: 1px solid #eee; color: #666;">Mutuo in corso:</td>
+                                            <td width="40%" style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mutuoCorso)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong><br><span style="font-size:11px;">${safe(impInc)}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Polizza Vita:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong><br><span style="font-size:11px;">${safe(impVita)}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid #eee; color: #666;">Certificazione Documentale:</td>
+                                            <td style="border-bottom: 1px solid #eee;" align="right"><strong>76,00 € per richiedente</strong></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px;">
+                            <tr>
+                                <td style="padding: 15px; font-size: 13px; color: #555; font-style: italic;">
+                                    <strong style="color: #333; font-style: normal;">Note Aggiuntive:</strong><br><br>
+                                    ${noteHtml}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td bgcolor="#002d72" style="padding: 30px; margin-top: 20px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td width="65%" style="color: #ffffff; font-size: 13px; line-height: 1.5;">
+                                    <strong style="font-size: 16px; color: #C99700;">${safe(referente)}</strong><br>
+                                    <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a9b5c7;">Referente Consulenza Credipass</span><br><br>
+                                    <a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">✉️ ${safe(refEmail)}</a><br>
+                                    <a href="tel:+39${safe(refCell)}" style="color: #ffffff; text-decoration: none;">📞 +39 ${safe(refCell)}</a>
+                                </td>
+                                <td width="35%" align="right" valign="middle">
+                                    <img src="https://i.postimg.cc/rF7M5C8j/Logo-Oro-20-anni-Credipass.png" alt="20 Anni" width="100" style="display: block; border: 0;">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+            </table>
+            
+            <p style="text-align: center; color: #999999; font-size: 11px; margin-top: 15px;">
+                Le informazioni contenute in questo riepilogo sono strettamente riservate.<br>Generato dal sistema Credipass.
+            </p>
+            
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
+`;
+    }
+
     const medCustom = document.getElementById('mediazione_custom');
     const medAltroRadio = document.getElementById('med_altro');
     if (medCustom && medAltroRadio) {
@@ -677,17 +1205,16 @@ window.addEventListener('DOMContentLoaded', () => {
         medCustom.addEventListener('input', () => { medAltroRadio.checked = true; });
     }
 
-    // --- LOGICA DI SALVATAGGIO TASTO 1 (ORIGINALE INTATTA) ---
     function adjustPreviewScale() {
         const wrapper = document.getElementById('modal_scroll_area');
         const sheet = document.getElementById('print-sheet');
         if(!wrapper || !sheet) return;
-        
+
         const availableWidth = wrapper.clientWidth - 40;
         if (availableWidth < 800) {
             const scale = availableWidth / 800;
             sheet.style.transform = `scale(${scale})`;
-            sheet.style.marginBottom = `-${1131 * (1 - scale)}px`; 
+            sheet.style.marginBottom = `-${1131 * (1 - scale)}px`;
         } else {
             sheet.style.transform = 'none';
             sheet.style.marginBottom = '0';
@@ -699,7 +1226,6 @@ window.addEventListener('DOMContentLoaded', () => {
         let includeNotes = confirm("Vuoi stampare anche le Note della consulenza nel PDF?\n\n- Clicca OK per includerle.\n- Clicca ANNULLA per ometterle.");
         document.getElementById('p_note_block').style.display = includeNotes ? 'block' : 'none';
 
-        // Popola Dati
         setPrint('p_referente', V('campo_referente'));
         setPrint('p_luogo', V('campo_luogo'));
         setPrint('p_data', V('campo_data'));
@@ -759,7 +1285,7 @@ window.addEventListener('DOMContentLoaded', () => {
         setTimeout(async () => {
             const sheet = document.getElementById('print-sheet');
             const scrollArea = document.getElementById('modal_scroll_area');
-            
+
             sheet.style.transform = 'none';
             sheet.style.marginBottom = '0';
             scrollArea.scrollTop = 0;
@@ -782,10 +1308,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
             }
-        }, 1500); 
+        }, 1500);
     });
 
-    // --- TASTO 2: SCELTA BACK OFFICE / DIRETTO ---
     function openWaChoiceModal() {
         const nomeCliente = V('cliente_nome', 'il cliente');
         document.getElementById('wa_modal_cliente_nome').textContent = nomeCliente;
@@ -796,75 +1321,21 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wa-choice-modal').style.display = 'none';
     }
 
-    function buildSchedaMessaggio(destPhone) {
-        const nome = document.getElementById('cliente_nome').value.trim();
-        const cell = document.getElementById('cliente_cell').value.trim();
-        const nome2 = document.getElementById('cliente2_nome').value.trim();
-        const cell2 = document.getElementById('cliente2_cell').value.trim();
-        const ref = document.getElementById('campo_referente').value.trim();
-        const loc = document.getElementById('campo_luogo').value.trim();
-
-        const r1 = document.getElementById('cliente_reddito').value || '0';
-        const r2 = document.getElementById('cliente2_reddito').value || '0';
-        const nC = document.getElementById('num_componenti').value || '0';
-        const aI = document.getElementById('assegno_importo').value || '0';
-        const f1 = document.getElementById('eta_f1').value || '0';
-        const f2 = document.getElementById('eta_f2').value || '0';
-        const f3 = document.getElementById('eta_f3').value || '0';
-        const mI = document.getElementById('mutuo_importo').value || '0';
-        const mC = document.getElementById('mutuo_compravendita').value || '0';
-        const vI = document.getElementById('immobile_valore').value || '0';
-        const dur = document.getElementById('mutuo_durata').value || '0';
-
-        let m = `${I.doc} SCHEDA CONSULENZA CREDIPASS\n\n`;
-        m += `${I.usr} Referente: ${ref}\n`;
-        m += `${I.map} Luogo: ${loc}\n\n`;
-        m += `${I.grp} CLIENTI:\n\n`;
-        m += `${I.usr} 1°: ${nome} (${I.phn} ${cell})\n`;
-        if (nome2) {
-            m += `${I.usr} 2°: ${nome2}`;
-            if (cell2) m += ` (${I.phn} ${cell2})`;
-            m += `\n`;
-        }
-
-        m += `\n${I.mon} REDDITO E FAMIGLIA:\n\n`;
-        m += `${I.brf} Contratto 1: ${getR('lav1')} (${I.eur} ${r1} €)\n`;
-        if (r2 !== '0') m += `${I.brf} Contratto 2: ${getR('lav2')} (${I.eur} ${r2} €)\n`;
-        m += `${I.rng} Stato Civile: ${getR('stato')}\n`;
-        m += `${I.fam} Nucleo: ${nC} pers. | ${I.bb} Assegno Unico: ${getR('assegno')} (${I.eur} ${aI} €)\n`;
-        m += `${I.ck} Età Figli: ${f1}, ${f2}, ${f3}\n`;
-
-        m += `\n${I.hm} DETTAGLI MUTUO:\n\n`;
-        m += `${I.trg} Finalità: ${getR('fin')}\n`;
-        m += `${I.eur} Importo: ${mI} € | ${I.mon} Prezzo: ${mC} €\n`;
-        m += `${I.hm} Valore Immobile: ${vI} €\n`;
-        m += `${I.clk} Durata: ${dur} anni | ${I.up} Tasso: ${getR('tasso')}\n`;
-        m += `${I.bar} Prodotto: ${getR('prodotto')}\n\n`;
-        m += `${I.time} _Inviato il: ${new Date().toLocaleString('it-IT')}_`;
-
-        return `https://wa.me/${destPhone}?text=${encodeURIComponent(m)}`;
-    }
-
     function sendWhatsAppBackoffice() {
         const nome = document.getElementById('cliente_nome').value.trim();
         const cell = normalizePhone(document.getElementById('cliente_cell').value.trim());
         const dest = normalizePhone(document.getElementById('campo_wa_auto').value.trim());
 
-        if (!nome || !cell) { alert('Inserisci Nome e Cellulare del cliente prima di procedere.'); return; }
-        if (!dest) { alert("Inserisci il numero WhatsApp di automazione nell'intestazione."); return; }
+        if (!nome || !cell) {
+            alert('Inserisci Nome e Cellulare del cliente prima di procedere.');
+            return;
+        }
+        if (!dest) {
+            alert("Inserisci il numero WhatsApp di automazione nell'intestazione.");
+            return;
+        }
 
-        const linkCliente = buildSchedaMessaggio(cell);
-        const ref = document.getElementById('campo_referente').value.trim();
-        const finalita = getR('fin');
-
-        let backofficeMsg = `RICHIESTA INVIO DOCUMENTALE\n\n`;
-        backofficeMsg += `Cliente: ${nome}\n`;
-        backofficeMsg += `Numero cliente: ${cell}\n`;
-        backofficeMsg += `Referente: ${ref}\n`;
-        backofficeMsg += `Finalità: ${finalita}\n\n`;
-        backofficeMsg += `Link diretto WhatsApp da inviare al cliente:\n${linkCliente}\n\n`;
-        backofficeMsg += `Generato il: ${new Date().toLocaleString('it-IT')}`;
-
+        const backofficeMsg = buildBackofficeMessage();
         window.open(`https://wa.me/${dest}?text=${encodeURIComponent(backofficeMsg)}`, '_blank');
         closeWaChoiceModal();
     }
@@ -873,10 +1344,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const nome = document.getElementById('cliente_nome').value.trim();
         const cell = normalizePhone(document.getElementById('cliente_cell').value.trim());
 
-        if (!nome || !cell) { alert('Inserisci Nome e Cellulare del cliente prima di procedere.'); return; }
+        if (!nome || !cell) {
+            alert('Inserisci Nome e Cellulare del cliente prima di procedere.');
+            return;
+        }
 
-        const directUrl = buildSchedaMessaggio(cell);
-        window.open(directUrl, '_blank');
+        const checklistMessage = buildChecklistMessage();
+        window.open(`https://wa.me/${cell}?text=${encodeURIComponent(checklistMessage)}`, '_blank');
         closeWaChoiceModal();
     }
 
@@ -897,7 +1371,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (ev.target.id === 'wa-choice-modal') closeWaChoiceModal();
     });
 
-    // --- TASTO 3 NUOVO (EMAIL + CONDIVISIONE) ---
     document.getElementById('btn_email').addEventListener('click', async () => {
         let m1 = V('cliente_email', '');
         let m2 = V('cliente2_email', '');
@@ -906,18 +1379,22 @@ window.addEventListener('DOMContentLoaded', () => {
         let toList = [m1, m2].filter(m => m !== '' && m !== '-').join(',');
         let bccList = (mAuto !== '' && mAuto !== '-') ? mAuto : '';
 
-        let subjectStr = "Scheda Consulenza Credipass - " + V('cliente_nome', '');
+        let clienteNome = V('cliente_nome', 'Cliente');
+        let subjectStr = "Scheda Consulenza Credipass - " + clienteNome;
         let bodyStr = "Buongiorno,\n\nin allegato trovate la scheda di consulenza in formato PDF con i dettagli riepilogativi della pratica.\n\nResto a disposizione per qualsiasi necessità.\n\nCordiali saluti.";
 
-        // 1. Copia indirizzi
         try {
             const allEmails = [toList, bccList].filter(Boolean).join(' ');
             await navigator.clipboard.writeText(allEmails);
         } catch (err) {}
 
-        let includeNotes = confirm("ATTENZIONE:\nGli indirizzi email sono stati copiati negli appunti.\n\nVuoi includere le Note della consulenza nel PDF che verrà allegato?");
-        
-        // 2. Popola Dati
+        let includeNotes = confirm(
+            "ATTENZIONE:\n" +
+            "Gli indirizzi email sono stati copiati negli appunti.\n\n" +
+            "Dopo l'apertura di Gmail, clicca nel corpo del messaggio e incolla con CTRL+V.\n\n" +
+            "Vuoi includere le Note della consulenza nel PDF che verrà allegato?"
+        );
+
         document.getElementById('p_note_block').style.display = includeNotes ? 'block' : 'none';
         setPrint('p_referente', V('campo_referente'));
         setPrint('p_luogo', V('campo_luogo'));
@@ -931,7 +1408,7 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_istr', formatNum(V('istr_banca', '0')) + ' €');
         setPrint('p_perizia', formatNum(V('perizia_costo', '0')) + ' €');
         setPrint('p_imposta', S('imposta'));
-        
+
         let valMediazione = S('mediazione');
         if (valMediazione === 'Altro') {
             let customMed = V('mediazione_custom', '');
@@ -952,6 +1429,7 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_lav2', S('lav2', '-'));
         let redd2 = formatNum(V('cliente2_reddito', ''));
         setPrint('p_redd2', redd2 ? redd2 + ' €' : '-');
+
         let nome1 = V('cliente_nome', '');
         let nome2 = V('cliente2_nome', '');
         let titoliNomi = nome1 + (nome2 !== '' && nome2 !== '-' ? ' e ' + nome2 : '');
@@ -983,19 +1461,47 @@ window.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
+                const htmlBody = buildEmailHtml();
+
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({
+                            "text/html": new Blob([htmlBody], { type: "text/html" }),
+                            "text/plain": new Blob([htmlBody.replace(/<[^>]*>/g, '')], { type: "text/plain" })
+                        })
+                    ]);
+                } catch (clipErr) {
+                    await navigator.clipboard.writeText(htmlBody);
+                }
+
                 const pdfBlob = await html2pdf().set(opt).from(sheet).output('blob');
                 const file = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: subjectStr,
-                        text: 'Incolla gli indirizzi email appena copiati nel campo A e CCN.'
-                    });
-                } else {
-                    html2pdf().set(opt).from(sheet).save();
-                    window.location.href = `mailto:?subject=${encodeURIComponent(subjectStr)}&body=${encodeURIComponent(bodyStr)}`;
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: subjectStr,
+                            text: 'Apri Gmail e incolla il corpo HTML nel messaggio con CTRL+V.'
+                        });
+                    } catch (shareErr) {}
                 }
+
+                const gmailUrl =
+                    `https://mail.google.com/mail/?view=cm&fs=1` +
+                    `&to=${encodeURIComponent(toList)}` +
+                    `&bcc=${encodeURIComponent(bccList)}` +
+                    `&su=${encodeURIComponent(subjectStr)}`;
+
+                window.open(gmailUrl, '_blank');
+
+                alert(
+                    "Gmail è stato aperto.\n\n" +
+                    "1. Clicca nel corpo del messaggio\n" +
+                    "2. Premi CTRL+V per incollare l'email grafica\n" +
+                    "3. Allega il PDF appena generato se necessario"
+                );
+
             } catch (err) {
                 html2pdf().set(opt).from(sheet).save();
                 window.location.href = `mailto:?subject=${encodeURIComponent(subjectStr)}&body=${encodeURIComponent(bodyStr)}`;
@@ -1005,26 +1511,39 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     });
 
-    // --- POLIZZE ---
-    const setupPol = (id, target) => {
+    const setupPol = (id, target, type) => {
         document.getElementById(id).addEventListener('change', function() {
             const sel = document.getElementById(target);
             sel.innerHTML = '';
-            const opts = {
-                'Banca': ["Da verificare"],
-                'Premio Rateizzato': ["€ 100.000 (€ 25,61 X 72 MESI)", "€ 150.000 (€ 28,91 X 72 MESI)", "€ 200.000 (€ 34,30 X 72 MESI)"],
-                'Premio Totale': ["€ 100.000 (€ 1.280,00)", "€ 150.000 (€ 1.445,00)", "€ 200.000 (€ 1.714,00)"],
-                'No Polizza': [" "]
-            };
+            let opts = {};
+
+            if (type === 'incendio') {
+                opts = {
+                    'Banca': ["Da verificare"],
+                    'Premio Rateizzato': ["€ 100.000 (€ 25,61 X 72 MESI)", "€ 150.000 (€ 28,91 X 72 MESI)", "€ 200.000 (€ 34,30 X 72 MESI)"],
+                    'Premio Totale': ["€ 100.000 (€ 1.280,00)", "€ 150.000 (€ 1.445,00)", "€ 200.000 (€ 1.714,00)"]
+                };
+            } else {
+                opts = {
+                    'No Polizza': [" "],
+                    'Banca': ["Da verificare"],
+                    'Premio Rateizzato': ["€ 150.000 (€ 41,00 x 72 Mesi)", "€ 100.000 (€ 35,00 x 72 Mesi)", "€ 50.000 (€ 20,00 x 72 Mesi)"],
+                    'Premio Totale': ["€ 50.000 (€ 1.000)", "€ 100.000 (€ 1.750)", "€ 150.000 (€ 2.050)"]
+                };
+            }
+
             (opts[this.value] || [" "]).forEach(o => {
                 const el = document.createElement('option');
-                el.text = o; el.value = o; sel.add(el);
+                el.text = o;
+                el.value = o;
+                sel.add(el);
             });
             sel.value = opts[this.value] ? opts[this.value][0] : " ";
         });
     };
-    setupPol('tipo_incendio', 'importo_incendio');
-    setupPol('tipo_vita', 'importo_vita');
+
+    setupPol('tipo_incendio', 'importo_incendio', 'incendio');
+    setupPol('tipo_vita', 'importo_vita', 'vita');
 });
 </script>
 </body>
