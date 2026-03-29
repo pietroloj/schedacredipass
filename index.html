@@ -247,12 +247,13 @@
         transform-origin: top center;
     }
 
+    /* RIDOTTO IL PADDING PER FARCI STARE LA FOTO SENZA SCHIACCIARE */
     .p-sidebar {
         width: 270px;
         flex-shrink: 0;
         background-color: #002d72;
         color: white;
-        padding: 40px 25px;
+        padding: 30px 25px;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
@@ -315,8 +316,8 @@
             <div class="p-sidebar">
                 <img src="/images/logo-credipass.png" class="p-logo" alt="Credipass" crossorigin="anonymous">
 
-                <div id="p_foto_container" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; margin-bottom: 25px; display: none;">
-                    <img id="p_referente_foto" src="" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous">
+                <div id="p_foto_container" style="width: 100px; height: 100px; min-width: 100px; min-height: 100px; flex-shrink: 0; align-self: center; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; margin-bottom: 20px; display: none; background-color: #fff;">
+                    <img id="p_referente_foto" src="" style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous">
                 </div>
 
                 <div class="p-side-block">
@@ -768,6 +769,18 @@ window.slugifyCredipassPart = function(text) {
         .replace(/-+/g, '-');
 }
 
+window.blobToBase64 = function(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64data = reader.result.split(',')[1];
+            resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
 window.loadCredipassReferentePhoto = async function() {
     const provincia = document.getElementById('ref_provincia')?.value || '';
     const nome = document.getElementById('ref_nome')?.value || '';
@@ -789,24 +802,32 @@ window.loadCredipassReferentePhoto = async function() {
             return;
         }
 
+        // Fetching dell'immagine via proxy per convertire in base64 ed evitare il blocco CORS sul PDF
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(data.imageUrl)}`;
+        const imgRes = await fetch(proxyUrl);
+        const imgBlob = await imgRes.blob();
+        const base64 = await window.blobToBase64(imgBlob);
+        
+        // Costruiamo il Data URI corretto
+        const base64Url = `data:${imgBlob.type};base64,${base64}`;
+
         const img = document.getElementById('referente_foto_preview');
         const placeholder = document.getElementById('referente_foto_placeholder');
         
         if (img) {
-            img.src = data.imageUrl;
+            img.src = base64Url;
             img.style.display = 'block';
             if(placeholder) placeholder.style.display = 'none';
             
-            // Salva in memoria per i prossimi utilizzi!
-            localStorage.setItem('ref_foto_url_salvata', data.imageUrl);
+            // Salva in memoria
+            localStorage.setItem('ref_foto_url_salvata', base64Url);
         }
     } catch(err) {
-        alert("Errore di connessione: " + err.message);
+        alert("Errore di connessione per scaricare la foto: " + err.message);
     }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // Ricarica la foto se era già stata salvata
     const savedFoto = localStorage.getItem('ref_foto_url_salvata');
     if (savedFoto) {
         const img = document.getElementById('referente_foto_preview');
@@ -921,18 +942,6 @@ window.addEventListener('DOMContentLoaded', () => {
     function hasAutonomo() {
         const types = [getR('lav1'), getR('lav2')];
         return types.includes('AUTONOMO');
-    }
-
-    function blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result.split(',')[1];
-                resolve(base64data);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
     }
 
     function buildChecklistMessage() {
@@ -1473,6 +1482,9 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', adjustPreviewScale);
 
     document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
+        // Obbliga la finestra a tornare in alto per evitare che html2canvas "tagli" l'immagine del PDF
+        window.scrollTo(0, 0);
+
         document.getElementById('p_note_block').style.display = 'block';
 
         setPrint('p_referente', V('campo_referente'));
@@ -1545,17 +1557,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('app_main_container').style.display = 'none';
         document.getElementById('custom-preview-modal').style.display = 'flex';
-        adjustPreviewScale();
+        
+        const sheet = document.getElementById('print-sheet');
+        const scrollArea = document.getElementById('modal_scroll_area');
+        
+        // Posizionamento temporaneo assoluto per evitare bug di html2canvas sullo scroll
+        sheet.style.position = 'absolute';
+        sheet.style.top = '0';
+        sheet.style.left = '0';
+        sheet.style.transform = 'none';
+        sheet.style.marginBottom = '0';
 
         setTimeout(async () => {
-            const sheet = document.getElementById('print-sheet');
-            const scrollArea = document.getElementById('modal_scroll_area');
-
-            sheet.style.transform = 'none';
-            sheet.style.marginBottom = '0';
-            scrollArea.scrollTop = 0;
-            scrollArea.scrollLeft = 0;
-
             const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
             const opt = {
                 margin: 0,
@@ -1568,6 +1581,10 @@ window.addEventListener('DOMContentLoaded', () => {
                     logging: false,
                     width: 800,
                     height: 1131,
+                    windowWidth: 800,
+                    windowHeight: 1131,
+                    x: 0,
+                    y: 0,
                     scrollX: 0,
                     scrollY: 0
                 },
@@ -1590,8 +1607,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const clienteNome = V('cliente_nome', 'Cliente');
                     const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
                     
-                    // Corpo mail totalmente vuoto: solo il file allegato e l'oggetto
-                    const htmlBody = "";
+                    const htmlBody = "<br>";
 
                     const response = await fetch('/api/send-email', {
                         method: 'POST',
@@ -1623,8 +1639,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert("Errore nella generazione del PDF o nell'invio email: " + err.message);
             } finally {
+                sheet.style.position = 'relative'; // Ripristina layout
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
+                adjustPreviewScale();
             }
         }, 1500);
     });
