@@ -427,6 +427,21 @@
     </div>
 </div>
 
+<div id="email-notes-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center;">
+    <div class="wa-modal-box">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://i.postimg.cc/hjX28x4r/Logo-Credipass-Negativo-per-Web.png" alt="Credipass" style="width: 140px; background: #002d72; padding: 10px 15px; border-radius: 8px; border-bottom: 3px solid #C99700;">
+        </div>
+        <h2 class="wa-modal-title">Includere le Note?</h2>
+        <p class="wa-modal-sub">Vuoi includere le <strong>Note della consulenza</strong> nel corpo dell'email per il cliente?</p>
+        <div class="wa-modal-buttons" style="grid-template-columns: 1fr 1fr;">
+            <button type="button" class="wa-option-btn wa-option-diretto" id="btn_email_si">Sì, includile</button>
+            <button type="button" class="wa-option-btn wa-option-backoffice" id="btn_email_no">No, omettile</button>
+        </div>
+        <button type="button" class="wa-option-btn wa-option-cancel" id="btn_email_cancel" style="width: 100%; margin-top: 12px;">Annulla</button>
+    </div>
+</div>
+
 <div class="app-container" id="app_main_container">
     <div class="header">
         <div class="header-box">
@@ -1006,7 +1021,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return sections.join('');
     }
 
-    function buildEmailHtml() {
+    function buildEmailHtml(includeNotes = true) {
         const nome1 = V('cliente_nome', 'Cliente');
         const email1 = V('cliente_email', '-');
         const cell1 = V('cliente_cell', '-');
@@ -1201,6 +1216,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         </table>
                     </td>
                 </tr>
+                ${includeNotes ? `
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px;">
@@ -1213,6 +1229,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         </table>
                     </td>
                 </tr>
+                ` : ''}
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1279,8 +1296,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', adjustPreviewScale);
 
     document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
-        let includeNotes = confirm("Vuoi stampare anche le Note della consulenza nel PDF?\n\n- Clicca OK per includerle.\n- Clicca ANNULLA per ometterle.");
-        document.getElementById('p_note_block').style.display = includeNotes ? 'block' : 'none';
+        document.getElementById('p_note_block').style.display = 'block';
 
         setPrint('p_referente', V('campo_referente'));
         setPrint('p_luogo', V('campo_luogo'));
@@ -1380,7 +1396,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (toList.length > 0) {
                     const clienteNome = V('cliente_nome', 'Cliente');
                     const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
-                    const htmlBody = buildEmailHtml();
+                    const htmlBody = buildEmailHtml(true);
 
                     const response = await fetch('/api/send-email', {
                         method: 'POST',
@@ -1404,7 +1420,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         throw new Error(result.error || 'Errore durante l’invio email con allegato');
                     }
 
-                    alert('PDF scaricato ed email inviata correttamente.');
+                    alert('PDF scaricato ed email inviata correttamente a te e all\'automazione.');
                 } else {
                     alert('PDF scaricato correttamente, ma non è stata trovata nessuna mail di automazione o referente.');
                 }
@@ -1478,7 +1494,8 @@ window.addEventListener('DOMContentLoaded', () => {
         if (ev.target.id === 'wa-choice-modal') closeWaChoiceModal();
     });
 
-    document.getElementById('btn_email').addEventListener('click', async () => {
+    async function eseguiInvioEmail(includeNotes) {
+        document.getElementById('email-notes-modal').style.display = 'none';
         const btn = document.getElementById('btn_email');
         const originalText = btn.innerHTML;
 
@@ -1497,16 +1514,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const clienteNome = V('cliente_nome', 'Cliente');
             const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
-            const htmlBody = buildEmailHtml();
+            
+            const htmlBody = buildEmailHtml(includeNotes);
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Invio in corso...';
 
             const response = await fetch('/api/send-email', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     to: toList,
                     bcc: bccList,
@@ -1522,7 +1538,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 throw new Error(result.error || 'Errore durante l’invio email');
             }
 
-            alert('Email inviata correttamente.');
+            alert('Email inviata correttamente al cliente.');
         } catch (err) {
             console.error(err);
             alert('Errore invio email: ' + err.message);
@@ -1530,6 +1546,16 @@ window.addEventListener('DOMContentLoaded', () => {
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
+    }
+
+    document.getElementById('btn_email').addEventListener('click', () => {
+        document.getElementById('email-notes-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn_email_si').addEventListener('click', () => eseguiInvioEmail(true));
+    document.getElementById('btn_email_no').addEventListener('click', () => eseguiInvioEmail(false));
+    document.getElementById('btn_email_cancel').addEventListener('click', () => {
+        document.getElementById('email-notes-modal').style.display = 'none';
     });
 
     const setupPol = (id, target, type) => {
