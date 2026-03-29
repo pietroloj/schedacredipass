@@ -17,7 +17,7 @@
         color: white;
         padding: 15px 30px;
         display: flex;
-        align-items: center;
+        align-items: stretch; /* Modificato in stretch per pareggiare le altezze dei box */
         justify-content: space-between;
         gap: 20px;
         border-bottom: 3px solid #C99700;
@@ -72,6 +72,7 @@
 
     .ref-photo-container {
         width: 85px; height: 85px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; background-color: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+        margin-top: auto; margin-bottom: auto; /* Aiuta a centrare la foto verticalmente */
     }
     .ref-photo-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
     .ref-photo-container i { font-size: 35px; color: rgba(255,255,255,0.5); }
@@ -81,7 +82,7 @@
     }
     .btn-aggiorna:hover { background: #C99700; color: #fff; }
 
-    .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
+    .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; min-width: 150px; }
     .logo-area-stack img.logo-main { width: 160px; height: auto; }
     .logo-area-stack img.logo-anniv { width: 110px; height: auto; }
 
@@ -459,7 +460,7 @@
 <div class="app-container" id="app_main_container">
     <div class="header">
         
-        <div style="display: flex; align-items: center; gap: 15px; flex: 1; max-width: 450px;">
+        <div style="display: flex; align-items: stretch; gap: 15px; flex: 1; max-width: 450px;">
             <div class="ref-photo-container">
                 <img id="referente_foto_preview" src="" alt="Foto Referente">
                 <i id="referente_foto_placeholder" class="fas fa-user-tie"></i>
@@ -568,7 +569,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <div class="form-group">
                 <label>Stato Civile Principale</label>
                 <div class="toggle-group">
-                    <input type="radio" id="c_sep" name="stato" value="SEPARAZIONE"><label for="c_sep">Coniugato/a Sep. Beni</label>
+                    <input type="radio" id="c_sep" name="stato" value="CONIUGATO_SEPARAZIONE_BENI"><label for="c_sep">Coniugato/a Sep. Beni</label>
                     <input type="radio" id="c_com" name="stato" value="COMUNIONE"><label for="c_com">Coniugato/a Com. Beni</label>
                     <input type="radio" id="cel" name="stato" value="CELIBE"><label for="cel">Celibe/Nubile</label>
                     <input type="radio" id="div" name="stato" value="DIVORZIATO"><label for="div">Divorziato/a</label>
@@ -922,8 +923,11 @@ window.addEventListener('DOMContentLoaded', () => {
         return cleaned.split(/\s+/)[0];
     }
 
+    // --- MOTORE CENTRALE CHECKLIST ---
+
     function hasSecondApplicant() {
-        return V('cliente2_nome', '') !== '-';
+        const nome2 = document.getElementById('cliente2_nome');
+        return nome2 ? nome2.value.trim() !== '' : false;
     }
 
     function hasDipendente() {
@@ -936,89 +940,129 @@ window.addEventListener('DOMContentLoaded', () => {
         return types.includes('AUTONOMO');
     }
 
+    function getChecklistConfig() {
+        return {
+            hasSecondApplicant: hasSecondApplicant(),
+            hasDipendente: hasDipendente(),
+            hasAutonomo: hasAutonomo(),
+            stato: getR('stato'),
+            finalita: getR('fin'),
+            fin_corso: getR('fin_corso') === 'Sì',
+            gia_mutuo: getR('gia_mutuo') === 'Sì'
+        };
+    }
+
+    function generateDocumentList() {
+        const config = getChecklistConfig();
+        const docs = {
+            anagrafici: [
+                "Carta d’Identità (fronte/retro) in corso di validità",
+                "Tessera Sanitaria (fronte/retro) in corso di validità",
+                "Certificato Cumulativo (Residenza e Stato di Famiglia)"
+            ],
+            dipendenti: [],
+            autonomi: [],
+            immobiliari: [],
+            altri: []
+        };
+
+        if (config.stato === 'CONIUGATO_SEPARAZIONE_BENI') {
+            docs.anagrafici.push("Atto di matrimonio (solo se coniugato con separazione dei beni)");
+        }
+
+        if (config.hasDipendente) {
+            docs.dipendenti.push("Ultime 2 buste paga");
+            docs.dipendenti.push("Ultimo CUD / CU disponibile");
+            docs.dipendenti.push("Estratto conto trimestrale");
+            docs.dipendenti.push("Lista movimenti aggiornata con saldo iniziale e finale");
+            docs.dipendenti.push("Contratto di lavoro o attestazione di servizio");
+        }
+
+        if (config.hasAutonomo) {
+            docs.autonomi.push("Ultimi 2 Modelli Redditi / Unici");
+            docs.autonomi.push("Ricevute di trasmissione telematica");
+            docs.autonomi.push("Ultimi F24 versati");
+            docs.autonomi.push("Estratti conto trimestrali");
+            docs.autonomi.push("Lista movimenti aggiornata con saldo iniziale e finale");
+            docs.autonomi.push("Visura Camerale aggiornata");
+            docs.autonomi.push("Contratti o parcelle principali");
+        }
+
+        if (config.finalita !== 'VOUCHER' && config.finalita !== 'N/D') {
+            docs.immobiliari.push("Atto di provenienza dell’immobile");
+            docs.immobiliari.push("Planimetria catastale e visura aggiornata");
+            docs.immobiliari.push("Concessione edilizia / agibilità");
+
+            if (config.finalita === 'ACQUISTO') {
+                docs.immobiliari.push("Preliminare di compravendita o proposta accettata");
+            } else if (config.finalita === 'RISTRUTTURAZIONE') {
+                docs.immobiliari.push("Preventivo dei lavori / Computo metrico");
+                docs.immobiliari.push("Titolo abilitativo (CILA/SCIA/DIA) se previsto");
+            } else if (config.finalita === 'LIQUIDITÀ') {
+                docs.immobiliari.push("Relazione o preventivi giustificativi per la finalità di liquidità richiesta");
+            }
+
+            if (config.finalita === 'SURROGA' || config.gia_mutuo) {
+                docs.immobiliari.push("Atto di mutuo");
+            }
+        }
+
+        if (config.fin_corso || config.finalita === 'CONSOLIDAMENTO') {
+            docs.altri.push("Contratti finanziamenti in corso");
+            docs.altri.push("Conteggi estintivi aggiornati");
+        }
+        docs.altri.push("CTC online (accesso tramite SPID) 👉 https://www.ctconline.it");
+
+        return { config, docs };
+    }
+
+    // --- FINE MOTORE CENTRALE ---
+
     function buildChecklistMessage() {
         const fullName = V('cliente_nome', '');
         const firstName = getClientFirstName(fullName);
-        const stato = getR('stato');
-        const finalita = getR('fin');
-        const secondApplicant = hasSecondApplicant();
-        const loans = getR('fin_corso') === 'Sì';
-        const mortgage = getR('gia_mutuo') === 'Sì';
+        const { config, docs } = generateDocumentList();
 
         let msg = `Ciao ${firstName} 😊\n\n`;
         msg += `✉️ *CHECKLIST DOCUMENTALE*`;
-        if (finalita === 'VOUCHER') {
+        if (config.finalita === 'VOUCHER') {
             msg += ` – *VOUCHER / PREDELIBERA*`;
-        } else if (finalita !== 'N/D') {
-            msg += ` – *${finalita}*`;
+        } else if (config.finalita !== 'N/D') {
+            msg += ` – *${config.finalita}*`;
         }
         msg += `\n\n`;
         msg += `Come da accordi, ti invio la lista dei documenti necessari per procedere con la pratica`;
-        msg += secondApplicant ? ` per te e, se previsto, per il coobbligato 👇\n\n` : ` 👇\n\n`;
+        msg += config.hasSecondApplicant ? ` per te e, se previsto, per il coobbligato 👇\n\n` : ` 👇\n\n`;
 
         msg += `👤 *ANAGRAFICA*\n`;
-        msg += `• 🪪 Carta d’Identità (fronte/retro) in corso di validità\n`;
-        msg += `• 💳 Tessera Sanitaria (fronte/retro) in corso di validità\n`;
-        msg += `• 🏠 Certificato Cumulativo (Residenza e Stato di Famiglia)\n`;
-        if (stato === 'SEPARAZIONE') {
-            msg += `• 💍 Atto di matrimonio (solo se coniugato con separazione dei beni)\n`;
-        }
+        docs.anagrafici.forEach(d => msg += `• ${d}\n`);
         msg += `\n`;
 
-        if (hasDipendente()) {
+        if (docs.dipendenti.length > 0) {
             msg += `💼 *REDDITI DIPENDENTI*\n`;
-            msg += `• 📄 Ultime 2 buste paga\n`;
-            msg += `• 📜 Ultimo CUD / CU disponibile\n`;
-            msg += `• 🏦 Estratto conto trimestrale\n`;
-            msg += `• 📊 Lista movimenti aggiornata con saldo iniziale e finale\n`;
-            msg += `• 📃 Contratto di lavoro o attestazione di servizio\n\n`;
+            docs.dipendenti.forEach(d => msg += `• ${d}\n`);
+            msg += `\n`;
         }
 
-        if (hasAutonomo()) {
+        if (docs.autonomi.length > 0) {
             msg += `🧾 *REDDITI AUTONOMO / LIBERO PROFESSIONISTA*\n`;
-            msg += `• 🧾 Ultimi 2 Modelli Redditi / Unici\n`;
-            msg += `• 📤 Ricevute di trasmissione telematica\n`;
-            msg += `• 💰 Ultimi F24 versati\n`;
-            msg += `• 🏦 Estratti conto trimestrali\n`;
-            msg += `• 📊 Lista movimenti aggiornata con saldo iniziale e finale\n`;
-            msg += `• 📎 Visura Camerale aggiornata\n`;
-            msg += `• 💼 Contratti o parcelle principali\n\n`;
+            docs.autonomi.forEach(d => msg += `• ${d}\n`);
+            msg += `\n`;
         }
 
-        if (finalita !== 'VOUCHER') {
+        if (docs.immobiliari.length > 0) {
             msg += `🏠 *DOCUMENTAZIONE IMMOBILIARE*\n`;
-            msg += `• 🧱 Atto di provenienza dell’immobile\n`;
-            msg += `• 📐 Planimetria catastale e visura aggiornata\n`;
-            msg += `• 🧾 Concessione edilizia / agibilità\n`;
-
-            if (finalita === 'ACQUISTO') {
-                msg += `• ✍️ Preliminare di compravendita o proposta accettata\n`;
-            }
-            
-            if (finalita === 'RISTRUTTURAZIONE') {
-                msg += `• 🛠️ Preventivo dei lavori / Computo metrico\n`;
-                msg += `• 📋 Titolo abilitativo (CILA/SCIA/DIA) se previsto\n`;
-            }
-
-            if (finalita === 'SURROGA' || mortgage) {
-                msg += `• 📄 Atto di mutuo\n`;
-            }
-
+            docs.immobiliari.forEach(d => msg += `• ${d}\n`);
             msg += `\n`;
         }
 
         msg += `💳 *ALTRI DOCUMENTI*\n`;
-        if (loans) {
-            msg += `• 📋 Contratti finanziamenti in corso\n`;
-            msg += `• 📆 Conteggi estintivi aggiornati\n`;
-        }
-        msg += `• 🌐 CTC online (accesso tramite SPID)\n`;
-        msg += `  👉 https://www.ctconline.it\n\n`;
+        docs.altri.forEach(d => msg += `• ${d}\n`);
+        msg += `\n`;
 
         msg += `📝 *NOTA IMPORTANTE*\n`;
         msg += `Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti (personali, aziendali e cointestati).\n`;
         msg += `Devono risultare i saldi iniziali e finali per ogni periodo.\n\n`;
-
         msg += `Per qualsiasi dubbio o supporto resto a disposizione 👋`;
 
         return msg;
@@ -1044,23 +1088,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function buildChecklistEmailHtml() {
-        const stato = getR('stato');
-        const finalita = getR('fin');
-        const secondApplicant = hasSecondApplicant();
-        const loans = getR('fin_corso') === 'Sì';
-        const mortgage = getR('gia_mutuo') === 'Sì';
-
+        const { config, docs } = generateDocumentList();
         let sections = [];
 
-        let anagrafica = `
-            <li>Carta d’Identità (fronte/retro) in corso di validità</li>
-            <li>Tessera Sanitaria (fronte/retro) in corso di validità</li>
-            <li>Certificato cumulativo (Residenza e Stato di Famiglia)</li>
-        `;
-        if (stato === 'SEPARAZIONE') {
-            anagrafica += `<li>Atto di matrimonio (solo se coniugato con separazione dei beni)</li>`;
-        }
-
+        let anagrafica = docs.anagrafici.map(d => `<li>${d}</li>`).join('');
         sections.push(`
             <tr>
                 <td style="padding: 12px 0;">
@@ -1072,89 +1103,57 @@ window.addEventListener('DOMContentLoaded', () => {
             </tr>
         `);
 
-        if (hasDipendente()) {
+        if (docs.dipendenti.length > 0) {
+            let dip = docs.dipendenti.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
                         <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi dipendenti</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
-                            <li>Ultime 2 buste paga</li>
-                            <li>Ultimo CUD / CU disponibile</li>
-                            <li>Estratto conto trimestrale</li>
-                            <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
-                            <li>Contratto di lavoro o attestazione di servizio</li>
+                            ${dip}
                         </ul>
                     </td>
                 </tr>
             `);
         }
 
-        if (hasAutonomo()) {
+        if (docs.autonomi.length > 0) {
+            let aut = docs.autonomi.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
                         <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi autonomo / libero professionista</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
-                            <li>Ultimi 2 Modelli Redditi / Unici</li>
-                            <li>Ricevute di trasmissione telematica</li>
-                            <li>Ultimi F24 versati</li>
-                            <li>Estratti conto trimestrali</li>
-                            <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
-                            <li>Visura Camerale aggiornata</li>
-                            <li>Contratti o parcelle principali</li>
+                            ${aut}
                         </ul>
                     </td>
                 </tr>
             `);
         }
 
-        if (finalita !== 'VOUCHER') {
-            let immobiliare = `
-                <li>Atto di provenienza dell’immobile</li>
-                <li>Planimetria catastale e visura aggiornata</li>
-                <li>Concessione edilizia / agibilità</li>
-            `;
-
-            if (finalita === 'ACQUISTO') {
-                immobiliare += `<li>Preliminare di compravendita o proposta accettata</li>`;
-            }
-            
-            if (finalita === 'RISTRUTTURAZIONE') {
-                immobiliare += `<li>Preventivo dei lavori / Computo metrico</li>`;
-                immobiliare += `<li>Titolo abilitativo (CILA/SCIA/DIA) se previsto</li>`;
-            }
-
-            if (finalita === 'SURROGA' || mortgage) {
-                immobiliare += `<li>Atto di mutuo</li>`;
-            }
-
+        if (docs.immobiliari.length > 0) {
+            let imm = docs.immobiliari.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
                         <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documentazione immobiliare</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
-                            ${immobiliare}
+                            ${imm}
                         </ul>
                     </td>
                 </tr>
             `);
         }
 
-        let altri = ``;
-        if (loans) {
-            altri += `
-                <li>Contratti finanziamenti in corso</li>
-                <li>Conteggi estintivi aggiornati</li>
-            `;
-        }
-        altri += `<li>CTC online con accesso tramite SPID</li>`;
+        let altriItems = docs.altri.filter(d => !d.includes('CTC online')).map(d => `<li>${d}</li>`).join('');
+        altriItems += `<li>CTC online con accesso tramite SPID</li>`;
 
         sections.push(`
             <tr>
                 <td style="padding: 12px 0;">
                     <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Altri documenti</h3>
                     <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
-                        ${altri}
+                        ${altriItems}
                     </ul>
                     <p style="margin: 10px 0 0 0; font-size: 13px; color: #555;">
                         CTC online: <a href="https://www.ctconline.it" style="color: #002d72;">www.ctconline.it</a>
@@ -1170,7 +1169,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         <strong style="color:#333;">Nota importante:</strong><br>
                         Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti
                         (personali, aziendali e cointestati), con saldi iniziali e finali per ogni periodo.
-                        ${secondApplicant ? `<br><br>La documentazione va prodotta, ove richiesto, anche per il secondo richiedente.` : ``}
+                        ${config.hasSecondApplicant ? `<br><br>La documentazione va prodotta, ove richiesto, anche per il secondo richiedente.` : ``}
                     </div>
                 </td>
             </tr>
