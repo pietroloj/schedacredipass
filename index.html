@@ -378,7 +378,10 @@
                         <div class="p-data-row"><span>Nucleo</span> <strong id="p_componenti"></strong></div>
                         <div class="p-data-row"><span>Assegno Unico</span> <strong id="p_assegno"></strong></div>
                     </div>
-                    <div class="p-data-row"><span>Età Figli</span> <strong id="p_figli"></strong></div>
+                    <div class="p-grid-2" style="margin-top: 8px;">
+                        <div class="p-data-row"><span>Età Figli</span> <strong id="p_figli"></strong></div>
+                        <div class="p-data-row"><span>Situaz. Abitativa</span> <strong id="p_sit_abitativa"></strong></div>
+                    </div>
                 </div>
 
                 <div class="p-section-title" style="color: #C99700; border-bottom: 2px solid #C99700;"><i class="fas fa-file-signature"></i> Dettagli Mutuo Richiesto</div>
@@ -551,6 +554,32 @@
                 <div class="form-group"><label>Età 2° Figlio</label><input type="number" id="eta_f2"></div>
                 <div class="form-group"><label>Età 3° Figlio</label><input type="number" id="eta_f3"></div>
             </div>
+            <hr>
+            <div class="grid-2" style="align-items: flex-start;">
+                <div class="form-group">
+                    <label>Situazione Abitativa</label>
+                    <div class="toggle-group blue">
+                        <input type="radio" id="ab_parenti" name="sit_abitativa" value="Presso parenti" checked><label for="ab_parenti">Presso parenti</label>
+                        <input type="radio" id="ab_proprieta" name="sit_abitativa" value="Di proprietà"><label for="ab_proprieta">Di proprietà</label>
+                        <input type="radio" id="ab_affitto" name="sit_abitativa" value="Affitto"><label for="ab_affitto">In affitto</label>
+                    </div>
+                </div>
+                <div id="dettagli_affitto" style="display: none; background: #f8f9fa; padding: 12px; border: 1px dashed #ced4da; border-radius: 8px;">
+                    <div class="grid-2">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Canone Mensile €</label>
+                            <input type="text" id="canone_affitto" placeholder="Es. 600">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Contratto Registrato?</label>
+                            <div class="toggle-group">
+                                <input type="radio" id="reg_si" name="contratto_reg" value="Sì" checked><label for="reg_si">Sì</label>
+                                <input type="radio" id="reg_no" name="contratto_reg" value="No"><label for="reg_no">No</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -717,6 +746,18 @@ window.addEventListener('DOMContentLoaded', () => {
                 }).catch(e => console.log(e));
         }, function(error) {});
     }
+    
+    const sitRadios = document.querySelectorAll('input[name="sit_abitativa"]');
+    const boxAffitto = document.getElementById('dettagli_affitto');
+    sitRadios.forEach(r => {
+        r.addEventListener('change', (e) => {
+            if(e.target.value === 'Affitto') {
+                boxAffitto.style.display = 'block';
+            } else {
+                boxAffitto.style.display = 'none';
+            }
+        });
+    });
 
     const getR = (name) => {
         const el = document.querySelector(`input[name="${name}"]:checked`);
@@ -1058,6 +1099,12 @@ window.addEventListener('DOMContentLoaded', () => {
         const componenti = V('num_componenti', '0');
         const assegno = S('assegno', 'No') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : '');
         const figli = [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(v => v !== '-').join(', ') || '-';
+        
+        const sitAbitRaw = S('sit_abitativa', '-');
+        let sitAbitText = sitAbitRaw;
+        if (sitAbitRaw === 'Affitto') {
+            sitAbitText += ` (${formatNum(V('canone_affitto', '0'))} €/mese, Reg: ${S('contratto_reg', 'No')})`;
+        }
 
         const finalita = S('fin', '-');
         const prodotto = S('prodotto', '-');
@@ -1170,6 +1217,9 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <tr>
                                             <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Età Figli:</span><br><strong>${figliHtml}</strong></td>
                                             <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Assegno Unico:</span><br><strong>${safe(assegno)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Situazione Abitativa:</span><br><strong>${safe(sitAbitText)}</strong></td>
                                         </tr>
                                     </table>
                                 </td>
@@ -1360,6 +1410,12 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_durata', V('mutuo_durata', '0') + ' Anni');
         setPrint('p_tasso', S('tasso'));
         setPrint('p_generato_il', new Date().toLocaleString('it-IT'));
+        
+        let sitAbit = S('sit_abitativa');
+        if (sitAbit === 'Affitto') {
+            sitAbit += ` (${formatNum(V('canone_affitto', '0'))} €/mese, Reg: ${S('contratto_reg')})`;
+        }
+        setPrint('p_sit_abitativa', sitAbit);
 
         document.getElementById('app_main_container').style.display = 'none';
         document.getElementById('custom-preview-modal').style.display = 'flex';
