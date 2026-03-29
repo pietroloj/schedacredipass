@@ -222,20 +222,6 @@
     .wa-option-diretto { background: #C99700; color: #fff; }
     .wa-option-cancel { background: #e9ecef; color: #333; }
 
-    #loading-overlay-mail {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.85);
-        color: white;
-        z-index: 9999999;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-    }
-    #loading-overlay-mail i { font-size: 42px; color: #C99700; }
-
     #print-sheet {
         width: 800px;
         height: 1131px;
@@ -288,7 +274,6 @@
     .p-section-title { font-size: 15px; font-weight: 700; color: #002d72; margin: 10px 0 8px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 4px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
     .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
     .p-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .p-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
 
     .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
     .p-card-gold { background: #fffdf5; border: 1px solid #C99700; }
@@ -388,12 +373,12 @@
 
                 <div class="p-section-title"><i class="fas fa-home"></i> Stato Civile e Famiglia</div>
                 <div class="p-card">
-                    <div class="p-grid-4">
+                    <div class="p-grid-3">
                         <div class="p-data-row"><span>Stato Civile</span> <strong id="p_stato"></strong></div>
                         <div class="p-data-row"><span>Nucleo</span> <strong id="p_componenti"></strong></div>
                         <div class="p-data-row"><span>Assegno Unico</span> <strong id="p_assegno"></strong></div>
-                        <div class="p-data-row"><span>Età Figli</span> <strong id="p_figli"></strong></div>
                     </div>
+                    <div class="p-data-row"><span>Età Figli</span> <strong id="p_figli"></strong></div>
                 </div>
 
                 <div class="p-section-title" style="color: #C99700; border-bottom: 2px solid #C99700;"><i class="fas fa-file-signature"></i> Dettagli Mutuo Richiesto</div>
@@ -436,15 +421,10 @@
                 <i class="fab fa-whatsapp"></i> Diretto
             </button>
             <button type="button" class="wa-option-btn wa-option-cancel" id="btn_wa_cancel">
-                <i class="fas fa-times"></i> Annulla
+                Annulla
             </button>
         </div>
     </div>
-</div>
-
-<div id="loading-overlay-mail">
-    <i class="fas fa-spinner fa-spin"></i>
-    <div>Preparazione allegato in corso...</div>
 </div>
 
 <div class="app-container" id="app_main_container">
@@ -568,7 +548,6 @@
                     <input type="radio" id="liq" name="fin" value="LIQUIDITÀ"><label for="liq">Liquidità</label>
                     <input type="radio" id="vou" name="fin" value="VOUCHER"><label for="vou">Voucher</label>
                     <input type="radio" id="cons" name="fin" value="CONSOLIDAMENTO"><label for="cons">Consolidamento</label>
-                    <input type="radio" id="ristr" name="fin" value="RISTRUTTURAZIONE"><label for="ristr">Ristrutturazione</label>
                 </div>
             </div>
             <div class="grid-4">
@@ -782,6 +761,18 @@ window.addEventListener('DOMContentLoaded', () => {
         return types.includes('AUTONOMO');
     }
 
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64data = reader.result.split(',')[1];
+                resolve(base64data);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
     function buildChecklistMessage() {
         const fullName = V('cliente_nome', '');
         const firstName = getClientFirstName(fullName);
@@ -840,9 +831,6 @@ window.addEventListener('DOMContentLoaded', () => {
             if (finalita === 'ACQUISTO') {
                 msg += `• ✍️ Preliminare di compravendita o proposta accettata\n`;
             }
-            if (finalita === 'RISTRUTTURAZIONE') {
-                msg += `• 🛠️ Preventivo o computo metrico lavori\n`;
-            }
 
             if (finalita === 'SURROGA' || mortgage) {
                 msg += `• 📄 Atto di mutuo\n`;
@@ -887,6 +875,137 @@ window.addEventListener('DOMContentLoaded', () => {
         return msg;
     }
 
+    function buildChecklistEmailHtml() {
+        const stato = getR('stato');
+        const finalita = getR('fin');
+        const secondApplicant = hasSecondApplicant();
+        const loans = getR('fin_corso') === 'Sì';
+        const mortgage = getR('gia_mutuo') === 'Sì';
+
+        let sections = [];
+
+        let anagrafica = `
+            <li>Carta d’Identità (fronte/retro) in corso di validità</li>
+            <li>Tessera Sanitaria (fronte/retro) in corso di validità</li>
+            <li>Certificato cumulativo (Residenza e Stato di Famiglia)</li>
+        `;
+        if (stato === 'SEPARAZIONE') {
+            anagrafica += `<li>Atto di matrimonio (solo se coniugato con separazione dei beni)</li>`;
+        }
+
+        sections.push(`
+            <tr>
+                <td style="padding: 12px 0;">
+                    <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti anagrafici</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
+                        ${anagrafica}
+                    </ul>
+                </td>
+            </tr>
+        `);
+
+        if (hasDipendente()) {
+            sections.push(`
+                <tr>
+                    <td style="padding: 12px 0;">
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi dipendenti</h3>
+                        <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
+                            <li>Ultime 2 buste paga</li>
+                            <li>Ultimo CUD / CU disponibile</li>
+                            <li>Estratto conto trimestrale</li>
+                            <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
+                            <li>Contratto di lavoro o attestazione di servizio</li>
+                        </ul>
+                    </td>
+                </tr>
+            `);
+        }
+
+        if (hasAutonomo()) {
+            sections.push(`
+                <tr>
+                    <td style="padding: 12px 0;">
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi autonomo / libero professionista</h3>
+                        <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
+                            <li>Ultimi 2 Modelli Redditi / Unici</li>
+                            <li>Ricevute di trasmissione telematica</li>
+                            <li>Ultimi F24 versati</li>
+                            <li>Estratti conto trimestrali</li>
+                            <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
+                            <li>Visura Camerale aggiornata</li>
+                            <li>Contratti o parcelle principali</li>
+                        </ul>
+                    </td>
+                </tr>
+            `);
+        }
+
+        if (finalita !== 'VOUCHER') {
+            let immobiliare = `
+                <li>Atto di provenienza dell’immobile</li>
+                <li>Planimetria catastale e visura aggiornata</li>
+                <li>Concessione edilizia / agibilità</li>
+            `;
+
+            if (finalita === 'ACQUISTO') {
+                immobiliare += `<li>Preliminare di compravendita o proposta accettata</li>`;
+            }
+
+            if (finalita === 'SURROGA' || mortgage) {
+                immobiliare += `<li>Atto di mutuo</li>`;
+            }
+
+            sections.push(`
+                <tr>
+                    <td style="padding: 12px 0;">
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documentazione immobiliare</h3>
+                        <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
+                            ${immobiliare}
+                        </ul>
+                    </td>
+                </tr>
+            `);
+        }
+
+        let altri = ``;
+        if (loans) {
+            altri += `
+                <li>Contratti finanziamenti in corso</li>
+                <li>Conteggi estintivi aggiornati</li>
+            `;
+        }
+        altri += `<li>CTC online con accesso tramite SPID</li>`;
+
+        sections.push(`
+            <tr>
+                <td style="padding: 12px 0;">
+                    <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Altri documenti</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
+                        ${altri}
+                    </ul>
+                    <p style="margin: 10px 0 0 0; font-size: 13px; color: #555;">
+                        CTC online: <a href="https://www.ctconline.it" style="color: #002d72;">www.ctconline.it</a>
+                    </p>
+                </td>
+            </tr>
+        `);
+
+        sections.push(`
+            <tr>
+                <td style="padding: 12px 0;">
+                    <div style="background:#f8f9fa; border:1px dashed #ccc; border-radius:8px; padding:15px; color:#555; font-size:13px; line-height:1.6;">
+                        <strong style="color:#333;">Nota importante:</strong><br>
+                        Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti
+                        (personali, aziendali e cointestati), con saldi iniziali e finali per ogni periodo.
+                        ${secondApplicant ? `<br><br>La documentazione va prodotta, ove richiesto, anche per il secondo richiedente.` : ``}
+                    </div>
+                </td>
+            </tr>
+        `);
+
+        return sections.join('');
+    }
+
     function buildEmailHtml() {
         const nome1 = V('cliente_nome', 'Cliente');
         const email1 = V('cliente_email', '-');
@@ -903,36 +1022,35 @@ window.addEventListener('DOMContentLoaded', () => {
         const refCell = V('campo_cellulare', '3925701385');
 
         const lav1 = S('lav1', '-');
-        const redd1 = formatNum(V('cliente_reddito', '0')) !== '0' ? formatNum(V('cliente_reddito', '0')) + ' €' : '-';
+        const redd1 = formatNum(V('cliente_reddito', '0')) + ' €';
 
         const lav2 = S('lav2', '-');
         const redd2raw = V('cliente2_reddito', '');
         const redd2 = redd2raw && redd2raw !== '-' ? (formatNum(redd2raw) + ' €') : '-';
 
         const stato = S('stato', '-');
-        const componenti = V('num_componenti', '-');
-        const assegnoImp = V('assegno_importo');
-        const assegno = S('assegno', 'No') + (assegnoImp !== "-" && assegnoImp ? ` (${formatNum(assegnoImp)} €)` : '');
+        const componenti = V('num_componenti', '0');
+        const assegno = S('assegno', 'No') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : '');
         const figli = [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(v => v !== '-').join(', ') || '-';
 
         const finalita = S('fin', '-');
         const prodotto = S('prodotto', '-');
-        const comprav = V('mutuo_compravendita', '0') !== '0' ? formatNum(V('mutuo_compravendita')) + ' €' : '-';
-        const valore = V('immobile_valore', '0') !== '0' ? formatNum(V('immobile_valore')) + ' €' : '-';
-        const importo = V('mutuo_importo', '0') !== '0' ? formatNum(V('mutuo_importo')) + ' €' : '-';
-        const durata = V('mutuo_durata', '0') !== '0' ? V('mutuo_durata') + ' Anni' : '-';
+        const comprav = formatNum(V('mutuo_compravendita', '0')) + ' €';
+        const valore = formatNum(V('immobile_valore', '0')) + ' €';
+        const importo = formatNum(V('mutuo_importo', '0')) + ' €';
+        const durata = V('mutuo_durata', '0') + ' Anni';
         const tasso = S('tasso', '-');
 
         const mutuoCorso = S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : '');
         const finanziamenti = S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : '');
 
-        const tipoInc = V('tipo_incendio') !== '-' && V('tipo_incendio') !== ' ' ? V('tipo_incendio') : '-';
-        const impInc = V('importo_incendio') !== '-' && V('importo_incendio') !== ' ' ? V('importo_incendio') : '-';
-        const tipoVita = V('tipo_vita') !== '-' && V('tipo_vita') !== ' ' ? V('tipo_vita') : '-';
-        const impVita = V('importo_vita') !== '-' && V('importo_vita') !== ' ' ? V('importo_vita') : '-';
+        const tipoInc = V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna';
+        const impInc = V('importo_incendio') !== '-' ? V('importo_incendio') : '-';
+        const tipoVita = V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna';
+        const impVita = V('importo_vita') !== '-' ? V('importo_vita') : '-';
 
-        const istr = V('istr_banca') && V('istr_banca') !== '0' ? formatNum(V('istr_banca')) + ' €' : '-';
-        const perizia = V('perizia_costo') && V('perizia_costo') !== '0' ? formatNum(V('perizia_costo')) + ' €' : '-';
+        const istr = formatNum(V('istr_banca', '0')) + ' €';
+        const perizia = formatNum(V('perizia_costo', '0')) + ' €';
         const imposta = S('imposta', '-');
 
         let mediazione = S('mediazione', '-');
@@ -941,7 +1059,7 @@ window.addEventListener('DOMContentLoaded', () => {
             mediazione = (customMed && customMed !== '-') ? customMed : 'Da definire';
         }
 
-        const note = V('note_consulenza', '');
+        const note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
 
         const safe = (txt) =>
             String(txt || '')
@@ -953,87 +1071,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const noteHtml = safe(note).replace(/\n/g, '<br>');
         const figliHtml = safe(figli);
+        const checklistHtml = buildChecklistEmailHtml();
 
-        let introTesto = "documentazione necessaria per procedere con la pratica";
-        if (finalita === 'VOUCHER') introTesto = "documentazione necessaria per predisporre la pre-delibera";
-        else if (finalita === 'SURROGA') introTesto = "documentazione necessaria per la surroga";
-        else if (finalita === 'ACQUISTO') introTesto = "documentazione necessaria per l’istruttoria mutuo acquisto";
-        else if (finalita === 'RISTRUTTURAZIONE') introTesto = "documentazione necessaria per l’istruttoria mutuo ristrutturazione";
-
-        let checklistHtml = `
-            <tr>
-                <td style="padding: 15px 30px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
-                        <tr>
-                            <td style="padding: 15px;">
-                                <h2 style="color: #002d72; font-size: 16px; margin: 0 0 10px 0; border-bottom: 2px solid #C99700; padding-bottom: 5px;">5. Checklist Documentale</h2>
-                                <p style="font-size: 14px; color: #555; margin-bottom: 15px;">Ecco la ${introTesto}${nome2 !== '-' ? " per te e per il coobbligato" : ""}:</p>
-                                
-                                <h4 style="color: #002d72; margin: 0 0 5px 0; font-size: 13px;">👤 ANAGRAFICA</h4>
-                                <ul style="margin: 0 0 15px 0; font-size: 13px; color: #333; padding-left: 20px;">
-                                    <li>Carta d’Identità (fronte/retro) in corso di validità</li>
-                                    <li>Tessera Sanitaria (fronte/retro) in corso di validità</li>
-                                    <li>Certificato Cumulativo (Residenza e Stato di Famiglia)</li>
-                                    ${stato === 'SEPARAZIONE' ? `<li>Atto di matrimonio (solo se coniugato con separazione dei beni)</li>` : ''}
-                                </ul>`;
-
-        if (hasDipendente()) {
-            checklistHtml += `
-                                <h4 style="color: #002d72; margin: 0 0 5px 0; font-size: 13px;">💼 REDDITI DIPENDENTI</h4>
-                                <ul style="margin: 0 0 15px 0; font-size: 13px; color: #333; padding-left: 20px;">
-                                    <li>Ultime 2 buste paga</li>
-                                    <li>Ultimo CUD / CU disponibile</li>
-                                    <li>Estratto conto trimestrale</li>
-                                    <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
-                                    <li>Contratto di lavoro o attestazione di servizio</li>
-                                </ul>`;
-        }
-
-        if (hasAutonomo()) {
-            checklistHtml += `
-                                <h4 style="color: #002d72; margin: 0 0 5px 0; font-size: 13px;">🧾 REDDITI AUTONOMO / LIBERO PROFESSIONISTA</h4>
-                                <ul style="margin: 0 0 15px 0; font-size: 13px; color: #333; padding-left: 20px;">
-                                    <li>Ultimi 2 Modelli Redditi / Unici</li>
-                                    <li>Ricevute di trasmissione telematica</li>
-                                    <li>Ultimi F24 versati</li>
-                                    <li>Estratti conto trimestrali</li>
-                                    <li>Lista movimenti aggiornata con saldo iniziale e finale</li>
-                                    <li>Visura Camerale aggiornata</li>
-                                    <li>Contratti o parcelle principali</li>
-                                </ul>`;
-        }
-
-        if (finalita !== 'VOUCHER') {
-            checklistHtml += `
-                                <h4 style="color: #002d72; margin: 0 0 5px 0; font-size: 13px;">🏠 DOCUMENTAZIONE IMMOBILIARE</h4>
-                                <ul style="margin: 0 0 15px 0; font-size: 13px; color: #333; padding-left: 20px;">
-                                    <li>Atto di provenienza dell’immobile</li>
-                                    <li>Planimetria catastale e visura aggiornata</li>
-                                    <li>Concessione edilizia / agibilità</li>
-                                    ${finalita === 'ACQUISTO' ? `<li>Preliminare di compravendita o proposta accettata</li>` : ''}
-                                    ${finalita === 'RISTRUTTURAZIONE' ? `<li>Preventivo o computo metrico lavori</li>` : ''}
-                                    ${finalita === 'SURROGA' || S('gia_mutuo') === 'Sì' ? `<li>Atto di mutuo</li>` : ''}
-                                </ul>`;
-        }
-
-        checklistHtml += `
-                                <h4 style="color: #002d72; margin: 0 0 5px 0; font-size: 13px;">💳 ALTRI DOCUMENTI</h4>
-                                <ul style="margin: 0 0 15px 0; font-size: 13px; color: #333; padding-left: 20px;">
-                                    ${S('fin_corso') === 'Sì' ? `<li>Contratti finanziamenti in corso</li><li>Conteggi estintivi aggiornati</li>` : ''}
-                                    <li>CTC online (accesso tramite SPID) <a href="https://www.ctconline.it" style="color: #C99700;" target="_blank">www.ctconline.it</a></li>
-                                </ul>
-                                
-                                <div style="background-color: #fffdf5; border-left: 4px solid #C99700; padding: 10px; font-size: 12px; color: #666;">
-                                    <strong>NOTA IMPORTANTE:</strong> Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti (personali, aziendali e cointestati). Devono risultare i saldi iniziali e finali per ogni periodo.
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>`;
-
-        return `
-<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -1050,17 +1090,15 @@ window.addEventListener('DOMContentLoaded', () => {
                         <img src="https://i.postimg.cc/hjX28x4r/Logo-Credipass-Negativo-per-Web.png" alt="Credipass" width="200" style="display: block; border: 0;">
                     </td>
                 </tr>
-
                 <tr>
                     <td style="padding: 30px 30px 10px 30px;">
                         <h1 style="color: #002d72; font-size: 22px; margin: 0 0 15px 0;">Scheda di Consulenza</h1>
                         <p style="color: #555555; font-size: 15px; line-height: 1.5; margin: 0;">
                             Gentile <strong>${safe(nome1)}</strong>,<br>
-                            di seguito riportiamo il riepilogo dettagliato dei dati emersi durante la nostra consulenza del <strong>${safe(data)}</strong> a <strong>${safe(luogo)}</strong>. Oltre al riepilogo, troverai la <strong>${introTesto}</strong> in fondo a questa email.
+                            di seguito riportiamo il riepilogo dettagliato dei dati emersi durante la nostra consulenza del <strong>${safe(data)}</strong> a <strong>${safe(luogo)}</strong>.
                         </p>
                     </td>
                 </tr>
-
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1074,24 +1112,20 @@ window.addEventListener('DOMContentLoaded', () => {
                                     <table width="100%" cellpadding="5" cellspacing="0" border="0" style="font-size: 14px; color: #333; margin-bottom: 10px; background-color: #f8f9fa; border-radius: 6px; padding: 10px;">
                                         <tr><td colspan="2"><strong style="color: #002d72; font-size: 12px; text-transform: uppercase;">1° Richiedente</strong></td></tr>
                                         <tr><td width="40%" style="color: #666;">Nominativo:</td><td width="60%"><strong>${safe(nome1)}</strong></td></tr>
-                                        ${cell1 !== '-' || email1 !== '-' ? `<tr><td style="color: #666;">Contatti:</td><td><strong>${safe(cell1)} | ${safe(email1)}</strong></td></tr>` : ''}
-                                        ${lav1 !== '-' ? `<tr><td style="color: #666;">Professione:</td><td><strong>${safe(lav1)} ${redd1 !== '-' ? `(${safe(redd1)})` : ''}</strong></td></tr>` : ''}
+                                        <tr><td style="color: #666;">Contatti:</td><td><strong>${safe(cell1)} | ${safe(email1)}</strong></td></tr>
+                                        <tr><td style="color: #666;">Professione:</td><td><strong>${safe(lav1)} (${safe(redd1)})</strong></td></tr>
                                     </table>
-
-                                    ${nome2 !== '-' ? `
                                     <table width="100%" cellpadding="5" cellspacing="0" border="0" style="font-size: 14px; color: #333; background-color: #f8f9fa; border-radius: 6px; padding: 10px;">
                                         <tr><td colspan="2"><strong style="color: #002d72; font-size: 12px; text-transform: uppercase;">2° Richiedente</strong></td></tr>
                                         <tr><td width="40%" style="color: #666;">Nominativo:</td><td width="60%"><strong>${safe(nome2)}</strong></td></tr>
-                                        ${cell2 !== '-' || email2 !== '-' ? `<tr><td style="color: #666;">Contatti:</td><td><strong>${safe(cell2)} | ${safe(email2)}</strong></td></tr>` : ''}
-                                        ${lav2 !== '-' ? `<tr><td style="color: #666;">Professione:</td><td><strong>${safe(lav2)} ${redd2 !== '-' ? `(${safe(redd2)})` : ''}</strong></td></tr>` : ''}
-                                    </table>` : ''}
+                                        <tr><td style="color: #666;">Contatti:</td><td><strong>${safe(cell2)} | ${safe(email2)}</strong></td></tr>
+                                        <tr><td style="color: #666;">Professione:</td><td><strong>${safe(lav2)} (${safe(redd2)})</strong></td></tr>
+                                    </table>
                                 </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
-
-                ${(stato !== '-' || componenti !== '-' || figli !== '-' || S('assegno') !== 'No') ? `
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1104,21 +1138,19 @@ window.addEventListener('DOMContentLoaded', () => {
                                 <td style="padding-top: 10px;">
                                     <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 14px; color: #333;">
                                         <tr>
-                                            ${stato !== '-' ? `<td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Stato Civile:</span><br><strong>${safe(stato)}</strong></td>` : '<td width="50%" style="border-bottom: 1px solid #eee;"></td>'}
-                                            ${componenti !== '-' ? `<td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Componenti Nucleo:</span><br><strong>${safe(componenti)}</strong></td>` : '<td width="50%" style="border-bottom: 1px solid #eee;"></td>'}
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Stato Civile:</span><br><strong>${safe(stato)}</strong></td>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Componenti Nucleo:</span><br><strong>${safe(componenti)}</strong></td>
                                         </tr>
-                                        ${(figli !== '-' || S('assegno') !== 'No') ? `
                                         <tr>
-                                            <td width="50%" style="border-bottom: 1px solid #eee;">${figli !== '-' ? `<span style="color: #666;">Età Figli:</span><br><strong>${figliHtml}</strong>` : ''}</td>
-                                            <td width="50%" style="border-bottom: 1px solid #eee;">${S('assegno') !== 'No' ? `<span style="color: #666;">Assegno Unico:</span><br><strong>${safe(assegno)}</strong>` : ''}</td>
-                                        </tr>` : ''}
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Età Figli:</span><br><strong>${figliHtml}</strong></td>
+                                            <td width="50%" style="border-bottom: 1px solid #eee;"><span style="color: #666;">Assegno Unico:</span><br><strong>${safe(assegno)}</strong></td>
+                                        </tr>
                                     </table>
                                 </td>
                             </tr>
                         </table>
                     </td>
-                </tr>` : ''}
-
+                </tr>
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fffdf5; border: 1px solid #C99700; border-radius: 8px;">
@@ -1128,26 +1160,22 @@ window.addEventListener('DOMContentLoaded', () => {
                                     <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 14px; color: #333;">
                                         <tr>
                                             <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Finalità:</span><br><strong>${safe(finalita)}</strong></td>
-                                            <td width="50%">${prodotto !== '-' ? `<span style="color: #8a6a00; font-size: 12px;">Prodotto:</span><br><strong>${safe(prodotto)}</strong>` : ''}</td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Prodotto:</span><br><strong>${safe(prodotto)}</strong></td>
                                         </tr>
-                                        ${comprav !== '-' || valore !== '-' ? `
                                         <tr>
-                                            <td width="50%">${comprav !== '-' ? `<span style="color: #8a6a00; font-size: 12px;">Prezzo Acquisto:</span><br><strong>${safe(comprav)}</strong>` : ''}</td>
-                                            <td width="50%">${valore !== '-' ? `<span style="color: #8a6a00; font-size: 12px;">Valore Immobile:</span><br><strong>${safe(valore)}</strong>` : ''}</td>
-                                        </tr>` : ''}
-                                        ${importo !== '-' || durata !== '-' || tasso !== '-' ? `
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Prezzo Acquisto:</span><br><strong>${safe(comprav)}</strong></td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Valore Immobile:</span><br><strong>${safe(valore)}</strong></td>
+                                        </tr>
                                         <tr>
-                                            <td width="50%">${importo !== '-' ? `<span style="color: #8a6a00; font-size: 12px;">Importo Mutuo:</span><br><strong style="font-size: 18px; color: #002d72;">${safe(importo)}</strong>` : ''}</td>
-                                            <td width="50%">${durata !== '-' || tasso !== '-' ? `<span style="color: #8a6a00; font-size: 12px;">Durata e Tasso:</span><br><strong>${durata !== '-' ? safe(durata) : ''} ${tasso !== '-' ? `- ` + safe(tasso) : ''}</strong>` : ''}</td>
-                                        </tr>` : ''}
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Importo Mutuo:</span><br><strong style="font-size: 18px; color: #002d72;">${safe(importo)}</strong></td>
+                                            <td width="50%"><span style="color: #8a6a00; font-size: 12px;">Durata e Tasso:</span><br><strong>${safe(durata)} - ${safe(tasso)}</strong></td>
+                                        </tr>
                                     </table>
                                 </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
-
-                ${(S('gia_mutuo') === 'Sì' || S('fin_corso') === 'Sì' || tipoInc !== '-' || tipoVita !== '-' || istr !== '-' || perizia !== '-' || imposta !== '-' || mediazione !== '-') ? `
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1159,22 +1187,20 @@ window.addEventListener('DOMContentLoaded', () => {
                             <tr>
                                 <td style="padding-top: 10px;">
                                     <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 13px; color: #333;">
-                                        ${S('gia_mutuo') === 'Sì' ? `<tr><td width="60%" style="border-bottom: 1px solid #eee; color: #666;">Mutuo in corso:</td><td width="40%" style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mutuoCorso)}</strong></td></tr>` : ''}
-                                        ${S('fin_corso') === 'Sì' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td></tr>` : ''}
-                                        ${tipoInc !== '-' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong>${impInc !== '-' ? `<br><span style="font-size:11px;">${safe(impInc)}</span>` : ''}</td></tr>` : ''}
-                                        ${tipoVita !== '-' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Vita:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong>${impVita !== '-' ? `<br><span style="font-size:11px;">${safe(impVita)}</span>` : ''}</td></tr>` : ''}
-                                        ${istr !== '-' || perizia !== '-' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${istr !== '-' ? safe(istr) : '0 €'} + ${perizia !== '-' ? safe(perizia) : '0 €'}</strong></td></tr>` : ''}
-                                        ${imposta !== '-' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td></tr>` : ''}
-                                        ${mediazione !== '-' ? `<tr><td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td></tr>` : ''}
+                                        <tr><td width="60%" style="border-bottom: 1px solid #eee; color: #666;">Mutuo in corso:</td><td width="40%" style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mutuoCorso)}</strong></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong><br><span style="font-size:11px;">${safe(impInc)}</span></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Vita:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong><br><span style="font-size:11px;">${safe(impVita)}</span></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Certificazione Documentale:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>76,00 € per richiedente</strong></td></tr>
                                     </table>
                                 </td>
                             </tr>
                         </table>
                     </td>
-                </tr>` : ''}
-
-                ${note !== '' ? `
+                </tr>
                 <tr>
                     <td style="padding: 15px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px;">
@@ -1186,10 +1212,19 @@ window.addEventListener('DOMContentLoaded', () => {
                             </tr>
                         </table>
                     </td>
-                </tr>` : ''}
-
-                ${checklistHtml}
-
+                </tr>
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="border-bottom: 2px solid #C99700; padding-bottom: 5px;">
+                                    <h2 style="color: #002d72; font-size: 16px; margin: 0; text-transform: uppercase;">5. Documentazione richiesta</h2>
+                                </td>
+                            </tr>
+                            ${checklistHtml}
+                        </table>
+                    </td>
+                </tr>
                 <tr>
                     <td bgcolor="#002d72" style="padding: 30px; margin-top: 20px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1208,7 +1243,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>
             </table>
-
             <p style="text-align: center; color: #999999; font-size: 11px; margin-top: 15px;">
                 Le informazioni contenute in questo riepilogo sono strettamente riservate.<br>Generato dal sistema Credipass.
             </p>
@@ -1216,8 +1250,7 @@ window.addEventListener('DOMContentLoaded', () => {
     </tr>
 </table>
 </body>
-</html>
-`;
+</html>`;
     }
 
     const medCustom = document.getElementById('mediazione_custom');
@@ -1319,14 +1352,66 @@ window.addEventListener('DOMContentLoaded', () => {
                 margin: 0,
                 filename: pdfFileName,
                 image: { type: 'jpeg', quality: 1 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, width: 800, height: 1131, scrollX: 0, scrollY: 0 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: 800,
+                    height: 1131,
+                    scrollX: 0,
+                    scrollY: 0
+                },
                 jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
             };
 
             try {
-                await html2pdf().set(opt).from(sheet).save();
+                const worker = html2pdf().set(opt).from(sheet);
+                const pdfBlob = await worker.output('blob');
+                const pdfBase64 = await blobToBase64(pdfBlob);
+                await worker.save();
+
+                const m1 = V('cliente_email', '');
+                const m2 = V('cliente2_email', '');
+                const mAuto = V('campo_email_auto', '');
+
+                const toList = [m1, m2].filter(m => m && m !== '-');
+                const bccList = (mAuto && mAuto !== '-') ? [mAuto] : [];
+
+                if (toList.length > 0) {
+                    const clienteNome = V('cliente_nome', 'Cliente');
+                    const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
+                    const htmlBody = buildEmailHtml();
+
+                    const response = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            to: toList,
+                            bcc: bccList,
+                            subject: subjectStr,
+                            html: htmlBody,
+                            replyTo: V('campo_email', ''),
+                            pdfBase64: pdfBase64,
+                            pdfFileName: pdfFileName
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Errore durante l’invio email con allegato');
+                    }
+
+                    alert('PDF scaricato ed email inviata correttamente.');
+                } else {
+                    alert('PDF scaricato correttamente. Nessuna email cliente inserita, quindi non è stata inviata la mail.');
+                }
             } catch (err) {
-                alert("Errore nella generazione del PDF: " + err);
+                console.error(err);
+                alert("Errore nella generazione del PDF o nell'invio email: " + err.message);
             } finally {
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
@@ -1412,7 +1497,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             const clienteNome = V('cliente_nome', 'Cliente');
-            const subjectStr = "Scheda Consulenza Credipass - " + clienteNome;
+            const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
             const htmlBody = buildEmailHtml();
 
             btn.disabled = true;
@@ -1456,26 +1541,26 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (type === 'incendio') {
                 opts = {
-                    'Banca': ["Da verificare"],
-                    'Premio Rateizzato': ["€ 100.000 (€ 25,61 X 72 MESI)", "€ 150.000 (€ 28,91 X 72 MESI)", "€ 200.000 (€ 34,30 X 72 MESI)"],
-                    'Premio Totale': ["€ 100.000 (€ 1.280,00)", "€ 150.000 (€ 1.445,00)", "€ 200.000 (€ 1.714,00)"]
+                    'Banca': ['Da verificare'],
+                    'Premio Rateizzato': ['€ 100.000 (€ 25,61 X 72 MESI)', '€ 150.000 (€ 28,91 X 72 MESI)', '€ 200.000 (€ 34,30 X 72 MESI)'],
+                    'Premio Totale': ['€ 100.000 (€ 1.280,00)', '€ 150.000 (€ 1.445,00)', '€ 200.000 (€ 1.714,00)']
                 };
             } else {
                 opts = {
-                    'No Polizza': [" "],
-                    'Banca': ["Da verificare"],
-                    'Premio Rateizzato': ["€ 150.000 (€ 41,00 x 72 Mesi)", "€ 100.000 (€ 35,00 x 72 Mesi)", "€ 50.000 (€ 20,00 x 72 Mesi)"],
-                    'Premio Totale': ["€ 50.000 (€ 1.000)", "€ 100.000 (€ 1.750)", "€ 150.000 (€ 2.050)"]
+                    'No Polizza': [' '],
+                    'Banca': ['Da verificare'],
+                    'Premio Rateizzato': ['€ 150.000 (€ 41,00 x 72 Mesi)', '€ 100.000 (€ 35,00 x 72 Mesi)', '€ 50.000 (€ 20,00 x 72 Mesi)'],
+                    'Premio Totale': ['€ 50.000 (€ 1.000)', '€ 100.000 (€ 1.750)', '€ 150.000 (€ 2.050)']
                 };
             }
 
-            (opts[this.value] || [" "]).forEach(o => {
+            (opts[this.value] || [' ']).forEach(o => {
                 const el = document.createElement('option');
                 el.text = o;
                 el.value = o;
                 sel.add(el);
             });
-            sel.value = opts[this.value] ? opts[this.value][0] : " ";
+            sel.value = opts[this.value] ? opts[this.value][0] : ' ';
         });
     };
 
