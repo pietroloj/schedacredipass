@@ -247,20 +247,19 @@
         transform-origin: top center;
     }
 
-    /* RIDOTTO IL PADDING PER FARCI STARE LA FOTO SENZA SCHIACCIARE */
+    /* Rimosso flex-shrink e ridotto padding per stabilità */
     .p-sidebar {
         width: 270px;
-        flex-shrink: 0;
         background-color: #002d72;
         color: white;
-        padding: 30px 25px;
+        padding: 25px 20px;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
         border-right: 5px solid #C99700;
     }
-    .p-logo { width: 100%; max-width: 170px; margin-bottom: 25px; }
-    .p-side-block { margin-bottom: 25px; }
+    .p-logo { width: 100%; max-width: 170px; margin: 0 auto 20px auto; display: block; }
+    .p-side-block { margin-bottom: 20px; }
     .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
     .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
     .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
@@ -270,8 +269,7 @@
 
     .p-main {
         width: 530px;
-        flex-shrink: 0;
-        padding: 40px 30px;
+        padding: 30px 30px;
         background-color: white;
         box-sizing: border-box;
         display: flex;
@@ -316,8 +314,8 @@
             <div class="p-sidebar">
                 <img src="/images/logo-credipass.png" class="p-logo" alt="Credipass" crossorigin="anonymous">
 
-                <div id="p_foto_container" style="width: 100px; height: 100px; min-width: 100px; min-height: 100px; flex-shrink: 0; align-self: center; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; margin-bottom: 20px; display: none; background-color: #fff;">
-                    <img id="p_referente_foto" src="" style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous">
+                <div id="p_foto_container" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; margin: 0 auto 20px auto; display: none; background-color: #fff;">
+                    <img id="p_referente_foto" src="" style="width: 100px; height: 100px; object-fit: cover; display: block;" crossorigin="anonymous">
                 </div>
 
                 <div class="p-side-block">
@@ -802,13 +800,11 @@ window.loadCredipassReferentePhoto = async function() {
             return;
         }
 
-        // Fetching dell'immagine via proxy per convertire in base64 ed evitare il blocco CORS sul PDF
         const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(data.imageUrl)}`;
         const imgRes = await fetch(proxyUrl);
         const imgBlob = await imgRes.blob();
         const base64 = await window.blobToBase64(imgBlob);
         
-        // Costruiamo il Data URI corretto
         const base64Url = `data:${imgBlob.type};base64,${base64}`;
 
         const img = document.getElementById('referente_foto_preview');
@@ -819,7 +815,6 @@ window.loadCredipassReferentePhoto = async function() {
             img.style.display = 'block';
             if(placeholder) placeholder.style.display = 'none';
             
-            // Salva in memoria
             localStorage.setItem('ref_foto_url_salvata', base64Url);
         }
     } catch(err) {
@@ -1482,7 +1477,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', adjustPreviewScale);
 
     document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
-        // Obbliga la finestra a tornare in alto per evitare che html2canvas "tagli" l'immagine del PDF
+        // Scorre in alto e fissa la pagina per evitare tagli del PDF
         window.scrollTo(0, 0);
 
         document.getElementById('p_note_block').style.display = 'block';
@@ -1568,6 +1563,7 @@ window.addEventListener('DOMContentLoaded', () => {
         sheet.style.transform = 'none';
         sheet.style.marginBottom = '0';
 
+        // Tempo maggiorato (2 secondi) per consentire il caricamento perfetto dell'immagine
         setTimeout(async () => {
             const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
             const opt = {
@@ -1639,12 +1635,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert("Errore nella generazione del PDF o nell'invio email: " + err.message);
             } finally {
-                sheet.style.position = 'relative'; // Ripristina layout
+                sheet.style.position = 'relative'; 
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
                 adjustPreviewScale();
             }
-        }, 1500);
+        }, 2000);
     });
 
     function openWaChoiceModal() {
