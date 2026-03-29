@@ -12,8 +12,7 @@ exports.handler = async (event) => {
     }
 
     const data = JSON.parse(event.body || "{}");
-
-    const { to, bcc, subject, html, replyTo } = data;
+    const { to, bcc, subject, html, replyTo, pdfBase64, pdfFileName } = data;
 
     if (!to || !subject || !html) {
       return {
@@ -24,14 +23,25 @@ exports.handler = async (event) => {
       };
     }
 
-    const result = await resend.emails.send({
-      from: "consulenza@consulenza-credipass.it",
+    const emailPayload = {
+      from: "Consulenza Credipass <consulenze@consulenza-credipass.it>",
       to: Array.isArray(to) ? to : [to],
       bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
       subject,
       html,
       replyTo: replyTo || undefined,
-    });
+    };
+
+    if (pdfBase64) {
+      emailPayload.attachments = [
+        {
+          filename: pdfFileName || "Scheda_Consulenza.pdf",
+          content: pdfBase64,
+        },
+      ];
+    }
+
+    const result = await resend.emails.send(emailPayload);
 
     return {
       statusCode: 200,
