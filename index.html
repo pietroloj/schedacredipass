@@ -1371,12 +1371,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 const pdfBase64 = await blobToBase64(pdfBlob);
                 await worker.save();
 
-                const m1 = V('cliente_email', '');
-                const m2 = V('cliente2_email', '');
-                const mAuto = V('campo_email_auto', '');
+                const mailAutomazione = V('campo_email_auto', '');
+                const mailReferente = V('campo_email', '');
 
-                const toList = [m1, m2].filter(m => m && m !== '-');
-                const bccList = (mAuto && mAuto !== '-') ? [mAuto] : [];
+                const toList = [...new Set([mailAutomazione, mailReferente].filter(m => m && m !== '-'))];
+                const bccList = [];
 
                 if (toList.length > 0) {
                     const clienteNome = V('cliente_nome', 'Cliente');
@@ -1407,7 +1406,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     alert('PDF scaricato ed email inviata correttamente.');
                 } else {
-                    alert('PDF scaricato correttamente. Nessuna email cliente inserita, quindi non è stata inviata la mail.');
+                    alert('PDF scaricato correttamente, ma non è stata trovata nessuna mail di automazione o referente.');
                 }
             } catch (err) {
                 console.error(err);
