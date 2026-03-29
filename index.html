@@ -232,9 +232,10 @@
     .wa-option-diretto { background: #C99700; color: #fff; }
     .wa-option-cancel { background: #e9ecef; color: #333; }
 
+    /* CSS AGGIORNATO PER PDF OTTIMIZZATO A4 */
     #print-sheet {
-        width: 800px;
-        height: 1131px;
+        width: 794px;
+        min-height: 1123px;
         background: white;
         box-sizing: border-box;
         font-family: 'Poppins', sans-serif;
@@ -245,30 +246,31 @@
         flex-shrink: 0;
         box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         transform-origin: top center;
+        overflow: hidden;
     }
 
     .p-sidebar {
-        width: 270px;
+        width: 250px;
         background-color: #002d72;
         color: white;
-        padding: 30px 25px;
+        padding: 24px 18px;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        border-right: 5px solid #C99700;
+        border-right: 4px solid #C99700;
     }
-    .p-logo { width: 100%; max-width: 170px; margin: 0 auto 25px auto; display: block; }
-    .p-side-block { margin-bottom: 25px; }
+    .p-logo { width: 100%; max-width: 170px; margin: 0 auto 20px auto; display: block; }
+    .p-side-block { margin-bottom: 20px; }
     .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
-    .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
+    .p-side-item { font-size: 11px; color: #f8f9fa; margin-bottom: 7px; line-height: 1.3; }
     .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
     .p-side-item strong { color: white; font-weight: 600; display: block; font-size: 13px; margin-top: 1px; }
     .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
     .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
 
     .p-main {
-        width: 530px;
-        padding: 40px 30px;
+        width: 544px;
+        padding: 24px 20px;
         background-color: white;
         box-sizing: border-box;
         display: flex;
@@ -276,21 +278,21 @@
     }
 
     .p-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
-    .p-main-title { font-size: 26px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.2; }
+    .p-main-title { font-size: 22px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.15; }
     .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 4px; }
 
-    .p-section-title { font-size: 15px; font-weight: 700; color: #002d72; margin: 10px 0 8px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 4px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+    .p-section-title { font-size: 13px; font-weight: 700; color: #002d72; margin: 8px 0 6px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 3px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
     .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
     .p-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-    .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
+    .p-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 12px; }
     .p-card-gold { background: #fffdf5; border: 1px solid #C99700; }
     .p-card-title { font-size: 12px; font-weight: 700; color: #C99700; margin-bottom: 8px; border-bottom: 1px solid #e9ecef; padding-bottom: 4px; }
     .p-data-row { display: flex; flex-direction: column; margin-bottom: 8px; }
-    .p-data-row span { font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
-    .p-data-row strong { font-size: 13px; color: #111; font-weight: 600; }
+    .p-data-row span { font-size: 9px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
+    .p-data-row strong { font-size: 12px; color: #111; font-weight: 600; }
 
-    .p-notes-box { min-height: 120px; border: 2px dashed #ccc; background: #fff; border-radius: 8px; margin-top: 5px; }
+    .p-notes-box { min-height: 80px; border: 2px dashed #ccc; background: #fff; border-radius: 8px; margin-top: 4px; }
     .p-footer { margin-top: auto; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
 
     @media (max-width: 1000px) {
@@ -934,18 +936,6 @@ window.addEventListener('DOMContentLoaded', () => {
         return types.includes('AUTONOMO');
     }
 
-    function blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result.split(',')[1];
-                resolve(base64data);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
     function buildChecklistMessage() {
         const fullName = V('cliente_nome', '');
         const firstName = getClientFirstName(fullName);
@@ -1471,10 +1461,10 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!wrapper || !sheet) return;
 
         const availableWidth = wrapper.clientWidth - 40;
-        if (availableWidth < 800) {
-            const scale = availableWidth / 800;
+        if (availableWidth < 794) {
+            const scale = availableWidth / 794;
             sheet.style.transform = `scale(${scale})`;
-            sheet.style.marginBottom = `-${1131 * (1 - scale)}px`;
+            sheet.style.marginBottom = `-${1123 * (1 - scale)}px`;
         } else {
             sheet.style.transform = 'none';
             sheet.style.marginBottom = '0';
@@ -1484,7 +1474,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', adjustPreviewScale);
 
     document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
-        // Scorre in alto e fissa la pagina per evitare tagli del PDF
         window.scrollTo(0, 0);
 
         document.getElementById('p_note_block').style.display = 'block';
@@ -1547,8 +1536,6 @@ window.addEventListener('DOMContentLoaded', () => {
             sitAbit += ` (${formatNum(V('canone_affitto', '0'))} €/mese, Reg: ${S('contratto_reg')})`;
         }
         setPrint('p_sit_abitativa', sitAbit);
-        
-        // FOTO RIMOSSA DAL PDF PER EVITARE BUG DI IMPAGINAZIONE
 
         document.getElementById('app_main_container').style.display = 'none';
         document.getElementById('custom-preview-modal').style.display = 'flex';
@@ -1556,35 +1543,46 @@ window.addEventListener('DOMContentLoaded', () => {
         const sheet = document.getElementById('print-sheet');
         const scrollArea = document.getElementById('modal_scroll_area');
         
-        // Posizionamento temporaneo assoluto per evitare bug di html2canvas sullo scroll
         sheet.style.position = 'absolute';
         sheet.style.top = '0';
         sheet.style.left = '0';
         sheet.style.transform = 'none';
         sheet.style.marginBottom = '0';
 
-        // Tempo maggiorato (2 secondi) per consentire il caricamento perfetto
+        const maxHeight = 1123;
+        const actualHeight = sheet.scrollHeight;
+
+        if (actualHeight > maxHeight) {
+            const scaleRatio = maxHeight / actualHeight;
+            sheet.style.transform = `scale(${scaleRatio})`;
+            sheet.style.transformOrigin = 'top left';
+        }
+
         setTimeout(async () => {
             const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
             const opt = {
                 margin: 0,
                 filename: pdfFileName,
-                image: { type: 'jpeg', quality: 1 },
+                image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
                     scale: 2,
                     useCORS: true,
                     backgroundColor: '#ffffff',
                     logging: false,
-                    width: 800,
-                    height: 1131,
-                    windowWidth: 800,
-                    windowHeight: 1131,
+                    width: 794,
+                    height: 1123,
+                    windowWidth: 794,
+                    windowHeight: 1123,
                     x: 0,
                     y: 0,
                     scrollX: 0,
                     scrollY: 0
                 },
-                jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+                jsPDF: {
+                    unit: 'pt',
+                    format: 'a4',
+                    orientation: 'portrait'
+                }
             };
 
             try {
@@ -1635,6 +1633,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert("Errore nella generazione del PDF o nell'invio email: " + err.message);
             } finally {
+                sheet.style.transform = 'none';
+                sheet.style.transformOrigin = 'top center';
                 sheet.style.position = 'relative'; 
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
