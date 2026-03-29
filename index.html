@@ -261,10 +261,46 @@
     }
     .p-logo { width: 100%; max-width: 170px; margin: 0 auto 20px auto; display: block; }
     .p-side-block { margin-bottom: 20px; }
-    .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
-    .p-side-item { font-size: 11px; color: #f8f9fa; margin-bottom: 7px; line-height: 1.3; }
-    .p-side-item i { width: 18px; color: #C99700; text-align: center; margin-right: 6px; }
-    .p-side-item strong { color: white; font-weight: 600; display: block; font-size: 13px; margin-top: 1px; }
+    
+    .p-side-title {
+        color: #C99700;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        border-bottom: 1px solid rgba(201, 151, 0, 0.35);
+        padding-bottom: 6px;
+        margin-bottom: 14px;
+        text-transform: uppercase;
+    }
+
+    .p-side-item { 
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+
+        font-size: 12px;
+        color: #f8f9fa;
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+
+    .p-side-item i { 
+        width: 18px;
+        min-width: 18px;
+        color: #C99700;
+        text-align: center;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+
+    .p-side-item strong { 
+        color: white;
+        font-weight: 600;
+        display: block;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
     .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
     .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
 
@@ -324,27 +360,27 @@
 
                 <div class="p-side-block">
                     <div class="p-side-title">RIFERIMENTI</div>
-                    <div class="p-side-item"><i class="fas fa-user-tie"></i> <strong style="font-size:14px;" id="p_referente"></strong></div>
-                    <div class="p-side-item"><i class="fas fa-building"></i> <strong id="p_indirizzo"></strong></div>
-                    <div class="p-side-item"><i class="fas fa-map-marker-alt"></i> <strong id="p_luogo"></strong></div>
-                    <div class="p-side-item"><i class="fas fa-calendar-alt"></i> <strong id="p_data"></strong></div>
+                    <div class="p-side-item"><i class="fas fa-user-tie"></i> <div><strong style="font-size:14px;" id="p_referente"></strong></div></div>
+                    <div class="p-side-item"><i class="fas fa-building"></i> <div id="p_indirizzo"></div></div>
+                    <div class="p-side-item"><i class="fas fa-map-marker-alt"></i> <div><strong id="p_luogo"></strong></div></div>
+                    <div class="p-side-item"><i class="fas fa-calendar-alt"></i> <div><strong id="p_data"></strong></div></div>
                 </div>
 
                 <div class="p-side-block">
                     <div class="p-side-title">COSTI E IMPEGNI</div>
-                    <div class="p-side-item">Mutuo in corso: <strong id="p_mutuo_corso"></strong></div>
-                    <div class="p-side-item">Finanziamenti: <strong id="p_finanziamenti"></strong></div>
+                    <div class="p-side-item" style="display:block;">Mutuo in corso: <strong id="p_mutuo_corso"></strong></div>
+                    <div class="p-side-item" style="display:block;">Finanziamenti: <strong id="p_finanziamenti"></strong></div>
                     <div class="p-side-line"></div>
 
-                    <div class="p-side-item">Polizza Incendio e scoppio:<br><span id="p_tipo_inc" style="display:block; margin:2px 0;"></span><strong id="p_imp_inc"></strong></div>
-                    <div class="p-side-item" style="margin-top:10px;">Polizza Vita:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
+                    <div class="p-side-item" style="display:block;">Polizza Incendio e scoppio:<br><span id="p_tipo_inc" style="display:block; margin:2px 0;"></span><strong id="p_imp_inc"></strong></div>
+                    <div class="p-side-item" style="display:block; margin-top:10px;">Polizza Vita:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
                     <div class="p-side-line"></div>
 
-                    <div class="p-side-item">Istruttoria Banca: <strong id="p_istr"></strong></div>
-                    <div class="p-side-item">Perizia: <strong id="p_perizia"></strong></div>
-                    <div class="p-side-item">Imposta Sostitutiva: <strong id="p_imposta"></strong></div>
-                    <div class="p-side-item">Mediazione Credipass: <strong id="p_mediazione"></strong></div>
-                    <div class="p-side-item">Certificazione Doc.: <strong style="font-size:14px;">76,00 € per richiedente</strong></div>
+                    <div class="p-side-item" style="display:block;">Istruttoria Banca: <strong id="p_istr"></strong></div>
+                    <div class="p-side-item" style="display:block;">Perizia: <strong id="p_perizia"></strong></div>
+                    <div class="p-side-item" style="display:block;">Imposta Sostitutiva: <strong id="p_imposta"></strong></div>
+                    <div class="p-side-item" style="display:block;">Mediazione Credipass: <strong id="p_mediazione"></strong></div>
+                    <div class="p-side-item" style="display:block;">Certificazione Doc.: <strong style="font-size:14px;">76,00 € per richiedente</strong></div>
                 </div>
 
                 <div class="p-side-block" id="p_note_block" style="flex-grow: 1;">
@@ -1554,7 +1590,6 @@ window.addEventListener('DOMContentLoaded', () => {
         sheet.style.marginBottom = '0';
         sheet.style.transformOrigin = 'top center';
 
-        // Debug utile per verificare se il contenuto sfora
         console.log('sheet clientHeight:', sheet.clientHeight);
         console.log('sheet scrollHeight:', sheet.scrollHeight);
 
