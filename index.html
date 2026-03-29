@@ -17,7 +17,7 @@
         color: white;
         padding: 15px 30px;
         display: flex;
-        align-items: stretch; /* Modificato in stretch per pareggiare le altezze dei box */
+        align-items: stretch;
         justify-content: space-between;
         gap: 20px;
         border-bottom: 3px solid #C99700;
@@ -72,7 +72,7 @@
 
     .ref-photo-container {
         width: 85px; height: 85px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; background-color: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; flex-shrink: 0;
-        margin-top: auto; margin-bottom: auto; /* Aiuta a centrare la foto verticalmente */
+        margin-top: auto; margin-bottom: auto;
     }
     .ref-photo-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
     .ref-photo-container i { font-size: 35px; color: rgba(255,255,255,0.5); }
@@ -295,6 +295,12 @@
     /* BOX NOTE FLESSIBILE */
     .p-notes-box { flex-grow: 1; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; margin-top: 6px; padding: 10px; }
     .p-footer { margin-top: 10px; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+
+    /* FORZA IL TESTO AD ANDARE A CAPO SE LE PAROLE SONO TROPPO LUNGHE NEL PDF */
+    .p-notes, .p-data-row strong, .p-side-item, .p-side-item strong {
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
 
     @media (max-width: 1000px) {
         .header { flex-direction: column; align-items: stretch; }
@@ -778,9 +784,9 @@ window.blobToBase64 = function(blob) {
 }
 
 window.loadCredipassReferentePhoto = async function() {
-    const provincia = document.getElementById('ref_provincia')?.value || '';
-    const nome = document.getElementById('ref_nome')?.value || '';
-    const cognome = document.getElementById('ref_cognome')?.value || '';
+    const provincia = document.getElementById('ref_provincia')?.value?.trim() || '';
+    const nome = document.getElementById('ref_nome')?.value?.trim() || '';
+    const cognome = document.getElementById('ref_cognome')?.value?.trim() || '';
 
     if (!provincia || !nome || !cognome) {
         alert('Inserisci provincia, nome e cognome del referente per caricare la foto.');
@@ -794,31 +800,30 @@ window.loadCredipassReferentePhoto = async function() {
         const data = await res.json();
 
         if (!res.ok || !data.ok) {
-            alert(data.error || 'Foto non trovata sulla pagina Credipass.');
-            return;
+            throw new Error(data.error || 'Foto non trovata sulla pagina Credipass.');
         }
-
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(data.imageUrl)}`;
-        const imgRes = await fetch(proxyUrl);
-        const imgBlob = await imgRes.blob();
-        const base64 = await window.blobToBase64(imgBlob);
-        
-        const base64Url = `data:${imgBlob.type};base64,${base64}`;
 
         const img = document.getElementById('referente_foto_preview');
         const placeholder = document.getElementById('referente_foto_placeholder');
-        
-        if (img) {
-            img.src = base64Url;
-            img.style.display = 'block';
-            if(placeholder) placeholder.style.display = 'none';
-            
-            localStorage.setItem('ref_foto_url_salvata', base64Url);
+
+        if (!data.imageBase64) {
+            throw new Error('La function non ha restituito l’immagine in base64.');
         }
-    } catch(err) {
-        alert("Errore di connessione per scaricare la foto: " + err.message);
+
+        img.src = data.imageBase64;
+        img.style.display = 'block';
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        localStorage.setItem('ref_foto_url_salvata', data.imageBase64);
+        alert('Foto aggiornata correttamente.');
+    } catch (err) {
+        console.error(err);
+        alert('Errore caricamento foto: ' + err.message);
     }
-}
+};
 
 window.addEventListener('DOMContentLoaded', () => {
     const savedFoto = localStorage.getItem('ref_foto_url_salvata');
