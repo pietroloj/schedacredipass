@@ -83,6 +83,31 @@ export async function handler(event) {
       imageUrl = `https://www.credipass.it${imageUrl}`;
     }
 
+    // scarico l'immagine lato server
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Netlify Function)',
+        'Referer': pageUrl
+      }
+    });
+
+    if (!imageResponse.ok) {
+      return {
+        statusCode: 502,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ok: false,
+          error: `Download immagine fallito (${imageResponse.status})`,
+          imageUrl
+        })
+      };
+    }
+
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const imageBase64 = `data:${contentType};base64,${base64}`;
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -90,7 +115,8 @@ export async function handler(event) {
         ok: true,
         slug,
         pageUrl,
-        imageUrl
+        imageUrl,
+        imageBase64
       })
     };
   } catch (error) {
