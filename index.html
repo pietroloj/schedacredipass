@@ -319,7 +319,7 @@
                     <div class="p-side-line"></div>
 
                     <div class="p-side-item">Polizza Incendio e scoppio:<br><span id="p_tipo_inc" style="display:block; margin:2px 0;"></span><strong id="p_imp_inc"></strong></div>
-                    <div class="p-side-item" style="margin-top:10px;">Polizza Personale:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
+                    <div class="p-side-item" style="margin-top:10px;">Polizza Vita:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
                     <div class="p-side-line"></div>
 
                     <div class="p-side-item">Istruttoria Banca: <strong id="p_istr"></strong></div>
@@ -659,7 +659,7 @@
                     <select id="importo_incendio" style="margin-top:5px;"><option value=" "></option></select>
                 </div>
                 <div class="form-group">
-                    <label>Polizza Personale</label>
+                    <label>Polizza Vita</label>
                     <select id="tipo_vita">
                         <option value=" ">- Seleziona -</option>
                         <option value="No Polizza">No Polizza</option>
@@ -1266,7 +1266,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <tr><td width="60%" style="border-bottom: 1px solid #eee; color: #666;">Mutuo in corso:</td><td width="40%" style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mutuoCorso)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong><br><span style="font-size:11px;">${safe(impInc)}</span></td></tr>
-                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Personale:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong><br><span style="font-size:11px;">${safe(impVita)}</span></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Vita:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong><br><span style="font-size:11px;">${safe(impVita)}</span></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td></tr>
@@ -1463,7 +1463,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (toList.length > 0) {
                     const clienteNome = V('cliente_nome', 'Cliente');
                     const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
-                    const htmlBody = buildEmailHtml(true);
+                    
+                    // Corpo della mail vuoto per il tasto 1: invia solo l'allegato
+                    const htmlBody = "";
 
                     const response = await fetch('/api/send-email', {
                         method: 'POST',
