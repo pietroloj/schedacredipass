@@ -29,7 +29,6 @@
         border-radius: 12px;
         border-left: 5px solid #C99700;
         flex: 1;
-        max-width: 400px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -70,6 +69,17 @@
         opacity: 0.9;
         margin-top: 1px;
     }
+
+    .ref-photo-container {
+        width: 85px; height: 85px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; background-color: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+    }
+    .ref-photo-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .ref-photo-container i { font-size: 35px; color: rgba(255,255,255,0.5); }
+    
+    .btn-aggiorna {
+        margin-top: 8px; background: rgba(201, 151, 0, 0.1); color: #C99700; border: 1px solid #C99700; border-radius: 4px; padding: 5px 10px; font-size: 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; width: fit-content; transition: 0.3s;
+    }
+    .btn-aggiorna:hover { background: #C99700; color: #fff; }
 
     .logo-area-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
     .logo-area-stack img.logo-main { width: 160px; height: auto; }
@@ -248,7 +258,7 @@
         flex-direction: column;
         border-right: 5px solid #C99700;
     }
-    .p-logo { width: 100%; max-width: 170px; margin-bottom: 30px; }
+    .p-logo { width: 100%; max-width: 170px; margin-bottom: 25px; }
     .p-side-block { margin-bottom: 25px; }
     .p-side-title { color: #C99700; font-size: 13px; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid rgba(201, 151, 0, 0.4); padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; }
     .p-side-item { font-size: 12px; color: #f8f9fa; margin-bottom: 8px; line-height: 1.4; }
@@ -305,9 +315,14 @@
             <div class="p-sidebar">
                 <img src="/images/logo-credipass.png" class="p-logo" alt="Credipass" crossorigin="anonymous">
 
+                <div id="p_foto_container" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid #C99700; overflow: hidden; margin-bottom: 25px; display: none;">
+                    <img id="p_referente_foto" src="" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous">
+                </div>
+
                 <div class="p-side-block">
                     <div class="p-side-title">RIFERIMENTI</div>
                     <div class="p-side-item"><i class="fas fa-user-tie"></i> <strong style="font-size:14px;" id="p_referente"></strong></div>
+                    <div class="p-side-item"><i class="fas fa-building"></i> <strong id="p_indirizzo"></strong></div>
                     <div class="p-side-item"><i class="fas fa-map-marker-alt"></i> <strong id="p_luogo"></strong></div>
                     <div class="p-side-item"><i class="fas fa-calendar-alt"></i> <strong id="p_data"></strong></div>
                 </div>
@@ -447,19 +462,44 @@
 
 <div class="app-container" id="app_main_container">
     <div class="header">
-        <div class="header-box">
-            <span class="ruolo">Referente Consulenza</span>
-            <input type="text" id="campo_referente" class="header-editable" value="PIETRO LO IACONO">
-            <span class="ruolo" style="margin-top: 5px;">Email e Contatti</span>
-            <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
-            <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
+        
+        <div style="display: flex; align-items: center; gap: 15px; flex: 1; max-width: 450px;">
+            <div class="ref-photo-container">
+                <img id="referente_foto_preview" src="" alt="Foto Referente">
+                <i id="referente_foto_placeholder" class="fas fa-user-tie"></i>
+            </div>
+            
+            <div class="header-box" style="margin: 0; max-width: none; flex: 1;">
+                <span class="ruolo">Referente Consulenza</span>
+                <input type="text" id="campo_referente" class="header-editable" value="PIETRO LO IACONO">
+                
+                <span class="ruolo" style="margin-top: 5px;">Sede / Indirizzo</span>
+                <textarea id="campo_indirizzo" class="header-editable info-sub" rows="2" style="resize: none; overflow: hidden;">VIA MARTIRI DEL DISSENSO 99/101
+SANTA MARIA CAPUA VETERE (CE)</textarea>
+                
+                <span class="ruolo" style="margin-top: 5px;">Email e Contatti</span>
+                <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
+                <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
+            </div>
         </div>
 
-        <div class="header-box">
+        <div class="header-box" style="max-width: 450px;">
             <span class="ruolo">Email Automazione</span>
             <input type="text" id="campo_email_auto" class="header-editable info-sub" value="segreteria.passaretti@credipass.it">
             <span class="ruolo" style="margin-top: 8px;">WhatsApp Automazione</span>
             <input type="text" id="campo_wa_auto" class="header-editable info-sub" value="393760552826">
+            
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(201, 151, 0, 0.3);">
+                <span class="ruolo" style="color: #C99700;">Aggiorna Foto Profilo Web (Provincia / Nome / Cognome)</span>
+                <div style="display: flex; gap: 5px; margin-top: 2px;">
+                    <input type="text" id="ref_provincia" class="header-editable info-sub" placeholder="Provincia" style="border-bottom: 1px solid rgba(255,255,255,0.2) !important; width: 32%;">
+                    <input type="text" id="ref_nome" class="header-editable info-sub" placeholder="Nome" style="border-bottom: 1px solid rgba(255,255,255,0.2) !important; width: 32%;">
+                    <input type="text" id="ref_cognome" class="header-editable info-sub" placeholder="Cognome" style="border-bottom: 1px solid rgba(255,255,255,0.2) !important; width: 32%;">
+                </div>
+                <button type="button" class="btn-aggiorna" onclick="loadCredipassReferentePhoto()">
+                    <i class="fas fa-sync-alt"></i> Aggiorna Informazioni
+                </button>
+            </div>
         </div>
 
         <div class="logo-area-stack">
@@ -471,6 +511,7 @@
     <div class="main-title">SCHEDA DI CONSULENZA</div>
 
     <div class="content">
+
         <div class="grid-2" style="margin-bottom: 20px;">
             <div class="form-group"><label><i class="fas fa-map-marker-alt" style="color:#C99700;"></i> Luogo Incontro</label><input type="text" id="campo_luogo" placeholder="Città..."></div>
             <div class="form-group"><label><i class="fas fa-calendar-alt" style="color:#C99700;"></i> Data</label><input type="text" id="campo_data"></div>
@@ -716,13 +757,77 @@
 </div>
 
 <script>
+window.slugifyCredipassPart = function(text) {
+    return String(text || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+}
+
+window.loadCredipassReferentePhoto = async function() {
+    const provincia = document.getElementById('ref_provincia')?.value || '';
+    const nome = document.getElementById('ref_nome')?.value || '';
+    const cognome = document.getElementById('ref_cognome')?.value || '';
+
+    if (!provincia || !nome || !cognome) {
+        alert('Inserisci provincia, nome e cognome del referente per caricare la foto.');
+        return;
+    }
+
+    const url = `/.netlify/functions/get-credipass-photo?provincia=${encodeURIComponent(provincia)}&nome=${encodeURIComponent(nome)}&cognome=${encodeURIComponent(cognome)}`;
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            alert(data.error || 'Foto non trovata sulla pagina Credipass.');
+            return;
+        }
+
+        const img = document.getElementById('referente_foto_preview');
+        const placeholder = document.getElementById('referente_foto_placeholder');
+        
+        if (img) {
+            img.src = data.imageUrl;
+            img.style.display = 'block';
+            if(placeholder) placeholder.style.display = 'none';
+            
+            // Salva in memoria per i prossimi utilizzi!
+            localStorage.setItem('ref_foto_url_salvata', data.imageUrl);
+        }
+    } catch(err) {
+        alert("Errore di connessione: " + err.message);
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+    // Ricarica la foto se era già stata salvata
+    const savedFoto = localStorage.getItem('ref_foto_url_salvata');
+    if (savedFoto) {
+        const img = document.getElementById('referente_foto_preview');
+        const placeholder = document.getElementById('referente_foto_placeholder');
+        if (img) {
+            img.src = savedFoto;
+            img.style.display = 'block';
+            if(placeholder) placeholder.style.display = 'none';
+        }
+    }
+
     const fields = {
         'campo_referente': 'ref_n',
+        'campo_indirizzo': 'ref_indirizzo',
         'campo_email': 'ref_e',
         'campo_email_auto': 'ref_ea',
         'campo_cellulare': 'ref_c',
-        'campo_wa_auto': 'ref_wa'
+        'campo_wa_auto': 'ref_wa',
+        'ref_provincia': 'ref_prov',
+        'ref_nome': 'ref_nome_val',
+        'ref_cognome': 'ref_cognome_val'
     };
 
     Object.keys(fields).forEach(id => {
@@ -1084,7 +1189,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const luogo = V('campo_luogo', '-');
         const data = V('campo_data', '-');
+        
         const referente = V('campo_referente', '-');
+        const indirizzo = V('campo_indirizzo', '');
         const refEmail = V('campo_email', 'pietro.loiacono@credipass.it');
         const refCell = V('campo_cellulare', '3925701385');
 
@@ -1133,6 +1240,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
+        
+        const imgPreview = document.getElementById('referente_foto_preview');
+        const fotoUrl = (imgPreview && imgPreview.style.display !== 'none') ? imgPreview.src : null;
 
         const safe = (txt) =>
             String(txt || '')
@@ -1307,13 +1417,19 @@ window.addEventListener('DOMContentLoaded', () => {
                     <td bgcolor="#002d72" style="padding: 30px; margin-top: 20px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
-                                <td width="65%" style="color: #ffffff; font-size: 13px; line-height: 1.5;">
+                                ${fotoUrl ? `
+                                <td width="90" valign="middle" style="padding-right: 15px;">
+                                    <img src="${fotoUrl}" alt="Foto Referente" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #C99700; object-fit: cover; display: block;">
+                                </td>
+                                ` : ''}
+                                <td style="color: #ffffff; font-size: 13px; line-height: 1.5;">
                                     <strong style="font-size: 16px; color: #C99700;">${safe(referente)}</strong><br>
                                     <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a9b5c7;">Referente Consulenza Credipass</span><br><br>
+                                    ${indirizzo ? `📍 ${safe(indirizzo).replace(/\n/g, '<br>')}<br>` : ''}
                                     <a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">✉️ ${safe(refEmail)}</a><br>
                                     <a href="tel:+39${safe(refCell)}" style="color: #ffffff; text-decoration: none;">📞 +39 ${safe(refCell)}</a>
                                 </td>
-                                <td width="35%" align="right" valign="middle">
+                                <td align="right" valign="middle">
                                     <img src="https://consulenza-credipass.it/images/logo-20anni.png" alt="20 Anni" width="100" style="display: block; border: 0;">
                                 </td>
                             </tr>
@@ -1360,6 +1476,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('p_note_block').style.display = 'block';
 
         setPrint('p_referente', V('campo_referente'));
+        setPrint('p_indirizzo', V('campo_indirizzo').replace(/\n/g, '<br>'));
         setPrint('p_luogo', V('campo_luogo'));
         setPrint('p_data', V('campo_data'));
         setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
@@ -1416,6 +1533,15 @@ window.addEventListener('DOMContentLoaded', () => {
             sitAbit += ` (${formatNum(V('canone_affitto', '0'))} €/mese, Reg: ${S('contratto_reg')})`;
         }
         setPrint('p_sit_abitativa', sitAbit);
+        
+        // Passa la foto anche al PDF
+        const imgPreview = document.getElementById('referente_foto_preview');
+        if (imgPreview && imgPreview.style.display !== 'none') {
+            document.getElementById('p_referente_foto').src = imgPreview.src;
+            document.getElementById('p_foto_container').style.display = 'block';
+        } else {
+            document.getElementById('p_foto_container').style.display = 'none';
+        }
 
         document.getElementById('app_main_container').style.display = 'none';
         document.getElementById('custom-preview-modal').style.display = 'flex';
@@ -1464,7 +1590,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const clienteNome = V('cliente_nome', 'Cliente');
                     const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
                     
-                    // Corpo della mail vuoto per il tasto 1: invia solo l'allegato
+                    // Corpo mail totalmente vuoto: solo il file allegato e l'oggetto
                     const htmlBody = "";
 
                     const response = await fetch('/api/send-email', {
