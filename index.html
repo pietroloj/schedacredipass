@@ -314,8 +314,8 @@
     }
 
     .p-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
-    .p-main-title { font-size: 22px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.15; }
-    .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 4px; }
+    .p-main-title { font-size: 22px; font-weight: 800; color: #002d72; margin: 0; line-height: 1.15; margin-bottom: 6px; }
+    .p-titolo-nomi { font-size: 14px; font-weight: 600; color: #C99700 !important; display: block; margin-top: 6px; letter-spacing: 0.5px; }
 
     .p-section-title { font-size: 13px; font-weight: 700; color: #002d72; margin: 8px 0 6px 0; border-bottom: 2px solid #e9ecef; padding-bottom: 3px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
     .p-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
@@ -361,7 +361,6 @@
                 <div class="p-side-block">
                     <div class="p-side-title">RIFERIMENTI</div>
                     <div class="p-side-item"><i class="fas fa-user-tie"></i> <div><strong style="font-size:14px;" id="p_referente"></strong></div></div>
-                    <div class="p-side-item"><i class="fas fa-building"></i> <div id="p_indirizzo"></div></div>
                     <div class="p-side-item"><i class="fas fa-map-marker-alt"></i> <div><strong id="p_luogo"></strong></div></div>
                     <div class="p-side-item"><i class="fas fa-calendar-alt"></i> <div><strong id="p_data"></strong></div></div>
                 </div>
@@ -1464,11 +1463,32 @@ window.addEventListener('DOMContentLoaded', () => {
                                 </td>
                                 ` : ''}
                                 <td style="color: #ffffff; font-size: 13px; line-height: 1.5;">
-                                    <strong style="font-size: 16px; color: #C99700;">${safe(referente)}</strong><br>
-                                    <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a9b5c7;">Referente Consulenza Credipass</span><br><br>
-                                    ${indirizzo ? `📍 ${safe(indirizzo).replace(/\n/g, '<br>')}<br>` : ''}
-                                    <a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">✉️ ${safe(refEmail)}</a><br>
-                                    <a href="tel:+39${safe(refCell)}" style="color: #ffffff; text-decoration: none;">📞 +39 ${safe(refCell)}</a>
+                                    <div style="margin-bottom: 12px;">
+                                        <strong style="font-size: 16px; color: #C99700; font-family: 'Poppins', Arial, sans-serif; font-weight: 700;">${safe(referente)}</strong><br>
+                                        <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a9b5c7; font-family: 'Poppins', Arial, sans-serif; font-weight: 500;">Referente Consulenza Credipass</span>
+                                    </div>
+                                    
+                                    ${indirizzo ? `
+                                    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
+                                        <tr>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">📍</td>
+                                            <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">${safe(indirizzo).replace(/\n/g, '<br>')}</td>
+                                        </tr>
+                                    </table>` : ''}
+                                    
+                                    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
+                                        <tr>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">✉️</td>
+                                            <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;"><a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">${safe(refEmail)}</a></td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <table cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">📞</td>
+                                            <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;"><a href="tel:+39${safe(refCell).replace(/\D/g, '')}" style="color: #ffffff; text-decoration: none;">+39 ${safe(refCell)}</a></td>
+                                        </tr>
+                                    </table>
                                 </td>
                                 <td align="right" valign="middle">
                                     <img src="https://consulenza-credipass.it/images/logo-20anni.png" alt="20 Anni" width="100" style="display: block; border: 0;">
@@ -1519,7 +1539,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('p_note_block').style.display = 'block';
 
         setPrint('p_referente', V('campo_referente'));
-        setPrint('p_indirizzo', V('campo_indirizzo').replace(/\n/g, '<br>'));
         setPrint('p_luogo', V('campo_luogo'));
         setPrint('p_data', V('campo_data'));
         setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
