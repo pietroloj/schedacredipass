@@ -372,7 +372,7 @@
                     <div class="p-side-line"></div>
 
                     <div class="p-side-item" style="display:block;">Polizza Incendio e scoppio:<br><span id="p_tipo_inc" style="display:block; margin:2px 0;"></span><strong id="p_imp_inc"></strong></div>
-                    <div class="p-side-item" style="display:block; margin-top:10px;">Polizza Vita:<br><span id="p_tipo_vita" style="display:block; margin:2px 0;"></span><strong id="p_imp_vita"></strong></div>
+                    <div class="p-side-item" style="display:block; margin-top:10px;">Polizza Personale:<br><span id="p_tipo_Personale" style="display:block; margin:2px 0;"></span><strong id="p_imp_Personale"></strong></div>
                     <div class="p-side-line"></div>
 
                     <div class="p-side-item" style="display:block;">Istruttoria Banca: <strong id="p_istr"></strong></div>
@@ -738,15 +738,15 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                     <select id="importo_incendio" style="margin-top:5px;"><option value=" "></option></select>
                 </div>
                 <div class="form-group">
-                    <label>Polizza Vita</label>
-                    <select id="tipo_vita">
+                    <label>Polizza Personale</label>
+                    <select id="tipo_Personale">
                         <option value=" ">- Seleziona -</option>
                         <option value="No Polizza">No Polizza</option>
                         <option value="Banca">Banca</option>
                         <option value="Premio Rateizzato">Premio Rateizzato</option>
                         <option value="Premio Totale">Premio Totale</option>
                     </select>
-                    <select id="importo_vita" style="margin-top:5px;"><option value=" "></option></select>
+                    <select id="importo_Personale" style="margin-top:5px;"><option value=" "></option></select>
                 </div>
             </div>
             <div class="grid-2">
@@ -1266,8 +1266,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const tipoInc = V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna';
         const impInc = V('importo_incendio') !== '-' ? V('importo_incendio') : '-';
-        const tipoVita = V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna';
-        const impVita = V('importo_vita') !== '-' ? V('importo_vita') : '-';
+        const tipoPersonale = V('tipo_Personale') !== '-' ? V('tipo_Personale') : 'Nessuna';
+        const impPersonale = V('importo_Personale') !== '-' ? V('importo_Personale') : '-';
 
         const istr = formatNum(V('istr_banca', '0')) + ' €';
         const perizia = formatNum(V('perizia_costo', '0')) + ' €';
@@ -1416,7 +1416,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <tr><td width="60%" style="border-bottom: 1px solid #eee; color: #666;">Mutuo in corso:</td><td width="40%" style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mutuoCorso)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong><br><span style="font-size:11px;">${safe(impInc)}</span></td></tr>
-                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Vita:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoVita)}</strong><br><span style="font-size:11px;">${safe(impVita)}</span></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Personale:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoPersonale)}</strong><br><span style="font-size:11px;">${safe(impPersonale)}</span></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td></tr>
@@ -1545,8 +1545,8 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_finanziamenti', S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : ''));
         setPrint('p_tipo_inc', V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna');
         setPrint('p_imp_inc', V('importo_incendio') !== '-' ? V('importo_incendio') : '');
-        setPrint('p_tipo_vita', V('tipo_vita') !== '-' ? V('tipo_vita') : 'Nessuna');
-        setPrint('p_imp_vita', V('importo_vita') !== '-' ? V('importo_vita') : '');
+        setPrint('p_tipo_Personale', V('tipo_Personale') !== '-' ? V('tipo_Personale') : 'Nessuna');
+        setPrint('p_imp_Personale', V('importo_Personale') !== '-' ? V('importo_Personale') : '');
         setPrint('p_istr', formatNum(V('istr_banca', '0')) + ' €');
         setPrint('p_perizia', formatNum(V('perizia_costo', '0')) + ' €');
         setPrint('p_imposta', S('imposta'));
@@ -1847,7 +1847,7 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     setupPol('tipo_incendio', 'importo_incendio', 'incendio');
-    setupPol('tipo_vita', 'importo_vita', 'vita');
+    setupPol('tipo_Personale', 'importo_Personale', 'Personale');
 });
 </script>
 </body>
