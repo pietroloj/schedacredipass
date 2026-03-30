@@ -266,7 +266,6 @@
     }
     .p-logo { width: 100%; max-width: 170px; margin: 0 auto 20px auto; display: block; }
     .p-side-block { margin-bottom: 20px; }
-    
     .p-side-title {
         color: #C99700;
         font-size: 12px;
@@ -277,19 +276,16 @@
         margin-bottom: 14px;
         text-transform: uppercase;
     }
-
-    .p-side-item { 
+    .p-side-item {
         display: flex;
         align-items: flex-start;
         gap: 8px;
-
         font-size: 12px;
         color: #f8f9fa;
         margin-bottom: 12px;
         line-height: 1.5;
     }
-
-    .p-side-item i { 
+    .p-side-item i {
         width: 18px;
         min-width: 18px;
         color: #C99700;
@@ -297,15 +293,13 @@
         margin-top: 3px;
         flex-shrink: 0;
     }
-
-    .p-side-item strong { 
+    .p-side-item strong {
         color: white;
         font-weight: 600;
         display: block;
         font-size: 13px;
         line-height: 1.5;
     }
-
     .p-side-line { height: 1px; background: rgba(255,255,255,0.1); margin: 12px 0; }
     .p-notes { font-size: 11px; color: #e0e0e0; font-style: italic; white-space: pre-wrap; line-height: 1.5; }
 
@@ -333,11 +327,9 @@
     .p-data-row span { font-size: 9px; text-transform: uppercase; color: #666; margin-bottom: 2px; }
     .p-data-row strong { font-size: 12px; color: #111; font-weight: 600; }
 
-    /* BOX NOTE FLESSIBILE */
     .p-notes-box { flex-grow: 1; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; margin-top: 6px; padding: 10px; }
     .p-footer { margin-top: 10px; text-align: right; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
 
-    /* FORZA IL TESTO AD ANDARE A CAPO SE LE PAROLE SONO TROPPO LUNGHE NEL PDF */
     .p-notes, .p-data-row strong, .p-side-item, .p-side-item strong {
         word-break: break-word;
         overflow-wrap: break-word;
@@ -505,7 +497,6 @@
 
 <div class="app-container" id="app_main_container">
     <div class="header">
-        
         <div style="display: flex; align-items: stretch; gap: 15px; flex: 1; max-width: 450px;">
             <div class="ref-photo-container">
                 <img id="referente_foto_preview" src="" alt="Foto Referente">
@@ -554,7 +545,6 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
     <div class="main-title">SCHEDA DI CONSULENZA</div>
 
     <div class="content">
-
         <div class="grid-2" style="margin-bottom: 20px;">
             <div class="form-group"><label><i class="fas fa-map-marker-alt" style="color:#C99700;"></i> Luogo Incontro</label><input type="text" id="campo_luogo" placeholder="Città..."></div>
             <div class="form-group"><label><i class="fas fa-calendar-alt" style="color:#C99700;"></i> Data</label><input type="text" id="campo_data"></div>
@@ -809,7 +799,7 @@ window.slugifyCredipassPart = function(text) {
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-');
-}
+};
 
 window.blobToBase64 = function(blob) {
     return new Promise((resolve, reject) => {
@@ -821,7 +811,7 @@ window.blobToBase64 = function(blob) {
         reader.onerror = reject;
         reader.readAsDataURL(blob);
     });
-}
+};
 
 window.loadCredipassReferentePhoto = async function() {
     const provincia = document.getElementById('ref_provincia')?.value?.trim() || '';
@@ -853,9 +843,7 @@ window.loadCredipassReferentePhoto = async function() {
         img.src = data.imageBase64;
         img.style.display = 'block';
 
-        if (placeholder) {
-            placeholder.style.display = 'none';
-        }
+        if (placeholder) placeholder.style.display = 'none';
 
         localStorage.setItem('ref_foto_url_salvata', data.imageBase64);
         alert('Foto aggiornata correttamente.');
@@ -873,7 +861,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (img) {
             img.src = savedFoto;
             img.style.display = 'block';
-            if(placeholder) placeholder.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'none';
         }
     }
 
@@ -900,7 +888,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
 
-    if ("geolocation" in navigator) {
+    if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(function(position) {
             fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
                 .then(response => response.json())
@@ -908,28 +896,24 @@ window.addEventListener('DOMContentLoaded', () => {
                     const citta = data.city || data.locality || data.principalSubdivision;
                     if (citta) document.getElementById('campo_luogo').value = citta;
                 }).catch(e => console.log(e));
-        }, function(error) {});
+        }, function() {});
     }
-    
+
     const sitRadios = document.querySelectorAll('input[name="sit_abitativa"]');
     const boxAffitto = document.getElementById('dettagli_affitto');
     sitRadios.forEach(r => {
         r.addEventListener('change', (e) => {
-            if(e.target.value === 'Affitto') {
-                boxAffitto.style.display = 'block';
-            } else {
-                boxAffitto.style.display = 'none';
-            }
+            boxAffitto.style.display = e.target.value === 'Affitto' ? 'block' : 'none';
         });
     });
 
     const getR = (name) => {
         const el = document.querySelector(`input[name="${name}"]:checked`);
-        return el ? el.value : "N/D";
+        return el ? el.value : 'N/D';
     };
 
     const formatNum = (val) => {
-        if (!val || val === "-" || String(val).trim() === "") return val;
+        if (!val || val === '-' || String(val).trim() === '') return val;
         let clean = String(val).replace(/\./g, '').trim();
         let parts = clean.split(',');
         let intPart = parseInt(parts[0].replace(/\D/g, ''), 10);
@@ -938,21 +922,21 @@ window.addEventListener('DOMContentLoaded', () => {
         return parts.length > 1 ? formattedInt + ',' + parts[1] : formattedInt;
     };
 
-    const V = (id, fallback = "-") => {
+    const V = (id, fallback = '-') => {
         const el = document.getElementById(id);
         if (!el) return fallback;
-        const value = (el.value || "").trim();
-        return value !== "" ? value : fallback;
+        const value = (el.value || '').trim();
+        return value !== '' ? value : fallback;
     };
 
-    const S = (name, fallback = "-") => {
+    const S = (name, fallback = '-') => {
         const el = document.querySelector(`input[name="${name}"]:checked`);
         return el ? el.value : fallback;
     };
 
     const setPrint = (id, value) => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = value || "-";
+        if (el) el.innerHTML = value || '-';
     };
 
     function normalizePhone(raw) {
@@ -967,8 +951,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!cleaned) return 'Cliente';
         return cleaned.split(/\s+/)[0];
     }
-
-    // --- MOTORE CENTRALE CHECKLIST ---
 
     function hasSecondApplicant() {
         const nome2 = document.getElementById('cliente2_nome');
@@ -1001,9 +983,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const config = getChecklistConfig();
         const docs = {
             anagrafici: [
-                "Carta d’Identità (fronte/retro) in corso di validità",
-                "Tessera Sanitaria (fronte/retro) in corso di validità",
-                "Certificato Cumulativo (Residenza e Stato di Famiglia)"
+                'Carta d’Identità (fronte/retro) in corso di validità',
+                'Tessera Sanitaria (fronte/retro) in corso di validità',
+                'Certificato Cumulativo (Residenza e Stato di Famiglia)'
             ],
             dipendenti: [],
             autonomi: [],
@@ -1012,56 +994,54 @@ window.addEventListener('DOMContentLoaded', () => {
         };
 
         if (config.stato === 'CONIUGATO_SEPARAZIONE_BENI') {
-            docs.anagrafici.push("Atto di matrimonio (solo se coniugato con separazione dei beni)");
+            docs.anagrafici.push('Atto di matrimonio (solo se coniugato con separazione dei beni)');
         }
 
         if (config.hasDipendente) {
-            docs.dipendenti.push("Ultime 2 buste paga");
-            docs.dipendenti.push("Ultimo CUD / CU disponibile");
-            docs.dipendenti.push("Estratto conto trimestrale");
-            docs.dipendenti.push("Lista movimenti aggiornata con saldo iniziale e finale");
-            docs.dipendenti.push("Contratto di lavoro o attestazione di servizio");
+            docs.dipendenti.push('Ultime 2 buste paga');
+            docs.dipendenti.push('Ultimo CUD / CU disponibile');
+            docs.dipendenti.push('Estratto conto trimestrale');
+            docs.dipendenti.push('Lista movimenti aggiornata con saldo iniziale e finale');
+            docs.dipendenti.push('Contratto di lavoro o attestazione di servizio');
         }
 
         if (config.hasAutonomo) {
-            docs.autonomi.push("Ultimi 2 Modelli Redditi / Unici");
-            docs.autonomi.push("Ricevute di trasmissione telematica");
-            docs.autonomi.push("Ultimi F24 versati");
-            docs.autonomi.push("Estratti conto trimestrali");
-            docs.autonomi.push("Lista movimenti aggiornata con saldo iniziale e finale");
-            docs.autonomi.push("Visura Camerale aggiornata");
-            docs.autonomi.push("Contratti o parcelle principali");
+            docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici');
+            docs.autonomi.push('Ricevute di trasmissione telematica');
+            docs.autonomi.push('Ultimi F24 versati');
+            docs.autonomi.push('Estratti conto trimestrali');
+            docs.autonomi.push('Lista movimenti aggiornata con saldo iniziale e finale');
+            docs.autonomi.push('Visura Camerale aggiornata');
+            docs.autonomi.push('Contratti o parcelle principali');
         }
 
         if (config.finalita !== 'VOUCHER' && config.finalita !== 'N/D') {
-            docs.immobiliari.push("Atto di provenienza dell’immobile");
-            docs.immobiliari.push("Planimetria catastale e visura aggiornata");
-            docs.immobiliari.push("Concessione edilizia / agibilità");
+            docs.immobiliari.push('Atto di provenienza dell’immobile');
+            docs.immobiliari.push('Planimetria catastale e visura aggiornata');
+            docs.immobiliari.push('Concessione edilizia / agibilità');
 
             if (config.finalita === 'ACQUISTO') {
-                docs.immobiliari.push("Preliminare di compravendita o proposta accettata");
+                docs.immobiliari.push('Preliminare di compravendita o proposta accettata');
             } else if (config.finalita === 'RISTRUTTURAZIONE') {
-                docs.immobiliari.push("Preventivo dei lavori / Computo metrico");
-                docs.immobiliari.push("Titolo abilitativo (CILA/SCIA/DIA) se previsto");
+                docs.immobiliari.push('Preventivo dei lavori / Computo metrico');
+                docs.immobiliari.push('Titolo abilitativo (CILA/SCIA/DIA) se previsto');
             } else if (config.finalita === 'LIQUIDITÀ') {
-                docs.immobiliari.push("Relazione o preventivi giustificativi per la finalità di liquidità richiesta");
+                docs.immobiliari.push('Relazione o preventivi giustificativi per la finalità di liquidità richiesta');
             }
 
             if (config.finalita === 'SURROGA' || config.gia_mutuo) {
-                docs.immobiliari.push("Atto di mutuo");
+                docs.immobiliari.push('Atto di mutuo');
             }
         }
 
         if (config.fin_corso || config.finalita === 'CONSOLIDAMENTO') {
-            docs.altri.push("Contratti finanziamenti in corso");
-            docs.altri.push("Conteggi estintivi aggiornati");
+            docs.altri.push('Contratti finanziamenti in corso');
+            docs.altri.push('Conteggi estintivi aggiornati');
         }
-        docs.altri.push("CTC online (accesso tramite SPID) 👉 https://www.ctconline.it");
+        docs.altri.push('CTC online (accesso tramite SPID) 👉 https://www.ctconline.it');
 
         return { config, docs };
     }
-
-    // --- FINE MOTORE CENTRALE ---
 
     function buildChecklistMessage() {
         const fullName = V('cliente_nome', '');
@@ -1113,20 +1093,40 @@ window.addEventListener('DOMContentLoaded', () => {
         return msg;
     }
 
+    function openWhatsApp(phone, message) {
+        const cleanPhone = String(phone || '').replace(/\D/g, '');
+        const encodedMsg = encodeURIComponent(message);
+        let url = '';
+
+        if (cleanPhone) {
+            url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMsg}`;
+        } else {
+            url = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+        }
+
+        window.open(url, '_blank');
+    }
+
+    function generateWhatsAppLink(phone, message) {
+        const cleanPhone = String(phone || '').replace(/\D/g, '');
+        const encodedMsg = encodeURIComponent(message);
+        return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMsg}`;
+    }
+
     function buildBackofficeMessage() {
         const clientName = V('cliente_nome', '');
         const clientPhone = normalizePhone(V('cliente_cell', ''));
         const referente = V('campo_referente', '');
         const finalita = getR('fin');
         const checklistMessage = buildChecklistMessage();
-        const waDirectLink = `https://wa.me/${clientPhone}?text=${encodeURIComponent(checklistMessage)}`;
+        const waDirectLink = generateWhatsAppLink(clientPhone, checklistMessage);
 
         let msg = `📥 *RICHIESTA INVIO DOCUMENTALE*\n\n`;
         msg += `👤 Cliente: ${clientName}\n`;
         msg += `📱 Numero cliente: ${clientPhone}\n`;
         msg += `🤝 Referente: ${referente}\n`;
         msg += `🎯 Finalità: ${finalita}\n\n`;
-        msg += `🔗 *Link diretto WhatsApp da inviare al cliente:*\n${waDirectLink}\n\n`;
+        msg += `🔗 *LINK DIRETTO DA INVIARE AL CLIENTE:*\n${waDirectLink}\n\n`;
         msg += `🕒 Generato il: ${new Date().toLocaleString('it-IT')}`;
 
         return msg;
@@ -1249,7 +1249,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const stato = S('stato', '-');
         const componenti = V('num_componenti', '0');
-        const assegno = S('assegno', 'No') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : '');
+        const assegno = S('assegno', 'No') + (V('assegno_importo') !== '-' ? ` (${formatNum(V('assegno_importo'))} €)` : '');
         const figli = [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(v => v !== '-').join(', ') || '-';
         
         const sitAbitRaw = S('sit_abitativa', '-');
@@ -1266,8 +1266,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const durata = V('mutuo_durata', '0') + ' Anni';
         const tasso = S('tasso', '-');
 
-        const mutuoCorso = S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : '');
-        const finanziamenti = S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : '');
+        const mutuoCorso = S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== '-' ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : '');
+        const finanziamenti = S('fin_corso', 'No') + (V('rata_fin_pre') !== '-' ? ` (${formatNum(V('rata_fin_pre'))} €)` : '');
 
         const tipoInc = V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna';
         const impInc = V('importo_incendio') !== '-' ? V('importo_incendio') : '-';
@@ -1285,7 +1285,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
-        
         const imgPreview = document.getElementById('referente_foto_preview');
         const fotoUrl = (imgPreview && imgPreview.style.display !== 'none') ? imgPreview.src : null;
 
@@ -1472,7 +1471,6 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <strong style="font-size: 16px; color: #C99700; font-family: 'Poppins', Arial, sans-serif; font-weight: 700;">${safe(referente)}</strong><br>
                                         <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a9b5c7; font-family: 'Poppins', Arial, sans-serif; font-weight: 500;">Referente Consulenza Credipass</span>
                                     </div>
-                                    
                                     ${indirizzo ? `
                                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
                                         <tr>
@@ -1480,14 +1478,12 @@ window.addEventListener('DOMContentLoaded', () => {
                                             <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">${safe(indirizzo).replace(/\n/g, '<br>')}</td>
                                         </tr>
                                     </table>` : ''}
-                                    
                                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
                                         <tr>
                                             <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">✉️</td>
                                             <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;"><a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">${safe(refEmail)}</a></td>
                                         </tr>
                                     </table>
-                                    
                                     <table cellpadding="0" cellspacing="0" border="0">
                                         <tr>
                                             <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">📞</td>
@@ -1546,8 +1542,8 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_referente', V('campo_referente'));
         setPrint('p_luogo', V('campo_luogo'));
         setPrint('p_data', V('campo_data'));
-        setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== "-" ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
-        setPrint('p_finanziamenti', S('fin_corso', 'No') + (V('rata_fin_pre') !== "-" ? ` (${formatNum(V('rata_fin_pre'))} €)` : ''));
+        setPrint('p_mutuo_corso', S('gia_mutuo', 'No') + (V('rata_mutuo_pre') !== '-' ? ` (${formatNum(V('rata_mutuo_pre'))} €)` : ''));
+        setPrint('p_finanziamenti', S('fin_corso', 'No') + (V('rata_fin_pre') !== '-' ? ` (${formatNum(V('rata_fin_pre'))} €)` : ''));
         setPrint('p_tipo_inc', V('tipo_incendio') !== '-' ? V('tipo_incendio') : 'Nessuna');
         setPrint('p_imp_inc', V('importo_incendio') !== '-' ? V('importo_incendio') : '');
         setPrint('p_tipo_Personale', V('tipo_Personale') !== '-' ? V('tipo_Personale') : 'Nessuna');
@@ -1584,8 +1580,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         setPrint('p_stato', S('stato'));
         setPrint('p_componenti', V('num_componenti', '0'));
-        setPrint('p_assegno', S('assegno') + (V('assegno_importo') !== "-" ? ` (${formatNum(V('assegno_importo'))} €)` : ''));
-        setPrint('p_figli', [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(e => e !== "-").join(', ') || '-');
+        setPrint('p_assegno', S('assegno') + (V('assegno_importo') !== '-' ? ` (${formatNum(V('assegno_importo'))} €)` : ''));
+        setPrint('p_figli', [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(e => e !== '-').join(', ') || '-');
         setPrint('p_finalita', S('fin'));
         setPrint('p_prodotto', S('prodotto'));
         setPrint('p_importo', formatNum(V('mutuo_importo', '0')) + ' €');
@@ -1594,7 +1590,7 @@ window.addEventListener('DOMContentLoaded', () => {
         setPrint('p_durata', V('mutuo_durata', '0') + ' Anni');
         setPrint('p_tasso', S('tasso'));
         setPrint('p_generato_il', new Date().toLocaleString('it-IT'));
-        
+
         let sitAbit = S('sit_abitativa');
         if (sitAbit === 'Affitto') {
             sitAbit += ` (${formatNum(V('canone_affitto', '0'))} €/mese, Reg: ${S('contratto_reg')})`;
@@ -1603,19 +1599,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('app_main_container').style.display = 'none';
         document.getElementById('custom-preview-modal').style.display = 'flex';
-        
+
         const sheet = document.getElementById('print-sheet');
-        const scrollArea = document.getElementById('modal_scroll_area');
-        
         sheet.style.position = 'relative';
         sheet.style.top = '0';
         sheet.style.left = '0';
         sheet.style.transform = 'none';
         sheet.style.marginBottom = '0';
         sheet.style.transformOrigin = 'top center';
-
-        console.log('sheet clientHeight:', sheet.clientHeight);
-        console.log('sheet scrollHeight:', sheet.scrollHeight);
 
         setTimeout(async () => {
             const pdfFileName = 'Scheda_Consulenza_' + (nome1 ? nome1.replace(/\s+/g, '_') : 'Cliente') + '.pdf';
@@ -1646,21 +1637,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 const mailAutomazione = V('campo_email_auto', '');
                 const mailReferente = V('campo_email', '');
-
                 const toList = [...new Set([mailAutomazione, mailReferente].filter(m => m && m !== '-'))];
                 const bccList = [];
 
                 if (toList.length > 0) {
                     const clienteNome = V('cliente_nome', 'Cliente');
                     const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
-                    
-                    const htmlBody = "<br>";
+                    const htmlBody = '<br>';
 
                     const response = await fetch('/api/send-email', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             to: toList,
                             bcc: bccList,
@@ -1673,10 +1660,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Errore durante l’invio email con allegato');
-                    }
+                    if (!response.ok) throw new Error(result.error || 'Errore durante l’invio email con allegato');
 
                     alert('PDF scaricato ed email inviata correttamente a te e all\'automazione.');
                 } else {
@@ -1684,11 +1668,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (err) {
                 console.error(err);
-                alert("Errore nella generazione del PDF o nell'invio email: " + err.message);
+                alert('Errore nella generazione del PDF o nell\'invio email: ' + err.message);
             } finally {
                 sheet.style.transform = 'none';
                 sheet.style.transformOrigin = 'top center';
-                sheet.style.position = 'relative'; 
+                sheet.style.position = 'relative';
                 document.getElementById('custom-preview-modal').style.display = 'none';
                 document.getElementById('app_main_container').style.display = 'block';
                 adjustPreviewScale();
@@ -1721,7 +1705,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const backofficeMsg = buildBackofficeMessage();
-        window.open(`https://wa.me/${dest}?text=${encodeURIComponent(backofficeMsg)}`, '_blank');
+        openWhatsApp(dest, backofficeMsg);
         closeWaChoiceModal();
     }
 
@@ -1735,7 +1719,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const checklistMessage = buildChecklistMessage();
-        window.open(`https://wa.me/${cell}?text=${encodeURIComponent(checklistMessage)}`, '_blank');
+        openWhatsApp(cell, checklistMessage);
         closeWaChoiceModal();
     }
 
@@ -1776,7 +1760,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const clienteNome = V('cliente_nome', 'Cliente');
             const subjectStr = 'Scheda Consulenza Credipass - ' + clienteNome;
-            
             const htmlBody = buildEmailHtml(includeNotes);
 
             btn.disabled = true;
@@ -1795,10 +1778,7 @@ window.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Errore durante l’invio email');
-            }
+            if (!response.ok) throw new Error(result.error || 'Errore durante l’invio email');
 
             alert('Email inviata correttamente al cliente.');
         } catch (err) {
