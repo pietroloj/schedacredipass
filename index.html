@@ -784,7 +784,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
         <div class="btn-wrapper">
             <button class="btn-action btn-pdf" id="btn_stampa_pdf"><i class="fas fa-file-pdf"></i> 1. SALVA E SCARICA IL PDF</button>
             <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP</button>
-            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL</button>
+            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL CON AREA CLIENTI</button>
         </div>
     </div>
 </div>
@@ -1300,6 +1300,53 @@ window.addEventListener('DOMContentLoaded', () => {
         const figliHtml = safe(figli);
         const checklistHtml = buildChecklistEmailHtml();
 
+        // --------------------------------------------------------------
+        // INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI
+        // --------------------------------------------------------------
+        const clienteParam = encodeURIComponent(getClientFirstName(nome1));
+        
+        let reqDocs = ['ci', 'ts', 'residenza']; 
+        
+        if (S('stato') === 'CONIUGATO_SEPARAZIONE_BENI') reqDocs.push('matrimonio');
+        
+        if (hasDipendente()) reqDocs.push('bustepaga', 'cud');
+        if (hasAutonomo()) reqDocs.push('unici', 'visura', 'f24');
+        reqDocs.push('ec'); 
+
+        const finalitaUrl = S('fin');
+        if (finalitaUrl !== 'VOUCHER' && finalitaUrl !== 'N/D') {
+            reqDocs.push('atto', 'planimetria');
+            if (finalitaUrl === 'ACQUISTO') reqDocs.push('preliminare');
+            if (finalitaUrl === 'RISTRUTTURAZIONE') reqDocs.push('preventivo');
+            if (finalitaUrl === 'SURROGA' || S('gia_mutuo') === 'Sì') reqDocs.push('mutuo_pre');
+        }
+        
+        if (S('fin_corso') === 'Sì' || finalitaUrl === 'CONSOLIDAMENTO') {
+            reqDocs.push('prestiti');
+        }
+
+        const docsParam = reqDocs.join(',');
+        
+        // --- ATTENZIONE: SOSTITUISCI TUODOMINIO.IT CON IL TUO VERO URL ---
+        const uploadUrl = `https://TUODOMINIO.it/upload.html?cliente=${clienteParam}&docs=${docsParam}`;
+
+        const pulsanteUploadHtml = `
+        <tr>
+            <td align="center" style="padding: 20px 30px 40px 30px;">
+                <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 25px; text-align: center;">
+                    <h3 style="color: #002d72; margin-top: 0; font-size: 18px;">Hai i documenti pronti?</h3>
+                    <p style="color: #555; font-size: 14px; margin-bottom: 20px;">
+                        Usa la nostra Area Clienti sicura per caricare i file o scansionarli comodamente dal telefono. La tua lista documenti è già personalizzata.
+                    </p>
+                    <a href="${uploadUrl}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                       📂 VAI ALL'AREA CLIENTI
+                    </a>
+                </div>
+            </td>
+        </tr>
+        `;
+        // --------------------------------------------------------------
+
         return `<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1457,6 +1504,9 @@ window.addEventListener('DOMContentLoaded', () => {
                         </table>
                     </td>
                 </tr>
+                
+                ${pulsanteUploadHtml}
+
                 <tr>
                     <td bgcolor="#002d72" style="padding: 30px; margin-top: 20px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
