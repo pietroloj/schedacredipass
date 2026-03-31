@@ -1327,8 +1327,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const docsParam = reqDocs.join(',');
         
-        // --- ATTENZIONE: SOSTITUISCI TUODOMINIO.IT CON IL TUO VERO URL ---
-        const uploadUrl = `https://TUODOMINIO.it/upload.html?cliente=${clienteParam}&docs=${docsParam}`;
+        // Il sistema capisce da solo su quale dominio si trova!
+        const baseURL = window.location.origin;
+        const uploadUrl = `${baseURL}/upload.html?cliente=${clienteParam}&docs=${docsParam}`;
 
         const pulsanteUploadHtml = `
         <tr>
