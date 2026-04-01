@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ricerca Clienti - Credipass</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+    body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .search-container { background-color: #ffffff; width: 100%; max-width: 800px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #002d72; }
+    
+    .header { background-color: #f8f9fa; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e9ecef; }
+    .header h1 { color: #002d72; margin: 0; font-size: 24px; font-weight: 800; }
+
+    .search-box { padding: 20px 40px; background: #002d72; }
+    .search-input-wrapper { position: relative; width: 100%; }
+    .search-input-wrapper i { position: absolute; left: 15px; top: 15px; color: #777; }
+    .search-input { width: 100%; padding: 15px 15px 15px 45px; border-radius: 8px; border: none; font-size: 16px; font-family: 'Poppins', sans-serif; box-sizing: border-box; outline: none; }
+    .search-input:focus { box-shadow: 0 0 0 3px rgba(201, 151, 0, 0.5); }
+
+    .client-list { padding: 20px 40px; min-height: 300px; }
+    
+    /* Stili base della Card */
+    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; text-decoration: none; color: inherit; background: #fff; }
+    .client-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+    
+    /* Classi Semaforo per lo Status */
+    .status-completo { border-left-color: #28a745; background-color: #f8fff9; }
+    .status-incompleto { border-left-color: #ffc107; background-color: #fffdf5; }
+    .status-vuoto { border-left-color: #dc3545; background-color: #fff; }
+
+    .client-info h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; display: flex; align-items: center; gap: 8px; }
+    .client-info p { margin: 0; font-size: 12px; color: #777; }
+    
+    .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
+    .badge-verde { background: #28a745; }
+    .badge-giallo { background: #ffc107; color: #856404; }
+    
+    .client-action { color: #002d72; font-weight: bold; font-size: 14px; }
+    
+    .loading { text-align: center; padding: 30px; color: #002d72; display: none; }
+    .no-results { text-align: center; padding: 30px; color: #777; display: none; }
+</style>
+</head>
+<body>
+
+<div class="search-container">
+    <div class="header">
+        <h1>Archivio Pratiche</h1>
+        <p style="color: #C99700; margin-top:5px; font-weight:600;">Controlla lo stato avanzamento documenti</p>
+    </div>
+
+    <div class="search-box">
+        <div class="search-input-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Cerca per nome o cognome..." onkeyup="filtraClienti()">
+        </div>
+    </div>
+
+    <div class="client-list">
+        <div id="loadingIndicator" class="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Caricamento archivio in corso...</p></div>
+        <div id="noResults" class="no-results">Nessun cliente trovato con questo nome.</div>
+        <div id="clientiContainer">
+            </div>
+    </div>
+</div>
+
+<script>
+    var firebaseConfig = {
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+        authDomain: "consulenza-credipass.firebaseapp.com",
+        projectId: "consulenza-credipass"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    var db = firebase.firestore();
+    var tuttiIClienti = []; 
+
+    async function caricaClientiDaDB() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        
+        try {
+            // Chiamata REALE al database Firebase
+            const querySnapshot = await db.collection("pratiche_mutuo").get();
+            
+            querySnapshot.forEach((doc) => {
+                const idDocumento = doc.id;
+                // Formatta l'ID (es. "mario_rossi" diventa "MARIO ROSSI") per la ricerca
+                const nomeFormattato = idDocumento.replace(/_/g, ' ').toUpperCase();
+                
+                tuttiIClienti.push({
+                    idOriginale: idDocumento,
+                    nomeRicerca: nomeFormattato,
+                    dati: doc.data()
+                });
+            });
+
+            document.getElementById('loadingIndicator').style.display = 'none';
+            mostraClienti(tuttiIClienti);
+
+        } catch (error) {
+            console.error("Errore di caricamento:", error);
+            alert("Errore nel caricamento del database. Controlla le regole di sicurezza di Firebase.");
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+    }
+
+    function mostraClienti(lista) {
+        const container = document.getElementById('clientiContainer');
+        const noResults = document.getElementById('noResults');
+        container.innerHTML = '';
+
+        if (lista.length === 0) {
+            noResults.style.display = 'block';
+            return;
+        } else {
+            noResults.style.display = 'none';
+        }
+
+        lista.forEach(cliente => {
+            const linkTag = document.createElement('a');
+            linkTag.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
+            
+            // LOGICA DEL SEMAFORO
+            // Escludiamo la chiave "totaleRichiesti" dal conteggio dei file effettivamente caricati
+            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti');
+            const fileCaricati = chiaviCaricate.length;
+            
+            // Se totaleRichiesti non c'è nel database, per default usiamo un numero indicativo (es. 0 per evitare errori)
+            const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
+            
+            let classeStato = "";
+            let badgeHtml = "";
+            let testoInfo = "";
+
+            if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
+                // COMPLETO
+                classeStato = "status-completo";
+                badgeHtml = `<span class="badge-status badge-verde"><i class="fas fa-check-circle"></i> COMPLETO</span>`;
+                testoInfo = `Tutti i ${fileRichiesti} documenti acquisiti`;
+            } else if (fileCaricati > 0) {
+                // INCOMPLETO
+                let mancanti = fileRichiesti - fileCaricati;
+                classeStato = "status-incompleto";
+                badgeHtml = `<span class="badge-status badge-giallo"><i class="fas fa-exclamation-triangle"></i> INCOMPLETO</span>`;
+                testoInfo = `${fileCaricati} caricati su ${fileRichiesti} • <strong>Mancano ${mancanti} documenti</strong>`;
+            } else {
+                // VUOTO (Nessun file caricato)
+                classeStato = "status-vuoto";
+                testoInfo = `In attesa di documenti (Richiesti: ${fileRichiesti})`;
+            }
+
+            linkTag.className = `client-card ${classeStato}`;
+
+            linkTag.innerHTML = `
+                <div class="client-info">
+                    <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
+                    <p>ID Pratica: ${cliente.idOriginale} <br> ${testoInfo}</p>
+                </div>
+                <div class="client-action">
+                    Fascicolo <i class="fas fa-chevron-right" style="margin-left:5px;"></i>
+                </div>
+            `;
+            container.appendChild(linkTag);
+        });
+    }
+
+    function filtraClienti() {
+        const termineDiRicerca = document.getElementById('searchInput').value.toUpperCase();
+        const clientiFiltrati = tuttiIClienti.filter(cliente => cliente.nomeRicerca.includes(termineDiRicerca));
+        mostraClienti(clientiFiltrati);
+    }
+
+    window.onload = caricaClientiDaDB;
+
+</script>
+</body>
+</html>
