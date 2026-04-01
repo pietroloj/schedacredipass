@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dettaglio Fascicolo - Credipass</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+    body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
+    .dashboard-container { background-color: #ffffff; width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #002d72; }
+    
+    .header { background-color: #f8f9fa; padding: 20px 40px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+    .header-text h1 { color: #002d72; margin: 0; font-size: 22px; font-weight: 800; text-transform: uppercase; }
+    .header-text p { color: #C99700; font-size: 13px; margin: 5px 0 0 0; font-weight: 600; }
+    .btn-back { background: #e9ecef; color: #002d72; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Poppins', sans-serif; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-back:hover { background: #002d72; color: white; }
+
+    .search-bar { background: #002d72; padding: 20px 40px; display: flex; gap: 10px; flex-direction: column; }
+    .search-inputs-group { display: flex; gap: 10px; width: 100%; }
+    .search-input { flex: 1; padding: 12px 15px; border-radius: 6px; border: none; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; }
+    .info-testo { color: white; font-size: 13px; }
+    
+    .btn-zip { background: #28a745; color: white; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; width: 100%; justify-content: center; margin-top: 20px; font-size: 16px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+    .btn-zip:hover { background: #218838; }
+    .btn-zip:disabled { background: #ccc; cursor: not-allowed; }
+
+    .content { padding: 30px 40px; }
+    .category-section { margin-bottom: 30px; display: none; }
+    .category-title { font-size: 16px; font-weight: 700; color: #002d72; border-bottom: 2px solid #e9ecef; padding-bottom: 5px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .category-title i { color: #C99700; }
+
+    .doc-row { background: #fdfdfd; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 20px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #C99700; }
+    .doc-info { flex: 1; display: flex; flex-direction: column; }
+    .doc-name { font-size: 14px; font-weight: 600; color: #333; }
+    .doc-meta { font-size: 11px; color: #777; margin-top: 2px; }
+
+    .actions { display: flex; gap: 8px; }
+    .btn-icon { background: #e9ecef; color: #002d72; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .btn-icon:hover { background: #002d72; color: white; }
+
+    /* Modal Anteprima */
+    #previewModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; }
+    .preview-header { width: 90%; max-width: 1000px; display: flex; justify-content: space-between; padding: 15px 0; color: white; align-items: center; }
+    .preview-content { background: white; width: 90%; max-width: 1000px; height: 80vh; border-radius: 8px; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: none; }
+    
+    .loading-spinner { display: none; text-align: center; padding: 40px; color: #002d72; }
+    .empty-state { text-align: center; padding: 40px; color: #777; font-size: 14px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div class="header">
+        <div class="header-text">
+            <h1 id="titoloPagina">Fascicolo Cliente</h1>
+            <p id="sottotitoloPagina">Analisi documenti in corso...</p>
+        </div>
+        <a href="ricerca-clienti.html" class="btn-back"><i class="fas fa-arrow-left"></i> Torna alla Ricerca</a>
+    </div>
+
+    <div class="search-bar">
+        <div class="info-testo"><i class="fas fa-info-circle"></i> Per nominare correttamente le cartelle nello ZIP, inserisci qui i nomi reali:</div>
+        <div class="search-inputs-group">
+            <input type="text" id="nomeRichiedente1" class="search-input" placeholder="Es. Pietro Lo Iacono (1° Richiedente)">
+            <input type="text" id="nomeRichiedente2" class="search-input" placeholder="Es. Mariana Corsale (2° Richiedente)">
+        </div>
+    </div>
+
+    <div class="content">
+        <div id="loading" class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Estrazione PDF dal Cloud...</p></div>
+        <div id="emptyState" class="empty-state">
+            <i class="fas fa-folder-open fa-3x" style="color:#ddd; margin-bottom:15px; display:block;"></i>
+            Nessun documento PDF trovato per questo cliente nello Storage.
+        </div>
+
+        <div id="cat-ANAGRAFICA" class="category-section"><div class="category-title"><i class="fas fa-id-card"></i> ANAGRAFICA</div><div class="doc-list"></div></div>
+        <div id="cat-REDDITUALI" class="category-section"><div class="category-title"><i class="fas fa-file-invoice-dollar"></i> REDDITUALI</div><div class="doc-list"></div></div>
+        <div id="cat-ESTRATTI" class="category-section"><div class="category-title"><i class="fas fa-university"></i> ESTRATTI CONTO</div><div class="doc-list"></div></div>
+        <div id="cat-IMMOBILIARI" class="category-section"><div class="category-title"><i class="fas fa-home"></i> IMMOBILIARI</div><div class="doc-list"></div></div>
+        <div id="cat-FINANZIAMENTI" class="category-section"><div class="category-title"><i class="fas fa-hand-holding-usd"></i> FINANZIAMENTI IN ESSERE</div><div class="doc-list"></div></div>
+
+        <button id="btnZip" class="btn-zip" onclick="scaricaZipStrutturato()"><i class="fas fa-file-archive"></i> Scarica ZIP Completo Strutturato</button>
+    </div>
+</div>
+
+<div id="previewModal">
+    <div class="preview-header">
+        <h3 id="previewTitle" style="margin:0; font-size:16px;">Anteprima Documento</h3>
+        <button style="background:#dc3545; color:white; border:none; padding: 8px 15px; border-radius:4px; cursor:pointer;" onclick="chiudiAnteprima()"><i class="fas fa-times"></i> Chiudi</button>
+    </div>
+    <div class="preview-content">
+        <iframe id="previewFrame" src=""></iframe>
+    </div>
+</div>
+
+<script>
+    var firebaseConfig = {
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+        authDomain: "consulenza-credipass.firebaseapp.com",
+        storageBucket: "consulenza-credipass.firebasestorage.app"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    var storage = firebase.storage();
+
+    const MAPPA_CATEGORIE = {
+        'doc_ci': 'ANAGRAFICA', 'doc_ts': 'ANAGRAFICA', 'doc_residenza': 'ANAGRAFICA', 'doc_matrimonio': 'ANAGRAFICA',
+        'doc_bustepaga': 'REDDITUALI', 'doc_cud': 'REDDITUALI', 'doc_unici': 'REDDITUALI', 'doc_visura': 'REDDITUALI',
+        'doc_ec': 'ESTRATTI', 'doc_mov': 'ESTRATTI',
+        'doc_atto': 'IMMOBILIARI', 'doc_planimetria': 'IMMOBILIARI', 'doc_preliminare': 'IMMOBILIARI', 'doc_preventivo': 'IMMOBILIARI',
+        'doc_mutuo_pre': 'FINANZIAMENTI', 'doc_prestiti': 'FINANZIAMENTI'
+    };
+
+    const NOMI_FRIENDLY = {
+        'doc_ci': "Carta d'Identità", 'doc_ts': "Tessera Sanitaria", 'doc_residenza': "Certificato Residenza", 'doc_matrimonio': "Atto Matrimonio",
+        'doc_bustepaga': "Buste Paga", 'doc_cud': "CUD/CU", 'doc_unici': "Modello Unico", 'doc_visura': "Visura Camerale",
+        'doc_ec': "Estratto Conto", 'doc_mov': "Lista Movimenti",
+        'doc_atto': "Atto Provenienza", 'doc_planimetria': "Planimetria", 'doc_preliminare': "Preliminare", 'doc_preventivo': "Preventivo",
+        'doc_mutuo_pre': "Mutuo in Corso", 'doc_prestiti': "Finanziamenti"
+    };
+
+    let filesCorrenti = [];
+    let idClienteAttuale = "";
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        idClienteAttuale = urlParams.get('clienteId');
+
+        if (idClienteAttuale) {
+            const nomeFormattato = idClienteAttuale.replace(/_/g, ' ').toUpperCase();
+            document.getElementById('titoloPagina').innerText = "Fascicolo: " + nomeFormattato;
+            document.getElementById('sottotitoloPagina').innerText = "ID: " + idClienteAttuale;
+            caricaFascicolo(idClienteAttuale);
+        } else {
+            document.getElementById('emptyState').innerHTML = "Nessun ID cliente selezionato.";
+            document.getElementById('emptyState').style.display = 'block';
+        }
+    };
+
+    async function caricaFascicolo(clientId) {
+        document.getElementById('loading').style.display = 'block';
+        filesCorrenti = [];
+
+        try {
+            const listRef = storage.ref(`Fascicoli/${clientId}`);
+            const res = await listRef.listAll();
+
+            if (res.items.length === 0) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            for (let itemRef of res.items) {
+                const url = await itemRef.getDownloadURL();
+                analizzaEPushFile(itemRef.name, url);
+            }
+            disegnaInterfaccia();
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('emptyState').innerHTML = `Errore di lettura permessi. Sblocca le regole di Firebase Storage.`;
+            document.getElementById('emptyState').style.display = 'block';
+        }
+    }
+
+    function analizzaEPushFile(fileName, url) {
+        const parti = fileName.split('_');
+        let codiceBase = ""; let richiedenteNum = "comune"; 
+
+        if (fileName.startsWith("doc_") && parti.length >= 3) {
+            let prefisso = parti[0] + "_" + parti[1]; 
+            if (prefisso.endsWith("1")) { richiedenteNum = "1"; codiceBase = prefisso.slice(0, -1); } 
+            else if (prefisso.endsWith("2")) { richiedenteNum = "2"; codiceBase = prefisso.slice(0, -1); } 
+            else { codiceBase = prefisso; }
+        }
+
+        filesCorrenti.push({
+            nomeOriginale: fileName,
+            url: url,
+            categoria: MAPPA_CATEGORIE[codiceBase] || 'ALTRI',
+            richiedente: richiedenteNum,
+            nomeFriendly: NOMI_FRIENDLY[codiceBase] || codiceBase
+        });
+    }
+
+    function disegnaInterfaccia() {
+        document.getElementById('loading').style.display = 'none';
+        
+        filesCorrenti.forEach(file => {
+            const container = document.querySelector(`#cat-${file.categoria} .doc-list`);
+            if (!container) return;
+
+            document.getElementById(`cat-${file.categoria}`).style.display = 'block';
+
+            let tagRichiedente = "";
+            if (file.richiedente === "1") tagRichiedente = `<span style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:10px; color:#002d72; margin-left:6px;">1° Richiedente</span>`;
+            if (file.richiedente === "2") tagRichiedente = `<span style="background:#fff3cd; padding:2px 6px; border-radius:4px; font-size:10px; color:#856404; margin-left:6px;">2° Richiedente</span>`;
+
+            const row = document.createElement('div');
+            row.className = 'doc-row';
+            row.innerHTML = `
+                <div class="doc-info">
+                    <div class="doc-name">${file.nomeFriendly} ${tagRichiedente}</div>
+                    <div class="doc-meta">${file.nomeOriginale}</div>
+                </div>
+                <div class="actions">
+                    <button type="button" class="btn-icon" title="Anteprima" onclick="apriAnteprima('${file.url}', '${file.nomeOriginale}')"><i class="fas fa-eye"></i></button>
+                    <button type="button" class="btn-icon" title="Scarica" onclick="scaricaFile('${file.url}', '${file.nomeOriginale}')"><i class="fas fa-download"></i></button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+        document.getElementById('btnZip').style.display = 'flex';
+    }
+
+    function apriAnteprima(url, name) {
+        document.getElementById('previewTitle').innerText = name;
+        document.getElementById('previewFrame').src = url;
+        document.getElementById('previewModal').style.display = 'flex';
+    }
+
+    function chiudiAnteprima() {
+        document.getElementById('previewModal').style.display = 'none';
+        document.getElementById('previewFrame').src = "";
+    }
+
+    async function scaricaFile(url, filename) {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            saveAs(blob, filename);
+        } catch (e) { window.open(url, '_blank'); }
+    }
+
+    async function scaricaZipStrutturato() {
+        const btn = document.getElementById('btnZip');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zippatura in corso...';
+
+        const zip = new JSZip();
+        const nomeRich1 = document.getElementById('nomeRichiedente1').value.trim().toUpperCase() || "1_RICHIEDENTE";
+        const nomeRich2 = document.getElementById('nomeRichiedente2').value.trim().toUpperCase() || "2_RICHIEDENTE";
+
+        try {
+            for (let file of filesCorrenti) {
+                const res = await fetch(file.url);
+                const blob = await res.blob();
+
+                let subFolder = file.richiedente === "1" ? `/${nomeRich1}` : (file.richiedente === "2" ? `/${nomeRich2}` : `/IMMOBILE_E_COMUNI`);
+                const percorsoFile = `${file.categoria}${subFolder}/${file.nomeFriendly.replace(/[^a-zA-Z0-9]/g, '_')}_${file.nomeOriginale}`;
+                
+                zip.file(percorsoFile, blob);
+            }
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `FASCICOLO_${idClienteAttuale.toUpperCase()}.zip`);
+        } catch (error) {
+            alert("Errore ZIP. Verifica regole CORS dello Storage.");
+        } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-archive"></i> Scarica ZIP Completo Strutturato';
+        }
+    }
+</script>
+</body>
+</html>
