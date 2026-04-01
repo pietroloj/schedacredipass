@@ -26,11 +26,9 @@
 
     .client-list { padding: 20px 40px; min-height: 300px; }
     
-    /* Stili base della Card */
-    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; text-decoration: none; color: inherit; background: #fff; }
+    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; background: #fff; }
     .client-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
     
-    /* Classi Semaforo per lo Status */
     .status-completo { border-left-color: #28a745; background-color: #f8fff9; }
     .status-incompleto { border-left-color: #ffc107; background-color: #fffdf5; }
     .status-vuoto { border-left-color: #dc3545; background-color: #fff; }
@@ -41,6 +39,7 @@
     .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
     .badge-verde { background: #28a745; }
     .badge-giallo { background: #ffc107; color: #856404; }
+    .badge-rosso { background: #dc3545; }
     
     .client-action { color: #002d72; font-weight: bold; font-size: 14px; }
     
@@ -65,9 +64,8 @@
 
     <div class="client-list">
         <div id="loadingIndicator" class="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Caricamento archivio in corso...</p></div>
-        <div id="noResults" class="no-results">Nessun cliente trovato con questo nome.</div>
-        <div id="clientiContainer">
-            </div>
+        <div id="noResults" class="no-results">Nessun cliente trovato.</div>
+        <div id="clientiContainer"></div>
     </div>
 </div>
 
@@ -86,18 +84,20 @@
         document.getElementById('loadingIndicator').style.display = 'block';
         
         try {
-            // Chiamata REALE al database Firebase
             const querySnapshot = await db.collection("pratiche_mutuo").get();
             
             querySnapshot.forEach((doc) => {
                 const idDocumento = doc.id;
-                // Formatta l'ID (es. "mario_rossi" diventa "MARIO ROSSI") per la ricerca
-                const nomeFormattato = idDocumento.replace(/_/g, ' ').toUpperCase();
+                const datiDoc = doc.data();
+                
+                // AGGIORNAMENTO: Cerca il nome reale salvato nel DB, altrimenti usa l'ID formattato
+                let nomeReale = datiDoc.nomeCliente || idDocumento.replace(/_/g, ' ');
+                const nomeFormattato = nomeReale.toUpperCase();
                 
                 tuttiIClienti.push({
                     idOriginale: idDocumento,
                     nomeRicerca: nomeFormattato,
-                    dati: doc.data()
+                    dati: datiDoc
                 });
             });
 
@@ -105,8 +105,8 @@
             mostraClienti(tuttiIClienti);
 
         } catch (error) {
-            console.error("Errore di caricamento:", error);
-            alert("Errore nel caricamento del database. Controlla le regole di sicurezza di Firebase.");
+            console.error(error);
+            alert("Errore di connessione a Firebase.");
             document.getElementById('loadingIndicator').style.display = 'none';
         }
     }
@@ -117,71 +117,58 @@
         container.innerHTML = '';
 
         if (lista.length === 0) {
-            noResults.style.display = 'block';
-            return;
+            noResults.style.display = 'block'; return;
         } else {
             noResults.style.display = 'none';
         }
 
         lista.forEach(cliente => {
-            const linkTag = document.createElement('div');
-            linkTag.style.cursor = 'pointer';
-            linkTag.onclick = function() {
-            window.location.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
-};
+            const card = document.createElement('div');
+            card.onclick = function() {
+                window.location.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
+            };
             
-            // LOGICA DEL SEMAFORO
-            // Escludiamo la chiave "totaleRichiesti" dal conteggio dei file effettivamente caricati
-            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti');
+            // Filtra solo le chiavi dei documenti
+            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente');
             const fileCaricati = chiaviCaricate.length;
-            
-            // Se totaleRichiesti non c'è nel database, per default usiamo un numero indicativo (es. 0 per evitare errori)
             const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
             
-            let classeStato = "";
-            let badgeHtml = "";
-            let testoInfo = "";
+            let classeStato = ""; let badgeHtml = ""; let testoInfo = "";
 
             if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
-                // COMPLETO
                 classeStato = "status-completo";
                 badgeHtml = `<span class="badge-status badge-verde"><i class="fas fa-check-circle"></i> COMPLETO</span>`;
                 testoInfo = `Tutti i ${fileRichiesti} documenti acquisiti`;
             } else if (fileCaricati > 0) {
-                // INCOMPLETO
                 let mancanti = fileRichiesti - fileCaricati;
                 classeStato = "status-incompleto";
                 badgeHtml = `<span class="badge-status badge-giallo"><i class="fas fa-exclamation-triangle"></i> INCOMPLETO</span>`;
                 testoInfo = `${fileCaricati} caricati su ${fileRichiesti} • <strong>Mancano ${mancanti} documenti</strong>`;
             } else {
-                // VUOTO (Nessun file caricato)
                 classeStato = "status-vuoto";
+                badgeHtml = `<span class="badge-status badge-rosso"><i class="fas fa-times-circle"></i> VUOTO</span>`;
                 testoInfo = `In attesa di documenti (Richiesti: ${fileRichiesti})`;
             }
 
-            linkTag.className = `client-card ${classeStato}`;
-
-            linkTag.innerHTML = `
+            card.className = `client-card ${classeStato}`;
+            card.innerHTML = `
                 <div class="client-info">
                     <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
                     <p>ID Pratica: ${cliente.idOriginale} <br> ${testoInfo}</p>
                 </div>
-                <div class="client-action">
-                    Fascicolo <i class="fas fa-chevron-right" style="margin-left:5px;"></i>
-                </div>
+                <div class="client-action">Fascicolo <i class="fas fa-chevron-right" style="margin-left:5px;"></i></div>
             `;
-            container.appendChild(linkTag);
+            container.appendChild(card);
         });
     }
 
     function filtraClienti() {
-        const termineDiRicerca = document.getElementById('searchInput').value.toUpperCase();
-        const clientiFiltrati = tuttiIClienti.filter(cliente => cliente.nomeRicerca.includes(termineDiRicerca));
-        mostraClienti(clientiFiltrati);
+        const termine = document.getElementById('searchInput').value.toUpperCase();
+        const filtrati = tuttiIClienti.filter(c => c.nomeRicerca.includes(termine));
+        mostraClienti(filtrati);
     }
 
     window.onload = caricaClientiDaDB;
-
 </script>
 </body>
 </html>
