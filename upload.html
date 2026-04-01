@@ -11,17 +11,17 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
-    .upload-container { background-color: #ffffff; width: 100%; max-width: 800px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #002d72; }
+    .upload-container { background-color: #ffffff; width: 100%; max-width: 800px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #C99700; }
     
-    .header { background-color: #f8f9fa; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e9ecef; }
+    .header { background-color: #002d72; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e9ecef; }
     .header img { max-width: 180px; margin-bottom: 15px; }
-    .header h1 { color: #002d72; margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; }
-    .header p { color: #666; font-size: 14px; margin: 10px 0 0 0; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; }
+    .header p { color: #C99700; font-size: 14px; margin: 10px 0 0 0; }
     
     .content { padding: 20px 40px 40px 40px; }
     .alert-box { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 4px solid #ffeeba; font-size: 13px; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start; }
@@ -33,17 +33,20 @@
     .doc-row.caricato { border-left-color: #28a745; background-color: #f8fff9; }
     
     .doc-info { flex: 1; padding-right: 15px; }
-    .doc-title { font-size: 14px; font-weight: 600; color: #333; display: block; }
+    .doc-title { font-size: 14px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 6px; }
     .doc-desc { font-size: 11px; color: #777; margin-top: 3px; display: block; }
 
+    /* Stile Info Icon */
+    .info-icon { color: #007bff; cursor: pointer; font-size: 15px; transition: 0.2s; }
+    .info-icon:hover { color: #0056b3; }
+    .info-detail { display: none; background: #e9f5ff; border-left: 3px solid #007bff; padding: 8px 12px; font-size: 11px; color: #0056b3; margin-top: 8px; border-radius: 4px; line-height: 1.4; }
+
     .actions-wrapper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    
     .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
     .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
     
     .btn-upload { background: #e9ecef; color: #002d72; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 16px; border: none; border-radius: 20px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 6px; }
     .file-input-wrapper:hover .btn-upload { background: #002d72; color: white; }
-    
     .btn-camera { background: #fffdf5; border: 1px solid #C99700; color: #C99700; padding: 8px 12px; border-radius: 50%; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; font-size: 14px; }
     .btn-camera:hover { background: #C99700; color: white; }
 
@@ -54,7 +57,6 @@
     .btn-submit:hover { background: #C99700; }
     .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
 
-    /* Modale QR Code CENTRATO */
     #qrModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
     .modal-content { background-color: #fff; padding: 30px; border-radius: 12px; text-align: center; max-width: 350px; border-top: 6px solid #C99700; }
     .modal-content h2 { margin-top: 0; color: #002d72; font-size: 20px; }
@@ -62,13 +64,10 @@
     #qrcode img { margin: 0 auto !important; }
     .close-modal { background: #e9ecef; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
 
-    /* Modale Scanner In-App */
     #scannerModal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: #000; flex-direction: column; justify-content: center; align-items: center; }
     .scanner-text { position: absolute; top: 40px; width: 100%; text-align: center; color: white; z-index: 10; }
     .scanner-viewport { position: relative; width: 100%; max-width: 500px; height: 70vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
     #cameraStream { width: 100%; height: 100%; object-fit: cover; }
-    
-    /* Maschera Adattiva */
     #documentMask { position: absolute; border: 3px dashed rgba(255,255,255,0.8); border-radius: 12px; transition: all 0.4s ease-out; box-shadow: 0 0 0 4000px rgba(0,0,0,0.65); pointer-events: none; }
     
     .scanner-controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 10; }
@@ -112,7 +111,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_ts1" data-section="sec_richiedente1">
-                <div class="doc-info"><span class="doc-title">Tessera Sanitaria / Codice Fiscale</span></div>
+                <div class="doc-info"><span class="doc-title">Tessera Sanitaria / C.Fiscale</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ts1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ts1')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts1', 'ID')" title="Scansiona C.F."><i class="fas fa-camera"></i></button>
@@ -123,7 +122,10 @@
             </div>
 
             <div class="doc-row" id="row_doc_residenza1" data-section="sec_richiedente1">
-                <div class="doc-info"><span class="doc-title">Certificato Cumulativo / Residenza</span></div>
+                <div class="doc-info">
+                    <span class="doc-title">Certificato Cumulativo <i class="fas fa-info-circle info-icon" onclick="toggleInfo('info_res1')"></i></span>
+                    <div id="info_res1" class="info-detail">Puoi scaricarlo gratis dal sito ANPR (Anagrafe Nazionale) accedendo con SPID. Comprende Stato di Famiglia e Residenza. Puoi richiederlo "esente da bollo" selezionando l'uso sportivo o similare.</div>
+                </div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_residenza1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_residenza1')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_residenza1', 'A4')" title="Scansiona Certificato"><i class="fas fa-camera"></i></button>
@@ -134,7 +136,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_bustepaga1" data-section="sec_richiedente1">
-                <div class="doc-info"><span class="doc-title">Ultime Buste Paga</span></div>
+                <div class="doc-info"><span class="doc-title">Ultime 2 Buste Paga</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_bustepaga1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_bustepaga1')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga1', 'A4')" title="Scansiona Buste Paga"><i class="fas fa-camera"></i></button>
@@ -188,6 +190,36 @@
                 <div class="file-name" id="filename_camera_doc_f241"></div>
             </div>
 
+            <div class="doc-row" id="row_doc_ec1" data-section="sec_richiedente1">
+                <div class="doc-info">
+                    <span class="doc-title">Estratto Conto Trimestrale <i class="fas fa-info-circle info-icon" onclick="toggleInfo('info_ec1')"></i></span>
+                    <span class="doc-desc">Documento in PDF (tutti i conti personali/aziendali)</span>
+                    <div id="info_ec1" class="info-detail">Scarica il PDF ufficiale dall'Home Banking per l'ultimo trimestre chiuso. Devono essere visibili sia il saldo iniziale che il saldo finale.</div>
+                </div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ec1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ec1')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ec1', 'A4')" title="Scansiona E.C."><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_ec1" name="doc_ec1" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_ec1"></div>
+            </div>
+            
+            <div class="doc-row" id="row_doc_mov1" data-section="sec_richiedente1">
+                <div class="doc-info">
+                    <span class="doc-title">Lista Movimenti Aggiornata <i class="fas fa-info-circle info-icon" onclick="toggleInfo('info_mov1')"></i></span>
+                    <span class="doc-desc">Dal 1 gennaio ad oggi</span>
+                    <div id="info_mov1" class="info-detail">Scarica la lista movimenti dell'anno in corso (dal 1 Gennaio ad oggi). Deve mostrare chiaramente il Saldo Disponibile attuale.</div>
+                </div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_mov1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_mov1')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_mov1', 'A4')" title="Scansiona Movimenti"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_mov1" name="doc_mov1" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_mov1"></div>
+            </div>
+
             <div class="section-title" id="sec_richiedente2"><i class="fas fa-user-plus"></i> Documenti 2° Richiedente <span id="nome_richiedente2" style="color:#002d72;"></span></div>
             
             <div class="doc-row" id="row_doc_ci2" data-section="sec_richiedente2">
@@ -202,7 +234,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_ts2" data-section="sec_richiedente2">
-                <div class="doc-info"><span class="doc-title">Tessera Sanitaria / Codice Fiscale</span></div>
+                <div class="doc-info"><span class="doc-title">Tessera Sanitaria / C.Fiscale</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ts2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ts2')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts2', 'ID')" title="Scansiona C.F."><i class="fas fa-camera"></i></button>
@@ -213,7 +245,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_bustepaga2" data-section="sec_richiedente2">
-                <div class="doc-info"><span class="doc-title">Ultime Buste Paga</span></div>
+                <div class="doc-info"><span class="doc-title">Ultime 2 Buste Paga</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_bustepaga2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_bustepaga2')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga2', 'A4')" title="Scansiona Buste Paga"><i class="fas fa-camera"></i></button>
@@ -235,7 +267,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_unici2" data-section="sec_richiedente2">
-                <div class="doc-info"><span class="doc-title">Modelli Unici / Redditi</span></div>
+                <div class="doc-info"><span class="doc-title">Ultimi Modelli Unici / Redditi</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_unici2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_unici2')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_unici2', 'A4')" title="Scansiona Modello Unico"><i class="fas fa-camera"></i></button>
@@ -267,19 +299,36 @@
                 <div class="file-name" id="filename_camera_doc_f242"></div>
             </div>
 
-            <div class="section-title" id="sec_comuni"><i class="fas fa-folder-open"></i> Documentazione Pratica</div>
-            
-            <div class="doc-row" id="row_doc_ec" data-section="sec_comuni">
-                <div class="doc-info"><span class="doc-title">Estratti Conto Trimestrali</span><span class="doc-desc">Tutti i conti correnti (personali, aziendali, cointestati)</span></div>
+            <div class="doc-row" id="row_doc_ec2" data-section="sec_richiedente2">
+                <div class="doc-info">
+                    <span class="doc-title">Estratto Conto Trimestrale <i class="fas fa-info-circle info-icon" onclick="toggleInfo('info_ec2')"></i></span>
+                    <div id="info_ec2" class="info-detail">Devono essere visibili saldo iniziale e finale dei conti personali ed eventuali conti aziendali/cointestati per il secondo richiedente.</div>
+                </div>
                 <div class="actions-wrapper">
-                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ec" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ec')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ec', 'A4')" title="Scansiona Estratto Conto"><i class="fas fa-camera"></i></button>
-                    <input type="file" id="camera_doc_ec" name="doc_ec" accept="image/*" multiple style="display:none">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ec2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ec2')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ec2', 'A4')" title="Scansiona E.C."><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_ec2" name="doc_ec2" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
-                <div class="file-name" id="filename_camera_doc_ec"></div>
+                <div class="file-name" id="filename_camera_doc_ec2"></div>
             </div>
 
+            <div class="doc-row" id="row_doc_mov2" data-section="sec_richiedente2">
+                <div class="doc-info">
+                    <span class="doc-title">Lista Movimenti Aggiornata <i class="fas fa-info-circle info-icon" onclick="toggleInfo('info_mov2')"></i></span>
+                    <div id="info_mov2" class="info-detail">Lista movimenti dal 1 gennaio ad oggi per il secondo richiedente. Saldo Disponibile in evidenza.</div>
+                </div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_mov2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_mov2')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_mov2', 'A4')" title="Scansiona Movimenti"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_mov2" name="doc_mov2" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_mov2"></div>
+            </div>
+
+            <div class="section-title" id="sec_comuni"><i class="fas fa-folder-open"></i> Documentazione Pratica</div>
+            
             <div class="doc-row" id="row_doc_matrimonio" data-section="sec_comuni">
                 <div class="doc-info"><span class="doc-title">Atto di Matrimonio</span></div>
                 <div class="actions-wrapper">
@@ -347,7 +396,7 @@
             </div>
 
             <div class="doc-row" id="row_doc_prestiti" data-section="sec_comuni">
-                <div class="doc-info"><span class="doc-title">Conteggi Estintivi / Finanziamenti in corso</span></div>
+                <div class="doc-info"><span class="doc-title">Conteggi Estintivi / Finanziamenti</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_prestiti" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_prestiti')"></div>
                     <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_prestiti', 'A4')" title="Scansiona Prestiti"><i class="fas fa-camera"></i></button>
@@ -380,7 +429,7 @@
     </div>
 
     <div class="scanner-viewport">
-        <video id="cameraStream" autoplay playsinline></video>
+        <video id="cameraStream" autoplay playsinline style="object-fit: cover; width: 100%; height: 100%;"></video>
         <div id="documentMask"></div>
     </div>
 
@@ -397,6 +446,11 @@
 </div>
 
 <script>
+    function toggleInfo(id) {
+        const el = document.getElementById(id);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
     // -------------------------------------------------------------------------
     // 1. CONFIGURAZIONE FIREBASE
     // -------------------------------------------------------------------------
@@ -443,18 +497,21 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. FOTOCAMERA IN-APP E CALCOLO PROPORZIONI (ASPECT RATIO)
+    // 3. FOTOCAMERA IN-APP, CROP E CONVERSIONE PDF
     // -------------------------------------------------------------------------
     let currentStream = null;
     let targetInputId = null;
     let aiTimeout = null;
     let fotoTemporanee = [];
+    let currentFormato = 'A4';
+    let cropDimensions = { x: 0, y: 0, w: 0, h: 0 };
 
     function apriFotocamera(hiddenInputId, formato = 'A4') {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         if (isMobile) {
             targetInputId = hiddenInputId;
+            currentFormato = formato;
             fotoTemporanee = []; 
             document.getElementById('counterFoto').innerText = "0 foto acquisite";
             document.getElementById('scannerModal').style.display = 'flex';
@@ -474,18 +531,17 @@
         const mask = document.getElementById('documentMask');
         const subtitle = document.getElementById('scannerSubtitle');
         
-        // CALCOLO ESATTO PROPORZIONI A SCHERMO
-        const viewportWidth = document.querySelector('.scanner-viewport').clientWidth;
+        const viewport = document.querySelector('.scanner-viewport');
+        const vw = viewport.clientWidth;
+        const vh = viewport.clientHeight;
+        
         let maskWidth, maskHeight;
 
         if (formato === 'ID') {
-            // Carta Identità/Patente (85.60 x 53.98 mm) -> Aspect Ratio ~ 1.586
-            maskWidth = viewportWidth * 0.85; 
+            maskWidth = vw * 0.85; 
             maskHeight = maskWidth / 1.586;
         } else {
-            // Fogli A4 (8.27 x 11.69 pollici) -> Aspect Ratio ~ 0.707
-            // La larghezza sarà minore per far stare l'altezza nel telefono
-            maskWidth = viewportWidth * 0.70; 
+            maskWidth = vw * 0.70; 
             maskHeight = maskWidth * 1.414;
         }
 
@@ -502,6 +558,24 @@
                 audio: false
             });
             video.srcObject = currentStream;
+
+            video.onloadedmetadata = () => {
+                // Calcola il taglio (Cropping) perfetto relativo alla maschera CSS
+                const scale = Math.max(vw / video.videoWidth, vh / video.videoHeight);
+                cropDimensions.w = maskWidth / scale;
+                cropDimensions.h = maskHeight / scale;
+                
+                const dispW = video.videoWidth * scale;
+                const dispH = video.videoHeight * scale;
+                const offX = (vw - dispW) / 2;
+                const offY = (vh - dispH) / 2;
+                
+                const maskX = (vw - maskWidth) / 2;
+                const maskY = (vh - maskHeight) / 2;
+                
+                cropDimensions.x = (maskX - offX) / scale;
+                cropDimensions.y = (maskY - offY) / scale;
+            };
 
             aiTimeout = setTimeout(() => {
                 mask.style.borderColor = "#28a745"; 
@@ -521,20 +595,21 @@
         const ctx = canvas.getContext('2d');
         const flash = document.getElementById('flashOverlay');
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.width = cropDimensions.w;
+        canvas.height = cropDimensions.h;
+        
+        // Ritaglia ESATTAMENTE la parte del video dentro il riquadro
+        ctx.drawImage(video, cropDimensions.x, cropDimensions.y, cropDimensions.w, cropDimensions.h, 0, 0, cropDimensions.w, cropDimensions.h);
 
         flash.classList.add('active');
         setTimeout(() => flash.classList.remove('active'), 150);
 
-        canvas.toBlob((blob) => {
-            const file = new File([blob], "scansione_" + Date.now() + ".jpg", { type: "image/jpeg" });
-            fotoTemporanee.push(file); 
-            
-            document.getElementById('counterFoto').innerText = `${fotoTemporanee.length} foto acquisite`;
-            document.getElementById('scannerSubtitle').innerText = "Scatta la prossima pagina o premi 'Fine'.";
-        }, 'image/jpeg', 0.85); 
+        // Salva in Base64 per il PDF
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        fotoTemporanee.push({ data: imgData, w: cropDimensions.w, h: cropDimensions.h }); 
+        
+        document.getElementById('counterFoto').innerText = `${fotoTemporanee.length} foto acquisite`;
+        document.getElementById('scannerSubtitle').innerText = "Scatta la prossima pagina o premi 'Fine'.";
     }
 
     function salvaScattiEChiudi() {
@@ -542,13 +617,27 @@
             chiudiScanner();
             return;
         }
+        
+        // CONVERSIONE IN PDF MULTIPAGINA
+        const { jsPDF } = window.jspdf;
+        const orient = currentFormato === 'ID' ? 'l' : 'p';
+        const doc = new jsPDF({ orientation: orient, unit: 'px', format: [fotoTemporanee[0].w, fotoTemporanee[0].h] });
+        
+        fotoTemporanee.forEach((foto, index) => {
+            if (index > 0) doc.addPage([foto.w, foto.h], orient);
+            doc.addImage(foto.data, 'JPEG', 0, 0, foto.w, foto.h);
+        });
+
+        const pdfBlob = doc.output('blob');
+        const file = new File([pdfBlob], "Documento_" + Date.now() + ".pdf", { type: "application/pdf" });
+
         let dataTransfer = new DataTransfer();
         const targetInput = document.getElementById(targetInputId);
         
         if (targetInput.files && targetInput.files.length > 0) {
             for (let i = 0; i < targetInput.files.length; i++) dataTransfer.items.add(targetInput.files[i]);
         }
-        for (let i = 0; i < fotoTemporanee.length; i++) dataTransfer.items.add(fotoTemporanee[i]);
+        dataTransfer.items.add(file);
         
         targetInput.files = dataTransfer.files;
         mostraTestoNome(targetInput, targetInputId.replace('camera_', 'row_'));
@@ -576,7 +665,7 @@
     function mostraTestoNome(input, rowId) {
         const nameDiv = document.getElementById('filename_camera_' + rowId.replace('row_', ''));
         if (nameDiv && input.files && input.files.length > 0) {
-            nameDiv.innerText = input.files.length > 1 ? `${input.files.length} documenti pronti per l'invio` : `1 documento pronto`;
+            nameDiv.innerText = input.files.length > 1 ? `${input.files.length} documenti pronti` : `1 documento pronto`;
             nameDiv.style.display = 'block';
         }
     }
@@ -649,6 +738,8 @@
                 if(emailRef) destinatari.push(emailRef);
                 if(emailBO) destinatari.push(emailBO);
                 
+                const dbConsoleLink = `https://console.firebase.google.com/project/consulenza-credipass/storage/consulenza-credipass.appspot.com/files/~2FFascicoli~2F${clienteId}`;
+                
                 fetch('/api/send-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -656,10 +747,12 @@
                         to: destinatari,
                         bcc: [],
                         subject: `Aggiornamento Documenti: Pratica ${clienteRaw}`,
-                        html: `<div style="font-family:Arial,sans-serif; padding:20px;">
-                                <h2 style="color:#002d72;">Aggiornamento Area Clienti</h2>
-                                <p>Il cliente <strong>${clienteRaw}</strong> ha caricato nuova documentazione.</p>
-                                <p>Accedi al gestionale o a Firebase Storage per visionare i file.</p>
+                        html: `<div style="font-family:Arial,sans-serif; padding:20px; background:#f4f7f6; border-radius:8px;">
+                                <h2 style="color:#002d72; border-bottom: 2px solid #C99700; padding-bottom:10px;">Nuovi documenti caricati</h2>
+                                <p style="color:#333;">Il cliente <strong>${clienteRaw}</strong> ha caricato nuova documentazione nell'Area Clienti.</p>
+                                <br>
+                                <a href="${dbConsoleLink}" style="background-color:#C99700; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block;">Apri Fascicolo Cliente</a>
+                                <p style="margin-top:20px; font-size:12px; color:#666;">Potrai visionare e scaricare i file PDF direttamente dal Cloud di archiviazione.</p>
                                </div>`,
                         replyTo: emailRef
                     })
