@@ -124,8 +124,11 @@
         }
 
         lista.forEach(cliente => {
-            const linkTag = document.createElement('a');
-            linkTag.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
+            const linkTag = document.createElement('div');
+            linkTag.style.cursor = 'pointer';
+            linkTag.onclick = function() {
+            window.location.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
+};
             
             // LOGICA DEL SEMAFORO
             // Escludiamo la chiave "totaleRichiesti" dal conteggio dei file effettivamente caricati
