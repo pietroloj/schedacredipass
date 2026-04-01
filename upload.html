@@ -529,13 +529,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. LOGICA URL & FILTRAGGIO SEZIONI
+    // 3. LOGICA URL & FILTRAGGIO SEZIONI (AGGIORNATA CON ID UNIVOCI)
     // -------------------------------------------------------------------------
     const urlParams = new URLSearchParams(window.location.search);
     
-    const clienteRaw = urlParams.get('cliente') || 'Cliente';
+    // Ora il sistema cerca prima "nome", se non c'è usa il vecchio "cliente" per retrocompatibilità
+    const clienteRaw = urlParams.get('nome') || urlParams.get('cliente') || 'Cliente';
     const cliente2Raw = urlParams.get('cliente2') || ''; 
-    const clienteId = clienteRaw.replace(/\s+/g, '_').toLowerCase() || 'demo_pratica'; 
+    
+    // Ora l'ID univoco per il Database è "id" (es. MR-1234). Se non c'è, usa il nome come faceva prima.
+    const clienteId = urlParams.get('id') || clienteRaw.replace(/\s+/g, '_').toLowerCase() || 'demo_pratica'; 
     
     const emailRef = urlParams.get('emailRef') || '';
     const emailBO = urlParams.get('emailBO') || '';
@@ -736,7 +739,7 @@
         if (docSnap.exists) {
             const dati = docSnap.data();
             for (const [nomeInput, caricato] of Object.entries(dati)) {
-                if (caricato) {
+                if (caricato === true) {
                     const riga = document.getElementById('row_' + nomeInput);
                     if(riga && riga.classList.contains('show-flex')) {
                         riga.classList.add('caricato');
@@ -777,6 +780,7 @@
         btn.disabled = true;
 
         let aggiornamentiDB = {};
+        aggiornamentiDB['nomeCliente'] = clienteRaw; // Salva il nome in chiaro nel DB per la ricerca
         aggiornamentiDB['totaleRichiesti'] = docsRichiesti.length;
 
         try {
