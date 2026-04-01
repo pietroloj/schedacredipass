@@ -1305,13 +1305,37 @@ window.addEventListener('DOMContentLoaded', () => {
         // --------------------------------------------------------------
         const clienteParam = encodeURIComponent(getClientFirstName(nome1));
         
-        let reqDocs = ['ci', 'ts', 'residenza']; 
+        // Se c'è un secondo richiedente, prepariamo il suo parametro
+        const cliente2Param = (nome2 && nome2 !== '-') ? `&cliente2=${encodeURIComponent(getClientFirstName(nome2))}` : '';
+        
+        // Catturiamo le email per le notifiche automatiche
+        const emailRefParam = (refEmail && refEmail !== '-') ? `&emailRef=${encodeURIComponent(refEmail)}` : '';
+        const autoEmail = V('campo_email_auto', '');
+        const emailBOParam = (autoEmail && autoEmail !== '-') ? `&emailBO=${encodeURIComponent(autoEmail)}` : '';
+
+        // Documenti base per il 1° Richiedente
+        let reqDocs = ['ci1', 'ts1', 'residenza1']; 
+        
+        // Documenti base per il 2° Richiedente (se esiste)
+        if (nome2 && nome2 !== '-') {
+            reqDocs.push('ci2', 'ts2');
+        }
         
         if (S('stato') === 'CONIUGATO_SEPARAZIONE_BENI') reqDocs.push('matrimonio');
         
-        if (hasDipendente()) reqDocs.push('bustepaga', 'cud');
-        if (hasAutonomo()) reqDocs.push('unici', 'visura', 'f24');
-        reqDocs.push('ec'); 
+        // Redditi 1° Richiedente
+        const lav1 = S('lav1', '-');
+        if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav1)) reqDocs.push('bustepaga1', 'cud1');
+        if (lav1 === 'AUTONOMO') reqDocs.push('unici1', 'visura', 'f24');
+
+        // Redditi 2° Richiedente
+        if (nome2 && nome2 !== '-') {
+            const lav2 = S('lav2', '-');
+            if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav2)) reqDocs.push('bustepaga2', 'cud2');
+            if (lav2 === 'AUTONOMO') reqDocs.push('unici1', 'visura', 'f24'); // Usano lo stesso box
+        }
+
+        reqDocs.push('ec'); // Estratti conto sempre richiesti
 
         const finalitaUrl = S('fin');
         if (finalitaUrl !== 'VOUCHER' && finalitaUrl !== 'N/D') {
@@ -1327,9 +1351,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const docsParam = reqDocs.join(',');
         
-        // Il sistema capisce da solo su quale dominio si trova!
+        // Il sistema capisce da solo su quale dominio si trova e appende TUTTI i parametri
         const baseURL = window.location.origin;
-        const uploadUrl = `${baseURL}/upload.html?cliente=${clienteParam}&docs=${docsParam}`;
+        const uploadUrl = `${baseURL}/upload.html?cliente=${clienteParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
 
         const pulsanteUploadHtml = `
         <tr>
@@ -1346,7 +1370,7 @@ window.addEventListener('DOMContentLoaded', () => {
             </td>
         </tr>
         `;
-        // --------------------------------------------------------------
+        // --- FINE LOGICA PER IL LINK ALL'AREA CLIENTI ---
 
         return `<!DOCTYPE html>
 <html lang="it">
