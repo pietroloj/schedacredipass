@@ -24,14 +24,10 @@
     .header p { color: #666; font-size: 14px; margin: 10px 0 0 0; }
     
     .content { padding: 20px 40px 40px 40px; }
-    
     .alert-box { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 4px solid #ffeeba; font-size: 13px; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start; }
     
     .section-title { font-size: 16px; font-weight: 700; color: #C99700; border-bottom: 2px solid #C99700; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; display: none; }
     .section-title i { margin-right: 8px; color: #002d72; }
-    
-    .applicant-badge { display: inline-block; background: #002d72; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; letter-spacing: 0.5px; }
-    .applicant-badge.app2 { background: #C99700; color: #fff; }
 
     .doc-row { display: none; background: #fdfdfd; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px 20px; margin-bottom: 10px; align-items: center; justify-content: space-between; transition: 0.3s; border-left: 4px solid #002d72; }
     .doc-row.caricato { border-left-color: #28a745; background-color: #f8fff9; }
@@ -58,10 +54,12 @@
     .btn-submit:hover { background: #C99700; }
     .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
 
-    /* Modale QR Code */
+    /* Modale QR Code CENTRATO */
     #qrModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
     .modal-content { background-color: #fff; padding: 30px; border-radius: 12px; text-align: center; max-width: 350px; border-top: 6px solid #C99700; }
     .modal-content h2 { margin-top: 0; color: #002d72; font-size: 20px; }
+    #qrcode { display: flex; justify-content: center; align-items: center; margin: 20px auto; width: 100%; }
+    #qrcode img { margin: 0 auto !important; }
     .close-modal { background: #e9ecef; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
 
     /* Modale Scanner In-App */
@@ -70,7 +68,7 @@
     .scanner-viewport { position: relative; width: 100%; max-width: 500px; height: 70vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
     #cameraStream { width: 100%; height: 100%; object-fit: cover; }
     
-    /* La maschera dinamica (A4 o ID) */
+    /* Maschera Adattiva */
     #documentMask { position: absolute; border: 3px dashed rgba(255,255,255,0.8); border-radius: 12px; transition: all 0.4s ease-out; box-shadow: 0 0 0 4000px rgba(0,0,0,0.65); pointer-events: none; }
     
     .scanner-controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 10; }
@@ -80,8 +78,6 @@
 
     .show-flex { display: flex !important; }
     .show-block { display: block !important; }
-
-    /* Flash visivo allo scatto */
     .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.1s; z-index: 20; }
     .flash-overlay.active { opacity: 1; }
 </style>
@@ -97,20 +93,18 @@
 
     <div class="content">
         <div class="alert-box">
-            <i class="fas fa-camera" style="margin-top: 2px;"></i>
-            <div id="status-message">Usa l'icona del telefono 📱 per scansionare i documenti multipli, oppure clicca su Allega 📎 per caricare i file dal PC.</div>
+            <i class="fas fa-camera" style="margin-top: 2px; font-size: 16px;"></i>
+            <div id="status-message">Usa l'icona Fotocamera per scansionare i documenti, oppure clicca su Allega per caricare i file PDF.</div>
         </div>
 
         <form id="uploadForm">
-            <div class="section-title" id="sec_richiedente1"><i class="fas fa-user"></i> Documenti 1° Richiedente <span id="nome_richiedente1"></span></div>
+            <div class="section-title" id="sec_richiedente1"><i class="fas fa-user"></i> Documenti 1° Richiedente <span id="nome_richiedente1" style="color:#002d72;"></span></div>
             
             <div class="doc-row" id="row_doc_ci1" data-section="sec_richiedente1">
-                <div class="doc-info">
-                    <span class="doc-title">Carta d'Identità</span><span class="doc-desc">Fronte e retro, a colori</span>
-                </div>
+                <div class="doc-info"><span class="doc-title">Carta d'Identità</span><span class="doc-desc">Fronte e retro, a colori</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ci1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ci1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ci1', 'ID')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ci1', 'ID')" title="Scansiona C.I."><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_ci1" name="doc_ci1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -121,7 +115,7 @@
                 <div class="doc-info"><span class="doc-title">Tessera Sanitaria / Codice Fiscale</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ts1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ts1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts1', 'ID')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts1', 'ID')" title="Scansiona C.F."><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_ts1" name="doc_ts1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -132,7 +126,7 @@
                 <div class="doc-info"><span class="doc-title">Certificato Cumulativo / Residenza</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_residenza1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_residenza1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_residenza1', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_residenza1', 'A4')" title="Scansiona Certificato"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_residenza1" name="doc_residenza1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -143,7 +137,7 @@
                 <div class="doc-info"><span class="doc-title">Ultime Buste Paga</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_bustepaga1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_bustepaga1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga1', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga1', 'A4')" title="Scansiona Buste Paga"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_bustepaga1" name="doc_bustepaga1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -151,10 +145,10 @@
             </div>
 
             <div class="doc-row" id="row_doc_cud1" data-section="sec_richiedente1">
-                <div class="doc-info"><span class="doc-title">Ultimo CUD / CU</span></div>
+                <div class="doc-info"><span class="doc-title">Ultimo CUD / CU disponibile</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_cud1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_cud1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_cud1', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_cud1', 'A4')" title="Scansiona CUD"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_cud1" name="doc_cud1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -162,23 +156,45 @@
             </div>
 
             <div class="doc-row" id="row_doc_unici1" data-section="sec_richiedente1">
-                <div class="doc-info"><span class="doc-title">Modelli Unici / Redditi</span></div>
+                <div class="doc-info"><span class="doc-title">Ultimi Modelli Unici / Redditi</span><span class="doc-desc">Con ricevute telematiche</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_unici1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_unici1')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_unici1', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_unici1', 'A4')" title="Scansiona Modello Unico"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_unici1" name="doc_unici1" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
                 <div class="file-name" id="filename_camera_doc_unici1"></div>
             </div>
+            
+            <div class="doc-row" id="row_doc_visura1" data-section="sec_richiedente1">
+                <div class="doc-info"><span class="doc-title">Visura Camerale</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_visura1" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_visura1')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_visura1', 'A4')" title="Scansiona Visura"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_visura1" name="doc_visura1" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_visura1"></div>
+            </div>
+            
+            <div class="doc-row" id="row_doc_f241" data-section="sec_richiedente1">
+                <div class="doc-info"><span class="doc-title">Ultimi F24 Pagati</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_f241" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_f241')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_f241', 'A4')" title="Scansiona F24"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_f241" name="doc_f241" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_f241"></div>
+            </div>
 
-            <div class="section-title" id="sec_richiedente2"><i class="fas fa-user-plus"></i> Documenti 2° Richiedente <span id="nome_richiedente2"></span></div>
+            <div class="section-title" id="sec_richiedente2"><i class="fas fa-user-plus"></i> Documenti 2° Richiedente <span id="nome_richiedente2" style="color:#002d72;"></span></div>
             
             <div class="doc-row" id="row_doc_ci2" data-section="sec_richiedente2">
                 <div class="doc-info"><span class="doc-title">Carta d'Identità</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ci2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ci2')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ci2', 'ID')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ci2', 'ID')" title="Scansiona C.I."><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_ci2" name="doc_ci2" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -189,7 +205,7 @@
                 <div class="doc-info"><span class="doc-title">Tessera Sanitaria / Codice Fiscale</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ts2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ts2')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts2', 'ID')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ts2', 'ID')" title="Scansiona C.F."><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_ts2" name="doc_ts2" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -200,7 +216,7 @@
                 <div class="doc-info"><span class="doc-title">Ultime Buste Paga</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_bustepaga2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_bustepaga2')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga2', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_bustepaga2', 'A4')" title="Scansiona Buste Paga"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_bustepaga2" name="doc_bustepaga2" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -211,20 +227,53 @@
                 <div class="doc-info"><span class="doc-title">Ultimo CUD / CU</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_cud2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_cud2')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_cud2', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_cud2', 'A4')" title="Scansiona CUD"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_cud2" name="doc_cud2" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
                 <div class="file-name" id="filename_camera_doc_cud2"></div>
             </div>
 
+            <div class="doc-row" id="row_doc_unici2" data-section="sec_richiedente2">
+                <div class="doc-info"><span class="doc-title">Modelli Unici / Redditi</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_unici2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_unici2')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_unici2', 'A4')" title="Scansiona Modello Unico"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_unici2" name="doc_unici2" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_unici2"></div>
+            </div>
+            
+            <div class="doc-row" id="row_doc_visura2" data-section="sec_richiedente2">
+                <div class="doc-info"><span class="doc-title">Visura Camerale</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_visura2" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_visura2')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_visura2', 'A4')" title="Scansiona Visura"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_visura2" name="doc_visura2" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_visura2"></div>
+            </div>
+            
+            <div class="doc-row" id="row_doc_f242" data-section="sec_richiedente2">
+                <div class="doc-info"><span class="doc-title">Ultimi F24 Pagati</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_f242" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_f242')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_f242', 'A4')" title="Scansiona F24"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_f242" name="doc_f242" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_f242"></div>
+            </div>
+
             <div class="section-title" id="sec_comuni"><i class="fas fa-folder-open"></i> Documentazione Pratica</div>
             
             <div class="doc-row" id="row_doc_ec" data-section="sec_comuni">
-                <div class="doc-info"><span class="doc-title">Estratto Conto Trimestrale</span><span class="doc-desc">Di tutti i conti (personali e cointestati)</span></div>
+                <div class="doc-info"><span class="doc-title">Estratti Conto Trimestrali</span><span class="doc-desc">Tutti i conti correnti (personali, aziendali, cointestati)</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_ec" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_ec')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ec', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_ec', 'A4')" title="Scansiona Estratto Conto"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_ec" name="doc_ec" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -235,7 +284,7 @@
                 <div class="doc-info"><span class="doc-title">Atto di Matrimonio</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_matrimonio" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_matrimonio')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_matrimonio', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_matrimonio', 'A4')" title="Scansiona Atto"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_matrimonio" name="doc_matrimonio" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -246,7 +295,7 @@
                 <div class="doc-info"><span class="doc-title">Atto di Provenienza Immobile</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_atto" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_atto')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_atto', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_atto', 'A4')" title="Scansiona Atto"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_atto" name="doc_atto" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -257,7 +306,7 @@
                 <div class="doc-info"><span class="doc-title">Planimetria e Visura Catastale</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_planimetria" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_planimetria')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_planimetria', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_planimetria', 'A4')" title="Scansiona Planimetria"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_planimetria" name="doc_planimetria" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -268,7 +317,7 @@
                 <div class="doc-info"><span class="doc-title">Preliminare / Proposta di Acquisto</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_preliminare" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_preliminare')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_preliminare', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_preliminare', 'A4')" title="Scansiona Preliminare"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_preliminare" name="doc_preliminare" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -279,18 +328,29 @@
                 <div class="doc-info"><span class="doc-title">Preventivo Lavori / Computo</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_preventivo" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_preventivo')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_preventivo', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_preventivo', 'A4')" title="Scansiona Preventivo"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_preventivo" name="doc_preventivo" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
                 <div class="file-name" id="filename_camera_doc_preventivo"></div>
             </div>
 
+            <div class="doc-row" id="row_doc_mutuo_pre" data-section="sec_comuni">
+                <div class="doc-info"><span class="doc-title">Atto Mutuo in Corso (Surroga)</span></div>
+                <div class="actions-wrapper">
+                    <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_mutuo_pre" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_mutuo_pre')"></div>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_mutuo_pre', 'A4')" title="Scansiona Mutuo"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="camera_doc_mutuo_pre" name="doc_mutuo_pre" accept="image/*" multiple style="display:none">
+                    <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
+                </div>
+                <div class="file-name" id="filename_camera_doc_mutuo_pre"></div>
+            </div>
+
             <div class="doc-row" id="row_doc_prestiti" data-section="sec_comuni">
-                <div class="doc-info"><span class="doc-title">Conteggi Estintivi / Finanziamenti</span></div>
+                <div class="doc-info"><span class="doc-title">Conteggi Estintivi / Finanziamenti in corso</span></div>
                 <div class="actions-wrapper">
                     <div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="doc_prestiti" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, 'camera_doc_prestiti')"></div>
-                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_prestiti', 'A4')"><i class="fas fa-mobile-alt"></i></button>
+                    <button type="button" class="btn-camera" onclick="apriFotocamera('camera_doc_prestiti', 'A4')" title="Scansiona Prestiti"><i class="fas fa-camera"></i></button>
                     <input type="file" id="camera_doc_prestiti" name="doc_prestiti" accept="image/*" multiple style="display:none">
                     <div class="status-badge"><i class="fas fa-check"></i> Acquisito</div>
                 </div>
@@ -304,10 +364,10 @@
 
 <div id="qrModal">
     <div class="modal-content">
-        <h2>Continua dal Telefono 📱</h2>
-        <p>Inquadra questo QR Code con la fotocamera del tuo smartphone per usare lo Scanner Multiplo.</p>
+        <h2>Continua dallo Smartphone <i class="fas fa-mobile-alt"></i></h2>
+        <p>Inquadra questo QR Code con la fotocamera del tuo telefono per usare lo Scanner.</p>
         <div id="qrcode"></div>
-        <p style="font-size:11px; margin-top: 10px; color: #888;">La pagina si aggiornerà da sola qui sul PC non appena invierai le foto dal telefono!</p>
+        <p style="font-size:11px; margin-top: 10px; color: #888;">La pagina si aggiornerà da sola qui sul PC non appena invierai i file dal telefono.</p>
         <button class="close-modal" onclick="document.getElementById('qrModal').style.display='none'">Chiudi</button>
     </div>
 </div>
@@ -338,7 +398,7 @@
 
 <script>
     // -------------------------------------------------------------------------
-    // 1. CONFIGURAZIONE FIREBASE (Usa le tue chiavi ufficiali qui)
+    // 1. CONFIGURAZIONE FIREBASE
     // -------------------------------------------------------------------------
     const firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
@@ -352,60 +412,59 @@
     const storage = firebase.storage();
 
     // -------------------------------------------------------------------------
-    // 2. LOGICA URL & FILTRAGGIO SEZIONI (Chi vede cosa)
+    // 2. LOGICA URL & FILTRAGGIO SEZIONI
     // -------------------------------------------------------------------------
     const urlParams = new URLSearchParams(window.location.search);
     
-    // Nomi dei clienti
     const clienteRaw = urlParams.get('cliente') || 'Cliente';
     const cliente2Raw = urlParams.get('cliente2') || ''; 
     const clienteId = clienteRaw.replace(/\s+/g, '_').toLowerCase() || 'demo_pratica'; 
     
-    // Email per notifiche
     const emailRef = urlParams.get('emailRef') || '';
     const emailBO = urlParams.get('emailBO') || '';
 
-    // Documenti richiesti (es. ci1,ts1,ci2,ec,atto)
-    const docsStr = urlParams.get('docs') || 'ci1,ts1,bustepaga1,ec';
-    const docsRichiesti = docsStr.split(',');
+    const docsStr = urlParams.get('docs') || '';
+    const docsRichiesti = docsStr ? docsStr.split(',') : [];
 
-    document.getElementById('welcome-text').innerHTML = `Ciao <strong>${clienteRaw}</strong>, ecco i documenti richiesti per la pratica.`;
-    if(cliente2Raw) document.getElementById('nome_richiedente2').innerText = `(${cliente2Raw})`;
+    document.getElementById('welcome-text').innerHTML = `Gentile <strong>${clienteRaw}</strong>, di seguito l'elenco dei documenti necessari.`;
+    if(cliente2Raw) {
+        document.getElementById('nome_richiedente2').innerText = `- ${cliente2Raw}`;
+    }
 
-    // Filtra e mostra solo le righe richieste
-    docsRichiesti.forEach(docCodice => {
-        const rigaDocumento = document.getElementById('row_doc_' + docCodice);
-        if(rigaDocumento) {
-            rigaDocumento.classList.add('show-flex');
-            const idSezione = rigaDocumento.getAttribute('data-section');
-            if(idSezione) document.getElementById(idSezione).classList.add('show-block');
-        }
-    });
+    if(docsRichiesti.length > 0) {
+        docsRichiesti.forEach(docCodice => {
+            const rigaDocumento = document.getElementById('row_doc_' + docCodice);
+            if(rigaDocumento) {
+                rigaDocumento.classList.add('show-flex');
+                const idSezione = rigaDocumento.getAttribute('data-section');
+                if(idSezione) document.getElementById(idSezione).classList.add('show-block');
+            }
+        });
+    }
 
     // -------------------------------------------------------------------------
-    // 3. FOTOCAMERA IN-APP MULTI-SCATTO E ADATTIVA (A4 vs ID)
+    // 3. FOTOCAMERA IN-APP E CALCOLO PROPORZIONI (ASPECT RATIO)
     // -------------------------------------------------------------------------
     let currentStream = null;
     let targetInputId = null;
     let aiTimeout = null;
-    let fotoTemporanee = []; // Accumulatore degli scatti multipli
+    let fotoTemporanee = [];
 
     function apriFotocamera(hiddenInputId, formato = 'A4') {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         if (isMobile) {
             targetInputId = hiddenInputId;
-            fotoTemporanee = []; // Resetta la memoria
+            fotoTemporanee = []; 
             document.getElementById('counterFoto').innerText = "0 foto acquisite";
             document.getElementById('scannerModal').style.display = 'flex';
             avviaScannerVideo(formato);
         } else {
-            // Su Computer mostra il QR Code
             document.getElementById('qrModal').style.display = 'flex';
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = ""; 
             new QRCode(qrContainer, {
-                text: window.location.href, width: 180, height: 180, colorDark : "#002d72", colorLight : "#ffffff"
+                text: window.location.href, width: 160, height: 160, colorDark : "#002d72", colorLight : "#ffffff"
             });
         }
     }
@@ -415,18 +474,26 @@
         const mask = document.getElementById('documentMask');
         const subtitle = document.getElementById('scannerSubtitle');
         
-        // Forma della maschera
+        // CALCOLO ESATTO PROPORZIONI A SCHERMO
+        const viewportWidth = document.querySelector('.scanner-viewport').clientWidth;
+        let maskWidth, maskHeight;
+
         if (formato === 'ID') {
-            mask.style.width = "85%";
-            mask.style.height = "45%"; // Orizzontale per Patente/CI
+            // Carta Identità/Patente (85.60 x 53.98 mm) -> Aspect Ratio ~ 1.586
+            maskWidth = viewportWidth * 0.85; 
+            maskHeight = maskWidth / 1.586;
         } else {
-            mask.style.width = "75%";
-            mask.style.height = "75%"; // Verticale per A4/Buste Paga
+            // Fogli A4 (8.27 x 11.69 pollici) -> Aspect Ratio ~ 0.707
+            // La larghezza sarà minore per far stare l'altezza nel telefono
+            maskWidth = viewportWidth * 0.70; 
+            maskHeight = maskWidth * 1.414;
         }
 
+        mask.style.width = maskWidth + "px";
+        mask.style.height = maskHeight + "px";
         mask.style.borderColor = "rgba(255,255,255,0.8)";
         mask.style.backgroundColor = "transparent";
-        subtitle.innerText = "Allinea il documento e scatta. Puoi fare più foto di fila.";
+        subtitle.innerText = "Allinea il documento. Puoi acquisire più pagine.";
         subtitle.style.color = "white";
 
         try {
@@ -436,7 +503,6 @@
             });
             video.srcObject = currentStream;
 
-            // Finto riconoscimento verde
             aiTimeout = setTimeout(() => {
                 mask.style.borderColor = "#28a745"; 
                 mask.style.backgroundColor = "rgba(40, 167, 69, 0.15)";
@@ -459,14 +525,12 @@
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Effetto Flash
         flash.classList.add('active');
         setTimeout(() => flash.classList.remove('active'), 150);
 
-        // Salva in Blob JPEG
         canvas.toBlob((blob) => {
             const file = new File([blob], "scansione_" + Date.now() + ".jpg", { type: "image/jpeg" });
-            fotoTemporanee.push(file); // Aggiunge alla coda
+            fotoTemporanee.push(file); 
             
             document.getElementById('counterFoto').innerText = `${fotoTemporanee.length} foto acquisite`;
             document.getElementById('scannerSubtitle').innerText = "Scatta la prossima pagina o premi 'Fine'.";
@@ -478,25 +542,16 @@
             chiudiScanner();
             return;
         }
-
         let dataTransfer = new DataTransfer();
         const targetInput = document.getElementById(targetInputId);
         
-        // Preserva i file precedenti (se l'utente aveva già caricato qualcosa in questa riga)
         if (targetInput.files && targetInput.files.length > 0) {
-            for (let i = 0; i < targetInput.files.length; i++) {
-                dataTransfer.items.add(targetInput.files[i]);
-            }
+            for (let i = 0; i < targetInput.files.length; i++) dataTransfer.items.add(targetInput.files[i]);
         }
+        for (let i = 0; i < fotoTemporanee.length; i++) dataTransfer.items.add(fotoTemporanee[i]);
         
-        // Aggiunge i nuovi scatti
-        for (let i = 0; i < fotoTemporanee.length; i++) {
-            dataTransfer.items.add(fotoTemporanee[i]);
-        }
-        
-        // Assegna all'input nascosto
         targetInput.files = dataTransfer.files;
-        mostraTestoNome(targetInput, targetInputId);
+        mostraTestoNome(targetInput, targetInputId.replace('camera_', 'row_'));
         chiudiScanner();
     }
 
@@ -515,19 +570,19 @@
         for (let i=0; i<masterInput.files.length; i++) dt.items.add(masterInput.files[i]);
         for (let i=0; i<inputObj.files.length; i++) dt.items.add(inputObj.files[i]);
         masterInput.files = dt.files;
-        mostraTestoNome(masterInput, hiddenInputIdTarget);
+        mostraTestoNome(masterInput, hiddenInputIdTarget.replace('camera_', 'row_'));
     }
 
-    function mostraTestoNome(input, elementId) {
-        const nameDiv = document.getElementById('filename_' + elementId);
-        if (input.files && input.files.length > 0) {
-            nameDiv.innerText = input.files.length > 1 ? `✅ ${input.files.length} documenti pronti per l'invio` : `✅ 1 documento pronto`;
+    function mostraTestoNome(input, rowId) {
+        const nameDiv = document.getElementById('filename_camera_' + rowId.replace('row_', ''));
+        if (nameDiv && input.files && input.files.length > 0) {
+            nameDiv.innerText = input.files.length > 1 ? `${input.files.length} documenti pronti per l'invio` : `1 documento pronto`;
             nameDiv.style.display = 'block';
         }
     }
 
     // -------------------------------------------------------------------------
-    // 5. DATABASE REALTIME (Per aggiornare il PC automaticamente)
+    // 5. DATABASE REALTIME
     // -------------------------------------------------------------------------
     db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
         if (docSnap.exists) {
@@ -550,7 +605,7 @@
     });
 
     // -------------------------------------------------------------------------
-    // 6. INVIO AL CLOUD E NOTIFICA EMAIL
+    // 6. INVIO E NOTIFICHE LATO SERVER
     // -------------------------------------------------------------------------
     document.getElementById('uploadForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -566,18 +621,17 @@
         });
 
         if (filesDaCaricare.length === 0) {
-            alert("Non ci sono nuovi documenti da inviare. Allega file o usa la fotocamera.");
+            alert("Non ci sono nuovi documenti selezionati.");
             return;
         }
 
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Trasferimento e Sicurezza in corso...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Acquisizione sicura...';
 
         let aggiornamentiDB = {};
 
         try {
-            // 1. Upload fisico dei file su Storage
             for (let input of filesDaCaricare) {
                 const fieldName = input.name; 
                 for(let i=0; i < input.files.length; i++) {
@@ -588,16 +642,13 @@
                 aggiornamentiDB[fieldName] = true;
             }
 
-            // 2. Aggiornamento Firestore
             await db.collection("pratiche_mutuo").doc(clienteId).set(aggiornamentiDB, { merge: true });
 
-            // 3. INVIO NOTIFICA EMAIL LATO SERVER (Silenziosa)
             if (emailRef || emailBO) {
                 let destinatari = [];
                 if(emailRef) destinatari.push(emailRef);
                 if(emailBO) destinatari.push(emailBO);
                 
-                // Usiamo il tuo stesso sistema /api/send-email
                 fetch('/api/send-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -608,14 +659,14 @@
                         html: `<div style="font-family:Arial,sans-serif; padding:20px;">
                                 <h2 style="color:#002d72;">Aggiornamento Area Clienti</h2>
                                 <p>Il cliente <strong>${clienteRaw}</strong> ha caricato nuova documentazione.</p>
-                                <p>Accedi al gestionale / Firebase Storage per visionare i file.</p>
+                                <p>Accedi al gestionale o a Firebase Storage per visionare i file.</p>
                                </div>`,
                         replyTo: emailRef
                     })
-                }).catch(e => console.log("Errore silenzioso notifica email: ", e));
+                }).catch(e => console.log("Notifica silenziata", e));
             }
 
-            btn.innerHTML = '<i class="fas fa-check"></i> Documenti Acquisiti!';
+            btn.innerHTML = '<i class="fas fa-check"></i> Trasferimento Completato';
             btn.style.backgroundColor = '#28a745';
 
             setTimeout(() => {
@@ -626,7 +677,7 @@
 
         } catch (error) {
             console.error("Errore:", error);
-            alert("Errore durante il trasferimento. Verifica la connessione e riprova.");
+            alert("Errore di connessione. Riprova.");
             btn.innerHTML = 'Riprova Invio';
             btn.disabled = false;
         }
