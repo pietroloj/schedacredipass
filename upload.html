@@ -11,8 +11,14 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+    // Configura il "motore" di lettura PDF
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+</script>
 
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
@@ -452,7 +458,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 1. CONFIGURAZIONE FIREBASE
+    // 1. CONFIGURAZIONE FIREBASE & FUNZIONI AI
     // -------------------------------------------------------------------------
     const firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
@@ -464,9 +470,66 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
+    const functionsFirebase = firebase.functions(); // Inizializza il modulo AI
 
     // -------------------------------------------------------------------------
-    // 2. LOGICA URL & FILTRAGGIO SEZIONI
+    // 2. FUNZIONI DI SUPPORTO PER L'INTELLIGENZA ARTIFICIALE
+    // -------------------------------------------------------------------------
+
+    // A) Trasforma normale immagine in Base64
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // B) "Fotografa" un PDF per permettere all'AI di vederlo
+    async function convertPdfToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(file);
+            reader.onload = async function() {
+                try {
+                    const typedarray = new Uint8Array(reader.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const page = await pdf.getPage(1); 
+                    
+                    const viewport = page.getViewport({ scale: 2.0 }); 
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+                    
+                    await page.render(renderContext).promise;
+                    const base64Img = canvas.toDataURL('image/jpeg', 0.8);
+                    resolve(base64Img);
+                } catch (err) {
+                    console.error("Errore conversione PDF:", err);
+                    reject(err);
+                }
+            };
+        });
+    }
+
+    // C) Il vigile urbano intelligente
+    async function preparaFilePerAI(file) {
+        if (file.type === 'application/pdf') {
+            return await convertPdfToBase64(file);
+        } else {
+            return await fileToBase64(file);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. LOGICA URL & FILTRAGGIO SEZIONI
     // -------------------------------------------------------------------------
     const urlParams = new URLSearchParams(window.location.search);
     
@@ -497,7 +560,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. FOTOCAMERA IN-APP, CROP E CONVERSIONE PDF
+    // 4. FOTOCAMERA IN-APP E CONVERSIONE PDF
     // -------------------------------------------------------------------------
     let currentStream = null;
     let targetInputId = null;
@@ -560,7 +623,6 @@
             video.srcObject = currentStream;
 
             video.onloadedmetadata = () => {
-                // Calcola il taglio (Cropping) perfetto relativo alla maschera CSS
                 const scale = Math.max(vw / video.videoWidth, vh / video.videoHeight);
                 cropDimensions.w = maskWidth / scale;
                 cropDimensions.h = maskHeight / scale;
@@ -598,13 +660,11 @@
         canvas.width = cropDimensions.w;
         canvas.height = cropDimensions.h;
         
-        // Ritaglia ESATTAMENTE la parte del video dentro il riquadro
         ctx.drawImage(video, cropDimensions.x, cropDimensions.y, cropDimensions.w, cropDimensions.h, 0, 0, cropDimensions.w, cropDimensions.h);
 
         flash.classList.add('active');
         setTimeout(() => flash.classList.remove('active'), 150);
 
-        // Salva in Base64 per il PDF
         const imgData = canvas.toDataURL('image/jpeg', 0.85);
         fotoTemporanee.push({ data: imgData, w: cropDimensions.w, h: cropDimensions.h }); 
         
@@ -618,7 +678,6 @@
             return;
         }
         
-        // CONVERSIONE IN PDF MULTIPAGINA
         const { jsPDF } = window.jspdf;
         const orient = currentFormato === 'ID' ? 'l' : 'p';
         const doc = new jsPDF({ orientation: orient, unit: 'px', format: [fotoTemporanee[0].w, fotoTemporanee[0].h] });
@@ -651,7 +710,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 4. GESTIONE FILE "ALLEGA" TRADIZIONALE
+    // 5. GESTIONE FILE "ALLEGA" TRADIZIONALE
     // -------------------------------------------------------------------------
     function gestisciFileSelezionato(inputObj, hiddenInputIdTarget) {
         const masterInput = document.getElementById(hiddenInputIdTarget);
@@ -671,7 +730,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. DATABASE REALTIME
+    // 6. DATABASE REALTIME (Semaforo)
     // -------------------------------------------------------------------------
     db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
         if (docSnap.exists) {
@@ -694,7 +753,7 @@
     });
 
     // -------------------------------------------------------------------------
-    // 6. INVIO E NOTIFICHE LATO SERVER
+    // 7. INVIO E VALIDAZIONE AI
     // -------------------------------------------------------------------------
     document.getElementById('uploadForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -716,24 +775,59 @@
 
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Acquisizione sicura...';
 
         let aggiornamentiDB = {};
         aggiornamentiDB['totaleRichiesti'] = docsRichiesti.length;
 
         try {
+            // Chiamata alla Cloud Function "Cervello"
+            const analizzaDocumento = functionsFirebase.httpsCallable('analizzaDocumentoAI');
+
             for (let input of filesDaCaricare) {
                 const fieldName = input.name; 
+                
                 for(let i=0; i < input.files.length; i++) {
                     let file = input.files[i];
+
+                    // --- 1. CONTROLLO AI ---
+                    btn.innerHTML = `<i class="fas fa-robot fa-spin"></i> Controllo AI su ${fieldName}...`;
+                    
+                    // Trasforma in Base64 (che sia immagine o PDF, ci pensa lui)
+                    let base64 = await preparaFilePerAI(file);
+
+                    try {
+                        let risultatoAI = await analizzaDocumento({
+                            urlFileBase64: base64,
+                            tipoDocumentoAtteso: fieldName,
+                            idCliente: clienteId
+                        });
+
+                        let risposta = risultatoAI.data;
+
+                        if (risposta.valido === false) {
+                            alert(`❌ DOCUMENTO RIFIUTATO!\n\nSezione: ${fieldName}\n\nMotivo:\n"${risposta.motivo_errore}"\n\nPer favore, carica il documento corretto.`);
+                            btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo';
+                            btn.disabled = false;
+                            btn.style.backgroundColor = '#002d72';
+                            return; // Blocca tutto l'upload!
+                        }
+
+                    } catch (aiError) {
+                        console.warn("L'AI ha riscontrato un problema, procedo comunque col salvataggio per non bloccare il cliente.", aiError);
+                    }
+
+                    // --- 2. SALVATAGGIO CLOUD STORAGE ---
+                    btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Salvataggio sicuro in corso...`;
                     let storageRef = storage.ref(`Fascicoli/${clienteId}/${fieldName}_${i}_${file.name}`);
                     await storageRef.put(file);
                 }
                 aggiornamentiDB[fieldName] = true;
             }
 
+            // --- 3. AGGIORNAMENTO DATABASE ---
             await db.collection("pratiche_mutuo").doc(clienteId).set(aggiornamentiDB, { merge: true });
 
+            // --- 4. INVIO EMAIL ---
             if (emailRef || emailBO) {
                 let destinatari = [];
                 if(emailRef) destinatari.push(emailRef);
