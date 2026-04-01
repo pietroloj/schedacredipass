@@ -719,6 +719,7 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Acquisizione sicura...';
 
         let aggiornamentiDB = {};
+        aggiornamentiDB['totaleRichiesti'] = docsRichiesti.length;
 
         try {
             for (let input of filesDaCaricare) {
