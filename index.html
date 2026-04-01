@@ -462,7 +462,7 @@
 
 <div id="wa-choice-modal">
     <div class="wa-modal-box">
-        <h2 class="wa-modal-title">Invio WhatsApp</h2>
+        <h2 class="wa-modal-title"><i class="fab fa-whatsapp" style="color:#25D366;"></i> Invio WhatsApp</h2>
         <p class="wa-modal-sub">
             Scegli come gestire il messaggio documentale per <strong id="wa_modal_cliente_nome">il cliente</strong>.
         </p>
@@ -471,7 +471,7 @@
                 <i class="fas fa-briefcase"></i> Back office
             </button>
             <button type="button" class="wa-option-btn wa-option-diretto" id="btn_wa_diretto">
-                <i class="fab fa-whatsapp"></i> Diretto al Cliente
+                <i class="fas fa-paper-plane"></i> Diretto al Cliente
             </button>
             <button type="button" class="wa-option-btn wa-option-cancel" id="btn_wa_cancel">
                 Annulla
@@ -1001,34 +1001,29 @@ window.addEventListener('DOMContentLoaded', () => {
             docs.anagrafici.push('Atto di matrimonio (separazione dei beni)');
         }
 
-        // Redditi 1° Richiedente
+        // Redditi e Conti 1° Richiedente
         const lav1 = S('lav1', '-');
         if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav1)) {
-            reqDocs.push('bustepaga1', 'cud1');
-            docs.dipendenti.push('Ultime buste paga', 'Ultimo CUD / CU disponibile');
+            reqDocs.push('bustepaga1', 'cud1', 'ec1', 'mov1');
+            docs.dipendenti.push('Ultime 2 buste paga', 'Ultimo CUD / CU disponibile', 'Estratto conto trimestrale di tutti i conti');
         }
         if (lav1 === 'AUTONOMO') {
-            reqDocs.push('unici1', 'visura1', 'f241');
-            docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici con ricevute', 'Ultimi F24 versati', 'Visura Camerale aggiornata');
+            reqDocs.push('unici1', 'visura1', 'f241', 'ec1', 'mov1');
+            docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale', 'Estratti conto trimestrali di tutti i conti (personali e aziendali)');
         }
 
-        // Redditi 2° Richiedente
+        // Redditi e Conti 2° Richiedente
         if (nome2Val !== '-') {
             const lav2 = S('lav2', '-');
             if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav2)) {
-                reqDocs.push('bustepaga2', 'cud2');
-                if(!docs.dipendenti.includes('Ultime buste paga')) docs.dipendenti.push('Ultime buste paga', 'Ultimo CUD / CU disponibile');
+                reqDocs.push('bustepaga2', 'cud2', 'ec2', 'mov2');
+                if(!docs.dipendenti.includes('Ultime 2 buste paga')) docs.dipendenti.push('Ultime 2 buste paga', 'Ultimo CUD / CU disponibile', 'Estratto conto trimestrale di tutti i conti');
             }
             if (lav2 === 'AUTONOMO') {
-                reqDocs.push('unici2', 'visura2', 'f242');
-                if(!docs.autonomi.includes('Visura Camerale aggiornata')) docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale');
+                reqDocs.push('unici2', 'visura2', 'f242', 'ec2', 'mov2');
+                if(!docs.autonomi.includes('Visura Camerale')) docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale', 'Estratti conto trimestrali di tutti i conti (personali e aziendali)');
             }
         }
-
-        // Estratti conto (Sempre presenti)
-        reqDocs.push('ec');
-        docs.dipendenti.push('Estratto conto trimestrale di tutti i conti');
-        docs.autonomi.push('Estratti conto trimestrali di tutti i conti (personali e aziendali)');
 
         const finalita = S('fin');
         if (finalita !== 'VOUCHER' && finalita !== 'N/D') {
@@ -1057,13 +1052,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         docs.altri.push('Accesso CTC online tramite SPID (www.ctconline.it)');
 
-        // Deduplicazione liste
+        // Deduplicazione per la lista testuale (evita doppioni visivi se i due richiedenti fanno lo stesso lavoro)
         docs.dipendenti = [...new Set(docs.dipendenti)];
         docs.autonomi = [...new Set(docs.autonomi)];
 
         return { 
-            reqDocsArray: reqDocs, // Usato per l'URL magico
-            docsLists: docs // Usato per i testi della mail
+            reqDocsArray: reqDocs, 
+            docsLists: docs 
         };
     }
 
@@ -1084,34 +1079,33 @@ window.addEventListener('DOMContentLoaded', () => {
         msg += `Come da accordi, ecco la lista dei documenti necessari per la lavorazione della pratica`;
         msg += hasSecondApp ? ` (inclusi quelli per il coobbligato):\n\n` : `:\n\n`;
 
-        msg += `ANAGRAFICA E STATO CIVILE\n`;
+        msg += `Documenti anagrafici\n`;
         docsLists.anagrafici.forEach(d => msg += `- ${d}\n`);
         msg += `\n`;
 
         if (docsLists.dipendenti.length > 0) {
-            msg += `REDDITI DIPENDENTI E PENSIONATI\n`;
+            msg += `Documenti reddituali (Dipendenti)\n`;
             docsLists.dipendenti.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
         if (docsLists.autonomi.length > 0) {
-            msg += `REDDITI AUTONOMI E P.IVA\n`;
+            msg += `Documenti reddituali (Autonomi / P.IVA)\n`;
             docsLists.autonomi.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
         if (docsLists.immobiliari.length > 0) {
-            msg += `DOCUMENTAZIONE IMMOBILIARE\n`;
+            msg += `Documentazione dell'immobile\n`;
             docsLists.immobiliari.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
-        msg += `ALTRI DOCUMENTI\n`;
+        msg += `Altri documenti richiesti\n`;
         docsLists.altri.forEach(d => msg += `- ${d}\n`);
         msg += `\n`;
 
-        msg += `NOTA IMPORTANTE: Gli estratti conto devono riportare i saldi iniziali e finali.\n\n`;
-        msg += `Per inviare i file, accedi all'Area Clienti tramite il link che hai ricevuto via Email, oppure inviali in risposta a questo messaggio.\n\nResto a disposizione per qualsiasi necessità.`;
+        msg += `Per inviare i file, accedi all'Area Clienti sicura tramite il link che ti ho inviato via Email, oppure inviali in risposta a questo messaggio.\nResto a disposizione per qualsiasi necessità.`;
 
         return msg;
     }
@@ -1223,19 +1217,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
                         ${altriItems}
                     </ul>
-                </td>
-            </tr>
-        `);
-
-        sections.push(`
-            <tr>
-                <td style="padding: 12px 0;">
-                    <div style="background:#f8f9fa; border:1px dashed #ccc; border-radius:8px; padding:15px; color:#555; font-size:13px; line-height:1.6;">
-                        <strong style="color:#333;">Nota importante:</strong><br>
-                        Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti
-                        (personali, aziendali e cointestati), evidenziando saldi iniziali e finali.
-                        ${hasSecondApp ? `<br><br>La documentazione va prodotta regolarmente anche per il secondo richiedente.` : ``}
-                    </div>
                 </td>
             </tr>
         `);
