@@ -462,7 +462,7 @@
 
 <div id="wa-choice-modal">
     <div class="wa-modal-box">
-        <h2 class="wa-modal-title">💬 Invio WhatsApp</h2>
+        <h2 class="wa-modal-title">Invio WhatsApp</h2>
         <p class="wa-modal-sub">
             Scegli come gestire il messaggio documentale per <strong id="wa_modal_cliente_nome">il cliente</strong>.
         </p>
@@ -471,7 +471,7 @@
                 <i class="fas fa-briefcase"></i> Back office
             </button>
             <button type="button" class="wa-option-btn wa-option-diretto" id="btn_wa_diretto">
-                <i class="fab fa-whatsapp"></i> Diretto
+                <i class="fab fa-whatsapp"></i> Diretto al Cliente
             </button>
             <button type="button" class="wa-option-btn wa-option-cancel" id="btn_wa_cancel">
                 Annulla
@@ -967,128 +967,151 @@ window.addEventListener('DOMContentLoaded', () => {
         return types.includes('AUTONOMO');
     }
 
-    function getChecklistConfig() {
-        return {
-            hasSecondApplicant: hasSecondApplicant(),
-            hasDipendente: hasDipendente(),
-            hasAutonomo: hasAutonomo(),
-            stato: getR('stato'),
-            finalita: getR('fin'),
-            fin_corso: getR('fin_corso') === 'Sì',
-            gia_mutuo: getR('gia_mutuo') === 'Sì'
-        };
-    }
-
+    // --- NUOVA LOGICA CENTRALIZZATA PER LISTE DOCUMENTI (URL E TESTO) ---
     function generateDocumentList() {
-        const config = getChecklistConfig();
+        const nome1Val = V('cliente_nome', 'Cliente');
+        const nome2Val = V('cliente2_nome', '-');
+        
+        let reqDocs = []; // Array per i codici dell'URL
+        
         const docs = {
-            anagrafici: [
-                'Carta d’Identità (fronte/retro) in corso di validità',
-                'Tessera Sanitaria (fronte/retro) in corso di validità',
-                'Certificato Cumulativo (Residenza e Stato di Famiglia)'
-            ],
+            anagrafici: [],
             dipendenti: [],
             autonomi: [],
             immobiliari: [],
             altri: []
         };
 
-        if (config.stato === 'CONIUGATO_SEPARAZIONE_BENI') {
-            docs.anagrafici.push('Atto di matrimonio (solo se coniugato con separazione dei beni)');
+        // 1° Richiedente Anagrafica
+        reqDocs.push('ci1', 'ts1', 'residenza1');
+        docs.anagrafici.push(
+            'Carta d’Identità (fronte/retro)',
+            'Tessera Sanitaria (fronte/retro)',
+            'Certificato Cumulativo (Residenza e Stato di Famiglia)'
+        );
+
+        // 2° Richiedente Anagrafica
+        if (nome2Val !== '-') {
+            reqDocs.push('ci2', 'ts2');
+            docs.anagrafici.push('Carta d’Identità e Tessera Sanitaria (2° Richiedente)');
         }
 
-        if (config.hasDipendente) {
-            docs.dipendenti.push('Ultime 2 buste paga');
-            docs.dipendenti.push('Ultimo CUD / CU disponibile');
-            docs.dipendenti.push('Estratto conto trimestrale');
-            docs.dipendenti.push('Lista movimenti aggiornata con saldo iniziale e finale');
-            docs.dipendenti.push('Contratto di lavoro o attestazione di servizio');
+        if (S('stato') === 'CONIUGATO_SEPARAZIONE_BENI') {
+            reqDocs.push('matrimonio');
+            docs.anagrafici.push('Atto di matrimonio (separazione dei beni)');
         }
 
-        if (config.hasAutonomo) {
-            docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici');
-            docs.autonomi.push('Ricevute di trasmissione telematica');
-            docs.autonomi.push('Ultimi F24 versati');
-            docs.autonomi.push('Estratti conto trimestrali');
-            docs.autonomi.push('Lista movimenti aggiornata con saldo iniziale e finale');
-            docs.autonomi.push('Visura Camerale aggiornata');
-            docs.autonomi.push('Contratti o parcelle principali');
+        // Redditi 1° Richiedente
+        const lav1 = S('lav1', '-');
+        if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav1)) {
+            reqDocs.push('bustepaga1', 'cud1');
+            docs.dipendenti.push('Ultime buste paga', 'Ultimo CUD / CU disponibile');
+        }
+        if (lav1 === 'AUTONOMO') {
+            reqDocs.push('unici1', 'visura1', 'f241');
+            docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici con ricevute', 'Ultimi F24 versati', 'Visura Camerale aggiornata');
         }
 
-        if (config.finalita !== 'VOUCHER' && config.finalita !== 'N/D') {
-            docs.immobiliari.push('Atto di provenienza dell’immobile');
-            docs.immobiliari.push('Planimetria catastale e visura aggiornata');
-            docs.immobiliari.push('Concessione edilizia / agibilità');
+        // Redditi 2° Richiedente
+        if (nome2Val !== '-') {
+            const lav2 = S('lav2', '-');
+            if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav2)) {
+                reqDocs.push('bustepaga2', 'cud2');
+                if(!docs.dipendenti.includes('Ultime buste paga')) docs.dipendenti.push('Ultime buste paga', 'Ultimo CUD / CU disponibile');
+            }
+            if (lav2 === 'AUTONOMO') {
+                reqDocs.push('unici2', 'visura2', 'f242');
+                if(!docs.autonomi.includes('Visura Camerale aggiornata')) docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale');
+            }
+        }
 
-            if (config.finalita === 'ACQUISTO') {
+        // Estratti conto (Sempre presenti)
+        reqDocs.push('ec');
+        docs.dipendenti.push('Estratto conto trimestrale di tutti i conti');
+        docs.autonomi.push('Estratti conto trimestrali di tutti i conti (personali e aziendali)');
+
+        const finalita = S('fin');
+        if (finalita !== 'VOUCHER' && finalita !== 'N/D') {
+            reqDocs.push('atto', 'planimetria');
+            docs.immobiliari.push('Atto di provenienza dell’immobile', 'Planimetria catastale e visura aggiornata');
+
+            if (finalita === 'ACQUISTO') {
+                reqDocs.push('preliminare');
                 docs.immobiliari.push('Preliminare di compravendita o proposta accettata');
-            } else if (config.finalita === 'RISTRUTTURAZIONE') {
+            } else if (finalita === 'RISTRUTTURAZIONE') {
+                reqDocs.push('preventivo');
                 docs.immobiliari.push('Preventivo dei lavori / Computo metrico');
-                docs.immobiliari.push('Titolo abilitativo (CILA/SCIA/DIA) se previsto');
-            } else if (config.finalita === 'LIQUIDITÀ') {
-                docs.immobiliari.push('Relazione o preventivi giustificativi per la finalità di liquidità richiesta');
+            } else if (finalita === 'LIQUIDITÀ') {
+                docs.immobiliari.push('Relazione o preventivi per liquidità');
             }
 
-            if (config.finalita === 'SURROGA' || config.gia_mutuo) {
-                docs.immobiliari.push('Atto di mutuo');
+            if (finalita === 'SURROGA' || S('gia_mutuo') === 'Sì') {
+                reqDocs.push('mutuo_pre');
+                docs.immobiliari.push('Atto di mutuo in corso');
             }
         }
 
-        if (config.fin_corso || config.finalita === 'CONSOLIDAMENTO') {
-            docs.altri.push('Contratti finanziamenti in corso');
-            docs.altri.push('Conteggi estintivi aggiornati');
+        if (S('fin_corso') === 'Sì' || finalita === 'CONSOLIDAMENTO') {
+            reqDocs.push('prestiti');
+            docs.altri.push('Contratti finanziamenti in corso e conteggi estintivi');
         }
-        docs.altri.push('CTC online (accesso tramite SPID) 👉 https://www.ctconline.it');
+        docs.altri.push('Accesso CTC online tramite SPID (www.ctconline.it)');
 
-        return { config, docs };
+        // Deduplicazione liste
+        docs.dipendenti = [...new Set(docs.dipendenti)];
+        docs.autonomi = [...new Set(docs.autonomi)];
+
+        return { 
+            reqDocsArray: reqDocs, // Usato per l'URL magico
+            docsLists: docs // Usato per i testi della mail
+        };
     }
 
     function buildChecklistMessage() {
-        const fullName = V('cliente_nome', '');
-        const firstName = getClientFirstName(fullName);
-        const { config, docs } = generateDocumentList();
+        const firstName = getClientFirstName(V('cliente_nome', ''));
+        const finalita = S('fin', '-');
+        const hasSecondApp = hasSecondApplicant();
+        const { docsLists } = generateDocumentList();
 
-        let msg = `Ciao ${firstName} 😊\n\n`;
-        msg += `✉️ *CHECKLIST DOCUMENTALE*`;
-        if (config.finalita === 'VOUCHER') {
-            msg += ` – *VOUCHER / PREDELIBERA*`;
-        } else if (config.finalita !== 'N/D') {
-            msg += ` – *${config.finalita}*`;
+        let msg = `Ciao ${firstName}\n\n`;
+        msg += `DOCUMENTAZIONE PRATICA`;
+        if (finalita === 'VOUCHER') {
+            msg += ` (VOUCHER)`;
+        } else if (finalita !== 'N/D') {
+            msg += ` (${finalita})`;
         }
         msg += `\n\n`;
-        msg += `Come da accordi, ti invio la lista dei documenti necessari per procedere con la pratica`;
-        msg += config.hasSecondApplicant ? ` per te e, se previsto, per il coobbligato 👇\n\n` : ` 👇\n\n`;
+        msg += `Come da accordi, ecco la lista dei documenti necessari per la lavorazione della pratica`;
+        msg += hasSecondApp ? ` (inclusi quelli per il coobbligato):\n\n` : `:\n\n`;
 
-        msg += `👤 *ANAGRAFICA*\n`;
-        docs.anagrafici.forEach(d => msg += `• ${d}\n`);
+        msg += `ANAGRAFICA E STATO CIVILE\n`;
+        docsLists.anagrafici.forEach(d => msg += `- ${d}\n`);
         msg += `\n`;
 
-        if (docs.dipendenti.length > 0) {
-            msg += `💼 *REDDITI DIPENDENTI*\n`;
-            docs.dipendenti.forEach(d => msg += `• ${d}\n`);
+        if (docsLists.dipendenti.length > 0) {
+            msg += `REDDITI DIPENDENTI E PENSIONATI\n`;
+            docsLists.dipendenti.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
-        if (docs.autonomi.length > 0) {
-            msg += `🧾 *REDDITI AUTONOMO / LIBERO PROFESSIONISTA*\n`;
-            docs.autonomi.forEach(d => msg += `• ${d}\n`);
+        if (docsLists.autonomi.length > 0) {
+            msg += `REDDITI AUTONOMI E P.IVA\n`;
+            docsLists.autonomi.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
-        if (docs.immobiliari.length > 0) {
-            msg += `🏠 *DOCUMENTAZIONE IMMOBILIARE*\n`;
-            docs.immobiliari.forEach(d => msg += `• ${d}\n`);
+        if (docsLists.immobiliari.length > 0) {
+            msg += `DOCUMENTAZIONE IMMOBILIARE\n`;
+            docsLists.immobiliari.forEach(d => msg += `- ${d}\n`);
             msg += `\n`;
         }
 
-        msg += `💳 *ALTRI DOCUMENTI*\n`;
-        docs.altri.forEach(d => msg += `• ${d}\n`);
+        msg += `ALTRI DOCUMENTI\n`;
+        docsLists.altri.forEach(d => msg += `- ${d}\n`);
         msg += `\n`;
 
-        msg += `📝 *NOTA IMPORTANTE*\n`;
-        msg += `Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti (personali, aziendali e cointestati).\n`;
-        msg += `Devono risultare i saldi iniziali e finali per ogni periodo.\n\n`;
-        msg += `Per qualsiasi dubbio o supporto resto a disposizione 👋`;
+        msg += `NOTA IMPORTANTE: Gli estratti conto devono riportare i saldi iniziali e finali.\n\n`;
+        msg += `Per inviare i file, accedi all'Area Clienti tramite il link che hai ricevuto via Email, oppure inviali in risposta a questo messaggio.\n\nResto a disposizione per qualsiasi necessità.`;
 
         return msg;
     }
@@ -1121,22 +1144,23 @@ window.addEventListener('DOMContentLoaded', () => {
         const checklistMessage = buildChecklistMessage();
         const waDirectLink = generateWhatsAppLink(clientPhone, checklistMessage);
 
-        let msg = `📥 *RICHIESTA INVIO DOCUMENTALE*\n\n`;
-        msg += `👤 Cliente: ${clientName}\n`;
-        msg += `📱 Numero cliente: ${clientPhone}\n`;
-        msg += `🤝 Referente: ${referente}\n`;
-        msg += `🎯 Finalità: ${finalita}\n\n`;
-        msg += `🔗 *LINK DIRETTO DA INVIARE AL CLIENTE:*\n${waDirectLink}\n\n`;
-        msg += `🕒 Generato il: ${new Date().toLocaleString('it-IT')}`;
+        let msg = `RICHIESTA INVIO DOCUMENTALE\n\n`;
+        msg += `Cliente: ${clientName}\n`;
+        msg += `Cellulare: ${clientPhone}\n`;
+        msg += `Referente: ${referente}\n`;
+        msg += `Finalità: ${finalita}\n\n`;
+        msg += `LINK DIRETTO DA INVIARE AL CLIENTE:\n${waDirectLink}\n\n`;
+        msg += `Generato il: ${new Date().toLocaleString('it-IT')}`;
 
         return msg;
     }
 
     function buildChecklistEmailHtml() {
-        const { config, docs } = generateDocumentList();
+        const hasSecondApp = hasSecondApplicant();
+        const { docsLists } = generateDocumentList();
         let sections = [];
 
-        let anagrafica = docs.anagrafici.map(d => `<li>${d}</li>`).join('');
+        let anagrafica = docsLists.anagrafici.map(d => `<li>${d}</li>`).join('');
         sections.push(`
             <tr>
                 <td style="padding: 12px 0;">
@@ -1148,12 +1172,12 @@ window.addEventListener('DOMContentLoaded', () => {
             </tr>
         `);
 
-        if (docs.dipendenti.length > 0) {
-            let dip = docs.dipendenti.map(d => `<li>${d}</li>`).join('');
+        if (docsLists.dipendenti.length > 0) {
+            let dip = docsLists.dipendenti.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
-                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi dipendenti</h3>
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti reddituali (Dipendenti)</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
                             ${dip}
                         </ul>
@@ -1162,12 +1186,12 @@ window.addEventListener('DOMContentLoaded', () => {
             `);
         }
 
-        if (docs.autonomi.length > 0) {
-            let aut = docs.autonomi.map(d => `<li>${d}</li>`).join('');
+        if (docsLists.autonomi.length > 0) {
+            let aut = docsLists.autonomi.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
-                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti redditi autonomo / libero professionista</h3>
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documenti reddituali (Autonomi / P.IVA)</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
                             ${aut}
                         </ul>
@@ -1176,12 +1200,12 @@ window.addEventListener('DOMContentLoaded', () => {
             `);
         }
 
-        if (docs.immobiliari.length > 0) {
-            let imm = docs.immobiliari.map(d => `<li>${d}</li>`).join('');
+        if (docsLists.immobiliari.length > 0) {
+            let imm = docsLists.immobiliari.map(d => `<li>${d}</li>`).join('');
             sections.push(`
                 <tr>
                     <td style="padding: 12px 0;">
-                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documentazione immobiliare</h3>
+                        <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Documentazione dell'immobile</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
                             ${imm}
                         </ul>
@@ -1190,19 +1214,15 @@ window.addEventListener('DOMContentLoaded', () => {
             `);
         }
 
-        let altriItems = docs.altri.filter(d => !d.includes('CTC online')).map(d => `<li>${d}</li>`).join('');
-        altriItems += `<li>CTC online con accesso tramite SPID</li>`;
+        let altriItems = docsLists.altri.map(d => `<li>${d}</li>`).join('');
 
         sections.push(`
             <tr>
                 <td style="padding: 12px 0;">
-                    <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Altri documenti</h3>
+                    <h3 style="margin: 0 0 8px 0; color: #002d72; font-size: 15px;">Altri documenti richiesti</h3>
                     <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.6;">
                         ${altriItems}
                     </ul>
-                    <p style="margin: 10px 0 0 0; font-size: 13px; color: #555;">
-                        CTC online: <a href="https://www.ctconline.it" style="color: #002d72;">www.ctconline.it</a>
-                    </p>
                 </td>
             </tr>
         `);
@@ -1213,8 +1233,8 @@ window.addEventListener('DOMContentLoaded', () => {
                     <div style="background:#f8f9fa; border:1px dashed #ccc; border-radius:8px; padding:15px; color:#555; font-size:13px; line-height:1.6;">
                         <strong style="color:#333;">Nota importante:</strong><br>
                         Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti
-                        (personali, aziendali e cointestati), con saldi iniziali e finali per ogni periodo.
-                        ${config.hasSecondApplicant ? `<br><br>La documentazione va prodotta, ove richiesto, anche per il secondo richiedente.` : ``}
+                        (personali, aziendali e cointestati), evidenziando saldi iniziali e finali.
+                        ${hasSecondApp ? `<br><br>La documentazione va prodotta regolarmente anche per il secondo richiedente.` : ``}
                     </div>
                 </td>
             </tr>
@@ -1300,58 +1320,18 @@ window.addEventListener('DOMContentLoaded', () => {
         const figliHtml = safe(figli);
         const checklistHtml = buildChecklistEmailHtml();
 
-        // --------------------------------------------------------------
-        // INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI
-        // --------------------------------------------------------------
+        // --- INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI ---
+        const { reqDocsArray } = generateDocumentList();
+        
         const clienteParam = encodeURIComponent(getClientFirstName(nome1));
+        const cliente2Param = (nome2 !== '-') ? `&cliente2=${encodeURIComponent(getClientFirstName(nome2))}` : '';
         
-        // Se c'è un secondo richiedente, prepariamo il suo parametro
-        const cliente2Param = (nome2 && nome2 !== '-') ? `&cliente2=${encodeURIComponent(getClientFirstName(nome2))}` : '';
-        
-        // Catturiamo le email per le notifiche automatiche
-        const emailRefParam = (refEmail && refEmail !== '-') ? `&emailRef=${encodeURIComponent(refEmail)}` : '';
         const autoEmail = V('campo_email_auto', '');
+        const emailRefParam = (refEmail && refEmail !== '-') ? `&emailRef=${encodeURIComponent(refEmail)}` : '';
         const emailBOParam = (autoEmail && autoEmail !== '-') ? `&emailBO=${encodeURIComponent(autoEmail)}` : '';
 
-        // Documenti base per il 1° Richiedente
-        let reqDocs = ['ci1', 'ts1', 'residenza1']; 
+        const docsParam = reqDocsArray.join(',');
         
-        // Documenti base per il 2° Richiedente (se esiste)
-        if (nome2 && nome2 !== '-') {
-            reqDocs.push('ci2', 'ts2');
-        }
-        
-        if (S('stato') === 'CONIUGATO_SEPARAZIONE_BENI') reqDocs.push('matrimonio');
-        
-        // Redditi 1° Richiedente
-        const lav1 = S('lav1', '-');
-        if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav1)) reqDocs.push('bustepaga1', 'cud1');
-        if (lav1 === 'AUTONOMO') reqDocs.push('unici1', 'visura', 'f24');
-
-        // Redditi 2° Richiedente
-        if (nome2 && nome2 !== '-') {
-            const lav2 = S('lav2', '-');
-            if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav2)) reqDocs.push('bustepaga2', 'cud2');
-            if (lav2 === 'AUTONOMO') reqDocs.push('unici1', 'visura', 'f24'); // Usano lo stesso box
-        }
-
-        reqDocs.push('ec'); // Estratti conto sempre richiesti
-
-        const finalitaUrl = S('fin');
-        if (finalitaUrl !== 'VOUCHER' && finalitaUrl !== 'N/D') {
-            reqDocs.push('atto', 'planimetria');
-            if (finalitaUrl === 'ACQUISTO') reqDocs.push('preliminare');
-            if (finalitaUrl === 'RISTRUTTURAZIONE') reqDocs.push('preventivo');
-            if (finalitaUrl === 'SURROGA' || S('gia_mutuo') === 'Sì') reqDocs.push('mutuo_pre');
-        }
-        
-        if (S('fin_corso') === 'Sì' || finalitaUrl === 'CONSOLIDAMENTO') {
-            reqDocs.push('prestiti');
-        }
-
-        const docsParam = reqDocs.join(',');
-        
-        // Il sistema capisce da solo su quale dominio si trova e appende TUTTI i parametri
         const baseURL = window.location.origin;
         const uploadUrl = `${baseURL}/upload.html?cliente=${clienteParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
 
@@ -1359,12 +1339,12 @@ window.addEventListener('DOMContentLoaded', () => {
         <tr>
             <td align="center" style="padding: 20px 30px 40px 30px;">
                 <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 25px; text-align: center;">
-                    <h3 style="color: #002d72; margin-top: 0; font-size: 18px;">Hai i documenti pronti?</h3>
+                    <h3 style="color: #002d72; margin-top: 0; font-size: 18px;">Trasferimento Documenti</h3>
                     <p style="color: #555; font-size: 14px; margin-bottom: 20px;">
-                        Usa la nostra Area Clienti sicura per caricare i file o scansionarli comodamente dal telefono. La tua lista documenti è già personalizzata.
+                        Accedi in sicurezza all'Area Clienti per caricare i file richiesti o effettuare la scansione guidata dei cartacei tramite smartphone.
                     </p>
                     <a href="${uploadUrl}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-                       📂 VAI ALL'AREA CLIENTI
+                       ACCEDI ALL'AREA CLIENTI
                     </a>
                 </div>
             </td>
@@ -1493,7 +1473,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Finanziamenti in corso:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(finanziamenti)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Incendio e Scoppio:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoInc)}</strong><br><span style="font-size:11px;">${safe(impInc)}</span></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Polizza Personale:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(tipoPersonale)}</strong><br><span style="font-size:11px;">${safe(impPersonale)}</span></td></tr>
-                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia Banca:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td></tr>
+                                        <tr><td style="border-bottom: 1px solid #eee; color: #666;">Istruttoria e Perizia:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(istr)} + ${safe(perizia)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Imposta Sostitutiva:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(imposta)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Mediazione Credipass:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>${safe(mediazione)}</strong></td></tr>
                                         <tr><td style="border-bottom: 1px solid #eee; color: #666;">Certificazione Documentale:</td><td style="border-bottom: 1px solid #eee;" align="right"><strong>76,00 € per richiedente</strong></td></tr>
@@ -1549,19 +1529,25 @@ window.addEventListener('DOMContentLoaded', () => {
                                     ${indirizzo ? `
                                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
                                         <tr>
-                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">📍</td>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">
+                                                <img src="https://img.icons8.com/color/48/000000/marker--v1.png" width="14" style="filter: brightness(0) invert(1);">
+                                            </td>
                                             <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">${safe(indirizzo).replace(/\n/g, '<br>')}</td>
                                         </tr>
                                     </table>` : ''}
                                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
                                         <tr>
-                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">✉️</td>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">
+                                                <img src="https://img.icons8.com/material-rounded/24/000000/mail.png" width="14" style="filter: brightness(0) invert(1);">
+                                            </td>
                                             <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;"><a href="mailto:${safe(refEmail)}" style="color: #ffffff; text-decoration: none;">${safe(refEmail)}</a></td>
                                         </tr>
                                     </table>
                                     <table cellpadding="0" cellspacing="0" border="0">
                                         <tr>
-                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">📞</td>
+                                            <td valign="top" style="padding-right: 8px; color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;">
+                                                <img src="https://img.icons8.com/material-rounded/24/000000/phone.png" width="14" style="filter: brightness(0) invert(1);">
+                                            </td>
                                             <td valign="top" style="color: #ffffff; font-size: 13px; line-height: 1.4; font-family: 'Poppins', Arial, sans-serif;"><a href="tel:+39${safe(refCell).replace(/\D/g, '')}" style="color: #ffffff; text-decoration: none;">+39 ${safe(refCell)}</a></td>
                                         </tr>
                                     </table>
