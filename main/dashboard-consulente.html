@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dettaglio Fascicolo - Credipass</title>
+<title>Dettaglio Fascicolo e Delibera AI - Credipass</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -28,9 +30,13 @@
     .search-input { flex: 1; padding: 12px 15px; border-radius: 6px; border: none; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; }
     .info-testo { color: white; font-size: 13px; }
     
-    .btn-zip { background: #28a745; color: white; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; width: 100%; justify-content: center; margin-top: 20px; font-size: 16px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+    .button-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-zip { background: #28a745; color: white; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; flex: 1; justify-content: center; font-size: 15px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
     .btn-zip:hover { background: #218838; }
-    .btn-zip:disabled { background: #ccc; cursor: not-allowed; }
+    
+    /* NUOVO BOTTONE AI */
+    .btn-ai { background: #C99700; color: #002d72; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; flex: 1; justify-content: center; font-size: 15px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+    .btn-ai:hover { background: #b38600; color: white; }
 
     .content { padding: 30px 40px; }
     .category-section { margin-bottom: 30px; display: none; }
@@ -43,15 +49,22 @@
     .doc-meta { font-size: 11px; color: #777; margin-top: 2px; }
 
     .actions { display: flex; gap: 8px; }
-    .btn-icon { background: #e9ecef; color: #002d72; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .btn-icon { background: #e9ecef; color: #002d72; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s; }
     .btn-icon:hover { background: #002d72; color: white; }
 
-    /* Modal Anteprima */
-    #previewModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; }
-    .preview-header { width: 90%; max-width: 1000px; display: flex; justify-content: space-between; padding: 15px 0; color: white; align-items: center; }
-    .preview-content { background: white; width: 90%; max-width: 1000px; height: 80vh; border-radius: 8px; overflow: hidden; }
+    /* Modal Anteprima PDF */
+    .modal-overlay { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; }
+    .modal-header { width: 90%; max-width: 1000px; display: flex; justify-content: space-between; padding: 15px 0; color: white; align-items: center; }
+    .modal-content-box { background: white; width: 90%; max-width: 1000px; height: 80vh; border-radius: 8px; overflow: hidden; }
     iframe { width: 100%; height: 100%; border: none; }
     
+    /* MODAL REPORT AI */
+    #aiReportModal .modal-content-box { background: #fdfdfd; height: 85vh; overflow-y: auto; padding: 30px; box-sizing: border-box; }
+    .ai-report-block { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+    .ai-report-block h3 { margin-top: 0; color: #002d72; border-bottom: 2px solid #C99700; padding-bottom: 8px; font-size: 16px; text-transform: uppercase; }
+    .ai-text { font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: #333; }
+    .score-badge { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px; color: white; background: #002d72; }
+
     .loading-spinner { display: none; text-align: center; padding: 40px; color: #002d72; }
     .empty-state { text-align: center; padding: 40px; color: #777; font-size: 14px; display: none; }
 </style>
@@ -70,8 +83,8 @@
     <div class="search-bar">
         <div class="info-testo"><i class="fas fa-info-circle"></i> Per nominare correttamente le cartelle nello ZIP, inserisci qui i nomi reali:</div>
         <div class="search-inputs-group">
-            <input type="text" id="nomeRichiedente1" class="search-input" placeholder="Es. Pietro Lo Iacono (1° Richiedente)">
-            <input type="text" id="nomeRichiedente2" class="search-input" placeholder="Es. Mariana Corsale (2° Richiedente)">
+            <input type="text" id="nomeRichiedente1" class="search-input" placeholder="Es. Mario Rossi (1° Richiedente)">
+            <input type="text" id="nomeRichiedente2" class="search-input" placeholder="Es. Giulia Bianchi (2° Richiedente)">
         </div>
     </div>
 
@@ -88,29 +101,49 @@
         <div id="cat-IMMOBILIARI" class="category-section"><div class="category-title"><i class="fas fa-home"></i> IMMOBILIARI</div><div class="doc-list"></div></div>
         <div id="cat-FINANZIAMENTI" class="category-section"><div class="category-title"><i class="fas fa-hand-holding-usd"></i> FINANZIAMENTI IN ESSERE</div><div class="doc-list"></div></div>
 
-        <button id="btnZip" class="btn-zip" onclick="scaricaZipStrutturato()"><i class="fas fa-file-archive"></i> Scarica ZIP Completo Strutturato</button>
+        <div class="button-group" id="actionButtons" style="display:none;">
+            <button id="btnZip" class="btn-zip" onclick="scaricaZipStrutturato()"><i class="fas fa-file-archive"></i> Scarica ZIP Fascicolo</button>
+            <button id="btnAI" class="btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> Apri Pre-Delibera AI</button>
+        </div>
     </div>
 </div>
 
-<div id="previewModal">
-    <div class="preview-header">
+<div id="previewModal" class="modal-overlay">
+    <div class="modal-header">
         <h3 id="previewTitle" style="margin:0; font-size:16px;">Anteprima Documento</h3>
         <button style="background:#dc3545; color:white; border:none; padding: 8px 15px; border-radius:4px; cursor:pointer;" onclick="chiudiAnteprima()"><i class="fas fa-times"></i> Chiudi</button>
     </div>
-    <div class="preview-content">
+    <div class="modal-content-box">
         <iframe id="previewFrame" src=""></iframe>
     </div>
 </div>
 
+<div id="aiReportModal" class="modal-overlay">
+    <div class="modal-header">
+        <h3 style="margin:0; font-size:18px; color:white;"><i class="fas fa-robot"></i> Report Pre-Delibera Intelligenza Artificiale</h3>
+        <div>
+            <button style="background:#002d72; color:white; border:1px solid white; padding: 8px 15px; border-radius:4px; cursor:pointer; margin-right: 10px;" onclick="stampaReportAI()"><i class="fas fa-print"></i> Stampa PDF</button>
+            <button style="background:#dc3545; color:white; border:none; padding: 8px 15px; border-radius:4px; cursor:pointer;" onclick="chiudiReportAI()"><i class="fas fa-times"></i> Chiudi</button>
+        </div>
+    </div>
+    <div class="modal-content-box" id="aiReportContent" style="background: #f4f7f6;">
+        <div id="aiLoading" style="text-align:center; padding: 50px; color:#002d72;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Interrogazione Database Delibere...</p></div>
+        <div id="aiBody" style="display:none;"></div>
+    </div>
+</div>
+
 <script>
+    // 1. CONFIGURAZIONE FIREBASE
     var firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
         authDomain: "consulenza-credipass.firebaseapp.com",
+        projectId: "consulenza-credipass",
         storageBucket: "consulenza-credipass.firebasestorage.app"
     };
 
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     var storage = firebase.storage();
+    var db = firebase.firestore(); // Aggiunto Firestore per leggere le delibere
 
     const MAPPA_CATEGORIE = {
         'doc_ci': 'ANAGRAFICA', 'doc_ts': 'ANAGRAFICA', 'doc_residenza': 'ANAGRAFICA', 'doc_matrimonio': 'ANAGRAFICA',
@@ -141,7 +174,7 @@
             document.getElementById('sottotitoloPagina').innerText = "ID: " + idClienteAttuale;
             caricaFascicolo(idClienteAttuale);
         } else {
-            document.getElementById('emptyState').innerHTML = "Nessun ID cliente selezionato.";
+            document.getElementById('emptyState').innerHTML = "Nessun ID cliente selezionato nell'URL.";
             document.getElementById('emptyState').style.display = 'block';
         }
     };
@@ -169,7 +202,7 @@
         } catch (error) {
             console.error(error);
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('emptyState').innerHTML = `Errore di lettura permessi. Sblocca le regole di Firebase Storage.`;
+            document.getElementById('emptyState').innerHTML = `Errore di lettura permessi o cartella inesistente.`;
             document.getElementById('emptyState').style.display = 'block';
         }
     }
@@ -221,20 +254,19 @@
             `;
             container.appendChild(row);
         });
-        document.getElementById('btnZip').style.display = 'flex';
+        document.getElementById('actionButtons').style.display = 'flex';
     }
 
+    // --- FUNZIONI PREVIEW E ZIP ---
     function apriAnteprima(url, name) {
         document.getElementById('previewTitle').innerText = name;
         document.getElementById('previewFrame').src = url;
         document.getElementById('previewModal').style.display = 'flex';
     }
-
     function chiudiAnteprima() {
         document.getElementById('previewModal').style.display = 'none';
         document.getElementById('previewFrame').src = "";
     }
-
     async function scaricaFile(url, filename) {
         try {
             const res = await fetch(url);
@@ -242,11 +274,9 @@
             saveAs(blob, filename);
         } catch (e) { window.open(url, '_blank'); }
     }
-
     async function scaricaZipStrutturato() {
         const btn = document.getElementById('btnZip');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zippatura in corso...';
-
         const zip = new JSZip();
         const nomeRich1 = document.getElementById('nomeRichiedente1').value.trim().toUpperCase() || "1_RICHIEDENTE";
         const nomeRich2 = document.getElementById('nomeRichiedente2').value.trim().toUpperCase() || "2_RICHIEDENTE";
@@ -255,10 +285,8 @@
             for (let file of filesCorrenti) {
                 const res = await fetch(file.url);
                 const blob = await res.blob();
-
                 let subFolder = file.richiedente === "1" ? `/${nomeRich1}` : (file.richiedente === "2" ? `/${nomeRich2}` : `/IMMOBILE_E_COMUNI`);
                 const percorsoFile = `${file.categoria}${subFolder}/${file.nomeFriendly.replace(/[^a-zA-Z0-9]/g, '_')}_${file.nomeOriginale}`;
-                
                 zip.file(percorsoFile, blob);
             }
             const content = await zip.generateAsync({ type: "blob" });
@@ -266,8 +294,118 @@
         } catch (error) {
             alert("Errore ZIP. Verifica regole CORS dello Storage.");
         } finally {
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-archive"></i> Scarica ZIP Completo Strutturato';
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-archive"></i> Scarica ZIP Fascicolo';
         }
+    }
+
+    // --- NUOVE FUNZIONI REPORT AI ---
+    async function apriReportAI() {
+        document.getElementById('aiReportModal').style.display = 'flex';
+        const aiBody = document.getElementById('aiBody');
+        const aiLoading = document.getElementById('aiLoading');
+        
+        aiBody.style.display = 'none';
+        aiLoading.style.display = 'block';
+        aiBody.innerHTML = ''; // Pulisce vecchio contenuto
+
+        try {
+            // Cerca il fascicolo segreto nel database
+            const docRef = await db.collection("analisi_deliberante").doc(idClienteAttuale).get();
+            
+            aiLoading.style.display = 'none';
+            aiBody.style.display = 'block';
+
+            if (!docRef.exists) {
+                aiBody.innerHTML = `
+                    <div style="text-align:center; padding: 40px;">
+                        <i class="fas fa-search-minus fa-3x" style="color:#ccc; margin-bottom:15px;"></i>
+                        <h2 style="color:#777;">Nessuna Analisi Disponibile</h2>
+                        <p style="color:#999;">L'Intelligenza Artificiale non ha ancora elaborato documenti reddituali o bancari per questo cliente.</p>
+                    </div>`;
+                return;
+            }
+
+            const dati = docRef.data();
+            let htmlReport = '';
+
+            // Intestazione con Score se presente
+            if (dati.score !== undefined && dati.score !== null) {
+                let color = "#28a745"; // Verde
+                if(dati.score < 85) color = "#ffc107"; // Giallo
+                if(dati.score < 70) color = "#dc3545"; // Rosso
+                
+                htmlReport += `
+                    <div style="background:white; padding:20px; border-radius:8px; border-left: 6px solid ${color}; margin-bottom:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h2 style="margin:0; color:#333; font-size: 18px;">Rischio Complessivo Pratica</h2>
+                            <p style="margin:5px 0 0 0; color:#777; font-size:14px;">Basato sull'ultima analisi reddituale effettuata.</p>
+                        </div>
+                        <div style="background:${color}; color:white; padding:15px 25px; border-radius:8px; text-align:center;">
+                            <span style="font-size:30px; font-weight:900; display:block; line-height:1;">${dati.score}/100</span>
+                            <span style="font-size:12px; text-transform:uppercase; font-weight:bold;">${dati.fascia || 'Analizzato'}</span>
+                        </div>
+                    </div>`;
+            }
+
+            // Loop attraverso tutte le chiavi del database per trovare i report
+            for (const [key, value] of Object.entries(dati)) {
+                if (key.startsWith('delibera_')) {
+                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('delibera_', '').replace(/[0-9]/g, '')] || key;
+                    htmlReport += `
+                        <div class="ai-report-block">
+                            <h3><i class="fas fa-file-invoice-dollar"></i> Pre-Delibera Reddituale: ${nomeDocPulito}</h3>
+                            <div class="ai-text">${value}</div>
+                        </div>`;
+                }
+                
+                if (key.startsWith('estrattoconto_')) {
+                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('estrattoconto_', '').replace(/[0-9]/g, '')] || "Estratto Conto";
+                    htmlReport += `
+                        <div class="ai-report-block" style="border-left: 4px solid #17a2b8;">
+                            <h3 style="color:#17a2b8; border-bottom-color:#17a2b8;"><i class="fas fa-university"></i> Analisi Comportamentale: ${nomeDocPulito}</h3>
+                            <div class="ai-text">${value}</div>
+                        </div>`;
+                }
+                
+                if (key.startsWith('documento_')) {
+                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('documento_', '').replace(/[0-9]/g, '')] || "Documento";
+                    htmlReport += `
+                        <div class="ai-report-block" style="border-left: 4px solid #6c757d;">
+                            <h3 style="color:#6c757d; border-bottom-color:#6c757d;"><i class="fas fa-search"></i> Nota Documentale: ${nomeDocPulito}</h3>
+                            <div class="ai-text">${value}</div>
+                        </div>`;
+                }
+            }
+
+            aiBody.innerHTML = htmlReport;
+
+        } catch (error) {
+            console.error(error);
+            aiLoading.style.display = 'none';
+            aiBody.style.display = 'block';
+            aiBody.innerHTML = `<div style="color:#dc3545; text-align:center; padding:30px;"><i class="fas fa-exclamation-triangle fa-2x"></i><br>Errore nel recupero del report AI.</div>`;
+        }
+    }
+
+    function chiudiReportAI() {
+        document.getElementById('aiReportModal').style.display = 'none';
+    }
+
+    function stampaReportAI() {
+        // Nasconde temporaneamente tutto tranne il report per la stampa
+        const contentToPrint = document.getElementById('aiReportContent').innerHTML;
+        const originalBody = document.body.innerHTML;
+        
+        document.body.innerHTML = `
+            <div style="max-width:800px; margin:0 auto; padding:20px; font-family:sans-serif;">
+                <h1 style="color:#002d72; text-align:center; border-bottom:2px solid #C99700; padding-bottom:10px;">Pre-Delibera AI - Cliente: ${idClienteAttuale.toUpperCase()}</h1>
+                ${contentToPrint}
+            </div>
+        `;
+        window.print();
+        // Ripristina la pagina
+        document.body.innerHTML = originalBody;
+        window.location.reload(); // Ricarica per ripristinare i listener Javascript
     }
 </script>
 </body>
