@@ -17,7 +17,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
-    // Configura il "motore" di lettura PDF
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 </script>
 
@@ -36,19 +35,47 @@
     .section-title { font-size: 16px; font-weight: 700; color: #C99700; border-bottom: 2px solid #C99700; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; display: none; }
     .section-title i { margin-right: 8px; color: #002d72; }
 
-    .doc-row { display: none; background: #fdfdfd; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px 20px; margin-bottom: 10px; align-items: center; justify-content: space-between; transition: 0.3s; border-left: 4px solid #002d72; }
-    .doc-row.caricato { border-left-color: #28a745; background-color: #f8fff9; }
+    .doc-row {
+        display: none;
+        background: #fdfdfd;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        align-items: center;
+        gap: 20px;
+        transition: 0.3s;
+        border-left: 4px solid #002d72;
+        flex-wrap: wrap;
+    }
+
+    .doc-row.caricato {
+        border-left-color: #28a745;
+        background-color: #f8fff9;
+    }
     
-    .doc-info { flex: 1; padding-right: 15px; }
+    .doc-info {
+        flex: 1 1 220px;
+        min-width: 180px;
+        padding-right: 10px;
+    }
+
     .doc-title { font-size: 14px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 6px; }
     .doc-desc { font-size: 11px; color: #777; margin-top: 3px; display: block; }
 
-    /* Stile Info Icon */
     .info-icon { color: #007bff; cursor: pointer; font-size: 15px; transition: 0.2s; }
     .info-icon:hover { color: #0056b3; }
     .info-detail { display: none; background: #e9f5ff; border-left: 3px solid #007bff; padding: 8px 12px; font-size: 11px; color: #0056b3; margin-top: 8px; border-radius: 4px; line-height: 1.4; }
 
-    .actions-wrapper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .actions-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        min-width: 170px;
+    }
+
     .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
     .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
     
@@ -58,7 +85,62 @@
     .btn-camera:hover { background: #C99700; color: white; }
 
     .status-badge { display: none; background: #28a745; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-    .file-name { font-size: 11px; color: #002d72; font-weight: 600; margin-top: 8px; text-align: right; display: none; width: 100%; }
+    
+    .file-name {
+        flex: 1 1 260px;
+        display: none;
+        font-size: 13px;
+        color: #002d72;
+        font-weight: 600;
+        text-align: center;
+        word-break: break-word;
+        padding: 0 10px;
+    }
+
+    .file-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #eef4ff;
+        color: #002d72;
+        border: 1px solid #cfe0ff;
+        padding: 10px 14px;
+        border-radius: 999px;
+        max-width: 100%;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .file-chip-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 260px;
+        display: inline-block;
+    }
+
+    .btn-remove-file {
+        background: #fff;
+        color: #c62828;
+        border: 1px solid #f1b5b5;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        transition: 0.2s;
+        flex: 0 0 auto;
+    }
+
+    .btn-remove-file:hover {
+        background: #c62828;
+        color: #fff;
+        border-color: #c62828;
+    }
 
     .btn-submit { width: 100%; background: #002d72; color: white; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 30px; transition: 0.3s; text-transform: uppercase; font-family: 'Poppins', sans-serif; }
     .btn-submit:hover { background: #C99700; }
@@ -86,6 +168,50 @@
     .show-block { display: block !important; }
     .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.1s; z-index: 20; }
     .flash-overlay.active { opacity: 1; }
+
+    /* Stile per il Popup Privacy */
+    #privacyModal { display: none; position: fixed; z-index: 10001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 20px; }
+    .privacy-content { background: white; padding: 30px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; font-size: 14px; line-height: 1.6; border-top: 6px solid #002d72; }
+    .close-privacy { position: sticky; top: 0; float: right; background: #eee; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+    @media (max-width: 768px) {
+        .content { padding: 20px; }
+
+        .doc-row {
+            align-items: flex-start;
+        }
+
+        .doc-info,
+        .actions-wrapper,
+        .file-name {
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+
+        .actions-wrapper {
+            justify-content: flex-start;
+        }
+
+        .file-name {
+            text-align: left;
+            padding: 0;
+        }
+
+        .file-chip {
+            border-radius: 12px;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .file-chip-text {
+            max-width: calc(100% - 40px);
+            white-space: normal;
+        }
+
+        .header {
+            padding: 25px 20px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -416,7 +542,8 @@
             <div class="privacy-box" style="margin: 25px 0; padding: 15px; background: #fff4f4; border: 1px solid #ffcccc; border-radius: 8px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start;">
                 <input type="checkbox" id="checkPrivacy" style="margin-top: 4px; cursor: pointer;">
                 <label for="checkPrivacy" style="cursor: pointer; line-height: 1.4; color: #333;">
-                    Dichiaro di aver letto l' <a href="privacy.html" target="_blank" style="color: #002d72; text-decoration: underline; font-weight: 600;">informativa privacy</a> 
+                    Dichiaro di aver letto l'
+                    <a href="javascript:void(0)" onclick="document.getElementById('privacyModal').style.display='flex'" style="color: #002d72; text-decoration: underline; font-weight: 600;">informativa privacy</a>
                     e acconsento al trattamento dei miei dati, inclusa l'analisi tramite <strong>Intelligenza Artificiale</strong>, per finalità di valutazione creditizia.
                 </label>
             </div>
@@ -460,15 +587,27 @@
     <canvas id="photoCanvas" style="display: none;"></canvas>
 </div>
 
+<div id="privacyModal">
+    <div class="privacy-content">
+        <button class="close-privacy" onclick="document.getElementById('privacyModal').style.display='none'">X</button>
+        <h2 style="color: #002d72; margin-top: 0;">Informativa Privacy AI</h2>
+        <p>La presente informativa descrive come trattiamo i tuoi dati per la valutazione del merito creditizio:</p>
+        <ul>
+            <li><strong>Finalità:</strong> I dati sono raccolti per l'istruttoria della pratica di mutuo.</li>
+            <li><strong>Analisi AI:</strong> I documenti sono analizzati tramite OpenAI API per estrarre dati reddituali. I dati <strong>non</strong> vengono usati per addestrare l'AI.</li>
+            <li><strong>Sicurezza:</strong> I file sono criptati su server Google Cloud/Firebase.</li>
+            <li><strong>Conservazione:</strong> I dati verranno conservati per un massimo di 180 giorni.</li>
+        </ul>
+        <p>Cliccando sulla checkbox, presti il consenso esplicito a questo trattamento tecnologico.</p>
+    </div>
+</div>
+
 <script>
     function toggleInfo(id) {
         const el = document.getElementById(id);
         el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
 
-    // -------------------------------------------------------------------------
-    // 1. CONFIGURAZIONE FIREBASE & FUNZIONI AI
-    // -------------------------------------------------------------------------
     const firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
         authDomain: "consulenza-credipass.firebaseapp.com",
@@ -479,13 +618,8 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
-    const functionsFirebase = firebase.functions(); // Inizializza il modulo AI
+    const functionsFirebase = firebase.functions();
 
-    // -------------------------------------------------------------------------
-    // 2. FUNZIONI DI SUPPORTO PER L'INTELLIGENZA ARTIFICIALE
-    // -------------------------------------------------------------------------
-
-    // A) Trasforma normale immagine in Base64
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -495,7 +629,6 @@
         });
     }
 
-    // B) "Fotografa" un PDF per permettere all'AI di vederlo
     async function convertPdfToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -528,7 +661,6 @@
         });
     }
 
-    // C) Il vigile urbano intelligente
     async function preparaFilePerAI(file) {
         if (file.type === 'application/pdf') {
             return await convertPdfToBase64(file);
@@ -537,16 +669,9 @@
         }
     }
 
-    // -------------------------------------------------------------------------
-    // 3. LOGICA URL & FILTRAGGIO SEZIONI (AGGIORNATA CON ID UNIVOCI)
-    // -------------------------------------------------------------------------
     const urlParams = new URLSearchParams(window.location.search);
-    
-    // Ora il sistema cerca prima "nome", se non c'è usa il vecchio "cliente" per retrocompatibilità
     const clienteRaw = urlParams.get('nome') || urlParams.get('cliente') || 'Cliente';
     const cliente2Raw = urlParams.get('cliente2') || ''; 
-    
-    // Ora l'ID univoco per il Database è "id" (es. MR-1234). Se non c'è, usa il nome come faceva prima.
     const clienteId = urlParams.get('id') || clienteRaw.replace(/\s+/g, '_').toLowerCase() || 'demo_pratica'; 
     
     const emailRef = urlParams.get('emailRef') || '';
@@ -556,24 +681,21 @@
     const docsRichiesti = docsStr ? docsStr.split(',') : [];
 
     document.getElementById('welcome-text').innerHTML = `Gentile <strong>${clienteRaw}</strong>, di seguito l'elenco dei documenti necessari.`;
-    if(cliente2Raw) {
+    if (cliente2Raw) {
         document.getElementById('nome_richiedente2').innerText = `- ${cliente2Raw}`;
     }
 
-    if(docsRichiesti.length > 0) {
+    if (docsRichiesti.length > 0) {
         docsRichiesti.forEach(docCodice => {
             const rigaDocumento = document.getElementById('row_doc_' + docCodice);
-            if(rigaDocumento) {
+            if (rigaDocumento) {
                 rigaDocumento.classList.add('show-flex');
                 const idSezione = rigaDocumento.getAttribute('data-section');
-                if(idSezione) document.getElementById(idSezione).classList.add('show-block');
+                if (idSezione) document.getElementById(idSezione).classList.add('show-block');
             }
         });
     }
 
-    // -------------------------------------------------------------------------
-    // 4. FOTOCAMERA IN-APP E CONVERSIONE PDF
-    // -------------------------------------------------------------------------
     let currentStream = null;
     let targetInputId = null;
     let aiTimeout = null;
@@ -587,16 +709,16 @@
         if (isMobile) {
             targetInputId = hiddenInputId;
             currentFormato = formato;
-            fotoTemporanee = []; 
+            fotoTemporanee = [];
             document.getElementById('counterFoto').innerText = "0 foto acquisite";
             document.getElementById('scannerModal').style.display = 'flex';
             avviaScannerVideo(formato);
         } else {
             document.getElementById('qrModal').style.display = 'flex';
             const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = ""; 
+            qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: window.location.href, width: 160, height: 160, colorDark : "#002d72", colorLight : "#ffffff"
+                text: window.location.href, width: 160, height: 160, colorDark: "#002d72", colorLight: "#ffffff"
             });
         }
     }
@@ -613,10 +735,10 @@
         let maskWidth, maskHeight;
 
         if (formato === 'ID') {
-            maskWidth = vw * 0.85; 
+            maskWidth = vw * 0.85;
             maskHeight = maskWidth / 1.586;
         } else {
-            maskWidth = vw * 0.70; 
+            maskWidth = vw * 0.70;
             maskHeight = maskWidth * 1.414;
         }
 
@@ -652,7 +774,7 @@
             };
 
             aiTimeout = setTimeout(() => {
-                mask.style.borderColor = "#28a745"; 
+                mask.style.borderColor = "#28a745";
                 mask.style.backgroundColor = "rgba(40, 167, 69, 0.15)";
             }, 2000);
 
@@ -678,7 +800,7 @@
         setTimeout(() => flash.classList.remove('active'), 150);
 
         const imgData = canvas.toDataURL('image/jpeg', 0.85);
-        fotoTemporanee.push({ data: imgData, w: cropDimensions.w, h: cropDimensions.h }); 
+        fotoTemporanee.push({ data: imgData, w: cropDimensions.w, h: cropDimensions.h });
         
         document.getElementById('counterFoto').innerText = `${fotoTemporanee.length} foto acquisite`;
         document.getElementById('scannerSubtitle').innerText = "Scatta la prossima pagina o premi 'Fine'.";
@@ -721,55 +843,17 @@
         document.getElementById('scannerModal').style.display = 'none';
     }
 
-    // -------------------------------------------------------------------------
-    // 5. GESTIONE FILE "ALLEGA" TRADIZIONALE
-    // -------------------------------------------------------------------------
     function gestisciFileSelezionato(inputObj, hiddenInputIdTarget) {
         const masterInput = document.getElementById(hiddenInputIdTarget);
         let dt = new DataTransfer();
-        for (let i=0; i<masterInput.files.length; i++) dt.items.add(masterInput.files[i]);
-        for (let i=0; i<inputObj.files.length; i++) dt.items.add(inputObj.files[i]);
+        for (let i = 0; i < masterInput.files.length; i++) dt.items.add(masterInput.files[i]);
+        for (let i = 0; i < inputObj.files.length; i++) dt.items.add(inputObj.files[i]);
         masterInput.files = dt.files;
         mostraTestoNome(masterInput, hiddenInputIdTarget.replace('camera_', 'row_'));
     }
 
-    function mostraTestoNome(input, rowId) {
-        const nameDiv = document.getElementById('filename_camera_' + rowId.replace('row_', ''));
-        if (nameDiv && input.files && input.files.length > 0) {
-            nameDiv.innerText = input.files.length > 1 ? `${input.files.length} documenti pronti` : `1 documento pronto`;
-            nameDiv.style.display = 'block';
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // 6. DATABASE REALTIME (Semaforo)
-    // -------------------------------------------------------------------------
-    db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
-        if (docSnap.exists) {
-            const dati = docSnap.data();
-            for (const [nomeInput, caricato] of Object.entries(dati)) {
-                if (caricato === true) {
-                    const riga = document.getElementById('row_' + nomeInput);
-                    if(riga && riga.classList.contains('show-flex')) {
-                        riga.classList.add('caricato');
-                        const btnWrapper = riga.querySelector('.actions-wrapper');
-                        if(btnWrapper) btnWrapper.style.display = 'none';
-                        const badge = riga.querySelector('.status-badge');
-                        if(badge) badge.style.display = 'inline-block';
-                        const fname = document.getElementById('filename_camera_' + nomeInput);
-                        if(fname) fname.style.display = 'none';
-                    }
-                }
-            }
-        }
-    });
-
-    // Gestione attivazione pulsante tramite Checkbox Privacy
-    const checkPrivacy = document.getElementById('checkPrivacy');
-    const submitBtn = document.getElementById('submitBtn');
-
-    checkPrivacy.addEventListener('change', function() {
-        if (this.checked) {
+    function aggiornaStatoBottonePrivacy() {
+        if (checkPrivacy.checked) {
             submitBtn.disabled = false;
             submitBtn.style.opacity = "1";
             submitBtn.style.cursor = "pointer";
@@ -778,11 +862,85 @@
             submitBtn.style.opacity = "0.5";
             submitBtn.style.cursor = "not-allowed";
         }
+    }
+
+    function eliminaFileDaInput(inputId, indexToRemove) {
+        const input = document.getElementById(inputId);
+        if (!input || !input.files) return;
+
+        let dt = new DataTransfer();
+
+        for (let i = 0; i < input.files.length; i++) {
+            if (i !== indexToRemove) {
+                dt.items.add(input.files[i]);
+            }
+        }
+
+        input.files = dt.files;
+        mostraTestoNome(input, inputId.replace('camera_', 'row_'));
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.innerText = text;
+        return div.innerHTML;
+    }
+
+    function mostraTestoNome(input, rowId) {
+        const nameDiv = document.getElementById('filename_camera_' + rowId.replace('row_', ''));
+
+        if (!nameDiv) return;
+
+        if (input.files && input.files.length > 0) {
+            let html = '';
+
+            for (let i = 0; i < input.files.length; i++) {
+                const file = input.files[i];
+                html += `
+                    <div class="file-chip" style="margin: 6px auto;">
+                        <span class="file-chip-text" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                        <button type="button" class="btn-remove-file" onclick="eliminaFileDaInput('${input.id}', ${i})" title="Elimina documento">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            nameDiv.innerHTML = html;
+            nameDiv.style.display = 'block';
+        } else {
+            nameDiv.innerHTML = '';
+            nameDiv.style.display = 'none';
+        }
+    }
+
+    db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
+        if (docSnap.exists) {
+            const dati = docSnap.data();
+            for (const [nomeInput, caricato] of Object.entries(dati)) {
+                if (caricato === true) {
+                    const riga = document.getElementById('row_' + nomeInput);
+                    if (riga && riga.classList.contains('show-flex')) {
+                        riga.classList.add('caricato');
+                        const btnWrapper = riga.querySelector('.actions-wrapper');
+                        if (btnWrapper) btnWrapper.style.display = 'none';
+                        const badge = riga.querySelector('.status-badge');
+                        if (badge) badge.style.display = 'inline-block';
+                        const fname = document.getElementById('filename_camera_' + nomeInput);
+                        if (fname) fname.style.display = 'none';
+                    }
+                }
+            }
+        }
     });
 
-    // -------------------------------------------------------------------------
-    // 7. INVIO E VALIDAZIONE AI
-    // -------------------------------------------------------------------------
+    const checkPrivacy = document.getElementById('checkPrivacy');
+    const submitBtn = document.getElementById('submitBtn');
+
+    checkPrivacy.addEventListener('change', function() {
+        aggiornaStatoBottonePrivacy();
+    });
+
     document.getElementById('uploadForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -809,19 +967,15 @@
         aggiornamentiDB['totaleRichiesti'] = docsRichiesti.length;
 
         try {
-            // Chiamata alla Cloud Function "Cervello"
             const analizzaDocumento = functionsFirebase.httpsCallable('analizzaDocumentoAI');
 
             for (let input of filesDaCaricare) {
                 const fieldName = input.name; 
                 
-                for(let i=0; i < input.files.length; i++) {
+                for (let i = 0; i < input.files.length; i++) {
                     let file = input.files[i];
 
-                    // --- 1. CONTROLLO AI ---
                     btn.innerHTML = `<i class="fas fa-robot fa-spin"></i> Controllo AI su ${fieldName}...`;
-                    
-                    // Trasforma in Base64 (che sia immagine o PDF, ci pensa lui)
                     let base64 = await preparaFilePerAI(file);
 
                     try {
@@ -836,17 +990,8 @@
                         if (risposta.valido === false) {
                             alert(`❌ DOCUMENTO RIFIUTATO!\n\nSezione: ${fieldName}\n\nMotivo:\n"${risposta.motivo_errore}"\n\nPer favore, carica il documento corretto.`);
                             btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo';
-                            btn.disabled = false;
-
-                            if (!checkPrivacy.checked) {
-                                btn.style.opacity = "0.5";
-                                btn.style.cursor = "not-allowed";
-                            } else {
-                                btn.style.opacity = "1";
-                                btn.style.cursor = "pointer";
-                            }
-
                             btn.style.backgroundColor = '#002d72';
+                            aggiornaStatoBottonePrivacy();
                             return;
                         }
 
@@ -854,7 +999,6 @@
                         console.warn("L'AI ha riscontrato un problema, procedo comunque col salvataggio per non bloccare il cliente.", aiError);
                     }
 
-                    // --- 2. SALVATAGGIO CLOUD STORAGE ---
                     btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Salvataggio sicuro in corso...`;
                     let storageRef = storage.ref(`Fascicoli/${clienteId}/${fieldName}_${i}_${file.name}`);
                     await storageRef.put(file);
@@ -862,14 +1006,12 @@
                 aggiornamentiDB[fieldName] = true;
             }
 
-            // --- 3. AGGIORNAMENTO DATABASE ---
             await db.collection("pratiche_mutuo").doc(clienteId).set(aggiornamentiDB, { merge: true });
 
-            // --- 4. INVIO EMAIL ---
             if (emailRef || emailBO) {
                 let destinatari = [];
-                if(emailRef) destinatari.push(emailRef);
-                if(emailBO) destinatari.push(emailBO);
+                if (emailRef) destinatari.push(emailRef);
+                if (emailBO) destinatari.push(emailBO);
                 
                 const dbConsoleLink = `https://console.firebase.google.com/project/consulenza-credipass/storage/consulenza-credipass.appspot.com/files/~2FFascicoli~2F${clienteId}`;
                 
@@ -900,32 +1042,22 @@
             setTimeout(() => {
                 btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo';
                 btn.style.backgroundColor = '#002d72';
-
-                if (checkPrivacy.checked) {
-                    btn.disabled = false;
-                    btn.style.opacity = "1";
-                    btn.style.cursor = "pointer";
-                } else {
-                    btn.disabled = true;
-                    btn.style.opacity = "0.5";
-                    btn.style.cursor = "not-allowed";
-                }
+                aggiornaStatoBottonePrivacy();
             }, 3000);
 
         } catch (error) {
             console.error("Errore:", error);
             alert("Errore di connessione. Riprova.");
             btn.innerHTML = 'Riprova Invio';
+            btn.style.backgroundColor = '#002d72';
+            aggiornaStatoBottonePrivacy();
+        }
+    });
 
-            if (checkPrivacy.checked) {
-                btn.disabled = false;
-                btn.style.opacity = "1";
-                btn.style.cursor = "pointer";
-            } else {
-                btn.disabled = true;
-                btn.style.opacity = "0.5";
-                btn.style.cursor = "not-allowed";
-            }
+    window.addEventListener('click', function(e) {
+        const privacyModal = document.getElementById('privacyModal');
+        if (e.target === privacyModal) {
+            privacyModal.style.display = 'none';
         }
     });
 </script>
