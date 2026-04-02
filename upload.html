@@ -11,7 +11,8 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -412,7 +413,15 @@
                 <div class="file-name" id="filename_camera_doc_prestiti"></div>
             </div>
 
-            <button type="submit" class="btn-submit" id="submitBtn"><i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo</button>
+            <div class="privacy-box" style="margin: 25px 0; padding: 15px; background: #fff4f4; border: 1px solid #ffcccc; border-radius: 8px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start;">
+                <input type="checkbox" id="checkPrivacy" style="margin-top: 4px; cursor: pointer;">
+                <label for="checkPrivacy" style="cursor: pointer; line-height: 1.4; color: #333;">
+                    Dichiaro di aver letto l' <a href="privacy.html" target="_blank" style="color: #002d72; text-decoration: underline; font-weight: 600;">informativa privacy</a> 
+                    e acconsento al trattamento dei miei dati, inclusa l'analisi tramite <strong>Intelligenza Artificiale</strong>, per finalità di valutazione creditizia.
+                </label>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo</button>
         </form>
     </div>
 </div>
@@ -755,6 +764,22 @@
         }
     });
 
+    // Gestione attivazione pulsante tramite Checkbox Privacy
+    const checkPrivacy = document.getElementById('checkPrivacy');
+    const submitBtn = document.getElementById('submitBtn');
+
+    checkPrivacy.addEventListener('change', function() {
+        if (this.checked) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = "1";
+            submitBtn.style.cursor = "pointer";
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = "0.5";
+            submitBtn.style.cursor = "not-allowed";
+        }
+    });
+
     // -------------------------------------------------------------------------
     // 7. INVIO E VALIDAZIONE AI
     // -------------------------------------------------------------------------
@@ -780,7 +805,7 @@
         btn.disabled = true;
 
         let aggiornamentiDB = {};
-        aggiornamentiDB['nomeCliente'] = clienteRaw; // Salva il nome in chiaro nel DB per la ricerca
+        aggiornamentiDB['nomeCliente'] = clienteRaw;
         aggiornamentiDB['totaleRichiesti'] = docsRichiesti.length;
 
         try {
@@ -812,8 +837,17 @@
                             alert(`❌ DOCUMENTO RIFIUTATO!\n\nSezione: ${fieldName}\n\nMotivo:\n"${risposta.motivo_errore}"\n\nPer favore, carica il documento corretto.`);
                             btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo';
                             btn.disabled = false;
+
+                            if (!checkPrivacy.checked) {
+                                btn.style.opacity = "0.5";
+                                btn.style.cursor = "not-allowed";
+                            } else {
+                                btn.style.opacity = "1";
+                                btn.style.cursor = "pointer";
+                            }
+
                             btn.style.backgroundColor = '#002d72';
-                            return; // Blocca tutto l'upload!
+                            return;
                         }
 
                     } catch (aiError) {
@@ -860,18 +894,38 @@
 
             btn.innerHTML = '<i class="fas fa-check"></i> Trasferimento Completato';
             btn.style.backgroundColor = '#28a745';
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
 
             setTimeout(() => {
                 btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Salva Documenti nel Fascicolo';
                 btn.style.backgroundColor = '#002d72';
-                btn.disabled = false;
+
+                if (checkPrivacy.checked) {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = "0.5";
+                    btn.style.cursor = "not-allowed";
+                }
             }, 3000);
 
         } catch (error) {
             console.error("Errore:", error);
             alert("Errore di connessione. Riprova.");
             btn.innerHTML = 'Riprova Invio';
-            btn.disabled = false;
+
+            if (checkPrivacy.checked) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+                btn.style.cursor = "not-allowed";
+            }
         }
     });
 </script>
