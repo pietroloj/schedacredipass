@@ -1301,11 +1301,19 @@ window.addEventListener('DOMContentLoaded', () => {
         const figliHtml = safe(figli);
         const checklistHtml = buildChecklistEmailHtml();
 
-        // --- INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI ---
+        // --- INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI (AGGIORNATO CON ID UNIVOCI) ---
         const { reqDocsArray } = generateDocumentList();
         
-        const clienteParam = encodeURIComponent(getClientFirstName(nome1));
-        const cliente2Param = (nome2 !== '-') ? `&cliente2=${encodeURIComponent(getClientFirstName(nome2))}` : '';
+        // 1. Creazione ID Pratica per le cartelle (es. "Mario Rossi - Mariana Polli")
+        let idPraticaCartella = nome1;
+        if (nome2 !== '-' && nome2.trim() !== '') {
+            idPraticaCartella += " - " + nome2;
+        }
+
+        // 2. Parametri per l'URL anti-duplicato
+        const idParam = `id=${encodeURIComponent(idPraticaCartella)}`;
+        const nomeParam = `&nome=${encodeURIComponent(nome1)}`;
+        const cliente2Param = (nome2 !== '-' && nome2.trim() !== '') ? `&cliente2=${encodeURIComponent(nome2)}` : '';
         
         const autoEmail = V('campo_email_auto', '');
         const emailRefParam = (refEmail && refEmail !== '-') ? `&emailRef=${encodeURIComponent(refEmail)}` : '';
@@ -1313,8 +1321,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const docsParam = reqDocsArray.join(',');
         
-        const baseURL = window.location.origin;
-        const uploadUrl = `${baseURL}/upload.html?cliente=${clienteParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
+        const baseURL = window.location.origin; // O metti "https://consulenza-credipass.it" se ci sono problemi coi path
+        const uploadUrl = `${baseURL}/upload.html?${idParam}${nomeParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
 
         const pulsanteUploadHtml = `
         <tr>
@@ -1325,7 +1333,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         Accedi in sicurezza all'Area Clienti per caricare i file richiesti o effettuare la scansione guidata dei cartacei tramite smartphone.
                     </p>
                     <a href="${uploadUrl}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-                       ACCEDI ALL'AREA CLIENTI
+                        ACCEDI ALL'AREA CLIENTI
                     </a>
                 </div>
             </td>
