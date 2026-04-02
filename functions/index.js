@@ -5,11 +5,14 @@ const { OpenAI } = require("openai");
 admin.initializeApp();
 const db = admin.firestore();
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// MODIFICA CHIAVE: runWith({ secrets: ["OPENAI_API_KEY"] }) dice a Google di caricare la chiave prima di eseguire
+exports.analizzaDocumentoAI = functions.runWith({ secrets: ["OPENAI_API_KEY"] }).https.onCall(async (data, context) => {
+    
+    // Inizializza OpenAI QUI DENTRO, così può leggere la chiave segreta caricata da Firebase
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
 
-exports.analizzaDocumentoAI = functions.https.onCall(async (data, context) => {
     const {
         urlFileBase64,
         tipoDocumentoAtteso,
@@ -246,7 +249,6 @@ RESTITUISCI TASSATIVAMENTE un JSON con questa struttura:
                         {
                             type: "image_url",
                             image_url: {
-                                // ECCO LA MODIFICA: Passiamo direttamente la variabile che contiene già il prefisso corretto
                                 url: urlFileBase64
                             }
                         }
