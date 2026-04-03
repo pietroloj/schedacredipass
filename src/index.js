@@ -29,8 +29,18 @@ const {
   upsertManualReview,
 } = require("./repositories/firestoreRepository");
 
+// Assicurati di importare le seguenti funzioni matematiche/di formattazione
+// const { calcolaRedditoBancarioMensilePrudenziale, calcolaDTI, calcolaLTV, formatNumberIT } = require("./utils/mathHelpers"); // <-- DA AGGIUNGERE
+
 admin.initializeApp();
+const adminDb = admin.firestore();
+
 setGlobalOptions({ region: "us-central1", memory: "1GiB", timeoutSeconds: 300 });
+
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 function buildPracticeContext(data) {
   return `
@@ -50,6 +60,150 @@ function computeAnalysisKey({ idCliente, codiceBase, files }) {
   const fileHashComposite = files.map((f) => `${f.side}:${f.sha256}`).sort().join("|");
   return sha256String(`${POLICY.pipelineVersion}|${idCliente}|${codiceBase}|${fileHashComposite}`);
 }
+
+async function loadClientDocumentAnalyses(idCliente) {
+  const docRef = adminDb.collection("analisi_deliberante").doc(idCliente);
+  const auditSnap = await docRef.collection("audit").get();
+
+  const latestByDocType = new Map();
+
+  auditSnap.forEach((doc) => {
+    const data = doc.data() || {};
+    const tipoDocumento = data.tipoDocumentoAtteso || "";
+    const createdAt = data.createdAt?.toMillis?.() || 0;
+
+    if (!tipoDocumento) return;
+
+    const current = latestByDocType.get(tipoDocumento);
+    if (!current || createdAt > current.createdAt) {
+      latestByDocType.set(tipoDocumento, {
+        createdAt,
+        tipoDocumento,
+        classificazione: data.classificazione || null,
+        estrazione: data.estrazione || null,
+        decisioneBackend: data.decisioneBackend || null,
+        review: data.review || null,
+        decisionCode: data.decisionCode || "",
+      });
+    }
+  });
+
+  return Array.from(latestByDocType.values());
+}
+
+function mergePracticeFinancials({ documentAnalyses, importoMutuo, valoreImmobile, rataMutuoStimata, rateAltriFinanziamenti }) {
+  const merged = {
+    redditoBancarioMensile: null,
+    dti: null,
+    ltv: null,
+    scoreIncome: null,
+    scoreBank: null,
+    criticitaFinanziarie: [],
+    puntiForzaFinanziari: [],
+  };
+
+  for (const doc of documentAnalyses) {
+    const dec = doc.decisioneBackend || {};
+
+    if (dec.redditoBancarioMensile !== undefined && dec.redditoBancarioMensile !== null) {
+      merged.redditoBancarioMensile = dec.redditoBancarioMensile;
+    }
+    if (dec.dti !== undefined && dec.dti !== null) {
+      merged.dti = dec.dti;
+    }
+    if (dec.ltv !== undefined && dec.ltv !== null) {
+      merged.ltv = dec.ltv;
+    }
+    if (dec.score !== undefined && dec.score !== null) {
+      merged.scoreIncome = dec.score;
+    }
+    if (dec.scoreComportamentoBancario !== undefined && dec.scoreComportamentoBancario !== null) {
+      merged.scoreBank = dec.scoreComportamentoBancario;
+    }
+    if (Array.isArray(dec.criticita)) {
+      merged.criticitaFinanziarie.push(...dec.criticita);
+    }
+    if (Array.isArray(dec.puntiForza)) {
+      merged.puntiForzaFinanziari.push(...dec.puntiForza);
+    }
+  }
+
+  if (merged.redditoBancarioMensile === null) {
+    const incomeDoc = documentAnalyses.find((d) => ["doc_cud", "doc_unici", "doc_bustepaga"].includes(d.tipoDocumento));
+    const estratti = incomeDoc?.estrazione?.dati_estratti || {};
+    merged.redditoBancarioMensile = calcolaRedditoBancarioMensilePrudenziale(estratti);
+  }
+
+  if (merged.dti === null && merged.redditoBancarioMensile !== null) {
+    merged.dti = calcolaDTI(merged.redditoBancarioMensile, rataMutuoStimata, rateAltriFinanziamenti);
+  }
+
+  if (merged.ltv === null) {
+    merged.ltv = calcolaLTV(importoMutuo, valoreImmobile);
+  }
+
+  merged.criticitaFinanziarie = Array.from(new Set(merged.criticitaFinanziarie));
+  merged.puntiForzaFinanziari = Array.from(new Set(merged.puntiForzaFinanziari));
+
+  return merged;
+}
+
+function buildPracticeSummary({ snapshot, anomalies, mergedFinancials, reviewFlags, importoMutuo, valoreImmobile, rataMutuoStimata, finalitaMutuo }) {
+  const severity = anomalies.hasBlocking ? "error" : reviewFlags.reviewManuale ? "warning" : "success";
+
+  const esito = anomalies.hasBlocking
+    ? "Pratica con anomalie bloccanti"
+    : reviewFlags.reviewManuale
+    ? "Pratica da revisionare"
+    : "Pratica coerente";
+
+  return {
+    esito,
+    severity,
+    riepilogo: {
+      soggetti: snapshot.soggetti,
+      immobile: snapshot.immobile,
+      operazione: {
+        ...snapshot.operazione,
+        importoMutuo: importoMutuo ?? null,
+        valoreImmobile: valoreImmobile ?? null,
+        rataMutuoStimata: rataMutuoStimata ?? null,
+        finalitaMutuo: finalitaMutuo ?? null,
+      },
+      reddito: {
+        ...snapshot.reddito,
+        redditoBancarioMensile: mergedFinancials.redditoBancarioMensile,
+        dti: mergedFinancials.dti,
+        ltv: mergedFinancials.ltv,
+      },
+      esposizioni: snapshot.esposizioni,
+    },
+    anomalie: anomalies,
+    review: reviewFlags,
+    indicatori: {
+      scoreIncome: mergedFinancials.scoreIncome,
+      scoreBank: mergedFinancials.scoreBank,
+      criticitaFinanziarie: mergedFinancials.criticitaFinanziarie,
+      puntiForzaFinanziari: mergedFinancials.puntiForzaFinanziari,
+    },
+    reportTestuale: [
+      "📁 DOSSIER PRATICA MUTUO",
+      `Esito: ${esito}`,
+      snapshot.immobile?.indirizzo ? `Immobile: ${snapshot.immobile.indirizzo}` : "Immobile: N/D",
+      snapshot.operazione?.prezzoCompravendita ? `Prezzo compravendita: ${snapshot.operazione.prezzoCompravendita}` : "Prezzo compravendita: N/D",
+      mergedFinancials.redditoBancarioMensile !== null ? `Reddito bancario mensile: € ${formatNumberIT(mergedFinancials.redditoBancarioMensile)}` : "Reddito bancario mensile: N/D",
+      mergedFinancials.dti !== null ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%` : "DTI: N/D",
+      mergedFinancials.ltv !== null ? `LTV: ${formatNumberIT(mergedFinancials.ltv)}%` : "LTV: N/D",
+      anomalies.anomalieBloccanti.length ? `Anomalie bloccanti: ${anomalies.anomalieBloccanti.join(" | ")}` : "Anomalie bloccanti: nessuna",
+      anomalies.anomalieWarning.length ? `Warning: ${anomalies.anomalieWarning.join(" | ")}` : "Warning: nessuno",
+    ].join("\n"),
+  };
+}
+
+
+// ============================================================================
+// CLOUD FUNCTIONS EXPORTS
+// ============================================================================
 
 exports.analizzaDocumentoAI = onCall({ secrets: ["OPENAI_API_KEY"] }, async (request) => {
   const data = request.data || {};
@@ -214,7 +368,7 @@ exports.analizzaDocumentoAI = onCall({ secrets: ["OPENAI_API_KEY"] }, async (req
       decisioneBackend: { ...decisioneBackend, practiceSnapshot, practiceAnomalies },
       ui: buildUiResult({
         severity: review.reviewManuale ? "warning" : "success",
-        titolo: review.reviewManuale ? "Documento da verificare" : "Documento valido",
+        titolo: review.reviewManuale ? "Documento da verificare",
         messaggio: review.reviewManuale ? "Documento coerente ma richiede revisione manuale." : "Documento coerente, leggibile e analizzato correttamente.",
         badge: [codiceBase, classificazione.leggibile_umano ? "Leggibile" : "Da verificare", review.reviewManuale ? "Review" : "OK"],
       }),
@@ -260,5 +414,115 @@ exports.analizzaDocumentoAI = onCall({ secrets: ["OPENAI_API_KEY"] }, async (req
   } catch (error) {
     console.error("ERRORE analizzaDocumentoAI:", error);
     throw new HttpsError("internal", error?.message || "Errore del server AI.");
+  }
+});
+
+exports.ricostruisciPraticaCompleta = onCall({ secrets: ["OPENAI_API_KEY"] }, async (request) => {
+  const data = request.data || {};
+  const {
+    idCliente,
+    importoMutuo = null,
+    valoreImmobile = null,
+    rataMutuoStimata = null,
+    rateAltriFinanziamenti = null,
+    finalitaMutuo = null,
+  } = data;
+
+  if (!idCliente) {
+    throw new HttpsError("invalid-argument", "ID cliente mancante.");
+  }
+
+  try {
+    const documentAnalyses = await loadClientDocumentAnalyses(idCliente);
+
+    if (!documentAnalyses.length) {
+      return {
+        ok: false,
+        stato: "no_documents",
+        messaggio: "Nessun documento analizzato trovato per questo cliente.",
+      };
+    }
+
+    const snapshot = buildPracticeSnapshot(documentAnalyses);
+    const anomalies = detectPracticeAnomalies(snapshot);
+
+    const mergedFinancials = mergePracticeFinancials({
+      documentAnalyses,
+      importoMutuo,
+      valoreImmobile,
+      rataMutuoStimata,
+      rateAltriFinanziamenti,
+    });
+
+    const reviewFlags = {
+      reviewManuale:
+        anomalies.hasBlocking ||
+        anomalies.anomalieWarning.length > 0 ||
+        documentAnalyses.some((d) => d.review?.reviewManuale === true),
+      motiviReview: Array.from(new Set([
+        ...anomalies.anomalieBloccanti,
+        ...anomalies.anomalieWarning,
+        ...documentAnalyses.flatMap((d) => d.review?.motiviReview || []),
+      ])),
+    };
+
+    const practiceSummary = buildPracticeSummary({
+      snapshot,
+      anomalies,
+      mergedFinancials,
+      reviewFlags,
+      importoMutuo,
+      valoreImmobile,
+      rataMutuoStimata,
+      finalitaMutuo,
+    });
+
+    const finalDecisionCode = anomalies.hasBlocking
+      ? "PRACTICE_BLOCKING_ANOMALY"
+      : reviewFlags.reviewManuale
+      ? "PRACTICE_REVIEW"
+      : "PRACTICE_OK";
+
+    const payload = {
+      aggiornatoIl: admin.firestore.FieldValue.serverTimestamp(),
+      pipelineVersion: POLICY.pipelineVersion,
+      praticaCompleta: {
+        decisionCode: finalDecisionCode,
+        documentiConsiderati: documentAnalyses.map((d) => ({
+          tipoDocumento: d.tipoDocumento,
+          decisionCode: d.decisionCode || "",
+        })),
+        snapshot,
+        anomalies,
+        mergedFinancials,
+        reviewFlags,
+        practiceSummary,
+      },
+    };
+
+    await adminDb.collection("analisi_deliberante").doc(idCliente).set(payload, { merge: true });
+
+    if (reviewFlags.reviewManuale) {
+      await adminDb.collection("manual_reviews").doc(`practice_${idCliente}`).set({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: "pending",
+        idCliente,
+        scope: "practice",
+        decisionCode: finalDecisionCode,
+        motiviReview: reviewFlags.motiviReview,
+        snapshot,
+        anomalies,
+      }, { merge: true });
+    }
+
+    return {
+      ok: true,
+      stato: anomalies.hasBlocking ? "practice_blocking_anomaly" : reviewFlags.reviewManuale ? "practice_review" : "practice_ok",
+      decisionCode: finalDecisionCode,
+      pratica: practiceSummary,
+    };
+  } catch (error) {
+    console.error("ERRORE ricostruisciPraticaCompleta:", error);
+    throw new HttpsError("internal", error?.message || "Errore nella ricostruzione pratica.");
   }
 });
