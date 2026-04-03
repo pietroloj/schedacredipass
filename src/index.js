@@ -16,6 +16,7 @@ const { extractRealEstate } = require("./services/extractors.realEstate");
 const { extractGeneric } = require("./services/extractors.generic");
 const { buildPracticeSnapshot } = require("./services/reconciler");
 const { detectPracticeAnomalies } = require("./services/anomalyEngine");
+const { matchBanksForPractice } = require("./services/bankMatcher"); // <-- NUOVO IMPORT AGGIUNTO
 const {
   scoreIncomeDecision,
   scoreBankDecision,
@@ -30,7 +31,7 @@ const {
 } = require("./repositories/firestoreRepository");
 
 // Assicurati di importare le seguenti funzioni matematiche/di formattazione
-// const { calcolaRedditoBancarioMensilePrudenziale, calcolaDTI, calcolaLTV, formatNumberIT } = require("./utils/mathHelpers"); // <-- DA AGGIUNGERE
+// const { calcolaRedditoBancarioMensilePrudenziale, calcolaDTI, calcolaLTV, formatNumberIT } = require("./utils/mathHelpers"); 
 
 admin.initializeApp();
 const adminDb = admin.firestore();
@@ -477,12 +478,22 @@ exports.ricostruisciPraticaCompleta = onCall({ secrets: ["OPENAI_API_KEY"] }, as
       finalitaMutuo,
     });
 
+    // INTEGRAZIONE BANK MATCHING
+    const bankMatch = await matchBanksForPractice({
+      practiceSummary,
+      documentAnalyses,
+      anomalies,
+      mergedFinancials,
+      finalitaMutuo,
+    });
+
     const finalDecisionCode = anomalies.hasBlocking
       ? "PRACTICE_BLOCKING_ANOMALY"
       : reviewFlags.reviewManuale
       ? "PRACTICE_REVIEW"
       : "PRACTICE_OK";
 
+    // PAYLOAD AGGIORNATO CON bankMatch
     const payload = {
       aggiornatoIl: admin.firestore.FieldValue.serverTimestamp(),
       pipelineVersion: POLICY.pipelineVersion,
@@ -497,6 +508,7 @@ exports.ricostruisciPraticaCompleta = onCall({ secrets: ["OPENAI_API_KEY"] }, as
         mergedFinancials,
         reviewFlags,
         practiceSummary,
+        bankMatch,
       },
     };
 
@@ -515,11 +527,14 @@ exports.ricostruisciPraticaCompleta = onCall({ secrets: ["OPENAI_API_KEY"] }, as
       }, { merge: true });
     }
 
+    // RETURN AGGIORNATO
     return {
       ok: true,
       stato: anomalies.hasBlocking ? "practice_blocking_anomaly" : reviewFlags.reviewManuale ? "practice_review" : "practice_ok",
       decisionCode: finalDecisionCode,
       pratica: practiceSummary,
+      bancheConsigliate: bankMatch.consigliate,
+      bancheAlternative: bankMatch.alternative,
     };
   } catch (error) {
     console.error("ERRORE ricostruisciPraticaCompleta:", error);
