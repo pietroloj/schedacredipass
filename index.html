@@ -341,6 +341,51 @@
         .logo-area-stack { align-items: center; }
         .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
+.header-actions {
+    position: absolute;
+    top: 50%;
+    right: 40px;
+    transform: translateY(-50%);
+}
+
+.btn-archive-circle {
+    width: 50px;
+    height: 50px;
+    background: #C99700; /* Oro Credipass */
+    color: #002d72;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 20px;
+    border: 2px solid white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+.btn-archive-circle:hover {
+    transform: scale(1.1);
+    background: white;
+    color: #002d72;
+}
+
+
+.btn-archive-circle:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (max-width: 768px) {
+    .header-actions {
+        position: static;
+        transform: none;
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+    }
+}
 </style>
 </head>
 <body>
@@ -496,7 +541,7 @@
 </div>
 
 <div class="app-container" id="app_main_container">
-    <div class="header">
+    <div class="header" style="position: relative;">
         <div style="display: flex; align-items: stretch; gap: 15px; flex: 1; max-width: 450px;">
             <div class="ref-photo-container">
                 <img id="referente_foto_preview" src="" alt="Foto Referente">
@@ -536,9 +581,14 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </div>
         </div>
 
-        <div class="logo-area-stack">
-            <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
+        <div class="logo-area-stack" style="margin-right: 60px;"> <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
             <img src="/images/logo-20anni.png" class="logo-anniv" alt="20 Anni">
+        </div>
+
+        <div class="header-actions" style="position: absolute; top: 15px; right: 15px; transform: none; z-index: 100;">
+            <a href="ricerca-clienti.html" class="btn-archive-circle" title="Vai all'Archivio Clienti" style="box-shadow: 0 0 20px rgba(0,0,0,0.4);">
+                <i class="fas fa-folder-open"></i>
+            </a>
         </div>
     </div>
 
