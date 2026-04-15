@@ -8,16 +8,31 @@ function containsGamblingKeyword(text = "") {
   return GAMBLING_KEYWORDS.some((k) => lower.includes(k));
 }
 
+// IL TUO CALCOLO CUD ESATTO
 function calcolaRedditoBancarioMensilePrudenziale(estratti) {
-  const lordo = normalizeNumber(estratti.reddito_lordo_annuo);
-  const irpef = normalizeNumber(estratti.irpef) || 0;
-  const reg = normalizeNumber(estratti.addizionale_regionale) || 0;
-  const com = normalizeNumber(estratti.addizionale_comunale) || 0;
-  const contr = normalizeNumber(estratti.contributi_previdenziali_lavoratore) || 0;
+  const lordo = normalizeNumber(estratti.reddito_lordo_annuo); // CUD Punti 1, 2, 3
+  const irpef = normalizeNumber(estratti.irpef) || 0; // CUD Punto 21
+  const reg = normalizeNumber(estratti.addizionale_regionale) || 0; // CUD Punto 22
+  const com = normalizeNumber(estratti.addizionale_comunale) || 0; // CUD Punti 26+27+29
+
+  const giorniLavorati = normalizeNumber(estratti.giorni_lavorati); // CUD Punto 6 o 7
+
   if (!lordo) return null;
-  const nettoAnnuo = lordo - irpef - reg - com - contr;
+
+  // Il reddito lordo nel CUD (Imponibile Fiscale) è GIÀ al netto dei contributi INPS.
+  // Quindi la formula esatta è: Lordo - Irpef - Add.Reg - Add.Com
+  const nettoAnnuo = lordo - irpef - reg - com;
+
   if (!Number.isFinite(nettoAnnuo) || nettoAnnuo <= 0) return null;
-  return round2(nettoAnnuo / 13);
+
+  // Trasformiamo i giorni in mesi (es. 365 -> 12 mesi, 120 -> 4 mesi)
+  let mesiLavorati = 12; // Default per un anno intero
+  if (giorniLavorati && giorniLavorati > 0 && giorniLavorati <= 365) {
+    mesiLavorati = Math.round(giorniLavorati / 30.416); // 365 / 12 = 30.416 (giorni medi mese)
+    if (mesiLavorati === 0) mesiLavorati = 1; // Evita divisioni impossibili
+  }
+
+  return round2(nettoAnnuo / mesiLavorati);
 }
 
 function calcolaDTI(redditoMensile, rataMutuo, altreRate) {
