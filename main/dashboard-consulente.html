@@ -11,132 +11,101 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-    .container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
+    .container { max-width: 1350px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
     .header { padding: 25px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { margin:0; font-size:22px; color:#002d72; font-weight: 800; text-transform: uppercase; }
+    .header h1 { margin:0; font-size:20px; color:#002d72; font-weight: 800; text-transform: uppercase; }
     
-    .main-grid { display: grid; grid-template-columns: 1fr 420px; gap: 30px; padding: 30px; }
+    .main-grid { display: grid; grid-template-columns: 1fr 450px; gap: 30px; padding: 30px; }
     @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
-    /* SEZIONI CATEGORIE (SINISTRA) */
-    .doc-category { margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
-    .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+    /* SINISTRA: DOCUMENTI CARICATI */
+    .doc-category { margin-bottom: 25px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+    .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
     .cat-header i { color: #C99700; }
-    .doc-list { padding: 15px; background: #fcfcfc; }
+    .doc-list { padding: 10px; background: #fcfcfc; }
+    .doc-item { background: white; border: 1px solid #eef2f7; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; }
+    .doc-filename { font-size: 10px; color: #999; display: block; }
+    .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
 
-    .doc-item { background: white; border: 1px solid #eef2f7; padding: 15px 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .doc-item:hover { border-color: #C99700; transform: translateX(5px); }
-    
-    .doc-info-box { display: flex; align-items: center; gap: 15px; }
-    .doc-icon { width: 35px; height: 35px; background: #fff5f5; color: #d93025; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .doc-name-main { font-size: 14px; font-weight: 700; color: #002d72; display: block; }
-    .doc-subtext { font-size: 11px; color: #718096; }
-
-    .btn-view { background: #002d72; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 700; transition: 0.3s; }
-    .btn-view:hover { background: #C99700; }
-
-    /* SIDEBAR (DESTRA) */
-    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-    .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+    /* DESTRA: SIDEBAR INTEGRATA */
+    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-sizing: border-box; }
+    .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
     
     .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px; }
-    .filter-btn { background: white; border: 1px solid #ddd; padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; }
+    .filter-btn { background: white; border: 1px solid #ddd; padding: 10px 4px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; font-size: 8px; font-weight: 800; text-transform: uppercase; }
     .filter-btn i { display: block; font-size: 16px; margin-bottom: 4px; color: #002d72; }
-    .filter-btn span { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #666; }
-    .filter-btn.active { border-color: #C99700; background: #C99700; }
-    .filter-btn.active i, .filter-btn.active span { color: white; }
+    .filter-btn.active { border-color: #C99700; background: #C99700; color: white; }
+    .filter-btn.active i { color: white; }
 
-    .integration-select { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; font-family: inherit; font-size: 13px; font-weight: 600; color: #002d72; outline: none; }
-    .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 12px; background: white; margin: 15px 0; min-height: 50px; }
-    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: #002d72; border-left: 4px solid #C99700; }
+    .integration-select { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; font-family: inherit; font-size: 13px; font-weight: 600; color: #002d72; margin-bottom: 10px; outline: none; }
     
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; font-family: inherit; }
-    .btn-send { background: #002d72; color: white; margin-top: 10px; }
+    .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 10px; background: white; margin-bottom: 15px; min-height: 40px; }
+    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; font-weight: 700; border-left: 4px solid #C99700; }
+
+    .nota-area { width: 100%; height: 110px; border: 2px solid #e9ecef; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; box-sizing: border-box; margin-bottom: 15px; }
+    .nota-area:focus { border-color: #C99700; outline: none; }
+
+    .btn-submit { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-primary { background: #002d72; color: white; }
     .btn-ai { background: #C99700; color: #002d72; margin-bottom: 10px; }
-    
-    .nota-area { width: 100%; height: 80px; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; }
 
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-content { background: white; width: 95%; max-width: 900px; border-radius: 15px; padding: 35px; max-height: 85vh; overflow-y: auto; }
+    .modal-content { background: white; width: 90%; max-width: 900px; border-radius: 15px; padding: 30px; max-height: 80vh; overflow-y: auto; }
 </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-folder-open" style="color:#C99700; margin-right:10px;"></i> Istruttoria: <span id="labelCliente">...</span></h1>
-        <a href="ricerca-clienti.html" style="text-decoration:none; color:#666; font-weight:700;"><i class="fas fa-arrow-left"></i> ESCI</a>
+        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> Fascicolo: <span id="labelCliente">...</span></h1>
+        <a href="ricerca-clienti.html" style="text-decoration:none; color:#666; font-weight:700;"><i class="fas fa-times"></i> CHIUDI</a>
     </div>
 
     <div class="main-grid">
         <div id="documentiArea">
-            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Catalogazione fascicolo...</p></div>
-            
-            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;">
-                <div class="cat-header"><i class="fas fa-user-circle"></i> Documenti Anagrafici</div>
-                <div class="doc-list" id="list-ANAGRAFICA"></div>
-            </div>
-
-            <div id="cat-REDDITUALE" class="doc-category" style="display:none;">
-                <div class="cat-header"><i class="fas fa-wallet"></i> Documenti Reddituali</div>
-                <div class="doc-list" id="list-REDDITUALE"></div>
-            </div>
-
-            <div id="cat-BANCA" class="doc-category" style="display:none;">
-                <div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div>
-                <div class="doc-list" id="list-BANCA"></div>
-            </div>
-
-            <div id="cat-IMMOBILIARE" class="doc-category" style="display:none;">
-                <div class="cat-header"><i class="fas fa-home"></i> Documentazione Immobile</div>
-                <div class="doc-list" id="list-IMMOBILIARE"></div>
-            </div>
-
-            <div id="cat-ALTRO" class="doc-category" style="display:none;">
-                <div class="cat-header"><i class="fas fa-plus-circle"></i> Altre Integrazioni</div>
-                <div class="doc-list" id="list-ALTRO"></div>
-            </div>
+            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Accesso al Cloud...</p></div>
+            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div><div class="doc-list" id="list-ANAGRAFICA"></div></div>
+            <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div><div class="doc-list" id="list-REDDITO"></div></div>
+            <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-piggy-bank"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
+            <div id="cat-IMMOBILE" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div><div class="doc-list" id="list-IMMOBILE"></div></div>
+            <div id="cat-ALTRO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro</div><div class="doc-list" id="list-ALTRO"></div></div>
         </div>
 
         <div class="sidebar">
             <div class="sidebar-card">
-                <h3><i class="fas fa-robot"></i> Analisi Dossier</h3>
-                <button class="btn btn-ai" onclick="apriReportAI()"><i class="fas fa-file-invoice-dollar"></i> APRI DOSSIER AI</button>
-                <button class="btn" style="background:#28a745; color:white;" onclick="alert('Compressione avviata...')"><i class="fas fa-file-archive"></i> SCARICA ZIP BANCA</button>
+                <h3>Analisi Dossier AI</h3>
+                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> APRI REPORT INTELLIGENTE</button>
             </div>
 
             <div class="sidebar-card">
-                <h3><i class="fas fa-tasks"></i> Richiedi Integrazione</h3>
-                
+                <h3>Nuova Integrazione</h3>
                 <div class="filter-grid">
                     <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i><span>Anag</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('REDDITUALE', this)"><i class="fas fa-wallet"></i><span>Redd</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-piggy-bank"></i><span>Banc</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILIARE', this)"><i class="fas fa-home"></i><span>Casa</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-ellipsis-h"></i><span>Altro</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i><span>Redd</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-university"></i><span>Banc</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILE', this)"><i class="fas fa-home"></i><span>Casa</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-plus"></i><span>Extra</span></div>
                 </div>
 
                 <select id="selectIntegrazione" class="integration-select"></select>
 
-                <button class="btn" style="background:#eef2f7; color:#002d72; border:1px solid #cbd5e0; font-size:12px; margin-top:10px;" onclick="aggiungiAcarrello()">
-                    <i class="fas fa-plus"></i> Aggiungi alla Checklist
+                <button class="btn-submit" style="background:#eef2f7; color:#002d72; border:1px solid #cbd5e0; font-size:12px; margin-bottom:15px;" onclick="aggiungiChecklist()">
+                    <i class="fas fa-plus"></i> Aggiungi alla lista
                 </button>
 
                 <div class="checklist-box">
-                    <p id="msgVuoto" style="text-align:center; color:#adb5bd; font-size:11px; margin:10px 0;">Nessun documento selezionato</p>
-                    <div id="listaCarrello"></div>
+                    <div id="listaCarrello"><p style="text-align:center; color:#999; font-size:11px; margin:5px;">Checklist vuota</p></div>
                 </div>
 
-                <textarea id="notaIntegrazione" class="nota-area" placeholder="Esempio: 'I documenti sono scaduti o mancano pagine...'"></textarea>
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi al cliente (es: 'La Carta d'identità è scaduta...')"></textarea>
 
-                <button id="btnInviaTutto" class="btn btn-send" onclick="inviaChecklistAlCliente()" disabled style="opacity:0.5;">
-                    <i class="fas fa-paper-plane"></i> INVIA RICHIESTA AL CLIENTE
+                <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
+                    <i class="fas fa-paper-plane"></i> INVIA RICHIESTA UNICA
                 </button>
             </div>
         </div>
@@ -154,26 +123,42 @@
 </div>
 
 <script>
-    // DIZIONARIO TRADUZIONI PROFESSIONALI
+    // --- DATABASE COMPLETO TRADUZIONI ---
     const TRADUZIONI = {
-        'ci1': "Carta d'Identità (Rich. 1)", 'ci2': "Carta d'Identità (Rich. 2)",
-        'ts1': "Tessera Sanitaria (Rich. 1)", 'ts2': "Tessera Sanitaria (Rich. 2)",
-        'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto di Matrimonio",
-        'isee': "Attestazione ISEE", 'bustepaga1': "Busta Paga (R1)", 'bustepaga2': "Busta Paga (R2)",
-        'cud1': "Certificazione Unica (R1)", 'cud2': "Certificazione Unica (R2)",
-        'unici1': "Modello Redditi / Unico", 'obism': "Modello OBIS/M",
-        'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti",
-        'atto': "Atto di Provenienza", 'preliminare': "Preliminare / Proposta",
-        'planimetria': "Planimetria Catastale", 'visura': "Visura Catastale",
-        'ape': "Certificato APE", 'integrazione1': "Integrazione Libera"
+        'ci1': "Carta d'Identità (R1)", 'ci2': "Carta d'Identità (R2)", 'ts1': "Tessera Sanitaria (R1)", 'ts2': "Tessera Sanitaria (R2)",
+        'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto di Matrimonio", 'isee': "Attestazione ISEE", 'divorzio': "Sentenza Divorzio",
+        'soggiorno': "Permesso Soggiorno", 'bustepaga1': "Ultime Buste Paga", 'cud1': "Certificazione Unica (CU)", 'contratto': "Contratto Lavoro",
+        'obism': "Modello OBIS/M", 'cedolino': "Cedolino Pensione", 'unici1': "Modello Redditi (ex Unico)", 'iva': "Dichiarazione IVA",
+        'f24': "Ricevute F24", 'bilancino': "Bilancino Provvisorio", 'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti",
+        'titoli': "Dossier Titoli", 'atto': "Atto di Provenienza", 'successione': "Dichiarazione Successione", 'preliminare': "Preliminare / Proposta",
+        'planimetria': "Planimetria Catastale", 'visuracat': "Visura Catastale", 'ape': "Certificato APE", 'concessione': "Concessione Edilizia",
+        'preventivo': "Preventivo Lavori", 'prestiti': "Contratti Finanziamenti", 'conteggio': "Conteggio Estintivo", 'liberatoria': "Lettera Liberatoria",
+        'integrazione1': "Integrazione Extra 1", 'integrazione2': "Integrazione Extra 2"
     };
 
-    const DATABASE_DOCS = {
-        'ANAGRAFICA': [{id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}, {id:'matrimonio', n:"Atto Matrimonio"}],
-        'REDDITUALE': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"Certificazione Unica"}, {id:'unici1', n:"Modello Redditi"}, {id:'obism', n:"Modello OBIS/M"}],
-        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Lista Movimenti"}],
-        'IMMOBILIARE': [{id:'atto', n:"Atto Provenienza"}, {id:'preliminare', n:"Preliminare"}, {id:'planimetria', n:"Planimetria"}],
-        'ALTRO': [{id:'integrazione1', n:"Altro documento"}]
+    // --- DATABASE COMPLETO FILTRATO ---
+    const DB_SELECT = {
+        'ANAGRAFICA': [
+            {id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Certificato Cumulativo"},
+            {id:'isee', n:"Attestazione ISEE"}, {id:'matrimonio', n:"Atto Matrimonio"}, {id:'divorzio', n:"Sentenza Divorzio"}, {id:'soggiorno', n:"Permesso Soggiorno"}
+        ],
+        'REDDITO': [
+            {id:'bustepaga1', n:"Ultime 3 Buste Paga"}, {id:'cud1', n:"Certificazione Unica (CU)"}, {id:'contratto', n:"Contratto Lavoro"},
+            {id:'obism', n:"Modello OBIS/M (Pens.)"}, {id:'cedolino', n:"Cedolino Pensione"}, {id:'unici1', n:"Modello Redditi (Unico)"},
+            {id:'iva', n:"Dichiarazione IVA"}, {id:'f24', n:"Ricevute F24"}, {id:'bilancino', n:"Bilancino Provvisorio"}
+        ],
+        'BANCA': [
+            {id:'ec1', n:"Estratto Conto Trimestrale"}, {id:'mov1', n:"Lista Movimenti Aggiornata"}, {id:'titoli', n:"Dossier Titoli / Investimenti"}
+        ],
+        'IMMOBILE': [
+            {id:'atto', n:"Atto di Provenienza"}, {id:'successione', n:"Dichiarazione Successione"}, {id:'preliminare', n:"Preliminare / Proposta"},
+            {id:'planimetria', n:"Planimetria Catastale"}, {id:'visuracat', n:"Visura Catastale"}, {id:'ape', n:"Certificato APE"},
+            {id:'concessione', n:"Concessione Edilizia"}, {id:'preventivo', n:"Preventivo Lavori"}
+        ],
+        'ALTRO': [
+            {id:'prestiti', n:"Contratti Finanziamenti"}, {id:'conteggio', n:"Conteggio Estintivo"}, {id:'liberatoria', n:"Lettera Liberatoria"},
+            {id:'integrazione1', n:"Box Integrazione Libero"}
+        ]
     };
 
     const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
@@ -183,12 +168,14 @@
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
 
     let carrello = [];
+    let emailCliente = "";
 
     window.onload = () => {
         if(idCliente) {
             document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').toUpperCase();
             caricaDocumenti();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
+            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { if(doc.exists) emailCliente = doc.data().cliente_email || ""; });
         }
     };
 
@@ -196,84 +183,73 @@
         const listRef = storage.ref(`Fascicoli/${idCliente}`);
         const res = await listRef.listAll();
         document.getElementById('loading').style.display = 'none';
-        
         for (let item of res.items) {
             const url = await item.getDownloadURL();
-            const filename = item.name;
-            
-            // Logica di estrazione codice: doc_CODICE_...
-            const parti = filename.split('_');
-            const codiceGrezzo = parti[1] || ''; 
-            const cleanCodice = codiceGrezzo.replace(/[0-9]/g, '');
-
-            let nomeBello = TRADUZIONI[codiceGrezzo] || filename;
-            
+            const fn = item.name;
+            const cod = fn.split('_')[1] || "";
+            const cleanCod = cod.replace(/[0-9]/g, '');
+            let nomeBello = TRADUZIONI[cod] || fn;
             let cat = 'ALTRO';
-            if(['ci','ts','residenza','matrimonio','isee'].includes(cleanCodice)) cat = 'ANAGRAFICA';
-            else if(['bustepaga','cud','unici','obism','pensione','contratto'].includes(cleanCodice)) cat = 'REDDITUALE';
-            else if(['ec','mov','titoli'].includes(cleanCodice)) cat = 'BANCA';
-            else if(['atto','preliminare','planimetria','ape','visura'].includes(cleanCodice)) cat = 'IMMOBILIARE';
-
-            const section = document.getElementById(`cat-${cat}`);
-            const list = document.getElementById(`list-${cat}`);
-            
-            section.style.display = 'block';
-            list.innerHTML += `
-                <div class="doc-item">
-                    <div class="doc-info-box">
-                        <div class="doc-icon"><i class="fas fa-file-pdf"></i></div>
-                        <div>
-                            <span class="doc-name-main">${nomeBello}</span>
-                            <span class="doc-subtext">${filename}</span>
-                        </div>
-                    </div>
-                    <a href="${url}" target="_blank" class="btn-view">VISUALIZZA</a>
-                </div>
-            `;
+            if(['ci','ts','residenza','matrimonio','isee','divorzio','soggiorno'].includes(cleanCod)) cat = 'ANAGRAFICA';
+            else if(['bustepaga','cud','unici','obism','cedolino','contratto','iva','f24','bilancino'].includes(cleanCod)) cat = 'REDDITO';
+            else if(['ec','mov','titoli'].includes(cleanCod)) cat = 'BANCA';
+            else if(['atto','successione','preliminare','planimetria','visuracat','ape','concessione','preventivo'].includes(cleanCod)) cat = 'IMMOBILE';
+            document.getElementById(`cat-${cat}`).style.display = 'block';
+            document.getElementById(`list-${cat}`).innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
         }
     }
 
     function cambiaCategoria(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const select = document.getElementById('selectIntegrazione');
-        select.innerHTML = DATABASE_DOCS[cat].map(doc => `<option value="${doc.id}">${doc.n}</option>`).join('');
+        document.getElementById('selectIntegrazione').innerHTML = DB_SELECT[cat].map(d => `<option value="${d.id}">${d.n}</option>`).join('');
     }
 
-    function aggiungiAcarrello() {
+    function aggiungiChecklist() {
         const sel = document.getElementById('selectIntegrazione');
-        const id = sel.value;
-        const nome = sel.options[sel.selectedIndex].text;
-        if(!id || carrello.find(c => c.id === id)) return;
-        carrello.push({id, nome});
+        if(carrello.includes(sel.value)) return;
+        carrello.push(sel.value);
         renderCarrello();
     }
 
     function renderCarrello() {
-        const list = document.getElementById('listaCarrello');
-        document.getElementById('msgVuoto').style.display = carrello.length ? 'none' : 'block';
-        document.getElementById('btnInviaTutto').disabled = carrello.length === 0;
-        document.getElementById('btnInviaTutto').style.opacity = carrello.length === 0 ? '0.5' : '1';
-        list.innerHTML = carrello.map(c => `<div class="checklist-item"><span>${c.nome.toUpperCase()}</span><i class="fas fa-times" onclick="carrello=carrello.filter(x=>x.id!=='${c.id}'); renderCarrello();" style="cursor:pointer;"></i></div>`).join('');
+        const c = document.getElementById('listaCarrello');
+        document.getElementById('btnInvia').disabled = carrello.length === 0;
+        document.getElementById('btnInvia').style.opacity = carrello.length === 0 ? 0.5 : 1;
+        c.innerHTML = carrello.map(id => `<div class="checklist-item"><span>${TRADUZIONI[id] || id}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x!=='${id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
     }
 
-    async function inviaChecklistAlCliente() {
+    async function inviaIntegrazione() {
         const nota = document.getElementById('notaIntegrazione').value;
-        const btn = document.getElementById('btnInviaTutto');
+        const btn = document.getElementById('btnInvia');
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
-        let updates = { richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello.map(c => c.id) };
-        carrello.forEach(c => { updates[c.id] = false; updates[`row_doc_${c.id}`] = false; });
-        await db.collection("pratiche_mutuo").doc(idCliente).set(updates, {merge:true});
-        alert("Richiesta inviata!");
-        location.reload();
+        let updates = { richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello };
+        carrello.forEach(id => { updates[id] = false; updates[`row_doc_${id}`] = false; });
+        try {
+            await db.collection("pratiche_mutuo").doc(idCliente).set(updates, {merge:true});
+            if(emailCliente) {
+                const linkCliente = `${window.location.origin}/upload.html?id=${idCliente}`;
+                await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: [emailCliente],
+                        subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`,
+                        html: `<div style="font-family:sans-serif; padding:20px; border:1px solid #002d72; border-radius:10px;"><h2 style="color:#002d72;">Ciao, mancano dei documenti</h2><p>Il consulente ha richiesto i seguenti documenti:</p><ul>${carrello.map(id => `<li><strong>${TRADUZIONI[id] || id}</strong></li>`).join('')}</ul><p><strong>Nota:</strong><br>${nota}</p><br><a href="${linkCliente}" style="background:#C99700; color:#fff; padding:12px 20px; text-decoration:none; border-radius:5px; font-weight:bold;">CARICA ORA</a></div>`
+                    })
+                });
+            }
+            alert("✅ Checklist inviata e Email spedita!");
+            location.reload();
+        } catch(e) { alert("Errore"); btn.innerHTML = 'REINVIA'; }
     }
 
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const body = document.getElementById('aiBody');
-        body.innerHTML = 'Lettura dossier...';
+        body.innerHTML = 'Analisi in corso...';
         const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Report non trovato."; return; }
+        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Analisi non trovata."; return; }
         body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
     }
 </script>
