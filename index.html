@@ -1912,6 +1912,42 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     // --- FINE NUOVA FUNZIONE ---
 
+    // --- INIZIO NUOVA FUNZIONE: SALVATAGGIO AI ---
+    async function sincronizzaSchedaConDatabase() {
+        const clienteNome = document.getElementById('cliente_nome')?.value.trim();
+        if (!clienteNome) return; 
+
+        const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
+        let idBase = slugifyCredipassPart(clienteNome);
+        if (cliente2Nome) {
+            idBase += " - " + cliente2Nome;
+        }
+
+        const datiScheda = {
+            cliente_email: document.getElementById('cliente_email')?.value || "",
+            cliente_cell: document.getElementById('cliente_cell')?.value || "",
+            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
+            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
+            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
+            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
+            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
+            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
+            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
+            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
+        };
+
+        try {
+            if (typeof db !== 'undefined') {
+                datiScheda.ultimo_aggiornamento_scheda = firebase.firestore.FieldValue.serverTimestamp();
+                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
+                console.log("✅ Dati sincronizzati per l'IA");
+            }
+        } catch (e) {
+            console.error("❌ Errore salvataggio dati:", e);
+        }
+    }
+    // --- FINE NUOVA FUNZIONE ---
+
     document.getElementById('btn_elabora').addEventListener('click', async () => {
         const nome = document.getElementById('cliente_nome').value.trim();
         const cell = document.getElementById('cliente_cell').value.trim();
@@ -1920,7 +1956,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL WHATSAPP
+        // SALVATAGGIO PRIMA DI APRIRE WHATSAPP
         await sincronizzaSchedaConDatabase();
         
         openWaChoiceModal();
@@ -2009,7 +2045,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('btn_email').addEventListener('click', () => {
+    document.getElementById('btn_email').addEventListener('click', async () => {
+        // SALVATAGGIO PRIMA DI APRIRE MODAL EMAIL
+        await sincronizzaSchedaConDatabase();
+        
         document.getElementById('email-notes-modal').style.display = 'flex';
     });
 
