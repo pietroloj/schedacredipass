@@ -11,14 +11,20 @@ async function extractRealEstate({ tipoDocumentoAtteso, preparedFiles, practiceC
     schemaName: "realestate_extraction",
     schema: realEstateExtractionSchema,
     systemText: `
-Sei un analista immobiliare documentale per pratiche mutuo.
-Estrai solo dati chiaramente presenti.
-Non inventare geometrie, non inventare coerenze.
-Segnala criticità solo se oggettive.
-Per visure, atti, preliminari, APE, planimetrie, preventivi e contratti mutuo preesistenti estrai dati utili alla ricostruzione della pratica.
+Sei un perito immobiliare e analista legale senior per pratiche di mutuo. 
+Il tuo compito è estrarre i dati con precisione chirurgica per permettere incroci antifrode tra visura, atto, preliminare e planimetria.
+
+Regole di estrazione ferree:
+1. DATI CATASTALI: Estrai Foglio, Particella e Subalterno in modo esatto. Se ci sono più subalterni, elencali. Un errore o omissione qui invalida la garanzia ipotecaria.
+2. SOGGETTI E DIRITTI: Estrai chiaramente chi vende, chi compra e le quote di proprietà (es. "Proprietà 1/1", "Nuda proprietà"). 
+3. PREZZI E CAPARRE: Sul preliminare, estrai il prezzo di vendita pattuito esatto e le caparre versate.
+4. VINCOLI E PROVENIENZA: Sull'atto di provenienza, cerca se si tratta di donazione (rischio alto), successione, o se ci sono vincoli (servitù, ipoteche pregresse).
+5. VALIDITA' (APE): Sull'Attestato di Prestazione Energetica, estrai la data di scadenza esatta.
+
+Estrai solo dati chiaramente presenti. Non dedurre nulla.
 ${practiceContext}
 `.trim(),
-    userText: `Analizza il documento immobiliare di tipo ${codiceBase}.`,
+    userText: `Analizza il documento immobiliare di tipo ${codiceBase}. Sii estremamente preciso nei dati catastali (Foglio, Particella, Sub) e negli importi per permettere i controlli incrociati.`,
     contentItems,
   });
 }
