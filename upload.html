@@ -618,7 +618,7 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
-    const functionsFirebase = firebase.functions();
+    const functionsFirebase = firebase.app().functions('us-central1');
 
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
@@ -980,7 +980,7 @@
 
                     try {
                         let risultatoAI = await analizzaDocumento({
-                            urlFileBase64: base64,
+                            urlFileBase64Front: base64,
                             tipoDocumentoAtteso: fieldName,
                             idCliente: clienteId
                         });
