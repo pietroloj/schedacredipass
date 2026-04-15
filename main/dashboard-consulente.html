@@ -11,15 +11,18 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
+    * { box-sizing: border-box; } /* FIX DEFINITIVO FUORI SQUADRA */
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 1350px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
     .header { padding: 25px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .header h1 { margin:0; font-size:20px; color:#002d72; font-weight: 800; text-transform: uppercase; }
     
-    .main-grid { display: grid; grid-template-columns: 1fr 450px; gap: 30px; padding: 30px; }
+    .main-grid { display: grid; grid-template-columns: 1fr 420px; gap: 30px; padding: 30px; }
     @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
     /* SINISTRA: DOCUMENTI CARICATI */
@@ -32,8 +35,8 @@
     .doc-filename { font-size: 10px; color: #999; display: block; }
     .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
 
-    /* DESTRA: SIDEBAR INTEGRATA */
-    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-sizing: border-box; }
+    /* DESTRA: SIDEBAR */
+    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; width: 100%; }
     .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
     
     .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px; }
@@ -47,12 +50,24 @@
     .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 10px; background: white; margin-bottom: 15px; min-height: 40px; }
     .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; font-weight: 700; border-left: 4px solid #C99700; }
 
-    .nota-area { width: 100%; height: 110px; border: 2px solid #e9ecef; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; box-sizing: border-box; margin-bottom: 15px; }
-    .nota-area:focus { border-color: #C99700; outline: none; }
+    .nota-area { 
+        width: 100%; 
+        height: 110px; 
+        border: 2px solid #e9ecef; 
+        border-radius: 8px; 
+        padding: 12px; 
+        font-family: inherit; 
+        font-size: 12px; 
+        resize: none; 
+        box-sizing: border-box; /* BLOCCA IL FUORI SQUADRA */
+        margin-bottom: 15px;
+        display: block;
+    }
 
-    .btn-submit { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-submit { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; }
     .btn-primary { background: #002d72; color: white; }
     .btn-ai { background: #C99700; color: #002d72; margin-bottom: 10px; }
+    .btn-zip { background: #28a745; color: white; }
 
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
     .modal-content { background: white; width: 90%; max-width: 900px; border-radius: 15px; padding: 30px; max-height: 80vh; overflow-y: auto; }
@@ -78,12 +93,13 @@
 
         <div class="sidebar">
             <div class="sidebar-card">
-                <h3>Analisi Dossier AI</h3>
-                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> APRI REPORT INTELLIGENTE</button>
+                <h3>Dossier & Archivio</h3>
+                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> REPORT AI</button>
+                <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA ARCHIVIO ZIP</button>
             </div>
 
             <div class="sidebar-card">
-                <h3>Nuova Integrazione</h3>
+                <h3>Richiedi Integrazione</h3>
                 <div class="filter-grid">
                     <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i><span>Anag</span></div>
                     <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i><span>Redd</span></div>
@@ -105,7 +121,7 @@
                 <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi al cliente (es: 'La Carta d'identità è scaduta...')"></textarea>
 
                 <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
-                    <i class="fas fa-paper-plane"></i> INVIA RICHIESTA UNICA
+                    <i class="fas fa-paper-plane"></i> INVIA AL CLIENTE
                 </button>
             </div>
         </div>
@@ -123,42 +139,24 @@
 </div>
 
 <script>
-    // --- DATABASE COMPLETO TRADUZIONI ---
     const TRADUZIONI = {
         'ci1': "Carta d'Identità (R1)", 'ci2': "Carta d'Identità (R2)", 'ts1': "Tessera Sanitaria (R1)", 'ts2': "Tessera Sanitaria (R2)",
         'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto di Matrimonio", 'isee': "Attestazione ISEE", 'divorzio': "Sentenza Divorzio",
         'soggiorno': "Permesso Soggiorno", 'bustepaga1': "Ultime Buste Paga", 'cud1': "Certificazione Unica (CU)", 'contratto': "Contratto Lavoro",
         'obism': "Modello OBIS/M", 'cedolino': "Cedolino Pensione", 'unici1': "Modello Redditi (ex Unico)", 'iva': "Dichiarazione IVA",
-        'f24': "Ricevute F24", 'bilancino': "Bilancino Provvisorio", 'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti",
-        'titoli': "Dossier Titoli", 'atto': "Atto di Provenienza", 'successione': "Dichiarazione Successione", 'preliminare': "Preliminare / Proposta",
+        'f24': "Ricevute F24", 'bilancino': "Bilancino Provvisorio", 'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti Aggiornata",
+        'atto': "Atto di Provenienza", 'successione': "Dichiarazione Successione", 'preliminare': "Preliminare / Proposta",
         'planimetria': "Planimetria Catastale", 'visuracat': "Visura Catastale", 'ape': "Certificato APE", 'concessione': "Concessione Edilizia",
         'preventivo': "Preventivo Lavori", 'prestiti': "Contratti Finanziamenti", 'conteggio': "Conteggio Estintivo", 'liberatoria': "Lettera Liberatoria",
-        'integrazione1': "Integrazione Extra 1", 'integrazione2': "Integrazione Extra 2"
+        'integrazione1': "Integrazione Extra 1"
     };
 
-    // --- DATABASE COMPLETO FILTRATO ---
     const DB_SELECT = {
-        'ANAGRAFICA': [
-            {id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Certificato Cumulativo"},
-            {id:'isee', n:"Attestazione ISEE"}, {id:'matrimonio', n:"Atto Matrimonio"}, {id:'divorzio', n:"Sentenza Divorzio"}, {id:'soggiorno', n:"Permesso Soggiorno"}
-        ],
-        'REDDITO': [
-            {id:'bustepaga1', n:"Ultime 3 Buste Paga"}, {id:'cud1', n:"Certificazione Unica (CU)"}, {id:'contratto', n:"Contratto Lavoro"},
-            {id:'obism', n:"Modello OBIS/M (Pens.)"}, {id:'cedolino', n:"Cedolino Pensione"}, {id:'unici1', n:"Modello Redditi (Unico)"},
-            {id:'iva', n:"Dichiarazione IVA"}, {id:'f24', n:"Ricevute F24"}, {id:'bilancino', n:"Bilancino Provvisorio"}
-        ],
-        'BANCA': [
-            {id:'ec1', n:"Estratto Conto Trimestrale"}, {id:'mov1', n:"Lista Movimenti Aggiornata"}, {id:'titoli', n:"Dossier Titoli / Investimenti"}
-        ],
-        'IMMOBILE': [
-            {id:'atto', n:"Atto di Provenienza"}, {id:'successione', n:"Dichiarazione Successione"}, {id:'preliminare', n:"Preliminare / Proposta"},
-            {id:'planimetria', n:"Planimetria Catastale"}, {id:'visuracat', n:"Visura Catastale"}, {id:'ape', n:"Certificato APE"},
-            {id:'concessione', n:"Concessione Edilizia"}, {id:'preventivo', n:"Preventivo Lavori"}
-        ],
-        'ALTRO': [
-            {id:'prestiti', n:"Contratti Finanziamenti"}, {id:'conteggio', n:"Conteggio Estintivo"}, {id:'liberatoria', n:"Lettera Liberatoria"},
-            {id:'integrazione1', n:"Box Integrazione Libero"}
-        ]
+        'ANAGRAFICA': [{id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}, {id:'isee', n:"ISEE"}, {id:'matrimonio', n:"Atto Matrimonio"}, {id:'divorzio', n:"Sentenza Divorzio"}, {id:'soggiorno', n:"Permesso Soggiorno"}],
+        'REDDITO': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"CU (CUD)"}, {id:'contratto', n:"Contratto Lavoro"}, {id:'obism', n:"Modello OBIS/M"}, {id:'cedolino', n:"Cedolino Pensione"}, {id:'unici1', n:"Modello Redditi"}, {id:'iva', n:"IVA"}, {id:'f24', n:"F24"}, {id:'bilancino', n:"Bilancino"}],
+        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Lista Movimenti"}, {id:'prestiti', n:"Prestiti/Mutui"}],
+        'IMMOBILE': [{id:'atto', n:"Atto Provenienza"}, {id:'successione', n:"Successione"}, {id:'preliminare', n:"Preliminare"}, {id:'planimetria', n:"Planimetria"}, {id:'visuracat', n:"Visura Catastale"}, {id:'ape', n:"APE"}, {id:'concessione', n:"Concessione Edilizia"}, {id:'preventivo', n:"Preventivo Lavori"}],
+        'ALTRO': [{id:'integrazione1', n:"Richiesta Libera"}]
     };
 
     const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
@@ -195,7 +193,7 @@
             else if(['ec','mov','titoli'].includes(cleanCod)) cat = 'BANCA';
             else if(['atto','successione','preliminare','planimetria','visuracat','ape','concessione','preventivo'].includes(cleanCod)) cat = 'IMMOBILE';
             document.getElementById(`cat-${cat}`).style.display = 'block';
-            document.getElementById(`list-${cat}`).innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
+            document.getElementById(`list-${cat}`).innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon" style="color:#d93025;margin-right:10px;"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
         }
     }
 
@@ -239,9 +237,52 @@
                     })
                 });
             }
-            alert("✅ Checklist inviata e Email spedita!");
+            alert("✅ Richiesta inviata!");
             location.reload();
         } catch(e) { alert("Errore"); btn.innerHTML = 'REINVIA'; }
+    }
+
+    // --- FUNZIONE SCARICA ZIP REALE ---
+    async function scaricaTuttoZip() {
+        const btn = document.getElementById('btnZip');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zipping...';
+        btn.disabled = true;
+
+        const zip = new JSZip();
+        const listRef = storage.ref(`Fascicoli/${idCliente}`);
+
+        try {
+            const res = await listRef.listAll();
+            if (res.items.length === 0) {
+                alert("Nessun file presente nel fascicolo.");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // Scarica ogni file come Blob e aggiungilo allo ZIP
+            const downloadPromises = res.items.map(async (item) => {
+                const url = await item.getDownloadURL();
+                const response = await fetch(url);
+                const blob = await response.blob();
+                zip.file(item.name, blob);
+            });
+
+            await Promise.all(downloadPromises);
+
+            // Genera il file ZIP e avvia il download
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `Fascicolo_${idCliente}.zip`);
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        } catch (e) {
+            console.error(e);
+            alert("Errore durante la creazione dello ZIP.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 
     async function apriReportAI() {
