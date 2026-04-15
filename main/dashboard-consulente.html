@@ -18,53 +18,39 @@
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
     .dashboard-container { background-color: #ffffff; width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #002d72; }
-    
     .header { background-color: #f8f9fa; padding: 20px 40px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
     .header-text h1 { color: #002d72; margin: 0; font-size: 22px; font-weight: 800; text-transform: uppercase; }
     .header-text p { color: #C99700; font-size: 13px; margin: 5px 0 0 0; font-weight: 600; }
     .btn-back { background: #e9ecef; color: #002d72; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Poppins', sans-serif; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
     .btn-back:hover { background: #002d72; color: white; }
-
     .search-bar { background: #002d72; padding: 20px 40px; display: flex; gap: 10px; flex-direction: column; }
     .search-inputs-group { display: flex; gap: 10px; width: 100%; }
     .search-input { flex: 1; padding: 12px 15px; border-radius: 6px; border: none; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; }
     .info-testo { color: white; font-size: 13px; }
-    
     .button-group { display: flex; gap: 10px; margin-top: 20px; }
     .btn-zip { background: #28a745; color: white; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; flex: 1; justify-content: center; font-size: 15px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
     .btn-zip:hover { background: #218838; }
-    
-    /* NUOVO BOTTONE AI */
     .btn-ai { background: #C99700; color: #002d72; border: none; font-weight: bold; font-family: 'Poppins', sans-serif; flex: 1; justify-content: center; font-size: 15px; padding: 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
     .btn-ai:hover { background: #b38600; color: white; }
-
     .content { padding: 30px 40px; }
     .category-section { margin-bottom: 30px; display: none; }
     .category-title { font-size: 16px; font-weight: 700; color: #002d72; border-bottom: 2px solid #e9ecef; padding-bottom: 5px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
     .category-title i { color: #C99700; }
-
     .doc-row { background: #fdfdfd; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 20px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #C99700; }
     .doc-info { flex: 1; display: flex; flex-direction: column; }
     .doc-name { font-size: 14px; font-weight: 600; color: #333; }
     .doc-meta { font-size: 11px; color: #777; margin-top: 2px; }
-
     .actions { display: flex; gap: 8px; }
     .btn-icon { background: #e9ecef; color: #002d72; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s; }
     .btn-icon:hover { background: #002d72; color: white; }
-
-    /* Modal Anteprima PDF */
     .modal-overlay { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; }
     .modal-header { width: 90%; max-width: 1000px; display: flex; justify-content: space-between; padding: 15px 0; color: white; align-items: center; }
     .modal-content-box { background: white; width: 90%; max-width: 1000px; height: 80vh; border-radius: 8px; overflow: hidden; }
     iframe { width: 100%; height: 100%; border: none; }
-    
-    /* MODAL REPORT AI */
     #aiReportModal .modal-content-box { background: #fdfdfd; height: 85vh; overflow-y: auto; padding: 30px; box-sizing: border-box; }
     .ai-report-block { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
     .ai-report-block h3 { margin-top: 0; color: #002d72; border-bottom: 2px solid #C99700; padding-bottom: 8px; font-size: 16px; text-transform: uppercase; }
     .ai-text { font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: #333; }
-    .score-badge { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px; color: white; background: #002d72; }
-
     .loading-spinner { display: none; text-align: center; padding: 40px; color: #002d72; }
     .empty-state { text-align: center; padding: 40px; color: #777; font-size: 14px; display: none; }
 </style>
@@ -103,7 +89,7 @@
 
         <div class="button-group" id="actionButtons" style="display:none;">
             <button id="btnZip" class="btn-zip" onclick="scaricaZipStrutturato()"><i class="fas fa-file-archive"></i> Scarica ZIP Fascicolo</button>
-            <button id="btnAI" class="btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> Apri Pre-Delibera AI</button>
+            <button id="btnAI" class="btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> Apri Dossier AI & Anomalie</button>
         </div>
     </div>
 </div>
@@ -120,20 +106,19 @@
 
 <div id="aiReportModal" class="modal-overlay">
     <div class="modal-header">
-        <h3 style="margin:0; font-size:18px; color:white;"><i class="fas fa-robot"></i> Report Pre-Delibera Intelligenza Artificiale</h3>
+        <h3 style="margin:0; font-size:18px; color:white;"><i class="fas fa-robot"></i> Dossier Pre-Delibera Intelligenza Artificiale</h3>
         <div>
             <button style="background:#002d72; color:white; border:1px solid white; padding: 8px 15px; border-radius:4px; cursor:pointer; margin-right: 10px;" onclick="stampaReportAI()"><i class="fas fa-print"></i> Stampa PDF</button>
             <button style="background:#dc3545; color:white; border:none; padding: 8px 15px; border-radius:4px; cursor:pointer;" onclick="chiudiReportAI()"><i class="fas fa-times"></i> Chiudi</button>
         </div>
     </div>
     <div class="modal-content-box" id="aiReportContent" style="background: #f4f7f6;">
-        <div id="aiLoading" style="text-align:center; padding: 50px; color:#002d72;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Interrogazione Database Delibere...</p></div>
+        <div id="aiLoading" style="text-align:center; padding: 50px; color:#002d72;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Interrogazione Motore Istruttoria...</p></div>
         <div id="aiBody" style="display:none;"></div>
     </div>
 </div>
 
 <script>
-    // 1. CONFIGURAZIONE FIREBASE
     var firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
         authDomain: "consulenza-credipass.firebaseapp.com",
@@ -143,7 +128,7 @@
 
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     var storage = firebase.storage();
-    var db = firebase.firestore(); // Aggiunto Firestore per leggere le delibere
+    var db = firebase.firestore();
 
     const MAPPA_CATEGORIE = {
         'doc_ci': 'ANAGRAFICA', 'doc_ts': 'ANAGRAFICA', 'doc_residenza': 'ANAGRAFICA', 'doc_matrimonio': 'ANAGRAFICA',
@@ -257,7 +242,6 @@
         document.getElementById('actionButtons').style.display = 'flex';
     }
 
-    // --- FUNZIONI PREVIEW E ZIP ---
     function apriAnteprima(url, name) {
         document.getElementById('previewTitle').innerText = name;
         document.getElementById('previewFrame').src = url;
@@ -298,7 +282,7 @@
         }
     }
 
-    // --- NUOVE FUNZIONI REPORT AI ---
+    // NUOVO REPORT DELIBERANTE AGGIORNATO (Legge praticaCompleta)
     async function apriReportAI() {
         document.getElementById('aiReportModal').style.display = 'flex';
         const aiBody = document.getElementById('aiBody');
@@ -306,75 +290,71 @@
         
         aiBody.style.display = 'none';
         aiLoading.style.display = 'block';
-        aiBody.innerHTML = ''; // Pulisce vecchio contenuto
+        aiBody.innerHTML = '';
 
         try {
-            // Cerca il fascicolo segreto nel database
             const docRef = await db.collection("analisi_deliberante").doc(idClienteAttuale).get();
             
             aiLoading.style.display = 'none';
             aiBody.style.display = 'block';
 
-            if (!docRef.exists) {
+            if (!docRef.exists || !docRef.data().praticaCompleta) {
                 aiBody.innerHTML = `
                     <div style="text-align:center; padding: 40px;">
                         <i class="fas fa-search-minus fa-3x" style="color:#ccc; margin-bottom:15px;"></i>
-                        <h2 style="color:#777;">Nessuna Analisi Disponibile</h2>
-                        <p style="color:#999;">L'Intelligenza Artificiale non ha ancora elaborato documenti reddituali o bancari per questo cliente.</p>
+                        <h2 style="color:#777;">Dossier Non Ancora Generato</h2>
+                        <p style="color:#999;">Il motore AI non ha ancora ricostruito le anomalie cross-documentali per questa pratica. Ricarica i documenti o attendi.</p>
                     </div>`;
                 return;
             }
 
             const dati = docRef.data();
+            const pratica = dati.praticaCompleta;
+            const summary = pratica.practiceSummary;
+            const anomalie = pratica.anomalies;
+
             let htmlReport = '';
 
-            // Intestazione con Score se presente
-            if (dati.score !== undefined && dati.score !== null) {
-                let color = "#28a745"; // Verde
-                if(dati.score < 85) color = "#ffc107"; // Giallo
-                if(dati.score < 70) color = "#dc3545"; // Rosso
-                
+            let color = summary.severity === "error" ? "#dc3545" : (summary.severity === "warning" ? "#ffc107" : "#28a745");
+            htmlReport += `
+                <div style="background:white; padding:20px; border-radius:8px; border-left: 6px solid ${color}; margin-bottom:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h2 style="margin:0; color:#333; font-size: 18px;">Stato Istruttoria: ${summary.esito}</h2>
+                        <p style="margin:5px 0 0 0; color:#777; font-size:14px;">Generato dal Motore Deliberante AI e Controllo Incrociato</p>
+                    </div>
+                </div>`;
+
+            if (anomalie.anomalieBloccanti && anomalie.anomalieBloccanti.length > 0) {
+                htmlReport += `<div class="ai-report-block" style="border-left: 4px solid #dc3545;">
+                    <h3 style="color:#dc3545; border-bottom-color:#dc3545;"><i class="fas fa-ban"></i> Anomalie Bloccanti e Antifrode</h3>
+                    <ul style="color:#333; line-height: 1.6;">`;
+                anomalie.anomalieBloccanti.forEach(a => htmlReport += `<li><strong>${a}</strong></li>`);
+                htmlReport += `</ul></div>`;
+            }
+
+            if (anomalie.anomalieWarning && anomalie.anomalieWarning.length > 0) {
+                htmlReport += `<div class="ai-report-block" style="border-left: 4px solid #ffc107;">
+                    <h3 style="color:#856404; border-bottom-color:#ffc107;"><i class="fas fa-exclamation-triangle"></i> Warning Cross-Documentali</h3>
+                    <ul style="color:#333; line-height: 1.6;">`;
+                anomalie.anomalieWarning.forEach(w => htmlReport += `<li>${w}</li>`);
+                htmlReport += `</ul></div>`;
+            }
+
+            if (summary.reportTestuale) {
                 htmlReport += `
-                    <div style="background:white; padding:20px; border-radius:8px; border-left: 6px solid ${color}; margin-bottom:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <h2 style="margin:0; color:#333; font-size: 18px;">Rischio Complessivo Pratica</h2>
-                            <p style="margin:5px 0 0 0; color:#777; font-size:14px;">Basato sull'ultima analisi reddituale effettuata.</p>
-                        </div>
-                        <div style="background:${color}; color:white; padding:15px 25px; border-radius:8px; text-align:center;">
-                            <span style="font-size:30px; font-weight:900; display:block; line-height:1;">${dati.score}/100</span>
-                            <span style="font-size:12px; text-transform:uppercase; font-weight:bold;">${dati.fascia || 'Analizzato'}</span>
-                        </div>
+                    <div class="ai-report-block" style="border-left: 4px solid #002d72;">
+                        <h3 style="color:#002d72; border-bottom-color:#002d72;"><i class="fas fa-file-invoice"></i> Snapshot Pratica Ricostruita</h3>
+                        <div class="ai-text">${summary.reportTestuale}</div>
                     </div>`;
             }
 
-            // Loop attraverso tutte le chiavi del database per trovare i report
-            for (const [key, value] of Object.entries(dati)) {
-                if (key.startsWith('delibera_')) {
-                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('delibera_', '').replace(/[0-9]/g, '')] || key;
-                    htmlReport += `
-                        <div class="ai-report-block">
-                            <h3><i class="fas fa-file-invoice-dollar"></i> Pre-Delibera Reddituale: ${nomeDocPulito}</h3>
-                            <div class="ai-text">${value}</div>
-                        </div>`;
-                }
-                
-                if (key.startsWith('estrattoconto_')) {
-                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('estrattoconto_', '').replace(/[0-9]/g, '')] || "Estratto Conto";
-                    htmlReport += `
-                        <div class="ai-report-block" style="border-left: 4px solid #17a2b8;">
-                            <h3 style="color:#17a2b8; border-bottom-color:#17a2b8;"><i class="fas fa-university"></i> Analisi Comportamentale: ${nomeDocPulito}</h3>
-                            <div class="ai-text">${value}</div>
-                        </div>`;
-                }
-                
-                if (key.startsWith('documento_')) {
-                    const nomeDocPulito = NOMI_FRIENDLY[key.replace('documento_', '').replace(/[0-9]/g, '')] || "Documento";
-                    htmlReport += `
-                        <div class="ai-report-block" style="border-left: 4px solid #6c757d;">
-                            <h3 style="color:#6c757d; border-bottom-color:#6c757d;"><i class="fas fa-search"></i> Nota Documentale: ${nomeDocPulito}</h3>
-                            <div class="ai-text">${value}</div>
-                        </div>`;
-                }
+            if (pratica.bankMatch && pratica.bankMatch.consigliate && pratica.bankMatch.consigliate.length > 0) {
+                htmlReport += `
+                    <div class="ai-report-block" style="border-left: 4px solid #28a745; background-color: #f8fff9;">
+                        <h3 style="color:#28a745; border-bottom-color:#28a745;"><i class="fas fa-university"></i> Prodotti Bancari Consigliati</h3>
+                        <ul style="color:#333; line-height: 1.6;">`;
+                pratica.bankMatch.consigliate.forEach(b => htmlReport += `<li><strong>${b.bancaNome} - ${b.prodottoNome}</strong> (Score compatibilità: ${b.score}/100)</li>`);
+                htmlReport += `</ul></div>`;
             }
 
             aiBody.innerHTML = htmlReport;
@@ -383,7 +363,7 @@
             console.error(error);
             aiLoading.style.display = 'none';
             aiBody.style.display = 'block';
-            aiBody.innerHTML = `<div style="color:#dc3545; text-align:center; padding:30px;"><i class="fas fa-exclamation-triangle fa-2x"></i><br>Errore nel recupero del report AI.</div>`;
+            aiBody.innerHTML = `<div style="color:#dc3545; text-align:center; padding:30px;"><i class="fas fa-exclamation-triangle fa-2x"></i><br>Errore nel recupero del report AI avanzato.</div>`;
         }
     }
 
@@ -392,20 +372,18 @@
     }
 
     function stampaReportAI() {
-        // Nasconde temporaneamente tutto tranne il report per la stampa
         const contentToPrint = document.getElementById('aiReportContent').innerHTML;
         const originalBody = document.body.innerHTML;
         
         document.body.innerHTML = `
             <div style="max-width:800px; margin:0 auto; padding:20px; font-family:sans-serif;">
-                <h1 style="color:#002d72; text-align:center; border-bottom:2px solid #C99700; padding-bottom:10px;">Pre-Delibera AI - Cliente: ${idClienteAttuale.toUpperCase()}</h1>
+                <h1 style="color:#002d72; text-align:center; border-bottom:2px solid #C99700; padding-bottom:10px;">Dossier Delibera AI - Cliente: ${idClienteAttuale.toUpperCase()}</h1>
                 ${contentToPrint}
             </div>
         `;
         window.print();
-        // Ripristina la pagina
         document.body.innerHTML = originalBody;
-        window.location.reload(); // Ricarica per ripristinare i listener Javascript
+        window.location.reload(); 
     }
 </script>
 </body>
