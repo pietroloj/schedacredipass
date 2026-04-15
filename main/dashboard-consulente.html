@@ -16,50 +16,52 @@
 
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-    .container { max-width: 1250px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
+    .container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
     .header { padding: 25px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { margin:0; font-size:20px; color:#002d72; font-weight: 800; text-transform: uppercase; }
-    .btn-back { text-decoration: none; color: #666; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .header h1 { margin:0; font-size:22px; color:#002d72; font-weight: 800; text-transform: uppercase; }
+    
+    .main-grid { display: grid; grid-template-columns: 1fr 420px; gap: 30px; padding: 30px; }
+    @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
-    .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 25px; padding: 30px; }
-    @media (max-width: 1000px) { .main-grid { grid-template-columns: 1fr; } }
+    /* SEZIONI CATEGORIE (SINISTRA) */
+    .doc-category { margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
+    .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+    .cat-header i { color: #C99700; }
+    .doc-list { padding: 15px; background: #fcfcfc; }
 
-    /* Sezioni Documenti Caricati */
-    .doc-category { margin-bottom: 35px; }
-    .cat-title { font-size: 14px; font-weight: 700; color: #002d72; border-bottom: 2px solid #C99700; padding-bottom: 5px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-    .doc-item { background: #fdfdfd; border: 1px solid #eee; padding: 12px 18px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .doc-item { background: white; border: 1px solid #eef2f7; padding: 15px 20px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .doc-item:hover { border-color: #C99700; transform: translateX(5px); }
+    
+    .doc-info-box { display: flex; align-items: center; gap: 15px; }
+    .doc-icon { width: 35px; height: 35px; background: #fff5f5; color: #d93025; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .doc-name-main { font-size: 14px; font-weight: 700; color: #002d72; display: block; }
+    .doc-subtext { font-size: 11px; color: #718096; }
 
-    /* Sidebar Integrazioni */
+    .btn-view { background: #002d72; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 700; transition: 0.3s; }
+    .btn-view:hover { background: #C99700; }
+
+    /* SIDEBAR (DESTRA) */
     .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
     .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
     
-    /* FILTRI CATEGORIA */
-    .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
-    .filter-btn { background: white; border: 1px solid #ddd; padding: 10px 5px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.3s; }
-    .filter-btn i { display: block; font-size: 18px; margin-bottom: 5px; color: #002d72; }
-    .filter-btn span { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #666; }
-    .filter-btn:hover { border-color: #C99700; background: #fffdf5; }
+    .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px; }
+    .filter-btn { background: white; border: 1px solid #ddd; padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; }
+    .filter-btn i { display: block; font-size: 16px; margin-bottom: 4px; color: #002d72; }
+    .filter-btn span { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #666; }
     .filter-btn.active { border-color: #C99700; background: #C99700; }
     .filter-btn.active i, .filter-btn.active span { color: white; }
 
-    /* Menu Tendina */
-    .integration-select {
-        width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; font-family: inherit; font-size: 13px; font-weight: 600; color: #002d72; background-color: #fff; cursor: pointer; outline: none;
-    }
-
-    /* Carrello Checklist */
-    .checklist-box { border: 2px dashed #d1d9e0; border-radius: 10px; padding: 12px; background: white; margin: 15px 0; min-height: 50px; }
-    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: #002d72; border-left: 3px solid #C99700; }
-    .checklist-item i { color: #ff4d4d; cursor: pointer; }
-
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; font-family: inherit; }
-    .btn-send { background: #002d72; color: white; }
+    .integration-select { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; font-family: inherit; font-size: 13px; font-weight: 600; color: #002d72; outline: none; }
+    .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 12px; background: white; margin: 15px 0; min-height: 50px; }
+    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: #002d72; border-left: 4px solid #C99700; }
+    
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; font-family: inherit; }
+    .btn-send { background: #002d72; color: white; margin-top: 10px; }
     .btn-ai { background: #C99700; color: #002d72; margin-bottom: 10px; }
     
-    .nota-area { width: 100%; height: 80px; border: 1px solid #d1d9e0; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; margin-bottom: 15px; }
+    .nota-area { width: 100%; height: 80px; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; }
 
-    /* Modal AI */
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
     .modal-content { background: white; width: 95%; max-width: 900px; border-radius: 15px; padding: 35px; max-height: 85vh; overflow-y: auto; }
 </style>
@@ -68,43 +70,62 @@
 
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> Istruttoria: <span id="labelCliente">...</span></h1>
-        <a href="ricerca-clienti.html" class="btn-back"><i class="fas fa-users"></i> Archivio</a>
+        <h1><i class="fas fa-folder-open" style="color:#C99700; margin-right:10px;"></i> Istruttoria: <span id="labelCliente">...</span></h1>
+        <a href="ricerca-clienti.html" style="text-decoration:none; color:#666; font-weight:700;"><i class="fas fa-arrow-left"></i> ESCI</a>
     </div>
 
     <div class="main-grid">
         <div id="documentiArea">
-            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Accesso al fascicolo...</p></div>
-            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-title"><i class="fas fa-user"></i> ANAGRAFICA</div><div class="items"></div></div>
-            <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-title"><i class="fas fa-briefcase"></i> REDDITO E PENSIONI</div><div class="items"></div></div>
-            <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-title"><i class="fas fa-university"></i> BANCA E PATRIMONIO</div><div class="items"></div></div>
-            <div id="cat-IMMOBILE" class="doc-category" style="display:none;"><div class="cat-title"><i class="fas fa-home"></i> TECNICO IMMOBILIARE</div><div class="items"></div></div>
-            <div id="cat-EXTRA" class="doc-category" style="display:none;"><div class="cat-title"><i class="fas fa-plus-circle"></i> ALTRO</div><div class="items"></div></div>
+            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Catalogazione fascicolo...</p></div>
+            
+            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-user-circle"></i> Documenti Anagrafici</div>
+                <div class="doc-list" id="list-ANAGRAFICA"></div>
+            </div>
+
+            <div id="cat-REDDITUALE" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-wallet"></i> Documenti Reddituali</div>
+                <div class="doc-list" id="list-REDDITUALE"></div>
+            </div>
+
+            <div id="cat-BANCA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div>
+                <div class="doc-list" id="list-BANCA"></div>
+            </div>
+
+            <div id="cat-IMMOBILIARE" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-home"></i> Documentazione Immobile</div>
+                <div class="doc-list" id="list-IMMOBILIARE"></div>
+            </div>
+
+            <div id="cat-ALTRO" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-plus-circle"></i> Altre Integrazioni</div>
+                <div class="doc-list" id="list-ALTRO"></div>
+            </div>
         </div>
 
         <div class="sidebar">
             <div class="sidebar-card">
                 <h3><i class="fas fa-robot"></i> Analisi Dossier</h3>
-                <button class="btn btn-ai" onclick="apriReportAI()"><i class="fas fa-file-invoice-dollar"></i> APRI REPORT AI</button>
-                <button class="btn" style="background:#28a745; color:white;" onclick="alert('Funzione ZIP in attivazione...')"><i class="fas fa-file-archive"></i> SCARICA ZIP BANCA</button>
+                <button class="btn btn-ai" onclick="apriReportAI()"><i class="fas fa-file-invoice-dollar"></i> APRI DOSSIER AI</button>
+                <button class="btn" style="background:#28a745; color:white;" onclick="alert('Compressione avviata...')"><i class="fas fa-file-archive"></i> SCARICA ZIP BANCA</button>
             </div>
 
             <div class="sidebar-card">
-                <h3><i class="fas fa-tasks"></i> Nuova Integrazione</h3>
+                <h3><i class="fas fa-tasks"></i> Richiedi Integrazione</h3>
                 
                 <div class="filter-grid">
-                    <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i><span>Anagrafica</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i><span>Reddituali</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-piggy-bank"></i><span>Banca</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILE', this)"><i class="fas fa-building"></i><span>Immobiliare</span></div>
+                    <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i><span>Anag</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('REDDITUALE', this)"><i class="fas fa-wallet"></i><span>Redd</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-piggy-bank"></i><span>Banc</span></div>
+                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILIARE', this)"><i class="fas fa-home"></i><span>Casa</span></div>
                     <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-ellipsis-h"></i><span>Altro</span></div>
                 </div>
 
-                <select id="selectIntegrazione" class="integration-select">
-                    </select>
+                <select id="selectIntegrazione" class="integration-select"></select>
 
-                <button class="btn" style="background:#eef2f7; color:#002d72; border:1px solid #cfd9e3; font-size:12px; margin-top:10px;" onclick="aggiungiAcarrello()">
-                    <i class="fas fa-plus"></i> Aggiungi Documento
+                <button class="btn" style="background:#eef2f7; color:#002d72; border:1px solid #cbd5e0; font-size:12px; margin-top:10px;" onclick="aggiungiAcarrello()">
+                    <i class="fas fa-plus"></i> Aggiungi alla Checklist
                 </button>
 
                 <div class="checklist-box">
@@ -112,10 +133,10 @@
                     <div id="listaCarrello"></div>
                 </div>
 
-                <textarea id="notaIntegrazione" class="nota-area" placeholder="Esempio: 'I documenti segnati sono scaduti o mancano le ultime pagine...'"></textarea>
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Esempio: 'I documenti sono scaduti o mancano pagine...'"></textarea>
 
                 <button id="btnInviaTutto" class="btn btn-send" onclick="inviaChecklistAlCliente()" disabled style="opacity:0.5;">
-                    <i class="fas fa-paper-plane"></i> INVIA RICHIESTA UNICA
+                    <i class="fas fa-paper-plane"></i> INVIA RICHIESTA AL CLIENTE
                 </button>
             </div>
         </div>
@@ -125,46 +146,38 @@
 <div id="modalAI" class="modal">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #C99700; padding-bottom:12px;">
-            <h2 style="margin:0; color:#002d72;"><i class="fas fa-robot"></i> Esito Istruttoria Intelligente</h2>
+            <h2 style="margin:0; color:#002d72; font-size:18px;"><i class="fas fa-robot"></i> Esito Pre-Delibera AI</h2>
             <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:28px;">&times;</span>
         </div>
-        <div id="aiBody" style="margin-top:25px;"></div>
+        <div id="aiBody" style="margin-top:20px;"></div>
     </div>
 </div>
 
 <script>
+    // DIZIONARIO TRADUZIONI PROFESSIONALI
+    const TRADUZIONI = {
+        'ci1': "Carta d'Identità (Rich. 1)", 'ci2': "Carta d'Identità (Rich. 2)",
+        'ts1': "Tessera Sanitaria (Rich. 1)", 'ts2': "Tessera Sanitaria (Rich. 2)",
+        'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto di Matrimonio",
+        'isee': "Attestazione ISEE", 'bustepaga1': "Busta Paga (R1)", 'bustepaga2': "Busta Paga (R2)",
+        'cud1': "Certificazione Unica (R1)", 'cud2': "Certificazione Unica (R2)",
+        'unici1': "Modello Redditi / Unico", 'obism': "Modello OBIS/M",
+        'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti",
+        'atto': "Atto di Provenienza", 'preliminare': "Preliminare / Proposta",
+        'planimetria': "Planimetria Catastale", 'visura': "Visura Catastale",
+        'ape': "Certificato APE", 'integrazione1': "Integrazione Libera"
+    };
+
     const DATABASE_DOCS = {
-        'ANAGRAFICA': [
-            {id:'ci1', n:"Carta d'Identità (Rich. 1)"}, {id:'ci2', n:"Carta d'Identità (Rich. 2)"},
-            {id:'ts1', n:"Tessera Sanitaria / C.F."}, {id:'residenza1', n:"Certificato Cumulativo"},
-            {id:'isee', n:"Attestazione ISEE"}, {id:'matrimonio', n:"Estratto Matrimonio"},
-            {id:'divorzio', n:"Sentenza Divorzio"}, {id:'permesso_soggiorno', n:"Permesso Soggiorno"}
-        ],
-        'REDDITO': [
-            {id:'bustepaga1', n:"Ultime 3 Buste Paga"}, {id:'cud1', n:"Certificazione Unica (CU)"},
-            {id:'contratto', n:"Contratto di Lavoro"}, {id:'obism', n:"Modello OBIS/M (Pensionati)"},
-            {id:'cedolino_pensione', n:"Cedolino Pensione"}, {id:'unici1', n:"Modello Redditi (ex Unico)"},
-            {id:'iva', n:"Dichiarazione IVA"}, {id:'f24', n:"Ricevute F24 Pagate"},
-            {id:'bilancino', n:"Bilancino Provvisorio"}, {id:'estratto_previdenziale', n:"Estratto INPS"}
-        ],
-        'BANCA': [
-            {id:'ec1', n:"Estratto Conto Trimestrale"}, {id:'mov1', n:"Lista Movimenti Aggiornata"},
-            {id:'titoli', n:"Dossier Titoli / Investimenti"}, {id:'liberatoria', n:"Lettera di Liberatoria"}
-        ],
-        'IMMOBILE': [
-            {id:'atto', n:"Atto di Provenienza"}, {id:'preliminare', n:"Preliminare / Proposta"},
-            {id:'planimetria', n:"Planimetria Catastale"}, {id:'visura_cat', n:"Visura Catastale Storica"},
-            {id:'ape', n:"Certificato APE"}, {id:'successione', n:"Dichiarazione Successione"},
-            {id:'concessione', n:"Concessione Edilizia / Sanatoria"}, {id:'preventivo', n:"Preventivo Lavori"}
-        ],
-        'ALTRO': [
-            {id:'prestiti', n:"Contratti Finanziamenti"}, {id:'conteggio_estintivo', n:"Conteggio per Estinzione"},
-            {id:'integrazione1', n:"BOX EXTRA 1"}, {id:'integrazione2', n:"BOX EXTRA 2"}
-        ]
+        'ANAGRAFICA': [{id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}, {id:'matrimonio', n:"Atto Matrimonio"}],
+        'REDDITUALE': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"Certificazione Unica"}, {id:'unici1', n:"Modello Redditi"}, {id:'obism', n:"Modello OBIS/M"}],
+        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Lista Movimenti"}],
+        'IMMOBILIARE': [{id:'atto', n:"Atto Provenienza"}, {id:'preliminare', n:"Preliminare"}, {id:'planimetria', n:"Planimetria"}],
+        'ALTRO': [{id:'integrazione1', n:"Altro documento"}]
     };
 
     const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const storage = firebase.storage();
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
@@ -174,49 +187,57 @@
     window.onload = () => {
         if(idCliente) {
             document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').toUpperCase();
-            caricaDocumentiEsistenti();
+            caricaDocumenti();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
         }
     };
 
-    function cambiaCategoria(cat, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        const select = document.getElementById('selectIntegrazione');
-        select.innerHTML = '';
-        DATABASE_DOCS[cat].forEach(doc => {
-            select.innerHTML += `<option value="${doc.id}">${doc.n}</option>`;
-        });
-    }
-
-    async function caricaDocumentiEsistenti() {
+    async function caricaDocumenti() {
         const listRef = storage.ref(`Fascicoli/${idCliente}`);
         const res = await listRef.listAll();
         document.getElementById('loading').style.display = 'none';
         
         for (let item of res.items) {
             const url = await item.getDownloadURL();
-            const n = item.name;
-            const pref = n.split('_')[0].replace(/[0-9]/g, '');
+            const filename = item.name;
             
-            let cat = 'EXTRA';
-            if(['ci','ts','residenza','matrimonio'].includes(pref)) cat = 'ANAGRAFICA';
-            if(['bustepaga','cud','unici','obism','pensione'].includes(pref)) cat = 'REDDITO';
-            if(['ec','mov','titoli'].includes(pref)) cat = 'BANCA';
-            if(['atto','preliminare','planimetria','ape','successione'].includes(pref)) cat = 'IMMOBILE';
+            // Logica di estrazione codice: doc_CODICE_...
+            const parti = filename.split('_');
+            const codiceGrezzo = parti[1] || ''; 
+            const cleanCodice = codiceGrezzo.replace(/[0-9]/g, '');
 
-            const container = document.getElementById(`cat-${cat}`);
-            if(container) {
-                container.style.display = 'block';
-                container.querySelector('.items').innerHTML += `
-                    <div class="doc-item">
-                        <span style="font-size:12px; font-weight:600;"><i class="far fa-file-pdf" style="color:#d93025; margin-right:8px;"></i> ${n}</span>
-                        <a href="${url}" target="_blank" style="font-size:11px; color:#002d72; font-weight:700; text-decoration:none;"><i class="fas fa-eye"></i> APRI</a>
+            let nomeBello = TRADUZIONI[codiceGrezzo] || filename;
+            
+            let cat = 'ALTRO';
+            if(['ci','ts','residenza','matrimonio','isee'].includes(cleanCodice)) cat = 'ANAGRAFICA';
+            else if(['bustepaga','cud','unici','obism','pensione','contratto'].includes(cleanCodice)) cat = 'REDDITUALE';
+            else if(['ec','mov','titoli'].includes(cleanCodice)) cat = 'BANCA';
+            else if(['atto','preliminare','planimetria','ape','visura'].includes(cleanCodice)) cat = 'IMMOBILIARE';
+
+            const section = document.getElementById(`cat-${cat}`);
+            const list = document.getElementById(`list-${cat}`);
+            
+            section.style.display = 'block';
+            list.innerHTML += `
+                <div class="doc-item">
+                    <div class="doc-info-box">
+                        <div class="doc-icon"><i class="fas fa-file-pdf"></i></div>
+                        <div>
+                            <span class="doc-name-main">${nomeBello}</span>
+                            <span class="doc-subtext">${filename}</span>
+                        </div>
                     </div>
-                `;
-            }
+                    <a href="${url}" target="_blank" class="btn-view">VISUALIZZA</a>
+                </div>
+            `;
         }
+    }
+
+    function cambiaCategoria(cat, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const select = document.getElementById('selectIntegrazione');
+        select.innerHTML = DATABASE_DOCS[cat].map(doc => `<option value="${doc.id}">${doc.n}</option>`).join('');
     }
 
     function aggiungiAcarrello() {
@@ -224,62 +245,36 @@
         const id = sel.value;
         const nome = sel.options[sel.selectedIndex].text;
         if(!id || carrello.find(c => c.id === id)) return;
-        
         carrello.push({id, nome});
         renderCarrello();
     }
 
     function renderCarrello() {
         const list = document.getElementById('listaCarrello');
-        const btn = document.getElementById('btnInviaTutto');
         document.getElementById('msgVuoto').style.display = carrello.length ? 'none' : 'block';
-        btn.disabled = carrello.length === 0;
-        btn.style.opacity = carrello.length === 0 ? '0.5' : '1';
-        
-        list.innerHTML = carrello.map(c => `
-            <div class="checklist-item">
-                <span>${c.nome.toUpperCase()}</span>
-                <i class="fas fa-times" onclick="rimuoviDoc('${c.id}')"></i>
-            </div>
-        `).join('');
-    }
-
-    function rimuoviDoc(id) {
-        carrello = carrello.filter(c => c.id !== id);
-        renderCarrello();
+        document.getElementById('btnInviaTutto').disabled = carrello.length === 0;
+        document.getElementById('btnInviaTutto').style.opacity = carrello.length === 0 ? '0.5' : '1';
+        list.innerHTML = carrello.map(c => `<div class="checklist-item"><span>${c.nome.toUpperCase()}</span><i class="fas fa-times" onclick="carrello=carrello.filter(x=>x.id!=='${c.id}'); renderCarrello();" style="cursor:pointer;"></i></div>`).join('');
     }
 
     async function inviaChecklistAlCliente() {
         const nota = document.getElementById('notaIntegrazione').value;
         const btn = document.getElementById('btnInviaTutto');
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
-
-        let updates = {
-            richiestaIntegrazioneAttiva: true,
-            notaPerCliente: nota,
-            elencoDocRichiesti: carrello.map(c => c.id)
-        };
-
-        carrello.forEach(c => {
-            updates[c.id] = false; 
-            updates[`row_doc_${c.id}`] = false;
-        });
-
+        let updates = { richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello.map(c => c.id) };
+        carrello.forEach(c => { updates[c.id] = false; updates[`row_doc_${c.id}`] = false; });
         await db.collection("pratiche_mutuo").doc(idCliente).set(updates, {merge:true});
-        alert("Richiesta inviata con successo!");
+        alert("Richiesta inviata!");
         location.reload();
     }
 
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const body = document.getElementById('aiBody');
-        body.innerHTML = 'Analisi in corso...';
+        body.innerHTML = 'Lettura dossier...';
         const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-        if(!snap.exists || !snap.data().praticaCompleta) {
-            body.innerHTML = "Dossier non generato. Il cliente deve cliccare 'Salva' nell'upload.";
-            return;
-        }
-        body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
+        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Report non trovato."; return; }
+        body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
     }
 </script>
 </body>
