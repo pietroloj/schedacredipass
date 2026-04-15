@@ -541,3 +541,7 @@ exports.ricostruisciPraticaCompleta = onCall({ secrets: ["OPENAI_API_KEY"] }, as
     throw new HttpsError("internal", error?.message || "Errore nella ricostruzione pratica.");
   }
 });
+
+// ESPORTAZIONE NUOVA FUNZIONE POLICY (AGGIUNTA)
+const { importaPolicyBancarieDaFileVersionata } = require("./policyImporter");
+exports.importaPolicyBancarieDaFileVersionata = importaPolicyBancarieDaFileVersionata;
