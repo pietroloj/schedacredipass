@@ -995,7 +995,45 @@ window.addEventListener('DOMContentLoaded', () => {
         if (s.startsWith('39')) return s;
         return '39' + s;
     }
+    // --- NUOVA FUNZIONE: SALVA DATI SCHEDA NEL DATABASE ---
+    async function sincronizzaSchedaConDatabase() {
+        const clienteNome = document.getElementById('cliente_nome').value.trim();
+        if (!clienteNome) return; // Non salva se il nome è vuoto
 
+        // Crea l'ID cliente pulito e aggiunge il nome del secondo richiedente (se c'è)
+        const cliente2Nome = document.getElementById('cliente2_nome').value.trim();
+        let idBase = slugifyCredipassPart(clienteNome);
+        if (cliente2Nome) {
+            idBase += " - " + cliente2Nome;
+        }
+
+        const datiScheda = {
+            cliente_email: document.getElementById('cliente_email').value || "",
+            cliente_cell: document.getElementById('cliente_cell').value || "",
+            importo_richiesto: document.getElementById('mutuo_importo').value || "0",
+            valore_immobile: document.getElementById('immobile_valore').value || "0",
+            reddito_richiedente_1: document.getElementById('cliente_reddito').value || "0",
+            reddito_richiedente_2: document.getElementById('cliente2_reddito').value || "0",
+            durata_mutuo: document.getElementById('mutuo_durata').value || "0",
+            finalita: S('fin', ''),
+            prodotto: S('prodotto', ''),
+            tasso: S('tasso', ''),
+            ultimo_aggiornamento_scheda: firebase.firestore.FieldValue.serverTimestamp() // Se ti dà errore, togli questa riga, ma non dovrebbe.
+        };
+
+        try {
+            // Nota: devi avere 'db' inizializzato. Aggiungiamo il controllo.
+            if(typeof db !== 'undefined') {
+                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
+                console.log("✅ Dati sincronizzati per l'IA");
+            } else {
+                console.log("Firebase non è inizializzato in questa pagina. Inizializzalo se vuoi salvare i dati.");
+            }
+        } catch (e) {
+            console.error("❌ Errore salvataggio dati:", e);
+        }
+    }
+    // --- FINE NUOVA FUNZIONE ---
     function getClientFirstName(fullName) {
         const cleaned = String(fullName || '').trim();
         if (!cleaned) return 'Cliente';
@@ -1823,13 +1861,57 @@ window.addEventListener('DOMContentLoaded', () => {
         closeWaChoiceModal();
     }
 
-    document.getElementById('btn_elabora').addEventListener('click', () => {
+    // --- NUOVA FUNZIONE: SALVA DATI SCHEDA NEL DATABASE PER L'IA ---
+    async function sincronizzaSchedaConDatabase() {
+        const clienteNome = document.getElementById('cliente_nome')?.value.trim();
+        if (!clienteNome) return; // Non salva se il nome è vuoto
+
+        // Crea l'ID cliente pulito e aggiunge il nome del secondo richiedente (se c'è)
+        const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
+        let idBase = slugifyCredipassPart(clienteNome);
+        if (cliente2Nome) {
+            idBase += " - " + cliente2Nome;
+        }
+
+        const datiScheda = {
+            cliente_email: document.getElementById('cliente_email')?.value || "",
+            cliente_cell: document.getElementById('cliente_cell')?.value || "",
+            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
+            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
+            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
+            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
+            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
+            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
+            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
+            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
+        };
+
+        try {
+            // Controlla se Firebase è inizializzato nella index.html
+            if (typeof db !== 'undefined') {
+                datiScheda.ultimo_aggiornamento_scheda = firebase.firestore.FieldValue.serverTimestamp();
+                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
+                console.log("✅ Dati sincronizzati per l'IA");
+            } else {
+                console.log("⚠️ Firebase non inizializzato. I dati non sono stati salvati nel cloud.");
+            }
+        } catch (e) {
+            console.error("❌ Errore salvataggio dati:", e);
+        }
+    }
+    // --- FINE NUOVA FUNZIONE ---
+
+    document.getElementById('btn_elabora').addEventListener('click', async () => {
         const nome = document.getElementById('cliente_nome').value.trim();
         const cell = document.getElementById('cliente_cell').value.trim();
         if (!nome || !cell) {
             alert('Inserisci Nome e Cellulare del cliente prima di procedere.');
             return;
         }
+        
+        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL WHATSAPP
+        await sincronizzaSchedaConDatabase();
+        
         openWaChoiceModal();
     });
 
@@ -1876,6 +1958,32 @@ window.addEventListener('DOMContentLoaded', () => {
                     replyTo: V('campo_email', '')
                 })
             });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Errore durante l’invio email');
+
+            alert('Email inviata correttamente al cliente.');
+        } catch (err) {
+            console.error(err);
+            alert('Errore invio email: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    document.getElementById('btn_email').addEventListener('click', async () => {
+        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL EMAIL
+        await sincronizzaSchedaConDatabase();
+        
+        document.getElementById('email-notes-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn_email_si').addEventListener('click', () => eseguiInvioEmail(true));
+    document.getElementById('btn_email_no').addEventListener('click', () => eseguiInvioEmail(false));
+    document.getElementById('btn_email_cancel').addEventListener('click', () => {
+        document.getElementById('email-notes-modal').style.display = 'none';
+    });
 
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Errore durante l’invio email');
