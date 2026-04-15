@@ -364,12 +364,16 @@ exports.analizzaDocumentoAI = onCall({ secrets: ["OPENAI_API_KEY"] }, async (req
       decisionCode,
       analysisKey,
       pipelineVersion: POLICY.pipelineVersion,
-      classificazione,
+ ui: buildUiResult({
+        severity: review.reviewManuale ? "warning" : "success",
+        titolo: review.reviewManuale ? "Documento da verificare" : "Documento valido",
+        messaggio: review.reviewManuale ? "Documento coerente ma richiede revisione manuale." : "Documento coerente, leggibile e analizzato correttamente.",
+        badge: [codiceBase, classificazione.leggibile_umano ? "Leggibile" : "Da verificare", review.reviewManuale ? "Review" : "OK"],    classificazione,
       estrazione,
       decisioneBackend: { ...decisioneBackend, practiceSnapshot, practiceAnomalies },
       ui: buildUiResult({
         severity: review.reviewManuale ? "warning" : "success",
-        titolo: review.reviewManuale ? "Documento da verificare" : "Documento valido",
+        titolo: review.reviewManuale ? "Documento da verificare",
         messaggio: review.reviewManuale ? "Documento coerente ma richiede revisione manuale." : "Documento coerente, leggibile e analizzato correttamente.",
         badge: [codiceBase, classificazione.leggibile_umano ? "Leggibile" : "Da verificare", review.reviewManuale ? "Review" : "OK"],
       }),

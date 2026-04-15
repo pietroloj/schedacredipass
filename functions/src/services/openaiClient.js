@@ -2,7 +2,7 @@ const OpenAI = require("openai");
 const fs = require("fs");
 const { persistTempFile } = require("../utils/files");
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" }) || "dummy_key";
 
 const MODELS = {
   FAST: process.env.OPENAI_MODEL_FAST || "gpt-5.4-mini",

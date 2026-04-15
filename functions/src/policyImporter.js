@@ -14,7 +14,7 @@ const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || "dummy_key",
 });
 
 const COLLECTION_SOURCES = "bank_policy_sources";
