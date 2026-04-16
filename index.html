@@ -16,11 +16,11 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
-    const firebaseConfig = { 
-        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", 
-        authDomain: "consulenza-credipass.firebaseapp.com", 
-        projectId: "consulenza-credipass", 
-        storageBucket: "consulenza-credipass.firebasestorage.app" 
+    const firebaseConfig = {
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+        authDomain: "consulenza-credipass.firebaseapp.com",
+        projectId: "consulenza-credipass",
+        storageBucket: "consulenza-credipass.firebasestorage.app"
     };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
@@ -94,7 +94,7 @@
     }
     .ref-photo-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
     .ref-photo-container i { font-size: 35px; color: rgba(255,255,255,0.5); }
-    
+
     .btn-aggiorna {
         margin-top: 8px; background: rgba(201, 151, 0, 0.1); color: #C99700; border: 1px solid #C99700; border-radius: 4px; padding: 5px 10px; font-size: 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; width: fit-content; transition: 0.3s;
     }
@@ -354,50 +354,47 @@
         .logo-area-stack { align-items: center; }
         .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
-.header-actions {
-    position: absolute;
-    top: 50%;
-    right: 40px;
-    transform: translateY(-50%);
-}
 
-.btn-archive-circle {
-    width: 50px;
-    height: 50px;
-    background: #C99700; /* Oro Credipass */
-    color: #002d72;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    font-size: 20px;
-    border: 2px solid white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-}
-
-.btn-archive-circle:hover {
-    transform: scale(1.1);
-    background: white;
-    color: #002d72;
-}
-
-.btn-archive-circle:hover::after {
-    opacity: 1;
-    visibility: visible;
-}
-
-@media (max-width: 768px) {
     .header-actions {
-        position: static;
+        position: absolute;
+        top: 15px;
+        right: 15px;
         transform: none;
-        margin-top: 15px;
-        display: flex;
-        justify-content: center;
+        z-index: 100;
     }
-}
+
+    .btn-archive-circle {
+        width: 50px;
+        height: 50px;
+        background: #C99700;
+        color: #002d72;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 20px;
+        border: 2px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+    }
+
+    .btn-archive-circle:hover {
+        transform: scale(1.1);
+        background: white;
+        color: #002d72;
+    }
+
+    @media (max-width: 768px) {
+        .header-actions {
+            position: static;
+            transform: none;
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+        }
+    }
 </style>
 </head>
 <body>
@@ -507,7 +504,7 @@
                 </div>
 
                 <div class="p-section-title"><i class="fas fa-edit"></i> Note Aggiuntive Bancarie</div>
-                <div class="p-notes-box"></div>
+                <div class="p-notes-box" id="p_note_box_text"></div>
 
                 <div class="p-footer">
                     <div>Documento generato da app.credipass.it il <span id="p_generato_il"></span></div>
@@ -559,15 +556,14 @@
                 <img id="referente_foto_preview" src="" alt="Foto Referente">
                 <i id="referente_foto_placeholder" class="fas fa-user-tie"></i>
             </div>
-            
+
             <div class="header-box" style="margin: 0; max-width: none; flex: 1;">
                 <span class="ruolo">Referente Consulenza</span>
                 <input type="text" id="campo_referente" class="header-editable" value="PIETRO LO IACONO">
-                
+
                 <span class="ruolo" style="margin-top: 5px;">Sede / Indirizzo</span>
-                <textarea id="campo_indirizzo" class="header-editable info-sub" rows="2" style="resize: none; overflow: hidden;">VIA MARTIRI DEL DISSENSO 99/101
-SANTA MARIA CAPUA VETERE (CE)</textarea>
-                
+                <textarea id="campo_indirizzo" class="header-editable info-sub" rows="2" style="resize: none; overflow: hidden;">VIA MARTIRI DEL DISSENSO 99/101&#10;SANTA MARIA CAPUA VETERE (CE)</textarea>
+
                 <span class="ruolo" style="margin-top: 5px;">Email e Contatti</span>
                 <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
                 <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
@@ -579,7 +575,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <input type="text" id="campo_email_auto" class="header-editable info-sub" value="segreteria.passaretti@credipass.it">
             <span class="ruolo" style="margin-top: 8px;">WhatsApp Automazione</span>
             <input type="text" id="campo_wa_auto" class="header-editable info-sub" value="393760552826">
-            
+
             <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(201, 151, 0, 0.3);">
                 <span class="ruolo" style="color: #C99700;">Aggiorna Foto Profilo Web (Provincia / Nome / Cognome)</span>
                 <div style="display: flex; gap: 5px; margin-top: 2px;">
@@ -593,12 +589,12 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </div>
         </div>
 
-        <div class="logo-area-stack" style="margin-right: 60px;"> 
+        <div class="logo-area-stack" style="margin-right: 60px;">
             <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
             <img src="/images/logo-20anni.png" class="logo-anniv" alt="20 Anni">
         </div>
 
-        <div class="header-actions" style="position: absolute; top: 15px; right: 15px; transform: none; z-index: 100;">
+        <div class="header-actions">
             <a href="main/ricerca-clienti.html" class="btn-archive-circle" title="Vai all'Archivio Clienti" style="box-shadow: 0 0 20px rgba(0,0,0,0.4);">
                 <i class="fas fa-folder-open"></i>
             </a>
@@ -903,7 +899,6 @@ window.loadCredipassReferentePhoto = async function() {
 
         img.src = data.imageBase64;
         img.style.display = 'block';
-
         if (placeholder) placeholder.style.display = 'none';
 
         localStorage.setItem('ref_foto_url_salvata', data.imageBase64);
@@ -949,15 +944,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
 
-    if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
-                .then(response => response.json())
-                .then(data => {
+    if (!('geolocation' in navigator)) {
+        console.warn('Geolocalizzazione non supportata dal browser');
+    } else if (!window.isSecureContext) {
+        console.warn('La geolocalizzazione richiede HTTPS o localhost');
+    } else {
+        navigator.geolocation.getCurrentPosition(
+            async function(position) {
+                try {
+                    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`);
+                    const data = await response.json();
                     const citta = data.city || data.locality || data.principalSubdivision;
                     if (citta) document.getElementById('campo_luogo').value = citta;
-                }).catch(e => console.log(e));
-        }, function() {});
+                } catch (e) {
+                    console.error('Errore reverse geocoding:', e);
+                }
+            },
+            function(error) {
+                console.error('Errore geolocalizzazione:', error);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     }
 
     const sitRadios = document.querySelectorAll('input[name="sit_abitativa"]');
@@ -975,7 +982,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const formatNum = (val) => {
         if (!val || val === '-' || String(val).trim() === '') return val;
-        let clean = String(val).replace(/\./g, '').trim();
+        let clean = String(val).replace(/\./g, '').replace(/€/g, '').trim();
         let parts = clean.split(',');
         let intPart = parseInt(parts[0].replace(/\D/g, ''), 10);
         if (isNaN(intPart)) return val;
@@ -1018,22 +1025,10 @@ window.addEventListener('DOMContentLoaded', () => {
         return nome2 ? nome2.value.trim() !== '' : false;
     }
 
-    function hasDipendente() {
-        const types = [getR('lav1'), getR('lav2')];
-        return types.includes('INDETERMINATO') || types.includes('DETERMINATO') || types.includes('STATALE');
-    }
-
-    function hasAutonomo() {
-        const types = [getR('lav1'), getR('lav2')];
-        return types.includes('AUTONOMO');
-    }
-
     function generateDocumentList() {
-        const nome1Val = V('cliente_nome', 'Cliente');
         const nome2Val = V('cliente2_nome', '-');
-        
-        let reqDocs = []; // Array per i codici dell'URL
-        
+
+        let reqDocs = [];
         const docs = {
             anagrafici: [],
             dipendenti: [],
@@ -1042,7 +1037,6 @@ window.addEventListener('DOMContentLoaded', () => {
             altri: []
         };
 
-        // 1° Richiedente Anagrafica
         reqDocs.push('ci1', 'ts1', 'residenza1');
         docs.anagrafici.push(
             'Carta d’Identità (fronte/retro)',
@@ -1050,7 +1044,6 @@ window.addEventListener('DOMContentLoaded', () => {
             'Certificato Cumulativo (Residenza e Stato di Famiglia)'
         );
 
-        // 2° Richiedente Anagrafica
         if (nome2Val !== '-') {
             reqDocs.push('ci2', 'ts2');
             docs.anagrafici.push('Carta d’Identità e Tessera Sanitaria (2° Richiedente)');
@@ -1061,7 +1054,6 @@ window.addEventListener('DOMContentLoaded', () => {
             docs.anagrafici.push('Atto di matrimonio (separazione dei beni)');
         }
 
-        // Redditi e Conti 1° Richiedente
         const lav1 = S('lav1', '-');
         if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav1)) {
             reqDocs.push('bustepaga1', 'cud1', 'ec1', 'mov1');
@@ -1072,16 +1064,15 @@ window.addEventListener('DOMContentLoaded', () => {
             docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale', 'Estratti conto trimestrali di tutti i conti (personali e aziendali)');
         }
 
-        // Redditi e Conti 2° Richiedente
         if (nome2Val !== '-') {
             const lav2 = S('lav2', '-');
             if (['INDETERMINATO', 'DETERMINATO', 'STATALE'].includes(lav2)) {
                 reqDocs.push('bustepaga2', 'cud2', 'ec2', 'mov2');
-                if(!docs.dipendenti.includes('Ultime 2 buste paga')) docs.dipendenti.push('Ultime 2 buste paga', 'Ultimo CUD / CU disponibile', 'Estratto conto trimestrale di tutti i conti');
+                if (!docs.dipendenti.includes('Ultime 2 buste paga')) docs.dipendenti.push('Ultime 2 buste paga', 'Ultimo CUD / CU disponibile', 'Estratto conto trimestrale di tutti i conti');
             }
             if (lav2 === 'AUTONOMO') {
                 reqDocs.push('unici2', 'visura2', 'f242', 'ec2', 'mov2');
-                if(!docs.autonomi.includes('Visura Camerale')) docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale', 'Estratti conto trimestrali di tutti i conti (personali e aziendali)');
+                if (!docs.autonomi.includes('Visura Camerale')) docs.autonomi.push('Ultimi 2 Modelli Redditi / Unici', 'Ultimi F24 versati', 'Visura Camerale', 'Estratti conto trimestrali di tutti i conti (personali e aziendali)');
             }
         }
 
@@ -1112,13 +1103,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         docs.altri.push('Accesso CTC online tramite SPID (www.ctconline.it)');
 
-        // Deduplicazione per la lista testuale (evita doppioni visivi se i due richiedenti fanno lo stesso lavoro)
         docs.dipendenti = [...new Set(docs.dipendenti)];
         docs.autonomi = [...new Set(docs.autonomi)];
 
-        return { 
-            reqDocsArray: reqDocs, 
-            docsLists: docs 
+        return {
+            reqDocsArray: reqDocs,
+            docsLists: docs
         };
     }
 
@@ -1210,7 +1200,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function buildChecklistEmailHtml() {
-        const hasSecondApp = hasSecondApplicant();
         const { docsLists } = generateDocumentList();
         let sections = [];
 
@@ -1269,7 +1258,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         let altriItems = docsLists.altri.map(d => `<li>${d}</li>`).join('');
-
         sections.push(`
             <tr>
                 <td style="padding: 12px 0;">
@@ -1295,7 +1283,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const luogo = V('campo_luogo', '-');
         const data = V('campo_data', '-');
-        
+
         const referente = V('campo_referente', '-');
         const indirizzo = V('campo_indirizzo', '');
         const refEmail = V('campo_email', 'pietro.loiacono@credipass.it');
@@ -1312,7 +1300,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const componenti = V('num_componenti', '0');
         const assegno = S('assegno', 'No') + (V('assegno_importo') !== '-' ? ` (${formatNum(V('assegno_importo'))} €)` : '');
         const figli = [V('eta_f1'), V('eta_f2'), V('eta_f3')].filter(v => v !== '-').join(', ') || '-';
-        
+
         const sitAbitRaw = S('sit_abitativa', '-');
         let sitAbitText = sitAbitRaw;
         if (sitAbitRaw === 'Affitto') {
@@ -1362,24 +1350,22 @@ window.addEventListener('DOMContentLoaded', () => {
         const checklistHtml = buildChecklistEmailHtml();
 
         const { reqDocsArray } = generateDocumentList();
-        
-        // --- 1. Creazione ID Pratica UNIFICATO per IA e Upload ---
+
         let idPraticaCartella = window.slugifyCredipassPart(nome1);
         if (nome2 !== '-' && nome2.trim() !== '') {
-            idPraticaCartella += "_" + window.slugifyCredipassPart(nome2);
+            idPraticaCartella += '_' + window.slugifyCredipassPart(nome2);
         }
 
         const idParam = `id=${encodeURIComponent(idPraticaCartella)}`;
         const nomeParam = `&nome=${encodeURIComponent(nome1)}`;
         const cliente2Param = (nome2 !== '-' && nome2.trim() !== '') ? `&cliente2=${encodeURIComponent(nome2)}` : '';
-        
+
         const autoEmail = V('campo_email_auto', '');
         const emailRefParam = (refEmail && refEmail !== '-') ? `&emailRef=${encodeURIComponent(refEmail)}` : '';
         const emailBOParam = (autoEmail && autoEmail !== '-') ? `&emailBO=${encodeURIComponent(autoEmail)}` : '';
 
         const docsParam = reqDocsArray.join(',');
-        
-        const baseURL = window.location.origin; 
+        const baseURL = window.location.origin;
         const uploadUrl = `${baseURL}/upload.html?${idParam}${nomeParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
 
         const pulsanteUploadHtml = `
@@ -1555,9 +1541,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         </table>
                     </td>
                 </tr>
-                
                 ${pulsanteUploadHtml}
-
                 <tr>
                     <td bgcolor="#002d72" style="padding: 30px; margin-top: 20px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1641,7 +1625,100 @@ window.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('resize', adjustPreviewScale);
 
+    async function sincronizzaSchedaConDatabase() {
+        const clienteNome = document.getElementById('cliente_nome')?.value.trim();
+        if (!clienteNome) return;
+
+        const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
+        let idBase = window.slugifyCredipassPart(clienteNome);
+        if (cliente2Nome) {
+            idBase += '_' + window.slugifyCredipassPart(cliente2Nome);
+        }
+
+        const getChecked = (name) => {
+            const el = document.querySelector(`input[name="${name}"]:checked`);
+            return el ? el.value : '';
+        };
+
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? (el.value || '').trim() : '';
+        };
+
+        let mediazione = getChecked('mediazione');
+        if (mediazione === 'Altro') {
+            mediazione = getVal('mediazione_custom') || 'Altro';
+        }
+
+        const datiScheda = {
+            cliente_nome: getVal('cliente_nome'),
+            cliente_email: getVal('cliente_email'),
+            cliente_cell: getVal('cliente_cell'),
+            lav1: getChecked('lav1'),
+            reddito_richiedente_1: getVal('cliente_reddito'),
+
+            cliente2_nome: getVal('cliente2_nome'),
+            cliente2_email: getVal('cliente2_email'),
+            cliente2_cell: getVal('cliente2_cell'),
+            lav2: getChecked('lav2'),
+            reddito_richiedente_2: getVal('cliente2_reddito'),
+
+            stato_civile: getChecked('stato'),
+            num_componenti: getVal('num_componenti'),
+            assegno: getChecked('assegno'),
+            assegno_importo: getVal('assegno_importo'),
+            eta_f1: getVal('eta_f1'),
+            eta_f2: getVal('eta_f2'),
+            eta_f3: getVal('eta_f3'),
+
+            sit_abitativa: getChecked('sit_abitativa'),
+            canone_affitto: getVal('canone_affitto'),
+            contratto_reg: getChecked('contratto_reg'),
+
+            finalita: getChecked('fin'),
+            prodotto: getChecked('prodotto'),
+            tasso: getChecked('tasso'),
+            importo_richiesto: getVal('mutuo_importo'),
+            valore_compravendita: getVal('mutuo_compravendita'),
+            valore_immobile: getVal('immobile_valore'),
+            durata_mutuo: getVal('mutuo_durata'),
+
+            gia_mutuo: getChecked('gia_mutuo'),
+            rata_mutuo_pre: getVal('rata_mutuo_pre'),
+            fin_corso: getChecked('fin_corso'),
+            rata_fin_pre: getVal('rata_fin_pre'),
+
+            tipo_incendio: getVal('tipo_incendio'),
+            importo_incendio: getVal('importo_incendio'),
+            tipo_Personale: getVal('tipo_Personale'),
+            importo_Personale: getVal('importo_Personale'),
+
+            istr_banca: getVal('istr_banca'),
+            perizia_costo: getVal('perizia_costo'),
+            imposta: getChecked('imposta'),
+            mediazione: mediazione,
+
+            note_consulenza: getVal('note_consulenza'),
+
+            luogo_incontro: getVal('campo_luogo'),
+            data_consulenza: getVal('campo_data'),
+            referente: getVal('campo_referente'),
+
+            ultimo_aggiornamento_scheda: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+            if (typeof db !== 'undefined') {
+                await db.collection('pratiche_mutuo').doc(idBase).set(datiScheda, { merge: true });
+                console.log('✅ Dati completi sincronizzati');
+            }
+        } catch (e) {
+            console.error('❌ Errore salvataggio dati:', e);
+        }
+    }
+
     document.getElementById('btn_stampa_pdf').addEventListener('click', async () => {
+        await sincronizzaSchedaConDatabase();
         window.scrollTo(0, 0);
 
         document.getElementById('p_note_block').style.display = 'block';
@@ -1668,6 +1745,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         let note = V('note_consulenza', 'Nessuna nota aggiuntiva.');
         setPrint('p_note', note.replace(/\n/g, '<br>'));
+        const noteBox = document.getElementById('p_note_box_text');
+        if (noteBox) noteBox.innerHTML = note.replace(/\n/g, '<br>');
+
         setPrint('p_nome1', V('cliente_nome'));
         setPrint('p_cell1', V('cliente_cell'));
         setPrint('p_email1', V('cliente_email'));
@@ -1784,7 +1864,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('app_main_container').style.display = 'block';
                 adjustPreviewScale();
             }
-        }, 1500);
+        }, 1000);
     });
 
     function openWaChoiceModal() {
@@ -1830,41 +1910,6 @@ window.addEventListener('DOMContentLoaded', () => {
         closeWaChoiceModal();
     }
 
-    // --- NUOVA FUNZIONE: SALVATAGGIO DATI PER L'INTELLIGENZA ARTIFICIALE ---
-    async function sincronizzaSchedaConDatabase() {
-        const clienteNome = document.getElementById('cliente_nome')?.value.trim();
-        if (!clienteNome) return;
-
-        const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
-        let idBase = window.slugifyCredipassPart(clienteNome);
-        if (cliente2Nome) {
-            idBase += "_" + window.slugifyCredipassPart(cliente2Nome);
-        }
-
-        const datiScheda = {
-            cliente_email: document.getElementById('cliente_email')?.value || "",
-            cliente_cell: document.getElementById('cliente_cell')?.value || "",
-            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
-            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
-            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
-            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
-            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
-            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
-            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
-            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
-        };
-
-        try {
-            if (typeof db !== 'undefined') {
-                datiScheda.ultimo_aggiornamento_scheda = firebase.firestore.FieldValue.serverTimestamp();
-                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
-                console.log("✅ Dati sincronizzati per l'IA");
-            }
-        } catch (e) {
-            console.error("❌ Errore salvataggio dati:", e);
-        }
-    }
-
     document.getElementById('btn_elabora').addEventListener('click', async () => {
         const nome = document.getElementById('cliente_nome').value.trim();
         const cell = document.getElementById('cliente_cell').value.trim();
@@ -1872,7 +1917,7 @@ window.addEventListener('DOMContentLoaded', () => {
             alert('Inserisci Nome e Cellulare del cliente prima di procedere.');
             return;
         }
-        
+
         await sincronizzaSchedaConDatabase();
         openWaChoiceModal();
     });
@@ -1947,7 +1992,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const setupPol = (id, target, type) => {
         const el = document.getElementById(id);
-        if(!el) return;
+        if (!el) return;
         el.addEventListener('change', function() {
             const sel = document.getElementById(target);
             sel.innerHTML = '';
@@ -1980,7 +2025,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     setupPol('tipo_incendio', 'importo_incendio', 'incendio');
     setupPol('tipo_Personale', 'importo_Personale', 'Personale');
-
 });
 </script>
 </body>
