@@ -844,8 +844,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="btn-wrapper">
             <button class="btn-action btn-pdf" id="btn_stampa_pdf"><i class="fas fa-file-pdf"></i> 1. SALVA E SCARICA IL PDF</button>
-            <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP E SALVA</button>
-            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL E SALVA DATI PER L'IA</button>
+            <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP</button>
+            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL CON AREA CLIENTI</button>
         </div>
     </div>
 </div>
@@ -947,42 +947,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- AUTOFIL DATA E LUOGO (CON SALVAGENTE) ---
     document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
 
-    function inserisciCitta(citta) {
-        const campo = document.getElementById('campo_luogo');
-        if (campo && !campo.value && citta) campo.value = citta;
-    }
-
     if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                // Tenta la traduzione primaria (il tuo GPS originale)
-                fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const citta = data.city || data.locality || data.principalSubdivision;
-                        if (citta) {
-                            inserisciCitta(citta);
-                        } else {
-                            // Se l'API restituisce vuoto, passa al Piano B
-                            throw new Error("Città non trovata dall'API primaria");
-                        }
-                    })
-                    .catch(e => {
-                        // Piano B: Usa l'IP se il traduttore GPS fa i capricci
-                        fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>inserisciCitta(d.city)).catch(err=>console.log(err));
-                    });
-            }, 
-            function(error) {
-                // Se rifiuti il GPS o ci mette troppo tempo, usa subito l'IP
-                fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>inserisciCitta(d.city)).catch(err=>console.log(err));
-            },
-            { enableHighAccuracy: true, timeout: 6000 }
-        );
+        navigator.geolocation.getCurrentPosition(function(position) {
+            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
+                .then(response => response.json())
+                .then(data => {
+                    const citta = data.city || data.locality || data.principalSubdivision;
+                    if (citta) document.getElementById('campo_luogo').value = citta;
+                }).catch(e => console.log(e));
+        }, function() {});
     }
-    // --- FINE AUTOFIL ---
 
     const sitRadios = document.querySelectorAll('input[name="sit_abitativa"]');
     const boxAffitto = document.getElementById('dettagli_affitto');
@@ -1385,16 +1361,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const figliHtml = safe(figli);
         const checklistHtml = buildChecklistEmailHtml();
 
-        // --- INIZIO LOGICA PER IL LINK ALL'AREA CLIENTI (AGGIORNATO CON ID UNIVOCI) ---
         const { reqDocsArray } = generateDocumentList();
         
-        // 1. Creazione ID Pratica per le cartelle (es. "Mario Rossi - Mariana Polli")
-        let idPraticaCartella = nome1;
+        // --- 1. Creazione ID Pratica UNIFICATO per IA e Upload ---
+        let idPraticaCartella = window.slugifyCredipassPart(nome1);
         if (nome2 !== '-' && nome2.trim() !== '') {
-            idPraticaCartella += " - " + nome2;
+            idPraticaCartella += "_" + window.slugifyCredipassPart(nome2);
         }
 
-        // 2. Parametri per l'URL anti-duplicato
         const idParam = `id=${encodeURIComponent(idPraticaCartella)}`;
         const nomeParam = `&nome=${encodeURIComponent(nome1)}`;
         const cliente2Param = (nome2 !== '-' && nome2.trim() !== '') ? `&cliente2=${encodeURIComponent(nome2)}` : '';
@@ -1405,7 +1379,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const docsParam = reqDocsArray.join(',');
         
-        const baseURL = window.location.origin; // O metti "https://consulenza-credipass.it" se ci sono problemi coi path
+        const baseURL = window.location.origin; 
         const uploadUrl = `${baseURL}/upload.html?${idParam}${nomeParam}${cliente2Param}&docs=${docsParam}${emailRefParam}${emailBOParam}`;
 
         const pulsanteUploadHtml = `
@@ -1423,7 +1397,6 @@ window.addEventListener('DOMContentLoaded', () => {
             </td>
         </tr>
         `;
-        // --- FINE LOGICA PER IL LINK ALL'AREA CLIENTI ---
 
         return `<!DOCTYPE html>
 <html lang="it">
@@ -1857,39 +1830,28 @@ window.addEventListener('DOMContentLoaded', () => {
         closeWaChoiceModal();
     }
 
-    // --- NUOVA FUNZIONE: SALVA DATI SCHEDA NEL DATABASE PER L'IA ---
+    // --- NUOVA FUNZIONE: SALVATAGGIO DATI PER L'INTELLIGENZA ARTIFICIALE ---
     async function sincronizzaSchedaConDatabase() {
         const clienteNome = document.getElementById('cliente_nome')?.value.trim();
-        if (!clienteNome) return; // Non salva se il nome è vuoto
+        if (!clienteNome) return;
 
-        // Crea l'ID cliente pulito e aggiunge il nome del secondo richiedente (se c'è)
         const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
-        let idBase = window.slugifyCredipassPart ? window.slugifyCredipassPart(clienteNome) : clienteNome.toLowerCase().replace(/\s+/g, '-');
+        let idBase = window.slugifyCredipassPart(clienteNome);
         if (cliente2Nome) {
-            idBase += " - " + cliente2Nome;
+            idBase += "_" + window.slugifyCredipassPart(cliente2Nome);
         }
 
-        const safeVal = (id) => {
-            const el = document.getElementById(id);
-            return el ? el.value : "";
-        };
-
-        const safeRadio = (name) => {
-            const el = document.querySelector('input[name="' + name + '"]:checked');
-            return el ? el.value : "";
-        };
-
         const datiScheda = {
-            cliente_email: safeVal('cliente_email'),
-            cliente_cell: safeVal('cliente_cell'),
-            importo_richiesto: safeVal('mutuo_importo') || "0",
-            valore_immobile: safeVal('immobile_valore') || "0",
-            reddito_richiedente_1: safeVal('cliente_reddito') || "0",
-            reddito_richiedente_2: safeVal('cliente2_reddito') || "0",
-            durata_mutuo: safeVal('mutuo_durata') || "0",
-            finalita: safeRadio('fin'),
-            prodotto: safeRadio('prodotto'),
-            tasso: safeRadio('tasso')
+            cliente_email: document.getElementById('cliente_email')?.value || "",
+            cliente_cell: document.getElementById('cliente_cell')?.value || "",
+            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
+            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
+            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
+            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
+            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
+            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
+            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
+            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
         };
 
         try {
@@ -1902,7 +1864,6 @@ window.addEventListener('DOMContentLoaded', () => {
             console.error("❌ Errore salvataggio dati:", e);
         }
     }
-    // --- FINE NUOVA FUNZIONE ---
 
     document.getElementById('btn_elabora').addEventListener('click', async () => {
         const nome = document.getElementById('cliente_nome').value.trim();
@@ -1912,9 +1873,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL WHATSAPP
         await sincronizzaSchedaConDatabase();
-        
         openWaChoiceModal();
     });
 
@@ -1976,9 +1935,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('btn_email').addEventListener('click', async () => {
-        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL EMAIL
         await sincronizzaSchedaConDatabase();
-        
         document.getElementById('email-notes-modal').style.display = 'flex';
     });
 
