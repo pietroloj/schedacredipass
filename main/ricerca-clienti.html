@@ -10,6 +10,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -26,22 +27,30 @@
 
     .client-list { padding: 20px 40px; min-height: 300px; }
     
-    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; background: #fff; }
+    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; background: #fff; }
     .client-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
     
     .status-completo { border-left-color: #28a745; background-color: #f8fff9; }
     .status-incompleto { border-left-color: #ffc107; background-color: #fffdf5; }
     .status-vuoto { border-left-color: #dc3545; background-color: #fff; }
 
-    .client-info h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; display: flex; align-items: center; gap: 8px; }
-    .client-info p { margin: 0; font-size: 12px; color: #777; }
+    .client-info-container { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 15px; }
+    
+    .client-data { flex-grow: 1; cursor: pointer; }
+    .client-data h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; display: flex; align-items: center; gap: 8px; }
+    .client-data p { margin: 0; font-size: 12px; color: #777; }
     
     .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
     .badge-verde { background: #28a745; }
     .badge-giallo { background: #ffc107; color: #856404; }
     .badge-rosso { background: #dc3545; }
     
-    .client-action { color: #002d72; font-weight: bold; font-size: 14px; }
+    .client-actions { display: flex; align-items: center; gap: 15px; }
+    .btn-fascicolo { color: #002d72; font-weight: bold; font-size: 13px; text-decoration: none; padding: 8px 12px; background: #eef2f7; border-radius: 6px; transition: 0.2s; cursor: pointer; }
+    .btn-fascicolo:hover { background: #002d72; color: white; }
+    
+    .btn-delete { color: #dc3545; background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px; transition: 0.2s; border-radius: 4px; }
+    .btn-delete:hover { background: #fee; transform: scale(1.1); }
     
     .loading { text-align: center; padding: 30px; color: #002d72; display: none; }
     .no-results { text-align: center; padding: 30px; color: #777; display: none; }
@@ -52,7 +61,7 @@
 <div class="search-container">
     <div class="header">
         <h1>Archivio Pratiche</h1>
-        <p style="color: #C99700; margin-top:5px; font-weight:600;">Controlla lo stato avanzamento documenti</p>
+        <p style="color: #C99700; margin-top:5px; font-weight:600;">Gestione e Ricerca Clienti</p>
     </div>
 
     <div class="search-box">
@@ -73,15 +82,18 @@
     var firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
         authDomain: "consulenza-credipass.firebaseapp.com",
-        projectId: "consulenza-credipass"
+        projectId: "consulenza-credipass",
+        storageBucket: "consulenza-credipass.firebasestorage.app"
     };
 
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     var db = firebase.firestore();
+    var storage = firebase.storage();
     var tuttiIClienti = []; 
 
     async function caricaClientiDaDB() {
         document.getElementById('loadingIndicator').style.display = 'block';
+        tuttiIClienti = []; // Resetta l'array per ricaricarlo pulito
         
         try {
             const querySnapshot = await db.collection("pratiche_mutuo").get();
@@ -90,7 +102,6 @@
                 const idDocumento = doc.id;
                 const datiDoc = doc.data();
                 
-                // AGGIORNAMENTO: Cerca il nome reale salvato nel DB, altrimenti usa l'ID formattato
                 let nomeReale = datiDoc.nomeCliente || idDocumento.replace(/_/g, ' ');
                 const nomeFormattato = nomeReale.toUpperCase();
                 
@@ -124,39 +135,41 @@
 
         lista.forEach(cliente => {
             const card = document.createElement('div');
-            card.onclick = function() {
-                window.location.href = `dashboard-consulente.html?clienteId=${cliente.idOriginale}`;
-            };
             
-            // Filtra solo le chiavi dei documenti
-            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente');
+            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente' && k !== 'richiestaIntegrazioneAttiva' && k !== 'notaPerCliente' && k !== 'elencoDocRichiesti' && k !== 'ultimoInvioNotifica' && k !== 'ultimo_aggiornamento_scheda' && k !== 'importo_richiesto' && k !== 'valore_immobile' && k !== 'reddito_richiedente_1' && k !== 'reddito_richiedente_2' && k !== 'durata_mutuo' && k !== 'finalita' && k !== 'prodotto' && k !== 'tasso' && k !== 'cliente_email' && k !== 'cliente_cell');
             const fileCaricati = chiaviCaricate.length;
             const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
             
-            let classeStato = ""; let badgeHtml = ""; let testoInfo = "";
+            let classeStato = "status-vuoto"; 
+            let badgeHtml = `<span class="badge-status badge-rosso"><i class="fas fa-folder-open"></i> APERTA</span>`; 
+            let testoInfo = `Pratica Inserita`;
 
             if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
                 classeStato = "status-completo";
                 badgeHtml = `<span class="badge-status badge-verde"><i class="fas fa-check-circle"></i> COMPLETO</span>`;
-                testoInfo = `Tutti i ${fileRichiesti} documenti acquisiti`;
+                testoInfo = `Documenti acquisiti`;
             } else if (fileCaricati > 0) {
-                let mancanti = fileRichiesti - fileCaricati;
                 classeStato = "status-incompleto";
-                badgeHtml = `<span class="badge-status badge-giallo"><i class="fas fa-exclamation-triangle"></i> INCOMPLETO</span>`;
-                testoInfo = `${fileCaricati} caricati su ${fileRichiesti} • <strong>Mancano ${mancanti} documenti</strong>`;
-            } else {
-                classeStato = "status-vuoto";
-                badgeHtml = `<span class="badge-status badge-rosso"><i class="fas fa-times-circle"></i> VUOTO</span>`;
-                testoInfo = `In attesa di documenti (Richiesti: ${fileRichiesti})`;
+                badgeHtml = `<span class="badge-status badge-giallo"><i class="fas fa-exclamation-triangle"></i> IN CORSO</span>`;
+                testoInfo = `${fileCaricati} Documenti caricati`;
             }
 
             card.className = `client-card ${classeStato}`;
             card.innerHTML = `
-                <div class="client-info">
-                    <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
-                    <p>ID Pratica: ${cliente.idOriginale} <br> ${testoInfo}</p>
+                <div class="client-info-container">
+                    <div class="client-data" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
+                        <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
+                        <p>ID: ${cliente.idOriginale} <br> ${testoInfo}</p>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <div class="btn-fascicolo" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
+                            Apri <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="client-action">Fascicolo <i class="fas fa-chevron-right" style="margin-left:5px;"></i></div>
             `;
             container.appendChild(card);
         });
@@ -166,6 +179,47 @@
         const termine = document.getElementById('searchInput').value.toUpperCase();
         const filtrati = tuttiIClienti.filter(c => c.nomeRicerca.includes(termine));
         mostraClienti(filtrati);
+    }
+
+    // --- FUNZIONE DI ELIMINAZIONE DEFINITIVA ---
+    async function eliminaPratica(idPratica, nomeCliente) {
+        const conferma = confirm(`ATTENZIONE!\n\nSei sicuro di voler eliminare definitivamente la pratica di: ${nomeCliente}?\n\nQuesta azione cancellerà tutti i dati e i documenti dal Cloud in modo irreversibile.`);
+        
+        if (!conferma) return; // Se l'utente clicca Annulla, si ferma qui
+
+        document.getElementById('loadingIndicator').innerHTML = '<i class="fas fa-trash-alt fa-bounce fa-2x" style="color:#dc3545;"></i><p>Eliminazione pratica in corso...</p>';
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('clientiContainer').innerHTML = ''; // Nasconde la lista durante l'operazione
+
+        try {
+            // 1. ELIMINA LA CARTELLA DEI FILE DALLO STORAGE (Se esiste)
+            const listRef = storage.ref(`Fascicoli/${idPratica}`);
+            try {
+                const res = await listRef.listAll();
+                // Cancella tutti i file uno per uno (Firebase non fa cancellare le cartelle piene in un colpo solo)
+                const deletePromises = res.items.map((itemRef) => itemRef.delete());
+                await Promise.all(deletePromises);
+                console.log(`Cartella Storage per ${idPratica} svuotata.`);
+            } catch (e) {
+                console.log(`Nessun file trovato nello Storage per ${idPratica}, o cartella inesistente.`);
+            }
+
+            // 2. ELIMINA IL DOCUMENTO DAL DATABASE (FIRESTORE)
+            await db.collection("pratiche_mutuo").doc(idPratica).delete();
+            console.log(`Dati Firestore per ${idPratica} eliminati.`);
+
+            alert(`✅ Pratica di ${nomeCliente} eliminata con successo dal Database e dallo Spazio di Archiviazione.`);
+            
+            // Ricarica la lista pulita
+            document.getElementById('searchInput').value = ""; // Resetta la barra di ricerca
+            await caricaClientiDaDB();
+
+        } catch (error) {
+            console.error("Errore durante l'eliminazione:", error);
+            alert("❌ Errore durante l'eliminazione della pratica. Riprova.");
+            document.getElementById('loadingIndicator').style.display = 'none';
+            caricaClientiDaDB(); // Ricarica la pagina in caso di errore per sicurezza
+        }
     }
 
     window.onload = caricaClientiDaDB;
