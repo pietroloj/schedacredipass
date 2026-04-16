@@ -16,113 +16,103 @@
 
 <style>
     * { box-sizing: border-box; } 
-    body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-    .container { max-width: 1350px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
+    body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
-    .header { padding: 25px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { margin:0; font-size:20px; color:#002d72; font-weight: 800; text-transform: uppercase; }
+    .header { padding: 20px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { margin:0; font-size:18px; color:#002d72; font-weight: 800; text-transform: uppercase; }
     
-    .main-grid { display: grid; grid-template-columns: 1fr 420px; gap: 30px; padding: 30px; }
-    @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
+    .main-grid { display: grid; grid-template-columns: 1fr 450px; gap: 25px; padding: 25px; }
+    @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
 
-    /* DOCUMENTI CARICATI */
-    .doc-category { margin-bottom: 25px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-    .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+    /* SEZIONE DOCUMENTI */
+    .doc-category { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .cat-header { background: #002d72; color: white; padding: 10px 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
     .cat-header i { color: #C99700; }
-    .doc-list { padding: 10px; background: #fcfcfc; }
-    .doc-item { background: white; border: 1px solid #eef2f7; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-    .doc-info { display: flex; align-items: center; }
-    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; display: block; }
-    .doc-filename { font-size: 10px; color: #999; display: block; margin-top: 2px; }
-    .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
+    .doc-list { padding: 8px; background: #fcfcfc; }
+    .doc-item { background: white; border: 1px solid #eef2f7; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; }
+    .doc-filename { font-size: 10px; color: #999; display: block; }
+    .btn-view { background: #e9f0ff; color: #002d72; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
 
-    /* SIDEBAR */
-    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; width: 100%; }
-    .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
+    /* SIDEBAR E SPECCHIETTO DINAMICO */
+    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+    .sidebar-card h3 { margin-top: 0; font-size: 14px; color: #002d72; font-weight: 800; border-bottom: 2px solid #C99700; padding-bottom: 8px; margin-bottom: 12px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+    .sidebar-card h3 i { color: #C99700; }
     
-    .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px; }
-    .filter-btn { background: white; border: 1px solid #ddd; padding: 10px 4px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; font-size: 8px; font-weight: 800; text-transform: uppercase; }
-    .filter-btn i { display: block; font-size: 16px; margin-bottom: 4px; color: #002d72; }
-    .filter-btn.active { border-color: #C99700; background: #C99700; color: white; }
+    .data-group { margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+    .data-group-title { font-size: 10px; font-weight: 800; color: #C99700; text-transform: uppercase; margin-bottom: 8px; display: block; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
+    
+    .data-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #f9f9f9; }
+    .data-row:last-child { border-bottom: none; }
+    .data-label { color: #777; flex: 1; }
+    .data-value { color: #111; font-weight: 700; text-align: right; flex: 1; word-break: break-word; }
+
+    /* FILTRI E PULSANTI */
+    .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
+    .filter-btn { background: white; border: 1px solid #ddd; padding: 8px 2px; border-radius: 6px; cursor: pointer; text-align: center; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .filter-btn i { display: block; font-size: 14px; margin-bottom: 3px; color: #002d72; }
+    .filter-btn.active { background: #C99700; color: white; border-color: #C99700; }
     .filter-btn.active i { color: white; }
 
-    .integration-select { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; font-family: inherit; font-size: 13px; font-weight: 600; color: #002d72; margin-bottom: 10px; outline: none; }
-    
-    .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 10px; background: white; margin-bottom: 15px; min-height: 40px; }
-    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; font-weight: 700; border-left: 4px solid #C99700; }
-
-    .nota-area { 
-        width: 100%; 
-        height: 110px; 
-        border: 2px solid #e9ecef; 
-        border-radius: 8px; 
-        padding: 12px; 
-        font-family: inherit; 
-        font-size: 12px; 
-        resize: none; 
-        box-sizing: border-box; 
-        margin-bottom: 15px;
-        display: block;
-    }
-
-    .btn-submit { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; }
+    .nota-area { width: 100%; height: 80px; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 12px; resize: none; margin-bottom: 15px; }
+    .btn-submit { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; margin-bottom: 10px; }
     .btn-primary { background: #002d72; color: white; }
-    .btn-ai { background: #C99700; color: #002d72; margin-bottom: 10px; }
+    .btn-ai { background: #C99700; color: #002d72; }
     .btn-zip { background: #28a745; color: white; }
 
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-content { background: white; width: 90%; max-width: 900px; border-radius: 15px; padding: 30px; max-height: 80vh; overflow-y: auto; }
+    .modal-content { background: white; width: 90%; max-width: 800px; border-radius: 12px; padding: 25px; max-height: 80vh; overflow-y: auto; }
 </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> Fascicolo: <span id="labelCliente">...</span></h1>
-        <a href="ricerca-clienti.html" style="text-decoration:none; color:#666; font-weight:700;"><i class="fas fa-times"></i> CHIUDI</a>
+        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> DASHBOARD: <span id="labelCliente">...</span></h1>
+        <a href="ricerca-clienti.html" style="text-decoration:none; color:#666; font-weight:700; font-size:12px;"><i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO</a>
     </div>
 
     <div class="main-grid">
         <div id="documentiArea">
-            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#002d72;"></i><p>Accesso al Cloud in corso...</p></div>
+            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#002d72;"></i><p>Analisi Fascicolo...</p></div>
             <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div><div class="doc-list" id="list-ANAGRAFICA"></div></div>
             <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div><div class="doc-list" id="list-REDDITO"></div></div>
             <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
             <div id="cat-IMMOBILE" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div><div class="doc-list" id="list-IMMOBILE"></div></div>
-            <div id="cat-ALTRO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro</div><div class="doc-list" id="list-ALTRO"></div></div>
+            <div id="cat-ALTRO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro / Messaggi</div><div class="doc-list" id="list-ALTRO"></div></div>
         </div>
 
         <div class="sidebar">
-            <div class="sidebar-card">
-                <h3>Dossier & Archivio</h3>
-                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> REPORT IA</button>
-                <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA ARCHIVIO ZIP</button>
+            
+            <div class="sidebar-card" style="border-top: 4px solid #C99700;">
+                <h3><i class="fas fa-id-card"></i> Identikit Pratica</h3>
+                <div id="identikitDinamico">
+                    </div>
+
+                <button class="btn-submit btn-ai" style="margin-top:10px;" onclick="apriReportAI()"><i class="fas fa-robot"></i> ANALISI DELIBERANTE IA</button>
+                <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA TUTTO (.ZIP)</button>
             </div>
 
             <div class="sidebar-card">
-                <h3>Richiedi Integrazione</h3>
+                <h3><i class="fas fa-plus-circle"></i> Richiedi Documenti</h3>
                 <div class="filter-grid">
-                    <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i><span>Anag</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i><span>Redd</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-university"></i><span>Banc</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILE', this)"><i class="fas fa-home"></i><span>Casa</span></div>
-                    <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-plus"></i><span>Extra</span></div>
+                    <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i>Anag</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i>Redd</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-university"></i>Banc</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILE', this)"><i class="fas fa-home"></i>Casa</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-list"></i>Extra</div>
                 </div>
 
-                <select id="selectIntegrazione" class="integration-select"></select>
+                <select id="selectIntegrazione" class="integration-select" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;"></select>
+                <button class="btn-submit" style="background:#eee; color:#333; font-size:12px;" onclick="aggiungiChecklist()">+ Aggiungi alla lista</button>
 
-                <button class="btn-submit" style="background:#eef2f7; color:#002d72; border:1px solid #cbd5e0; font-size:12px; margin-bottom:15px;" onclick="aggiungiChecklist()">
-                    <i class="fas fa-plus"></i> Aggiungi alla lista
-                </button>
+                <div class="checklist-box" id="listaCarrello"></div>
 
-                <div class="checklist-box">
-                    <div id="listaCarrello"><p style="text-align:center; color:#999; font-size:11px; margin:5px;">Checklist vuota</p></div>
-                </div>
-
-                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente (es: 'La foto è sfocata, per favore ricaricala')"></textarea>
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente..."></textarea>
 
                 <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
-                    <i class="fas fa-paper-plane"></i> INVIA AL CLIENTE
+                    <i class="fas fa-paper-plane"></i> INVIA NOTIFICA EMAIL
                 </button>
             </div>
         </div>
@@ -131,89 +121,138 @@
 
 <div id="modalAI" class="modal">
     <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #C99700; padding-bottom:12px;">
-            <h2 style="margin:0; color:#002d72; font-size:18px;"><i class="fas fa-robot"></i> Esito Pre-Delibera IA</h2>
-            <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:28px;">&times;</span>
-        </div>
-        <div id="aiBody" style="margin-top:20px;"></div>
+        <h2 style="color:#002d72; border-bottom:2px solid #C99700; padding-bottom:10px;"><i class="fas fa-robot"></i> Analisi Predittiva IA</h2>
+        <div id="aiBody" style="margin-top:20px; line-height:1.6; font-size:14px;"></div>
+        <button class="btn-submit btn-primary" style="margin-top:20px;" onclick="document.getElementById('modalAI').style.display='none'">CHIUDI</button>
     </div>
 </div>
 
 <script>
-    const TRADUZIONI = {
-        'ci1': "Carta d'Identità (R1)", 'ci2': "Carta d'Identità (R2)", 'ts1': "Tessera Sanitaria (R1)", 'ts2': "Tessera Sanitaria (R2)",
-        'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto di Matrimonio", 'isee': "Attestazione ISEE", 'divorzio': "Sentenza Divorzio",
-        'soggiorno': "Permesso Soggiorno", 'bustepaga1': "Ultime Buste Paga", 'cud1': "Certificazione Unica (CU)", 'contratto': "Contratto Lavoro",
-        'obism': "Modello OBIS/M", 'cedolino': "Cedolino Pensione", 'unici1': "Modello Redditi (ex Unico)", 'iva': "Dichiarazione IVA",
-        'f24': "Ricevute F24", 'bilancino': "Bilancino Provvisorio", 'ec1': "Estratto Conto Trimestrale", 'mov1': "Lista Movimenti Aggiornata",
-        'atto': "Atto di Provenienza", 'successione': "Dichiarazione Successione", 'preliminare': "Preliminare / Proposta",
-        'planimetria': "Planimetria Catastale", 'visuracat': "Visura Catastale", 'ape': "Certificato APE", 'concessione': "Concessione Edilizia",
-        'preventivo': "Preventivo Lavori", 'prestiti': "Contratti Finanziamenti", 'conteggio': "Conteggio Estintivo", 'liberatoria': "Lettera Liberatoria",
-        'integrazione1': "Integrazione Extra 1"
-    };
-
-    const DB_SELECT = {
-        'ANAGRAFICA': [{id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}, {id:'isee', n:"ISEE"}, {id:'matrimonio', n:"Atto Matrimonio"}, {id:'divorzio', n:"Sentenza Divorzio"}, {id:'soggiorno', n:"Permesso Soggiorno"}],
-        'REDDITO': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"CU (CUD)"}, {id:'contratto', n:"Contratto Lavoro"}, {id:'obism', n:"Modello OBIS/M"}, {id:'cedolino', n:"Cedolino Pensione"}, {id:'unici1', n:"Modello Redditi"}, {id:'iva', n:"IVA"}, {id:'f24', n:"F24"}, {id:'bilancino', n:"Bilancino"}],
-        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Lista Movimenti"}, {id:'prestiti', n:"Prestiti/Mutui"}],
-        'IMMOBILE': [{id:'atto', n:"Atto Provenienza"}, {id:'successione', n:"Successione"}, {id:'preliminare', n:"Preliminare"}, {id:'planimetria', n:"Planimetria"}, {id:'visuracat', n:"Visura Catastale"}, {id:'ape', n:"APE"}, {id:'concessione', n:"Concessione Edilizia"}, {id:'preventivo', n:"Preventivo Lavori"}],
-        'ALTRO': [{id:'integrazione1', n:"Richiesta Libera"}]
-    };
-
+    // Configurazione Firebase
     const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
 
+    const TRADUZIONI = {
+        'ci1': "Identità R1", 'ci2': "Identità R2", 'ts1': "Sanitaria R1", 'ts2': "Sanitaria R2",
+        'residenza1': "Cumulativo", 'matrimonio': "Atto Matrimonio", 'isee': "ISEE", 
+        'bustepaga1': "Buste Paga", 'cud1': "Certificazione Unica", 'unici1': "Dichiarazione Redditi",
+        'ec1': "Estratto Conto", 'mov1': "Movimenti", 'atto': "Atto Provenienza", 'planimetria': "Planimetria"
+    };
+
+    const DB_SELECT = {
+        'ANAGRAFICA': [{id:'ci1', n:"Carta Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}],
+        'REDDITO': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"Certificazione Unica"}, {id:'unici1', n:"Modello Redditi"}],
+        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Lista Movimenti"}],
+        'IMMOBILE': [{id:'atto', n:"Atto Provenienza"}, {id:'planimetria', n:"Planimetria Catastale"}],
+        'ALTRO': [{id:'integrazione1', n:"Richiesta Generica"}]
+    };
+
     let carrello = [];
     let emailCliente = "";
 
     window.onload = () => {
         if(idCliente) {
-            document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').replace(/-/g, ' ').toUpperCase();
+            document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').toUpperCase();
             caricaDocumenti();
+            caricaIdentikitDinamico();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
-            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { if(doc.exists) emailCliente = doc.data().cliente_email || ""; });
         }
     };
 
+    // --- LOGICA IDENTIKIT DINAMICO ---
+    async function caricaIdentikitDinamico() {
+        const container = document.getElementById('identikitDinamico');
+        try {
+            const doc = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            if(!doc.exists) return;
+            
+            const d = doc.data();
+            emailCliente = d.cliente_email || "";
+
+            let html = "";
+
+            // Funzione interna per generare righe solo se il dato esiste
+            const row = (label, value) => {
+                if(!value || value === "0" || value === "0 €" || value === "-" || value === "N/D") return "";
+                return `<div class="data-row"><span class="data-label">${label}:</span> <span class="data-value">${value}</span></div>`;
+            };
+
+            // GRUPPO 1: MUTUO
+            let g1 = "";
+            g1 += row("Importo Mutuo", d.importo_richiesto ? d.importo_richiesto + " €" : "");
+            g1 += row("Valore Immobile", d.valore_immobile ? d.valore_immobile + " €" : "");
+            g1 += row("Finalità", d.finalita);
+            g1 += row("Prodotto", d.prodotto);
+            g1 += row("Tasso", d.tasso);
+            g1 += row("Durata", d.durata_mutuo ? d.durata_mutuo + " Anni" : "");
+            if(g1) html += `<div class="data-group"><span class="data-group-title">Dati Mutuo</span>${g1}</div>`;
+
+            // GRUPPO 2: RICHIEDENTE 1
+            let g2 = "";
+            g2 += row("Reddito Mensile", d.reddito_richiedente_1 ? d.reddito_richiedente_1 + " €" : "");
+            g2 += row("Cellulare", d.cliente_cell);
+            g2 += row("Email", d.cliente_email);
+            if(g2) html += `<div class="data-group"><span class="data-group-title">1° Richiedente</span>${g2}</div>`;
+
+            // GRUPPO 3: RICHIEDENTE 2 (Solo se compilato)
+            let g3 = "";
+            g3 += row("Reddito Mensile", d.reddito_richiedente_2 ? d.reddito_richiedente_2 + " €" : "");
+            g3 += row("Cellulare", d.cliente2_cell);
+            g3 += row("Email", d.cliente2_email);
+            if(g3) html += `<div class="data-group"><span class="data-group-title">2° Richiedente</span>${g3}</div>`;
+
+            // GRUPPO 4: FAMIGLIA
+            let g4 = "";
+            g4 += row("Stato Civile", d.stato_civile);
+            g4 += row("Componenti Nucleo", d.num_componenti);
+            g4 += row("Assegno Unico", d.assegno_importo ? d.assegno_importo + " €" : "");
+            
+            // Logica figli
+            let figliArr = [];
+            if(d.eta_f1) figliArr.push(d.eta_f1);
+            if(d.eta_f2) figliArr.push(d.eta_f2);
+            if(d.eta_f3) figliArr.push(d.eta_f3);
+            if(figliArr.length > 0) g4 += row("Età Figli", figliArr.join(", ") + " anni");
+
+            if(g4) html += `<div class="data-group"><span class="data-group-title">Nucleo Familiare</span>${g4}</div>`;
+
+            // GRUPPO 5: IMPEGNI
+            let g5 = "";
+            g5 += row("Mutuo in Corso", d.rata_mutuo_pre ? d.rata_mutuo_pre + " €" : "");
+            g5 += row("Prestiti in Corso", d.rata_fin_pre ? d.rata_fin_pre + " €" : "");
+            g5 += row("Mediazione", d.mediazione);
+            if(g5) html += `<div class="data-group"><span class="data-group-title">Impegni e Costi</span>${g5}</div>`;
+
+            container.innerHTML = html || "<p style='font-size:11px; color:#999; text-align:center;'>Nessun dato identikit salvato.</p>";
+
+        } catch(e) { console.error(e); }
+    }
+
     async function caricaDocumenti() {
-        const loadingBox = document.getElementById('loading');
-        const idNormale = idCliente; 
-        const idSpazi = idCliente.replace(/_/g, ' ').replace(/-/g, ' '); 
-        const idTrattini = idCliente.replace(/_/g, '-').replace(/ /g, '-');
-        let fileTrovati = [];
-        const tentativi = [idNormale, idSpazi, idTrattini, idNormale.toLowerCase(), idSpazi.toLowerCase(), idTrattini.toLowerCase()];
-        const tentativiUnici = [...new Set(tentativi)]; 
-        for (let variante of tentativiUnici) {
+        const loading = document.getElementById('loading');
+        const varianti = [idCliente, idCliente.replace(/_/g, ' '), idCliente.replace(/_/g, '-')];
+        let files = [];
+        for (let v of varianti) {
             try {
-                let res = await storage.ref(`Fascicoli/${variante}`).listAll();
-                if (res.items.length > 0) { fileTrovati = res.items; break; }
-            } catch(e) { } 
+                let res = await storage.ref(`Fascicoli/${v}`).listAll();
+                if(res.items.length > 0) { files = res.items; break; }
+            } catch(e) {}
         }
-        if(loadingBox) loadingBox.style.display = 'none';
-        if (fileTrovati.length === 0) {
-            document.getElementById('documentiArea').innerHTML += `<div style="padding:20px; text-align:center; color:#666;">Nessun file trovato.</div>`;
-            return;
-        }
-        for (let item of fileTrovati) {
+        if(loading) loading.style.display = 'none';
+        files.forEach(async (item) => {
             const url = await item.getDownloadURL();
-            const fn = item.name;
-            const fnLow = fn.toLowerCase();
-            let cat = 'ALTRO'; let nomeBello = fn;
-            if(fnLow.includes('ci1') || fnLow.includes('ts1') || fnLow.includes('ci2') || fnLow.includes('ts2') || fnLow.includes('residenza') || fnLow.includes('matrimonio') || fnLow.includes('isee')) cat = 'ANAGRAFICA';
-            else if(fnLow.includes('bustepaga') || fnLow.includes('cud') || fnLow.includes('unici') || fnLow.includes('f24') || fnLow.includes('iva')) cat = 'REDDITO';
-            else if(fnLow.includes('ec1') || fnLow.includes('mov1') || fnLow.includes('conto')) cat = 'BANCA';
-            else if(fnLow.includes('atto') || fnLow.includes('planimetria') || fnLow.includes('ape') || fnLow.includes('visura')) cat = 'IMMOBILE';
-            for (const [key, value] of Object.entries(TRADUZIONI)) { if (fnLow.includes(key)) { nomeBello = value; break; } }
-            const catContainer = document.getElementById(`cat-${cat}`);
-            const listContainer = document.getElementById(`list-${cat}`);
-            if(catContainer && listContainer) {
-                catContainer.style.display = 'block';
-                listContainer.innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon" style="color:#d93025; margin-right:10px;"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
-            }
-        }
+            const fn = item.name.toLowerCase();
+            let cat = 'ALTRO';
+            if(fn.includes('ci') || fn.includes('ts') || fn.includes('residenza')) cat = 'ANAGRAFICA';
+            else if(fn.includes('busta') || fn.includes('cud') || fn.includes('unici')) cat = 'REDDITO';
+            else if(fn.includes('ec1') || fn.includes('mov')) cat = 'BANCA';
+            else if(fn.includes('atto') || fn.includes('planimetria')) cat = 'IMMOBILE';
+            document.getElementById(`cat-${cat}`).style.display = 'block';
+            document.getElementById(`list-${cat}`).innerHTML += `<div class="doc-item"><div><span class="doc-name">${item.name}</span></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
+        });
     }
 
     function cambiaCategoria(cat, btn) {
@@ -224,95 +263,28 @@
 
     function aggiungiChecklist() {
         const sel = document.getElementById('selectIntegrazione');
-        if(carrello.includes(sel.value)) return;
-        carrello.push(sel.value);
-        renderCarrello();
+        if(!carrello.includes(sel.value)) { carrello.push(sel.value); renderCarrello(); }
     }
 
     function renderCarrello() {
         const c = document.getElementById('listaCarrello');
-        document.getElementById('btn_invia_cliente').disabled = carrello.length === 0; // Fix ID
-        c.innerHTML = carrello.map(id => `<div class="checklist-item"><span>${TRADUZIONI[id] || id}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x!=='${id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
+        document.getElementById('btnInvia').disabled = carrello.length === 0;
+        document.getElementById('btnInvia').style.opacity = carrello.length === 0 ? 0.5 : 1;
+        c.innerHTML = carrello.map(id => `<div class="checklist-item"><span>${id}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x!=='${id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
     }
 
-    // --- FUNZIONE INVIO EMAIL CON LAYOUT A TABELLE PROFESSIONALE ---
     async function inviaIntegrazione() {
         const nota = document.getElementById('notaIntegrazione').value;
         const btn = document.getElementById('btnInvia');
-        if (!emailCliente) { alert("Email cliente mancante."); return; }
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
-        btn.disabled = true;
+        btn.innerHTML = 'INVIO...'; btn.disabled = true;
 
-        const emailHtmlTemplate = `<!DOCTYPE html>
-<html lang="it">
-<body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: Arial, Helvetica, sans-serif;">
-<table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 10px;">
-    <tr>
-        <td align="center">
-            <table width="600" bgcolor="#ffffff" cellpadding="0" cellspacing="0" border="0" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
-                <tr>
-                    <td bgcolor="#002d72" align="center" style="padding: 30px 20px; border-bottom: 5px solid #C99700;">
-                        <img src="https://consulenza-credipass.it/images/logo-credipass.png" alt="Credipass" width="200" style="display: block; border: 0;">
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 30px 30px 10px 30px;">
-                        <h1 style="color: #002d72; font-size: 22px; margin: 0 0 15px 0;">Integrazione Documentazione</h1>
-                        <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 0;">
-                            Gentile Cliente,<br><br>
-                            per procedere rapidamente con l'istruttoria della tua pratica di mutuo, ti chiediamo cortesemente di integrare o aggiornare i seguenti documenti:
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px 30px;">
-                        <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #f8f9fa; border-left: 4px solid #002d72; border-radius: 6px;">
-                            <tr>
-                                <td>
-                                    <ul style="margin: 0; padding-left: 20px; color: #002d72; font-weight: bold; font-size: 15px; line-height: 1.6;">
-                                        ${carrello.map(id => `<li>${TRADUZIONI[id] || id}</li>`).join('')}
-                                    </ul>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-                ${nota.trim() !== '' ? `
-                <tr>
-                    <td style="padding: 15px 30px;">
-                        <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #fffdf5; border: 1px dashed #C99700; border-radius: 6px;">
-                            <tr>
-                                <td style="font-size: 14px; color: #555; font-style: italic; line-height: 1.5;">
-                                    <strong style="color: #8a6a00; font-style: normal; display: block; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">Messaggio dal tuo consulente:</strong>
-                                    "${nota.replace(/\n/g, '<br>')}"
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-                ` : ''}
-                <tr>
-                    <td align="center" style="padding: 30px;">
-                        <a href="${window.location.origin}/upload.html?id=${idCliente}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">CARICA DOCUMENTI ORA</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td bgcolor="#f8f9fa" align="center" style="padding: 20px; border-top: 1px solid #eeeeee;">
-                        <p style="color: #999999; font-size: 11px; margin: 0;">Messaggio automatico dal portale Istruttoria Credipass.</p>
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
-</table>
-</body>
-</html>`;
+        const emailHtml = `<!DOCTYPE html><html lang="it"><body style="font-family:sans-serif; background:#f4f7f6; padding:20px;"><table width="100%" bgcolor="#ffffff" style="max-width:600px; margin:auto; border-radius:12px; overflow:hidden; border:1px solid #eee;"><tr><td bgcolor="#002d72" align="center" style="padding:20px; border-bottom:4px solid #C99700;"><img src="https://consulenza-credipass.it/images/logo-credipass.png" width="180"></td></tr><tr><td style="padding:30px;"><h2 style="color:#002d72;">Integrazione Documenti</h2><p>Per avanzare con la tua pratica, abbiamo bisogno di:</p><ul style="color:#002d72; font-weight:bold;">${carrello.map(id=>`<li>${id}</li>`).join('')}</ul><p style="background:#fff9e6; padding:15px; border-radius:8px; border-left:4px solid #C99700; font-style:italic;">"${nota}"</p><div align="center" style="margin-top:30px;"><a href="${window.location.origin}/upload.html?id=${idCliente}" style="background:#C99700; color:white; padding:15px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">CARICA DOCUMENTI</a></div></td></tr></table></body></html>`;
 
         try {
             await db.collection("pratiche_mutuo").doc(idCliente).set({ richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello }, {merge:true});
-            await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: [emailCliente], subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`, html: emailHtmlTemplate })});
-            alert("✅ Inviata!"); location.reload();
-        } catch(e) { alert("Errore"); btn.disabled = false; btn.innerHTML = 'REINVIA'; }
+            await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: [emailCliente], subject: `Integrazione Documenti - ${idCliente}`, html: emailHtml })});
+            alert("✅ Richiesta Inviata!"); location.reload();
+        } catch(e) { alert("Errore"); btn.disabled = false; btn.innerHTML = 'INVIA NOTIFICA EMAIL'; }
     }
 
     async function scaricaTuttoZip() {
@@ -321,26 +293,25 @@
         const zip = new JSZip();
         try {
             const res = await storage.ref(`Fascicoli/${idCliente}`).listAll();
-            const downloadPromises = res.items.map(async (item) => {
+            for(let item of res.items) {
                 const url = await item.getDownloadURL();
-                const response = await fetch(url);
-                const blob = await response.blob();
+                const resp = await fetch(url);
+                const blob = await resp.blob();
                 zip.file(item.name, blob);
-            });
-            await Promise.all(downloadPromises);
-            const content = await zip.generateAsync({ type: "blob" });
+            }
+            const content = await zip.generateAsync({type:"blob"});
             saveAs(content, `Fascicolo_${idCliente}.zip`);
-            btn.innerHTML = 'SCARICA ARCHIVIO ZIP'; btn.disabled = false;
-        } catch (e) { alert("Errore"); btn.disabled = false; }
+            btn.innerHTML = 'SCARICA TUTTO (.ZIP)'; btn.disabled = false;
+        } catch (e) { alert("Errore ZIP"); btn.disabled = false; }
     }
 
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const body = document.getElementById('aiBody');
-        body.innerHTML = 'Analisi...';
+        body.innerHTML = 'Analisi in corso...';
         const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Non trovato."; return; }
-        body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
+        if(!snap.exists) { body.innerHTML = "Report non ancora generato."; return; }
+        body.innerHTML = `<pre style="white-space:pre-wrap; background:#f4f4f4; padding:15px; border-radius:8px; font-family:inherit;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
     }
 </script>
 </body>
