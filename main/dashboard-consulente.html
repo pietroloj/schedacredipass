@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Consulente - Credipass</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fascicolo Cliente - Credipass</title>
+
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,72 +15,388 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; }
-    .container { max-width: 1500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
-    
-    /* HEADER */
-    .header { padding: 20px 40px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { margin:0; font-size:18px; color:#002d72; font-weight: 800; text-transform: uppercase; }
-    .btn-back { text-decoration:none; color:#666; font-weight:700; font-size:12px; transition: 0.2s; }
-    .btn-back:hover { color: #002d72; }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: #e9ecef;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+    }
 
-    /* GRID PRINCIPALE */
-    .main-grid { display: grid; grid-template-columns: 1fr 480px; gap: 25px; padding: 25px; }
-    @media (max-width: 1250px) { .main-grid { grid-template-columns: 1fr; } }
+    .container {
+        max-width: 1450px;
+        margin: 0 auto;
+        background: #f8f9fa;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        border: 8px solid #333;
+    }
 
-    /* SEZIONE SINISTRA: DOCUMENTI */
-    .doc-category { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff; }
-    .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
-    .cat-header i { color: #C99700; }
-    .doc-list { padding: 10px; background: #fcfcfc; }
-    .doc-item { background: white; border: 1px solid #eef2f7; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-    .doc-item:hover { background: #f8faff; border-color: #d1d9e6; }
-    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; }
-    .doc-filename { font-size: 10px; color: #999; display: block; margin-top: 2px; }
-    .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; transition: 0.2s; }
-    .btn-view:hover { background: #002d72; color: white; }
+    .header {
+        background: #002d72;
+        color: white;
+        padding: 22px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 4px solid #C99700;
+    }
 
-    /* SEZIONE DESTRA: SIDEBAR */
-    .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-    .sidebar-card h3 { margin-top: 0; font-size: 15px; color: #002d72; font-weight: 800; border-bottom: 2px solid #C99700; padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
-    
-    /* IDENTIKIT DATI */
-    .data-group { margin-bottom: 15px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .data-group-title { font-size: 11px; font-weight: 800; color: #C99700; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid #f0f0f0; padding-bottom: 5px; }
-    .data-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #f9f9f9; }
+    .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.3;
+    }
+
+    .btn-back {
+        background: rgba(255,255,255,0.12);
+        color: white;
+        text-decoration: none;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        transition: 0.2s;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .btn-back:hover {
+        background: #C99700;
+        color: #002d72;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1.55fr 0.95fr;
+        gap: 24px;
+        padding: 24px;
+        align-items: start;
+    }
+
+    .doc-category {
+        background: white;
+        border: 1px solid #e7ebf0;
+        border-radius: 14px;
+        margin-bottom: 18px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .cat-header {
+        background: #002d72;
+        color: white;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-left: 5px solid #C99700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .doc-list {
+        padding: 14px;
+    }
+
+    .doc-item {
+        background: white;
+        border: 1px solid #eef2f7;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        transition: 0.2s;
+    }
+
+    .doc-item:hover {
+        background: #f8faff;
+        border-color: #d1d9e6;
+    }
+
+    .doc-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #002d72;
+    }
+
+    .doc-filename {
+        font-size: 10px;
+        color: #999;
+        display: block;
+        margin-top: 2px;
+        word-break: break-word;
+    }
+
+    .btn-view {
+        background: #e9f0ff;
+        color: #002d72;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        transition: 0.2s;
+        flex-shrink: 0;
+    }
+
+    .btn-view:hover {
+        background: #002d72;
+        color: white;
+    }
+
+    .sidebar-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .sidebar-card h3 {
+        margin-top: 0;
+        font-size: 15px;
+        color: #002d72;
+        font-weight: 800;
+        border-bottom: 2px solid #C99700;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .data-group {
+        margin-bottom: 15px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .data-group-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #C99700;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        display: block;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 5px;
+    }
+
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 0;
+        font-size: 12px;
+        border-bottom: 1px solid #f9f9f9;
+    }
+
     .data-row:last-child { border-bottom: none; }
-    .data-label { color: #666; font-weight: 500; }
-    .data-value { color: #111; font-weight: 700; text-align: right; max-width: 60%; word-break: break-word; }
 
-    /* AZIONI */
-    .filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
-    .filter-btn { background: white; border: 1px solid #ddd; padding: 10px 2px; border-radius: 6px; cursor: pointer; text-align: center; font-size: 8px; font-weight: 800; text-transform: uppercase; transition: 0.2s; }
-    .filter-btn i { display: block; font-size: 14px; margin-bottom: 4px; color: #002d72; }
-    .filter-btn.active { background: #C99700; color: white; border-color: #C99700; }
+    .data-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .data-value {
+        color: #111;
+        font-weight: 700;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-word;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+
+    .filter-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px 2px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        transition: 0.2s;
+        user-select: none;
+    }
+
+    .filter-btn i {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+        color: #002d72;
+    }
+
+    .filter-btn.active {
+        background: #C99700;
+        color: white;
+        border-color: #C99700;
+    }
+
     .filter-btn.active i { color: white; }
 
-    .nota-area { width: 100%; height: 90px; border: 2px solid #e9ecef; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12px; resize: none; margin-bottom: 15px; outline: none; }
+    .integration-select,
+    .nota-area {
+        width: 100%;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+    }
+
+    .integration-select {
+        border: 2px solid #e9ecef;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: white;
+    }
+
+    .integration-select:focus { border-color: #C99700; }
+
+    .nota-area {
+        height: 90px;
+        border: 2px solid #e9ecef;
+        padding: 12px;
+        resize: none;
+        margin-bottom: 15px;
+    }
+
     .nota-area:focus { border-color: #C99700; }
 
-    .btn-submit { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; margin-bottom: 10px; text-transform: uppercase; font-size: 13px; }
+    .btn-submit {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-family: inherit;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        font-size: 13px;
+    }
+
     .btn-primary { background: #002d72; color: white; }
     .btn-primary:hover { background: #001a45; }
+
     .btn-ai { background: #C99700; color: #002d72; }
     .btn-ai:hover { background: #b08500; color: white; }
+
     .btn-zip { background: #28a745; color: white; }
     .btn-zip:hover { background: #1e7e34; }
 
-    .checklist-box { border: 2px dashed #cbd5e0; border-radius: 10px; padding: 10px; background: white; margin-bottom: 15px; min-height: 50px; }
-    .checklist-item { display: flex; justify-content: space-between; align-items: center; background: #ebf4ff; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; font-weight: 700; border-left: 4px solid #C99700; }
+    .checklist-box {
+        border: 2px dashed #cbd5e0;
+        border-radius: 10px;
+        padding: 10px;
+        background: white;
+        margin-bottom: 15px;
+        min-height: 50px;
+    }
 
-    /* MODALE */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-    .modal-content { background: white; width: 100%; max-width: 900px; border-radius: 15px; padding: 30px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+    .checklist-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: #ebf4ff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        border-left: 4px solid #C99700;
+    }
+
+    .trash-btn {
+        color: #cc0000;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .modal-content {
+        background: white;
+        width: 100%;
+        max-width: 900px;
+        border-radius: 15px;
+        padding: 30px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+        font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 700px) {
+        body { padding: 10px; }
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .filter-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .doc-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .btn-view {
+            align-self: flex-end;
+        }
+    }
 </style>
 </head>
 <body>
@@ -89,17 +409,38 @@
 
     <div class="main-grid">
         <div id="documentiArea">
-            <div id="loading" style="text-align:center; padding:60px;"><i class="fas fa-spinner fa-spin fa-3x" style="color:#002d72;"></i><p style="margin-top:15px; font-weight:600;">Recupero documenti dal cloud...</p></div>
-            
-            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div><div class="doc-list" id="list-ANAGRAFICA"></div></div>
-            <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div><div class="doc-list" id="list-REDDITO"></div></div>
-            <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
-            <div id="cat-IMMOBILE" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div><div class="doc-list" id="list-IMMOBILE"></div></div>
-            <div id="cat-ALTRO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro / Extra</div><div class="doc-list" id="list-ALTRO"></div></div>
+            <div id="loading" class="empty-state">
+                <i class="fas fa-spinner fa-spin fa-3x" style="color:#002d72;"></i>
+                <p style="margin-top:15px; font-weight:600;">Recupero documenti dal cloud...</p>
+            </div>
+
+            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div>
+                <div class="doc-list" id="list-ANAGRAFICA"></div>
+            </div>
+
+            <div id="cat-REDDITO" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div>
+                <div class="doc-list" id="list-REDDITO"></div>
+            </div>
+
+            <div id="cat-BANCA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div>
+                <div class="doc-list" id="list-BANCA"></div>
+            </div>
+
+            <div id="cat-IMMOBILE" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div>
+                <div class="doc-list" id="list-IMMOBILE"></div>
+            </div>
+
+            <div id="cat-ALTRO" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro / Extra</div>
+                <div class="doc-list" id="list-ALTRO"></div>
+            </div>
         </div>
 
         <div class="sidebar">
-            
             <div class="sidebar-card" style="border-top: 5px solid #C99700;">
                 <h3><i class="fas fa-id-card"></i> Identikit Completo Pratica</h3>
                 <div id="identikitDinamico">
@@ -111,6 +452,7 @@
 
             <div class="sidebar-card">
                 <h3><i class="fas fa-plus-circle"></i> Richiedi Integrazione</h3>
+
                 <div class="filter-grid">
                     <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i>Anag</div>
                     <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i>Redd</div>
@@ -120,6 +462,7 @@
                 </div>
 
                 <select id="selectIntegrazione" class="integration-select"></select>
+
                 <button class="btn-submit" style="background:#eee; color:#333; font-size:12px; margin-bottom:15px;" onclick="aggiungiChecklist()">
                     <i class="fas fa-plus"></i> AGGIUNGI ALLA LISTA
                 </button>
@@ -147,236 +490,605 @@
 </div>
 
 <script>
-    // --- CONFIGURAZIONE FIREBASE ---
-    const firebaseConfig = { 
-        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", 
-        authDomain: "consulenza-credipass.firebaseapp.com", 
-        projectId: "consulenza-credipass", 
-        storageBucket: "consulenza-credipass.firebasestorage.app" 
+    const firebaseConfig = {
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+        authDomain: "consulenza-credipass.firebaseapp.com",
+        projectId: "consulenza-credipass",
+        storageBucket: "consulenza-credipass.firebasestorage.app"
     };
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
     const db = firebase.firestore();
     const storage = firebase.storage();
+
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
 
     const TRADUZIONI = {
-        'ci1': "Carta d'Identità R1", 'ci2': "Carta d'Identità R2", 'ts1': "Tessera Sanitaria R1", 'ts2': "Tessera Sanitaria R2",
-        'residenza1': "Certificato Cumulativo", 'matrimonio': "Atto Matrimonio", 'isee': "Attestazione ISEE",
-        'bustepaga1': "Ultime 2 Buste Paga", 'cud1': "Certificazione Unica (CU)", 'unici1': "Modello Redditi",
-        'ec1': "Estratto Conto Trimestrale", 'mov1': "Movimenti Bancari", 'atto': "Atto di Provenienza",
-        'planimetria': "Planimetria Catastale", 'visuracat': "Visura Catastale", 'preliminare': "Preliminare / Proposta"
+        'ci1': "Carta d'Identità R1",
+        'ci2': "Carta d'Identità R2",
+        'ts1': "Tessera Sanitaria R1",
+        'ts2': "Tessera Sanitaria R2",
+        'residenza1': "Certificato Cumulativo",
+        'matrimonio': "Atto Matrimonio",
+        'isee': "Attestazione ISEE",
+        'bustepaga1': "Ultime 2 Buste Paga R1",
+        'bustepaga2': "Ultime 2 Buste Paga R2",
+        'cud1': "Certificazione Unica R1",
+        'cud2': "Certificazione Unica R2",
+        'unici1': "Modello Redditi R1",
+        'unici2': "Modello Redditi R2",
+        'f241': "F24 R1",
+        'f242': "F24 R2",
+        'visura1': "Visura Camerale R1",
+        'visura2': "Visura Camerale R2",
+        'ec1': "Estratto Conto R1",
+        'ec2': "Estratto Conto R2",
+        'mov1': "Movimenti Bancari R1",
+        'mov2': "Movimenti Bancari R2",
+        'prestiti': "Contratti Prestiti",
+        'atto': "Atto di Provenienza",
+        'planimetria': "Planimetria Catastale",
+        'visuracat': "Visura Catastale",
+        'preliminare': "Preliminare / Proposta",
+        'mutuo_pre': "Atto Mutuo in Corso",
+        'preventivo': "Preventivo / Computo Metrico"
     };
 
     const DB_SELECT = {
-        'ANAGRAFICA': [{id:'ci1', n:"Carta d'Identità"}, {id:'ts1', n:"Tessera Sanitaria"}, {id:'residenza1', n:"Cumulativo"}, {id:'isee', n:"ISEE"}, {id:'matrimonio', n:"Atto Matrimonio"}],
-        'REDDITO': [{id:'bustepaga1', n:"Buste Paga"}, {id:'cud1', n:"Certificazione Unica"}, {id:'unici1', n:"Modello Redditi"}, {id:'f24', n:"F24"}, {id:'contratto', n:"Contratto"}],
-        'BANCA': [{id:'ec1', n:"Estratto Conto"}, {id:'mov1', n:"Movimenti"}, {id:'prestiti', n:"Contratti Prestiti"}],
-        'IMMOBILE': [{id:'atto', n:"Atto Provenienza"}, {id:'planimetria', n:"Planimetria"}, {id:'visuracat', n:"Visura Catastale"}, {id:'preliminare', n:"Preliminare"}],
-        'ALTRO': [{id:'integrazione1', n:"Richiesta Generica"}]
+        'ANAGRAFICA': [
+            {id:'ci1', n:"Carta d'Identità R1"},
+            {id:'ci2', n:"Carta d'Identità R2"},
+            {id:'ts1', n:"Tessera Sanitaria R1"},
+            {id:'ts2', n:"Tessera Sanitaria R2"},
+            {id:'residenza1', n:"Certificato Cumulativo"},
+            {id:'isee', n:"ISEE"},
+            {id:'matrimonio', n:"Atto Matrimonio"}
+        ],
+        'REDDITO': [
+            {id:'bustepaga1', n:"Buste Paga R1"},
+            {id:'bustepaga2', n:"Buste Paga R2"},
+            {id:'cud1', n:"Certificazione Unica R1"},
+            {id:'cud2', n:"Certificazione Unica R2"},
+            {id:'unici1', n:"Modello Redditi R1"},
+            {id:'unici2', n:"Modello Redditi R2"},
+            {id:'f241', n:"F24 R1"},
+            {id:'f242', n:"F24 R2"},
+            {id:'contratto', n:"Contratto di Lavoro"},
+            {id:'visura1', n:"Visura Camerale R1"},
+            {id:'visura2', n:"Visura Camerale R2"}
+        ],
+        'BANCA': [
+            {id:'ec1', n:"Estratto Conto R1"},
+            {id:'ec2', n:"Estratto Conto R2"},
+            {id:'mov1', n:"Movimenti R1"},
+            {id:'mov2', n:"Movimenti R2"},
+            {id:'prestiti', n:"Contratti Prestiti"},
+            {id:'mutuo_pre', n:"Atto Mutuo in Corso"}
+        ],
+        'IMMOBILE': [
+            {id:'atto', n:"Atto Provenienza"},
+            {id:'planimetria', n:"Planimetria"},
+            {id:'visuracat', n:"Visura Catastale"},
+            {id:'preliminare', n:"Preliminare"},
+            {id:'preventivo', n:"Preventivo / Computo Metrico"}
+        ],
+        'ALTRO': [
+            {id:'integrazione1', n:"Richiesta Generica"},
+            {id:'extra1', n:"Documento Integrativo"},
+            {id:'extra2', n:"Chiarimento / Nota"}
+        ]
     };
 
     let carrello = [];
     let emailCliente = "";
 
+    function formatCurrencyIT(value) {
+        if (value === null || value === undefined) return "";
+        let s = String(value).trim();
+        if (!s || s === "-" || s === "N/D" || s === " ") return "";
+
+        s = s.replace(/€/g, '').replace(/\s/g, '');
+
+        const parts = s.split(',');
+        const intPart = parts[0].replace(/\./g, '').replace(/[^\d-]/g, '');
+
+        if (intPart === "" || isNaN(Number(intPart))) return String(value).trim();
+
+        const formattedInt = Number(intPart).toLocaleString('it-IT');
+        return parts.length > 1 ? `${formattedInt},${parts[1]}` : formattedInt;
+    }
+
+    function formatEuro(value) {
+        const formatted = formatCurrencyIT(value);
+        return formatted ? `${formatted} €` : "";
+    }
+
+    function normalizeDisplay(value) {
+        if (value === null || value === undefined) return "";
+        const s = String(value).trim();
+        if (!s || s === "-" || s === "N/D" || s === " ") return "";
+        return s;
+    }
+
+    function formatBooleanItalian(value) {
+        const s = normalizeDisplay(value).toLowerCase();
+        if (!s) return "";
+        if (s === 'si' || s === 'sì' || s === 'true') return 'Sì';
+        if (s === 'no' || s === 'false') return 'No';
+        return value;
+    }
+
+    function prettyClientLabel(id) {
+        return String(id || '').replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+    }
+
     window.onload = () => {
-        if(idCliente) {
-            document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').toUpperCase();
+        if (idCliente) {
+            document.getElementById('labelCliente').innerText = prettyClientLabel(idCliente);
             caricaDocumenti();
             caricaIdentikitCompleto();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
+        } else {
+            document.getElementById('documentiArea').innerHTML = '<div class="empty-state">Cliente non specificato nell’URL.</div>';
+            document.getElementById('identikitDinamico').innerHTML = '<div class="empty-state">Cliente non specificato.</div>';
         }
     };
 
-    // --- FUNZIONE IDENTIKIT DINAMICO: MAPPA TUTTI I CAMPI ---
     async function caricaIdentikitCompleto() {
         const container = document.getElementById('identikitDinamico');
+
         try {
             const doc = await db.collection("pratiche_mutuo").doc(idCliente).get();
-            if(!doc.exists) { container.innerHTML = "Dati non trovati."; return; }
-            const d = doc.data();
+
+            if (!doc.exists) {
+                container.innerHTML = "<p style='text-align:center; padding:20px; font-size:12px; color:#999;'>Dati pratica non trovati.</p>";
+                return;
+            }
+
+            const d = doc.data() || {};
             emailCliente = d.cliente_email || "";
 
-            let html = "";
             const row = (label, val) => {
-                if(!val || val === "0" || val === "0 €" || val === "-" || val === "N/D" || val === "No" || val === " ") return "";
-                return `<div class="data-row"><span class="data-label">${label}:</span> <span class="data-value">${val}</span></div>`;
+                const clean = normalizeDisplay(val);
+                if (!clean) return "";
+                return `
+                    <div class="data-row">
+                        <span class="data-label">${label}:</span>
+                        <span class="data-value">${clean}</span>
+                    </div>
+                `;
             };
 
-            // GRUPPO 1: RICHIESTA MUTUO
+            const rowEuro = (label, val) => {
+                const clean = formatEuro(val);
+                if (!clean) return "";
+                return `
+                    <div class="data-row">
+                        <span class="data-label">${label}:</span>
+                        <span class="data-value">${clean}</span>
+                    </div>
+                `;
+            };
+
+            let html = "";
+
             let gMutuo = "";
             gMutuo += row("Finalità", d.finalita);
-            gMutuo += row("Importo", d.importo_richiesto ? d.importo_richiesto + " €" : "");
-            gMutuo += row("Prezzo Acquisto", d.valore_compravendita ? d.valore_compravendita + " €" : "");
-            gMutuo += row("Valore Immobile", d.valore_immobile ? d.valore_immobile + " €" : "");
+            gMutuo += rowEuro("Importo richiesto", d.importo_richiesto || d.mutuo_importo);
+            gMutuo += rowEuro("Compravendita", d.valore_compravendita || d.mutuo_compravendita);
+            gMutuo += rowEuro("Valore immobile", d.valore_immobile || d.immobile_valore);
             gMutuo += row("Prodotto", d.prodotto);
             gMutuo += row("Tasso", d.tasso);
-            gMutuo += row("Durata", d.durata_mutuo ? d.durata_mutuo + " Anni" : "");
-            if(gMutuo) html += `<div class="data-group"><span class="data-group-title">Operazione Mutuo</span>${gMutuo}</div>`;
+            gMutuo += row("Durata", normalizeDisplay(d.durata_mutuo) ? `${d.durata_mutuo} anni` : "");
 
-            // GRUPPO 2: 1° RICHIEDENTE
+            if (gMutuo) {
+                html += `<div class="data-group"><span class="data-group-title">Operazione Mutuo</span>${gMutuo}</div>`;
+            }
+
             let gR1 = "";
-            gR1 += row("Lavoro", d.lav1);
-            gR1 += row("Reddito Netto", d.reddito_richiedente_1 ? d.reddito_richiedente_1 + " €" : "");
+            gR1 += row("Nominativo", d.cliente_nome);
+            gR1 += row("Contratto", d.lav1 || d.contratto_richiedente_1);
+            gR1 += rowEuro("Reddito netto", d.reddito_richiedente_1 || d.cliente_reddito);
             gR1 += row("Cellulare", d.cliente_cell);
             gR1 += row("Email", d.cliente_email);
-            if(gR1) html += `<div class="data-group"><span class="data-group-title">1° Richiedente</span>${gR1}</div>`;
 
-            // GRUPPO 3: 2° RICHIEDENTE
-            if(d.reddito_richiedente_2 && d.reddito_richiedente_2 !== "0") {
+            if (gR1) {
+                html += `<div class="data-group"><span class="data-group-title">1° Richiedente</span>${gR1}</div>`;
+            }
+
+            const esisteSecondo =
+                normalizeDisplay(d.cliente2_nome) ||
+                normalizeDisplay(d.cliente2_email) ||
+                normalizeDisplay(d.cliente2_cell) ||
+                normalizeDisplay(d.reddito_richiedente_2) ||
+                normalizeDisplay(d.lav2);
+
+            if (esisteSecondo) {
                 let gR2 = "";
-                gR2 += row("Lavoro", d.lav2);
-                gR2 += row("Reddito Netto", d.reddito_richiedente_2 ? d.reddito_richiedente_2 + " €" : "");
+                gR2 += row("Nominativo", d.cliente2_nome);
+                gR2 += row("Contratto", d.lav2 || d.contratto_richiedente_2);
+                gR2 += rowEuro("Reddito netto", d.reddito_richiedente_2 || d.cliente2_reddito);
                 gR2 += row("Cellulare", d.cliente2_cell);
                 gR2 += row("Email", d.cliente2_email);
-                if(gR2) html += `<div class="data-group"><span class="data-group-title">2° Richiedente</span>${gR2}</div>`;
+
+                if (gR2) {
+                    html += `<div class="data-group"><span class="data-group-title">2° Richiedente</span>${gR2}</div>`;
+                }
             }
 
-            // GRUPPO 4: NUCLEO E FAMIGLIA
             let gFam = "";
-            gFam += row("Stato Civile", d.stato_civile);
-            gFam += row("N. Componenti", d.num_componenti);
-            gFam += row("Assegno Unico", d.assegno_importo ? d.assegno_importo + " €" : "");
-            let figli = [d.eta_f1, d.eta_f2, d.eta_f3].filter(x => x && x !== "0" && x !== "-").join(", ");
-            if(figli) gFam += row("Età Figli", figli + " anni");
-            gFam += row("Abitazione", d.sit_abitativa);
-            if(d.sit_abitativa === "Affitto") {
-                gFam += row("Canone Affitto", d.canone_affitto + " €");
-                gFam += row("Registrato", d.contratto_reg);
+            gFam += row("Stato civile", d.stato_civile || d.stato);
+            gFam += row("N. componenti", d.num_componenti);
+
+            const assegnoValue = formatBooleanItalian(d.assegno);
+            const assegnoImporto = formatEuro(d.assegno_importo);
+            if (assegnoValue || assegnoImporto) {
+                gFam += row("Assegno unico", `${assegnoValue || "Sì"}${assegnoImporto ? ` (${assegnoImporto})` : ""}`);
             }
-            if(gFam) html += `<div class="data-group"><span class="data-group-title">Famiglia e Casa</span>${gFam}</div>`;
 
-            // GRUPPO 5: IMPEGNI E COSTI
+            const etaFigli = [d.eta_f1, d.eta_f2, d.eta_f3]
+                .map(x => normalizeDisplay(x))
+                .filter(Boolean);
+
+            if (etaFigli.length > 0) {
+                gFam += row("Numero figli", String(etaFigli.length));
+                gFam += row("Età figli", etaFigli.join(", "));
+            }
+
+            gFam += row("Situazione abitativa", d.sit_abitativa);
+
+            if ((normalizeDisplay(d.sit_abitativa)).toLowerCase() === "affitto") {
+                gFam += rowEuro("Canone affitto", d.canone_affitto);
+                gFam += row("Contratto registrato", formatBooleanItalian(d.contratto_reg));
+            }
+
+            if (gFam) {
+                html += `<div class="data-group"><span class="data-group-title">Famiglia e Casa</span>${gFam}</div>`;
+            }
+
             let gCosti = "";
-            if(d.rata_mutuo_pre) gCosti += row("Rata Mutuo Corso", d.rata_mutuo_pre + " €");
-            if(d.rata_fin_pre) gCosti += row("Altre Rate", d.rata_fin_pre + " €");
-            gCosti += row("Istruttoria Banca", d.istr_banca + " €");
-            gCosti += row("Costo Perizia", d.perizia_costo + " €");
-            gCosti += row("Imposta Sost.", d.imposta);
+            if (normalizeDisplay(d.gia_mutuo) || normalizeDisplay(d.rata_mutuo_pre)) {
+                gCosti += row("Mutuo in corso", `${formatBooleanItalian(d.gia_mutuo) || "Sì"}${formatEuro(d.rata_mutuo_pre) ? ` (${formatEuro(d.rata_mutuo_pre)})` : ""}`);
+            }
+
+            if (normalizeDisplay(d.fin_corso) || normalizeDisplay(d.rata_fin_pre)) {
+                gCosti += row("Finanziamenti", `${formatBooleanItalian(d.fin_corso) || "Sì"}${formatEuro(d.rata_fin_pre) ? ` (${formatEuro(d.rata_fin_pre)})` : ""}`);
+            }
+
+            gCosti += row("Polizza incendio", d.tipo_incendio);
+            gCosti += row("Importo polizza incendio", d.importo_incendio);
+            gCosti += row("Polizza personale", d.tipo_Personale || d.tipo_personale);
+            gCosti += row("Importo polizza personale", d.importo_Personale || d.importo_personale);
+            gCosti += rowEuro("Istruttoria banca", d.istr_banca);
+            gCosti += rowEuro("Perizia", d.perizia_costo);
+            gCosti += row("Imposta sostitutiva", d.imposta);
             gCosti += row("Mediazione", d.mediazione);
-            if(gCosti) html += `<div class="data-group"><span class="data-group-title">Impegni e Costi Istruttoria</span>${gCosti}</div>`;
 
-            container.innerHTML = html;
+            if (gCosti) {
+                html += `<div class="data-group"><span class="data-group-title">Impegni e Costi Istruttoria</span>${gCosti}</div>`;
+            }
 
-        } catch(e) { console.error("Errore identikit:", e); }
+            let gNote = "";
+            gNote += row("Luogo incontro", d.luogo_incontro || d.campo_luogo);
+            gNote += row("Data consulenza", d.data_consulenza || d.campo_data);
+            gNote += row("Referente", d.referente || d.campo_referente);
+            gNote += row("Note", d.note_consulenza);
+
+            if (gNote) {
+                html += `<div class="data-group"><span class="data-group-title">Note e Riferimenti</span>${gNote}</div>`;
+            }
+
+            container.innerHTML = html || `<p style="text-align:center; padding:20px; font-size:12px; color:#999;">Nessun dato disponibile.</p>`;
+        } catch (e) {
+            console.error("Errore identikit:", e);
+            container.innerHTML = "<p style='text-align:center; padding:20px; font-size:12px; color:#c00;'>Errore nel caricamento dell'identikit.</p>";
+        }
     }
 
-    // --- SUPER SCANNER CARICAMENTO FILE ---
     async function caricaDocumenti() {
         const loading = document.getElementById('loading');
-        const varianti = [idCliente, idCliente.replace(/_/g, ' '), idCliente.replace(/_/g, '-')];
+        const varianti = [
+            idCliente,
+            idCliente.replace(/_/g, ' '),
+            idCliente.replace(/_/g, '-')
+        ];
+
         let files = [];
-        
+
         for (let v of varianti) {
             try {
-                let res = await storage.ref(`Fascicoli/${v}`).listAll();
-                if(res.items.length > 0) { files = res.items; break; }
-            } catch(e) {}
+                const res = await storage.ref(`Fascicoli/${v}`).listAll();
+                if (res.items.length > 0) {
+                    files = res.items;
+                    break;
+                }
+            } catch (e) {}
         }
-        if(loading) loading.style.display = 'none';
-        
-        if(files.length === 0) {
-            document.getElementById('documentiArea').innerHTML += '<p style="text-align:center; padding:40px; color:#999;">Nessun documento caricato dal cliente.</p>';
+
+        if (loading) loading.style.display = 'none';
+
+        if (files.length === 0) {
+            document.getElementById('documentiArea').innerHTML += '<p class="empty-state">Nessun documento caricato dal cliente.</p>';
             return;
         }
 
-        files.forEach(async (item) => {
-            const url = await item.getDownloadURL();
-            const fn = item.name.toLowerCase();
-            let cat = 'ALTRO'; let nomeBello = item.name;
+        for (const item of files) {
+            try {
+                const url = await item.getDownloadURL();
+                const fn = item.name.toLowerCase();
 
-            if(fn.includes('ci') || fn.includes('ts') || fn.includes('residenza') || fn.includes('isee') || fn.includes('matrimonio')) cat = 'ANAGRAFICA';
-            else if(fn.includes('busta') || fn.includes('cud') || fn.includes('unici') || fn.includes('iva') || fn.includes('f24')) cat = 'REDDITO';
-            else if(fn.includes('ec1') || fn.includes('mov') || fn.includes('conto') || fn.includes('prestiti')) cat = 'BANCA';
-            else if(fn.includes('atto') || fn.includes('planimetria') || fn.includes('visura') || fn.includes('preliminare')) cat = 'IMMOBILE';
+                let cat = 'ALTRO';
+                let nomeBello = item.name;
 
-            for (const [key, val] of Object.entries(TRADUZIONI)) {
-                if (fn.includes(key)) { nomeBello = val; break; }
+                if (fn.includes('ci') || fn.includes('ts') || fn.includes('residenza') || fn.includes('isee') || fn.includes('matrimonio')) {
+                    cat = 'ANAGRAFICA';
+                } else if (fn.includes('busta') || fn.includes('cud') || fn.includes('unici') || fn.includes('iva') || fn.includes('f24') || fn.includes('visura1') || fn.includes('visura2') || fn.includes('contratto')) {
+                    cat = 'REDDITO';
+                } else if (fn.includes('ec1') || fn.includes('ec2') || fn.includes('mov') || fn.includes('conto') || fn.includes('prestiti') || fn.includes('mutuo_pre')) {
+                    cat = 'BANCA';
+                } else if (fn.includes('atto') || fn.includes('planimetria') || fn.includes('visura') || fn.includes('preliminare') || fn.includes('preventivo')) {
+                    cat = 'IMMOBILE';
+                }
+
+                for (const [key, val] of Object.entries(TRADUZIONI)) {
+                    if (fn.includes(key)) {
+                        nomeBello = val;
+                        break;
+                    }
+                }
+
+                const containerCat = document.getElementById(`cat-${cat}`);
+                const listCat = document.getElementById(`list-${cat}`);
+
+                if (containerCat && listCat) {
+                    containerCat.style.display = 'block';
+                    listCat.innerHTML += `
+                        <div class="doc-item">
+                            <div>
+                                <span class="doc-name">${nomeBello}</span>
+                                <span class="doc-filename">${item.name}</span>
+                            </div>
+                            <a href="${url}" target="_blank" class="btn-view">VEDI</a>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Errore file:", item.name, err);
             }
-
-            const containerCat = document.getElementById(`cat-${cat}`);
-            const listCat = document.getElementById(`list-${cat}`);
-            if(containerCat) {
-                containerCat.style.display = 'block';
-                listCat.innerHTML += `<div class="doc-item"><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${item.name}</span></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
-            }
-        });
+        }
     }
 
     function cambiaCategoria(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('selectIntegrazione').innerHTML = DB_SELECT[cat].map(d => `<option value="${d.id}">${d.n}</option>`).join('');
+        if (btn) btn.classList.add('active');
+
+        const select = document.getElementById('selectIntegrazione');
+        select.innerHTML = (DB_SELECT[cat] || []).map(d => `<option value="${d.id}">${d.n}</option>`).join('');
     }
 
     function aggiungiChecklist() {
         const sel = document.getElementById('selectIntegrazione');
+        if (!sel || !sel.value) return;
+
         const val = sel.value;
         const txt = sel.options[sel.selectedIndex].text;
-        if(carrello.some(x => x.id === val)) return;
-        carrello.push({id: val, testo: txt});
+
+        if (carrello.some(x => x.id === val)) return;
+
+        carrello.push({ id: val, testo: txt });
+        renderCarrello();
+    }
+
+    function removeFromCarrello(id) {
+        carrello = carrello.filter(x => x.id !== id);
         renderCarrello();
     }
 
     function renderCarrello() {
         const c = document.getElementById('listaCarrello');
-        document.getElementById('btnInvia').disabled = carrello.length === 0;
-        document.getElementById('btnInvia').style.opacity = carrello.length === 0 ? 0.5 : 1;
-        c.innerHTML = carrello.map(item => `<div class="checklist-item"><span>${item.testo}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x.id!=='${item.id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
+        const btnInvia = document.getElementById('btnInvia');
+
+        btnInvia.disabled = carrello.length === 0;
+        btnInvia.style.opacity = carrello.length === 0 ? 0.5 : 1;
+
+        if (carrello.length === 0) {
+            c.innerHTML = '<div style="font-size:11px; color:#999; text-align:center; padding:10px;">Nessun documento selezionato.</div>';
+            return;
+        }
+
+        c.innerHTML = carrello.map(item => `
+            <div class="checklist-item">
+                <span>${item.testo}</span>
+                <i class="fas fa-trash trash-btn" onclick="removeFromCarrello('${item.id}')"></i>
+            </div>
+        `).join('');
     }
 
-    // --- INVIO EMAIL CON LAYOUT PROFESSIONALE ---
     async function inviaIntegrazione() {
-        const nota = document.getElementById('notaIntegrazione').value;
+        const nota = document.getElementById('notaIntegrazione').value.trim();
         const btn = document.getElementById('btnInvia');
-        if(!emailCliente) { alert("Attenzione: Email cliente non trovata!"); return; }
-        
+
+        if (!emailCliente) {
+            alert("Attenzione: email cliente non trovata.");
+            return;
+        }
+
+        if (carrello.length === 0) {
+            alert("Aggiungi almeno un documento alla richiesta.");
+            return;
+        }
+
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
         btn.disabled = true;
 
-        const emailHtml = `<!DOCTYPE html><html lang="it"><body style="margin:0;padding:0;background-color:#f4f7f6;font-family:Arial,sans-serif;"><table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding:30px 10px;"><tr><td align="center"><table width="600" bgcolor="#ffffff" style="border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);border:1px solid #eee;"><tr><td bgcolor="#002d72" align="center" style="padding:25px;border-bottom:5px solid #C99700;"><img src="https://consulenza-credipass.it/images/logo-credipass.png" width="200"></td></tr><tr><td style="padding:30px;"><h2 style="color:#002d72;margin-top:0;">Integrazione Documenti</h2><p style="color:#555;line-height:1.6;">Gentile Cliente, per procedere con la tua pratica abbiamo bisogno di integrare i seguenti documenti:</p><div style="background:#f8f9fa;padding:15px;border-left:4px solid #002d72;margin:20px 0;"><ul style="margin:0;padding-left:20px;color:#002d72;font-weight:bold;">${carrello.map(i=>`<li>${i.testo}</li>`).join('')}</ul></div>${nota?`<p style="background:#fff9e6;padding:15px;border:1px dashed #C99700;border-radius:8px;font-style:italic;">"${nota}"</p>`:''}<div align="center" style="margin-top:30px;"><a href="${window.location.origin}/upload.html?id=${idCliente}" style="background:#C99700;color:white;padding:16px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">CARICA DOCUMENTI</a></div></td></tr></table></td></tr></table></body></html>`;
+        const elencoHtml = carrello.map(i => `<li>${i.testo}</li>`).join('');
+
+        const uploadUrl = `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+
+        const emailHtml = `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background-color:#f4f7f6;font-family:Arial,sans-serif;">
+    <table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding:30px 10px;">
+        <tr>
+            <td align="center">
+                <table width="600" bgcolor="#ffffff" style="border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);border:1px solid #eee;">
+                    <tr>
+                        <td bgcolor="#002d72" align="center" style="padding:25px;border-bottom:5px solid #C99700;">
+                            <img src="https://consulenza-credipass.it/images/logo-credipass.png" width="200" alt="Credipass">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px;">
+                            <h2 style="color:#002d72;margin-top:0;">Integrazione Documenti</h2>
+                            <p style="color:#555;line-height:1.6;">
+                                Gentile Cliente, per procedere con la tua pratica abbiamo bisogno di integrare i seguenti documenti:
+                            </p>
+
+                            <div style="background:#f8f9fa;padding:15px;border-left:4px solid #002d72;margin:20px 0;">
+                                <ul style="margin:0;padding-left:20px;color:#002d72;font-weight:bold;">
+                                    ${elencoHtml}
+                                </ul>
+                            </div>
+
+                            ${nota ? `
+                            <p style="background:#fff9e6;padding:15px;border:1px dashed #C99700;border-radius:8px;font-style:italic; color:#444;">
+                                "${nota}"
+                            </p>
+                            ` : ''}
+
+                            <div align="center" style="margin-top:30px;">
+                                <a href="${uploadUrl}" style="background:#C99700;color:white;padding:16px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">
+                                    CARICA DOCUMENTI
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
 
         try {
-            await db.collection("pratiche_mutuo").doc(idCliente).set({ richiestaIntegrazioneAttiva:true, notaPerCliente:nota, elencoDocRichiesti: carrello.map(x=>x.id) }, {merge:true});
-            const response = await fetch('/api/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ to:[emailCliente], subject:`Integrazione Documenti - ${idCliente.replace(/_/g,' ')}`, html:emailHtml }) });
-            if(response.ok) { alert("✅ Email inviata con successo!"); location.reload(); }
-        } catch(e) { alert("Errore durante l'invio."); btn.disabled = false; btn.innerHTML = 'INVIA NOTIFICA EMAIL'; }
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                richiestaIntegrazioneAttiva: true,
+                notaPerCliente: nota,
+                elencoDocRichiesti: carrello.map(x => x.id),
+                ultimoAggiornamentoIntegrazione: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            const response = await fetch('/api/send-email', {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify({
+                    to: [emailCliente],
+                    subject: `Integrazione Documenti - ${prettyClientLabel(idCliente)}`,
+                    html: emailHtml
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Invio email non riuscito");
+            }
+
+            alert("✅ Email inviata con successo!");
+            location.reload();
+        } catch (e) {
+            console.error("Errore invio integrazione:", e);
+            alert("Errore durante l'invio.");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> INVIA NOTIFICA AL CLIENTE';
+        }
     }
 
-    // --- DOWNLOAD ZIP ---
     async function scaricaTuttoZip() {
         const btn = document.getElementById('btnZip');
         const oldTxt = btn.innerHTML;
-        btn.innerHTML = 'Creazione Archivio...'; btn.disabled = true;
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creazione Archivio...';
+        btn.disabled = true;
+
         const zip = new JSZip();
+
         try {
-            const varianti = [idCliente, idCliente.replace(/_/g, ' '), idCliente.replace(/_/g, '-')];
+            const varianti = [
+                idCliente,
+                idCliente.replace(/_/g, ' '),
+                idCliente.replace(/_/g, '-')
+            ];
+
             let items = [];
+
             for (let v of varianti) {
-                let res = await storage.ref(`Fascicoli/${v}`).listAll();
-                if(res.items.length > 0) { items = res.items; break; }
+                try {
+                    const res = await storage.ref(`Fascicoli/${v}`).listAll();
+                    if (res.items.length > 0) {
+                        items = res.items;
+                        break;
+                    }
+                } catch (e) {}
             }
-            if(items.length === 0) { alert("Nessun file!"); btn.disabled=false; btn.innerHTML=oldTxt; return; }
-            for(let item of items) {
+
+            if (items.length === 0) {
+                alert("Nessun file presente.");
+                btn.disabled = false;
+                btn.innerHTML = oldTxt;
+                return;
+            }
+
+            for (const item of items) {
                 const url = await item.getDownloadURL();
                 const resp = await fetch(url);
                 const blob = await resp.blob();
                 zip.file(item.name, blob);
             }
-            const content = await zip.generateAsync({type:"blob"});
+
+            const content = await zip.generateAsync({ type: "blob" });
             saveAs(content, `Fascicolo_${idCliente}.zip`);
-            btn.innerHTML = oldTxt; btn.disabled = false;
-        } catch(e) { alert("Errore ZIP"); btn.disabled = false; btn.innerHTML = oldTxt; }
+
+            btn.innerHTML = oldTxt;
+            btn.disabled = false;
+        } catch (e) {
+            console.error("Errore ZIP:", e);
+            alert("Errore durante la creazione dello ZIP.");
+            btn.disabled = false;
+            btn.innerHTML = oldTxt;
+        }
     }
 
-    // --- REPORT AI ---
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const b = document.getElementById('aiBody');
         b.innerHTML = 'Generazione report in corso...';
-        const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-        if(!snap.exists) { b.innerHTML = "L'intelligenza artificiale non ha ancora elaborato questa pratica."; return; }
-        b.innerHTML = `<pre style="white-space:pre-wrap; background:#f8f9fa; padding:15px; border-radius:10px; font-family:inherit; font-size:13px; color:#444; border:1px solid #ddd;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
+
+        try {
+            const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
+
+            if (!snap.exists) {
+                b.innerHTML = "L'intelligenza artificiale non ha ancora elaborato questa pratica.";
+                return;
+            }
+
+            const report = snap.data()?.praticaCompleta?.practiceSummary?.reportTestuale || "Report non disponibile.";
+            b.innerHTML = `
+                <pre style="white-space:pre-wrap; background:#f8f9fa; padding:15px; border-radius:10px; font-family:inherit; font-size:13px; color:#444; border:1px solid #ddd;">${report}</pre>
+            `;
+        } catch (e) {
+            console.error("Errore report AI:", e);
+            b.innerHTML = "Errore nel caricamento del report AI.";
+        }
     }
+
+    document.getElementById('modalAI').addEventListener('click', (e) => {
+        if (e.target.id === 'modalAI') {
+            document.getElementById('modalAI').style.display = 'none';
+        }
+    });
 </script>
 </body>
 </html>
