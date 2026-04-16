@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
-    * { box-sizing: border-box; } /* FIX DEFINITIVO FUORI SQUADRA */
+    * { box-sizing: border-box; } /* FIX FUORI SQUADRA */
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 1350px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
@@ -31,8 +31,9 @@
     .cat-header i { color: #C99700; }
     .doc-list { padding: 10px; background: #fcfcfc; }
     .doc-item { background: white; border: 1px solid #eef2f7; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; }
-    .doc-filename { font-size: 10px; color: #999; display: block; }
+    .doc-info { display: flex; align-items: center; }
+    .doc-name { font-size: 13px; font-weight: 700; color: #002d72; display: block; }
+    .doc-filename { font-size: 10px; color: #999; display: block; margin-top: 2px; }
     .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
 
     /* DESTRA: SIDEBAR */
@@ -59,7 +60,7 @@
         font-family: inherit; 
         font-size: 12px; 
         resize: none; 
-        box-sizing: border-box; /* BLOCCA IL FUORI SQUADRA */
+        box-sizing: border-box; 
         margin-bottom: 15px;
         display: block;
     }
@@ -83,7 +84,7 @@
 
     <div class="main-grid">
         <div id="documentiArea">
-            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Accesso al Cloud...</p></div>
+            <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#002d72;"></i><p>Accesso al Cloud in corso...</p></div>
             <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div><div class="doc-list" id="list-ANAGRAFICA"></div></div>
             <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div><div class="doc-list" id="list-REDDITO"></div></div>
             <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-piggy-bank"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
@@ -94,7 +95,7 @@
         <div class="sidebar">
             <div class="sidebar-card">
                 <h3>Dossier & Archivio</h3>
-                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> REPORT AI</button>
+                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> REPORT IA</button>
                 <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA ARCHIVIO ZIP</button>
             </div>
 
@@ -118,7 +119,7 @@
                     <div id="listaCarrello"><p style="text-align:center; color:#999; font-size:11px; margin:5px;">Checklist vuota</p></div>
                 </div>
 
-                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi al cliente (es: 'La Carta d'identità è scaduta...')"></textarea>
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente (es: 'La foto è sfocata, per favore ricaricala in modo chiaro')"></textarea>
 
                 <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
                     <i class="fas fa-paper-plane"></i> INVIA AL CLIENTE
@@ -131,7 +132,7 @@
 <div id="modalAI" class="modal">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #C99700; padding-bottom:12px;">
-            <h2 style="margin:0; color:#002d72; font-size:18px;"><i class="fas fa-robot"></i> Esito Pre-Delibera AI</h2>
+            <h2 style="margin:0; color:#002d72; font-size:18px;"><i class="fas fa-robot"></i> Esito Pre-Delibera IA</h2>
             <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:28px;">&times;</span>
         </div>
         <div id="aiBody" style="margin-top:20px;"></div>
@@ -159,8 +160,14 @@
         'ALTRO': [{id:'integrazione1', n:"Richiesta Libera"}]
     };
 
-    const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
-    firebase.initializeApp(firebaseConfig);
+    const firebaseConfig = { 
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", 
+        authDomain: "consulenza-credipass.firebaseapp.com", 
+        projectId: "consulenza-credipass", 
+        storageBucket: "consulenza-credipass.firebasestorage.app" 
+    };
+    
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
@@ -170,32 +177,95 @@
 
     window.onload = () => {
         if(idCliente) {
-            document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').toUpperCase();
+            document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').replace(/-/g, ' ').toUpperCase();
             caricaDocumenti();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
-            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { if(doc.exists) emailCliente = doc.data().cliente_email || ""; });
+            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { 
+                if(doc.exists) emailCliente = doc.data().cliente_email || ""; 
+            });
         }
     };
 
+    // --- SUPER SCANNER FIREBASE ---
     async function caricaDocumenti() {
-        const listRef = storage.ref(`Fascicoli/${idCliente}`);
-        const res = await listRef.listAll();
-        document.getElementById('loading').style.display = 'none';
-        for (let item of res.items) {
+        const loadingBox = document.getElementById('loading');
+        
+        // Crea le varianti del nome per trovare la cartella a prescindere da spazi/trattini
+        const idNormale = idCliente; 
+        const idSpazi = idCliente.replace(/_/g, ' ').replace(/-/g, ' '); 
+        const idTrattini = idCliente.replace(/_/g, '-').replace(/ /g, '-');
+        
+        let fileTrovati = [];
+        const tentativi = [idNormale, idSpazi, idTrattini, idNormale.toLowerCase(), idSpazi.toLowerCase(), idTrattini.toLowerCase()];
+        const tentativiUnici = [...new Set(tentativi)]; 
+        
+        for (let variante of tentativiUnici) {
+            try {
+                let res = await storage.ref(`Fascicoli/${variante}`).listAll();
+                if (res.items.length > 0) {
+                    fileTrovati = res.items;
+                    break;
+                }
+            } catch(e) { } 
+        }
+
+        if(loadingBox) loadingBox.style.display = 'none';
+
+        if (fileTrovati.length === 0) {
+            document.getElementById('documentiArea').innerHTML += `
+                <div style="padding:20px; background:#fffcf5; border:1px solid #C99700; border-radius:8px; text-align:center; margin-bottom:20px;">
+                    <i class="fas fa-exclamation-triangle" style="color:#C99700; font-size:24px; margin-bottom:10px;"></i><br>
+                    <b style="color:#002d72;">Nessun file trovato nel Fascicolo.</b><br>
+                    <span style="font-size:12px; color:#666;">Verifica che il cliente abbia salvato i file nell'Area di Upload.</span>
+                </div>`;
+            return;
+        }
+
+        for (let item of fileTrovati) {
             const url = await item.getDownloadURL();
             const fn = item.name;
-            const cod = fn.split('_')[1] || "";
-            const cleanCod = cod.replace(/[0-9]/g, '');
-            let nomeBello = TRADUZIONI[cod] || fn;
-            let cat = 'ALTRO';
-            if(['ci','ts','residenza','matrimonio','isee','divorzio','soggiorno'].includes(cleanCod)) cat = 'ANAGRAFICA';
-            else if(['bustepaga','cud','unici','obism','cedolino','contratto','iva','f24','bilancino'].includes(cleanCod)) cat = 'REDDITO';
-            else if(['ec','mov','titoli'].includes(cleanCod)) cat = 'BANCA';
-            else if(['atto','successione','preliminare','planimetria','visuracat','ape','concessione','preventivo'].includes(cleanCod)) cat = 'IMMOBILE';
-            document.getElementById(`cat-${cat}`).style.display = 'block';
-            document.getElementById(`list-${cat}`).innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon" style="color:#d93025;margin-right:10px;"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
+            const fnLow = fn.toLowerCase();
+            
+            let cat = 'ALTRO'; 
+            let nomeBello = fn;
+            
+            // Smistamento categorie tramite parole chiave nel nome del file
+            if(fnLow.includes('ci1') || fnLow.includes('ts1') || fnLow.includes('ci2') || fnLow.includes('ts2') || fnLow.includes('residenza') || fnLow.includes('matrimonio') || fnLow.includes('identita') || fnLow.includes('tessera') || fnLow.includes('isee')) {
+                cat = 'ANAGRAFICA';
+            } else if(fnLow.includes('bustepaga') || fnLow.includes('cud') || fnLow.includes('unici') || fnLow.includes('obism') || fnLow.includes('cedolino') || fnLow.includes('reddito') || fnLow.includes('f24') || fnLow.includes('iva') || fnLow.includes('contratto')) {
+                cat = 'REDDITO';
+            } else if(fnLow.includes('ec1') || fnLow.includes('mov1') || fnLow.includes('ec2') || fnLow.includes('mov2') || fnLow.includes('estratto') || fnLow.includes('conto') || fnLow.includes('titoli')) {
+                cat = 'BANCA';
+            } else if(fnLow.includes('atto') || fnLow.includes('preliminare') || fnLow.includes('planimetria') || fnLow.includes('ape') || fnLow.includes('visura') || fnLow.includes('successione')) {
+                cat = 'IMMOBILE';
+            }
+
+            for (const [key, value] of Object.entries(TRADUZIONI)) {
+                if (fnLow.startsWith(key) || fnLow.includes('_' + key)) {
+                    nomeBello = value; break;
+                }
+            }
+
+            const catContainer = document.getElementById(`cat-${cat}`);
+            const listContainer = document.getElementById(`list-${cat}`);
+            
+            if(catContainer && listContainer) {
+                catContainer.style.display = 'block';
+                listContainer.innerHTML += `
+                    <div class="doc-item">
+                        <div class="doc-info">
+                            <i class="fas fa-file-alt doc-icon" style="color:#002d72; margin-right:10px; font-size:18px;"></i>
+                            <div>
+                                <span class="doc-name">${nomeBello}</span>
+                                <span class="doc-filename">${fn}</span>
+                            </div>
+                        </div>
+                        <a href="${url}" target="_blank" class="btn-view">VEDI</a>
+                    </div>`;
+            }
         }
     }
+    // --- FINE SUPER SCANNER ---
 
     function cambiaCategoria(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -217,32 +287,133 @@
         c.innerHTML = carrello.map(id => `<div class="checklist-item"><span>${TRADUZIONI[id] || id}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x!=='${id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
     }
 
+    // --- FUNZIONE INVIO EMAIL CON LAYOUT A TABELLE ---
     async function inviaIntegrazione() {
         const nota = document.getElementById('notaIntegrazione').value;
         const btn = document.getElementById('btnInvia');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
-        let updates = { richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello };
-        carrello.forEach(id => { updates[id] = false; updates[`row_doc_${id}`] = false; });
+        
+        if (!emailCliente || emailCliente === "") {
+            alert("⚠️ Errore: Non ho trovato l'email del cliente nel database. Impossibile inviare la notifica.");
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO IN CORSO...';
+        btn.disabled = true;
+
+        let updates = { 
+            richiestaIntegrazioneAttiva: true, 
+            notaPerCliente: nota, 
+            elencoDocRichiesti: carrello,
+            ultimoInvioNotifica: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        carrello.forEach(id => { 
+            updates[id] = false; 
+            updates[`row_doc_${id}`] = false; 
+        });
+
         try {
             await db.collection("pratiche_mutuo").doc(idCliente).set(updates, {merge:true});
-            if(emailCliente) {
-                const linkCliente = `${window.location.origin}/upload.html?id=${idCliente}`;
-                await fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        to: [emailCliente],
-                        subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`,
-                        html: `<div style="font-family:sans-serif; padding:20px; border:1px solid #002d72; border-radius:10px;"><h2 style="color:#002d72;">Ciao, mancano dei documenti</h2><p>Il consulente ha richiesto i seguenti documenti:</p><ul>${carrello.map(id => `<li><strong>${TRADUZIONI[id] || id}</strong></li>`).join('')}</ul><p><strong>Nota:</strong><br>${nota}</p><br><a href="${linkCliente}" style="background:#C99700; color:#fff; padding:12px 20px; text-decoration:none; border-radius:5px; font-weight:bold;">CARICA ORA</a></div>`
-                    })
-                });
+
+            const linkCliente = `${window.location.origin}/upload.html?id=${idCliente}`;
+            
+            const emailHtmlTemplate = `<!DOCTYPE html>
+<html lang="it">
+<body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: Arial, Helvetica, sans-serif;">
+<table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 10px;">
+    <tr>
+        <td align="center">
+            <table width="600" bgcolor="#ffffff" cellpadding="0" cellspacing="0" border="0" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
+                <tr>
+                    <td bgcolor="#002d72" align="center" style="padding: 30px 20px; border-bottom: 5px solid #C99700;">
+                        <img src="https://consulenza-credipass.it/images/logo-credipass.png" alt="Credipass" width="200" style="display: block; border: 0;">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 30px 30px 10px 30px;">
+                        <h1 style="color: #002d72; font-size: 22px; margin: 0 0 15px 0;">Integrazione Documentazione</h1>
+                        <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 0;">
+                            Gentile Cliente,<br><br>
+                            per procedere rapidamente con l'istruttoria della tua pratica di mutuo, ti chiediamo cortesemente di integrare o aggiornare i seguenti documenti:
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 30px;">
+                        <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #f8f9fa; border-left: 4px solid #002d72; border-radius: 6px;">
+                            <tr>
+                                <td>
+                                    <ul style="margin: 0; padding-left: 20px; color: #002d72; font-weight: bold; font-size: 15px; line-height: 1.6;">
+                                        ${carrello.map(id => `<li>${TRADUZIONI[id] || id}</li>`).join('')}
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                ${nota.trim() !== '' ? `
+                <tr>
+                    <td style="padding: 15px 30px;">
+                        <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #fffdf5; border: 1px dashed #C99700; border-radius: 6px;">
+                            <tr>
+                                <td style="font-size: 14px; color: #555; font-style: italic; line-height: 1.5;">
+                                    <strong style="color: #8a6a00; font-style: normal; display: block; margin-bottom: 5px; font-size: 13px; text-transform: uppercase;">Messaggio dal tuo consulente:</strong>
+                                    "${nota.replace(/\n/g, '<br>')}"
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                ` : ''}
+                <tr>
+                    <td align="center" style="padding: 30px;">
+                        <a href="${linkCliente}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; letter-spacing: 0.5px;">CARICA DOCUMENTI ORA</a>
+                        <p style="color: #999; font-size: 12px; margin-top: 15px; line-height: 1.5;">
+                            Puoi scattare le foto ai documenti o allegare i PDF<br>direttamente dal tuo smartphone cliccando sul tasto qui sopra.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td bgcolor="#f8f9fa" align="center" style="padding: 20px; border-top: 1px solid #eeeeee;">
+                        <p style="color: #999999; font-size: 11px; margin: 0; line-height: 1.5;">
+                            Questo è un messaggio automatico dal portale Istruttoria Credipass.<br>Si prega di non rispondere a questa email.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>`;
+
+            const response = await fetch('/api/send-email', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: [emailCliente],
+                    subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`,
+                    html: emailHtmlTemplate
+                })
+            });
+
+            if (response.ok) {
+                alert("✅ Richiesta di integrazione inviata con successo!");
+                location.reload();
+            } else {
+                const result = await response.json();
+                throw new Error(result.error || "Errore dal server email");
             }
-            alert("✅ Richiesta inviata!");
-            location.reload();
-        } catch(e) { alert("Errore"); btn.innerHTML = 'REINVIA'; }
+
+        } catch(e) { 
+            console.error("Errore completo:", e);
+            alert("❌ Errore durante l'invio:\n" + e.message); 
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> INVIA AL CLIENTE';
+            btn.disabled = false;
+        }
     }
 
-    // --- FUNZIONE SCARICA ZIP REALE ---
+    // --- DOWNLOAD ZIP REALE ---
     async function scaricaTuttoZip() {
         const btn = document.getElementById('btnZip');
         const originalText = btn.innerHTML;
@@ -250,19 +421,34 @@
         btn.disabled = true;
 
         const zip = new JSZip();
-        const listRef = storage.ref(`Fascicoli/${idCliente}`);
+        
+        const idNormale = idCliente; 
+        const idSpazi = idCliente.replace(/_/g, ' ').replace(/-/g, ' '); 
+        const idTrattini = idCliente.replace(/_/g, '-').replace(/ /g, '-');
+        
+        let folderReference = null;
+        const tentativi = [idNormale, idSpazi, idTrattini, idNormale.toLowerCase(), idSpazi.toLowerCase(), idTrattini.toLowerCase()];
+        const tentativiUnici = [...new Set(tentativi)]; 
+        
+        for (let variante of tentativiUnici) {
+            try {
+                let res = await storage.ref(`Fascicoli/${variante}`).listAll();
+                if (res.items.length > 0) {
+                    folderReference = res.items;
+                    break;
+                }
+            } catch(e) {} 
+        }
 
         try {
-            const res = await listRef.listAll();
-            if (res.items.length === 0) {
-                alert("Nessun file presente nel fascicolo.");
+            if (!folderReference || folderReference.length === 0) {
+                alert("Nessun file presente nel fascicolo da scaricare.");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
             }
 
-            // Scarica ogni file come Blob e aggiungilo allo ZIP
-            const downloadPromises = res.items.map(async (item) => {
+            const downloadPromises = folderReference.map(async (item) => {
                 const url = await item.getDownloadURL();
                 const response = await fetch(url);
                 const blob = await response.blob();
@@ -271,7 +457,6 @@
 
             await Promise.all(downloadPromises);
 
-            // Genera il file ZIP e avvia il download
             const content = await zip.generateAsync({ type: "blob" });
             saveAs(content, `Fascicolo_${idCliente}.zip`);
 
@@ -285,13 +470,22 @@
         }
     }
 
+    // --- ESITO REPORT IA ---
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const body = document.getElementById('aiBody');
-        body.innerHTML = 'Analisi in corso...';
-        const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Analisi non trovata."; return; }
-        body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
+        body.innerHTML = 'Analisi in corso... <i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
+            if(!snap.exists || !snap.data().praticaCompleta) { 
+                body.innerHTML = "Nessuna analisi IA ancora elaborata per questo cliente."; 
+                return; 
+            }
+            body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
+        } catch(e) {
+            body.innerHTML = "Impossibile recuperare il report al momento.";
+        }
     }
 </script>
 </body>
