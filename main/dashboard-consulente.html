@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
-    * { box-sizing: border-box; } /* FIX FUORI SQUADRA */
+    * { box-sizing: border-box; } 
     body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 1350px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #002d72; overflow: hidden; }
     
@@ -25,7 +25,7 @@
     .main-grid { display: grid; grid-template-columns: 1fr 420px; gap: 30px; padding: 30px; }
     @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
-    /* SINISTRA: DOCUMENTI CARICATI */
+    /* DOCUMENTI CARICATI */
     .doc-category { margin-bottom: 25px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
     .cat-header { background: #002d72; color: white; padding: 12px 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
     .cat-header i { color: #C99700; }
@@ -36,7 +36,7 @@
     .doc-filename { font-size: 10px; color: #999; display: block; margin-top: 2px; }
     .btn-view { background: #e9f0ff; color: #002d72; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 700; }
 
-    /* DESTRA: SIDEBAR */
+    /* SIDEBAR */
     .sidebar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; width: 100%; }
     .sidebar-card h3 { margin-top: 0; font-size: 16px; color: #002d72; font-weight: 700; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
     
@@ -87,7 +87,7 @@
             <div id="loading" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#002d72;"></i><p>Accesso al Cloud in corso...</p></div>
             <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div><div class="doc-list" id="list-ANAGRAFICA"></div></div>
             <div id="cat-REDDITO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div><div class="doc-list" id="list-REDDITO"></div></div>
-            <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-piggy-bank"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
+            <div id="cat-BANCA" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div><div class="doc-list" id="list-BANCA"></div></div>
             <div id="cat-IMMOBILE" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div><div class="doc-list" id="list-IMMOBILE"></div></div>
             <div id="cat-ALTRO" class="doc-category" style="display:none;"><div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro</div><div class="doc-list" id="list-ALTRO"></div></div>
         </div>
@@ -119,7 +119,7 @@
                     <div id="listaCarrello"><p style="text-align:center; color:#999; font-size:11px; margin:5px;">Checklist vuota</p></div>
                 </div>
 
-                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente (es: 'La foto è sfocata, per favore ricaricala in modo chiaro')"></textarea>
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente (es: 'La foto è sfocata, per favore ricaricala')"></textarea>
 
                 <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
                     <i class="fas fa-paper-plane"></i> INVIA AL CLIENTE
@@ -160,13 +160,7 @@
         'ALTRO': [{id:'integrazione1', n:"Richiesta Libera"}]
     };
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", 
-        authDomain: "consulenza-credipass.firebaseapp.com", 
-        projectId: "consulenza-credipass", 
-        storageBucket: "consulenza-credipass.firebasestorage.app" 
-    };
-    
+    const firebaseConfig = { apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4", authDomain: "consulenza-credipass.firebaseapp.com", projectId: "consulenza-credipass", storageBucket: "consulenza-credipass.firebasestorage.app" };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
     const storage = firebase.storage();
@@ -180,92 +174,47 @@
             document.getElementById('labelCliente').innerText = idCliente.replace(/_/g, ' ').replace(/-/g, ' ').toUpperCase();
             caricaDocumenti();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
-            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { 
-                if(doc.exists) emailCliente = doc.data().cliente_email || ""; 
-            });
+            db.collection("pratiche_mutuo").doc(idCliente).get().then(doc => { if(doc.exists) emailCliente = doc.data().cliente_email || ""; });
         }
     };
 
-    // --- SUPER SCANNER FIREBASE ---
     async function caricaDocumenti() {
         const loadingBox = document.getElementById('loading');
-        
-        // Crea le varianti del nome per trovare la cartella a prescindere da spazi/trattini
         const idNormale = idCliente; 
         const idSpazi = idCliente.replace(/_/g, ' ').replace(/-/g, ' '); 
         const idTrattini = idCliente.replace(/_/g, '-').replace(/ /g, '-');
-        
         let fileTrovati = [];
         const tentativi = [idNormale, idSpazi, idTrattini, idNormale.toLowerCase(), idSpazi.toLowerCase(), idTrattini.toLowerCase()];
         const tentativiUnici = [...new Set(tentativi)]; 
-        
         for (let variante of tentativiUnici) {
             try {
                 let res = await storage.ref(`Fascicoli/${variante}`).listAll();
-                if (res.items.length > 0) {
-                    fileTrovati = res.items;
-                    break;
-                }
+                if (res.items.length > 0) { fileTrovati = res.items; break; }
             } catch(e) { } 
         }
-
         if(loadingBox) loadingBox.style.display = 'none';
-
         if (fileTrovati.length === 0) {
-            document.getElementById('documentiArea').innerHTML += `
-                <div style="padding:20px; background:#fffcf5; border:1px solid #C99700; border-radius:8px; text-align:center; margin-bottom:20px;">
-                    <i class="fas fa-exclamation-triangle" style="color:#C99700; font-size:24px; margin-bottom:10px;"></i><br>
-                    <b style="color:#002d72;">Nessun file trovato nel Fascicolo.</b><br>
-                    <span style="font-size:12px; color:#666;">Verifica che il cliente abbia salvato i file nell'Area di Upload.</span>
-                </div>`;
+            document.getElementById('documentiArea').innerHTML += `<div style="padding:20px; text-align:center; color:#666;">Nessun file trovato.</div>`;
             return;
         }
-
         for (let item of fileTrovati) {
             const url = await item.getDownloadURL();
             const fn = item.name;
             const fnLow = fn.toLowerCase();
-            
-            let cat = 'ALTRO'; 
-            let nomeBello = fn;
-            
-            // Smistamento categorie tramite parole chiave nel nome del file
-            if(fnLow.includes('ci1') || fnLow.includes('ts1') || fnLow.includes('ci2') || fnLow.includes('ts2') || fnLow.includes('residenza') || fnLow.includes('matrimonio') || fnLow.includes('identita') || fnLow.includes('tessera') || fnLow.includes('isee')) {
-                cat = 'ANAGRAFICA';
-            } else if(fnLow.includes('bustepaga') || fnLow.includes('cud') || fnLow.includes('unici') || fnLow.includes('obism') || fnLow.includes('cedolino') || fnLow.includes('reddito') || fnLow.includes('f24') || fnLow.includes('iva') || fnLow.includes('contratto')) {
-                cat = 'REDDITO';
-            } else if(fnLow.includes('ec1') || fnLow.includes('mov1') || fnLow.includes('ec2') || fnLow.includes('mov2') || fnLow.includes('estratto') || fnLow.includes('conto') || fnLow.includes('titoli')) {
-                cat = 'BANCA';
-            } else if(fnLow.includes('atto') || fnLow.includes('preliminare') || fnLow.includes('planimetria') || fnLow.includes('ape') || fnLow.includes('visura') || fnLow.includes('successione')) {
-                cat = 'IMMOBILE';
-            }
-
-            for (const [key, value] of Object.entries(TRADUZIONI)) {
-                if (fnLow.startsWith(key) || fnLow.includes('_' + key)) {
-                    nomeBello = value; break;
-                }
-            }
-
+            let cat = 'ALTRO'; let nomeBello = fn;
+            if(fnLow.includes('ci1') || fnLow.includes('ts1') || fnLow.includes('ci2') || fnLow.includes('ts2') || fnLow.includes('residenza') || fnLow.includes('matrimonio') || fnLow.includes('isee')) cat = 'ANAGRAFICA';
+            else if(fnLow.includes('bustepaga') || fnLow.includes('cud') || fnLow.includes('unici') || fnLow.includes('f24') || fnLow.includes('iva')) cat = 'REDDITO';
+            else if(fnLow.includes('ec1') || fnLow.includes('mov1') || fnLow.includes('conto')) cat = 'BANCA';
+            else if(fnLow.includes('atto') || fnLow.includes('planimetria') || fnLow.includes('ape') || fnLow.includes('visura')) cat = 'IMMOBILE';
+            for (const [key, value] of Object.entries(TRADUZIONI)) { if (fnLow.includes(key)) { nomeBello = value; break; } }
             const catContainer = document.getElementById(`cat-${cat}`);
             const listContainer = document.getElementById(`list-${cat}`);
-            
             if(catContainer && listContainer) {
                 catContainer.style.display = 'block';
-                listContainer.innerHTML += `
-                    <div class="doc-item">
-                        <div class="doc-info">
-                            <i class="fas fa-file-alt doc-icon" style="color:#002d72; margin-right:10px; font-size:18px;"></i>
-                            <div>
-                                <span class="doc-name">${nomeBello}</span>
-                                <span class="doc-filename">${fn}</span>
-                            </div>
-                        </div>
-                        <a href="${url}" target="_blank" class="btn-view">VEDI</a>
-                    </div>`;
+                listContainer.innerHTML += `<div class="doc-item"><div class="doc-info"><i class="fas fa-file-pdf doc-icon" style="color:#d93025; margin-right:10px;"></i><div><span class="doc-name">${nomeBello}</span><span class="doc-filename">${fn}</span></div></div><a href="${url}" target="_blank" class="btn-view">VEDI</a></div>`;
             }
         }
     }
-    // --- FINE SUPER SCANNER ---
 
     function cambiaCategoria(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -282,42 +231,19 @@
 
     function renderCarrello() {
         const c = document.getElementById('listaCarrello');
-        document.getElementById('btnInvia').disabled = carrello.length === 0;
-        document.getElementById('btnInvia').style.opacity = carrello.length === 0 ? 0.5 : 1;
+        document.getElementById('btn_invia_cliente').disabled = carrello.length === 0; // Fix ID
         c.innerHTML = carrello.map(id => `<div class="checklist-item"><span>${TRADUZIONI[id] || id}</span><i class="fas fa-trash" onclick="carrello=carrello.filter(x=>x!=='${id}');renderCarrello();" style="color:red;cursor:pointer;"></i></div>`).join('');
     }
 
-    // --- FUNZIONE INVIO EMAIL CON LAYOUT A TABELLE ---
+    // --- FUNZIONE INVIO EMAIL CON LAYOUT A TABELLE PROFESSIONALE ---
     async function inviaIntegrazione() {
         const nota = document.getElementById('notaIntegrazione').value;
         const btn = document.getElementById('btnInvia');
-        
-        if (!emailCliente || emailCliente === "") {
-            alert("⚠️ Errore: Non ho trovato l'email del cliente nel database. Impossibile inviare la notifica.");
-            return;
-        }
-
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO IN CORSO...';
+        if (!emailCliente) { alert("Email cliente mancante."); return; }
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
         btn.disabled = true;
 
-        let updates = { 
-            richiestaIntegrazioneAttiva: true, 
-            notaPerCliente: nota, 
-            elencoDocRichiesti: carrello,
-            ultimoInvioNotifica: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        carrello.forEach(id => { 
-            updates[id] = false; 
-            updates[`row_doc_${id}`] = false; 
-        });
-
-        try {
-            await db.collection("pratiche_mutuo").doc(idCliente).set(updates, {merge:true});
-
-            const linkCliente = `${window.location.origin}/upload.html?id=${idCliente}`;
-            
-            const emailHtmlTemplate = `<!DOCTYPE html>
+        const emailHtmlTemplate = `<!DOCTYPE html>
 <html lang="it">
 <body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: Arial, Helvetica, sans-serif;">
 <table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 10px;">
@@ -367,17 +293,12 @@
                 ` : ''}
                 <tr>
                     <td align="center" style="padding: 30px;">
-                        <a href="${linkCliente}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; letter-spacing: 0.5px;">CARICA DOCUMENTI ORA</a>
-                        <p style="color: #999; font-size: 12px; margin-top: 15px; line-height: 1.5;">
-                            Puoi scattare le foto ai documenti o allegare i PDF<br>direttamente dal tuo smartphone cliccando sul tasto qui sopra.
-                        </p>
+                        <a href="${window.location.origin}/upload.html?id=${idCliente}" style="background-color: #C99700; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">CARICA DOCUMENTI ORA</a>
                     </td>
                 </tr>
                 <tr>
                     <td bgcolor="#f8f9fa" align="center" style="padding: 20px; border-top: 1px solid #eeeeee;">
-                        <p style="color: #999999; font-size: 11px; margin: 0; line-height: 1.5;">
-                            Questo è un messaggio automatico dal portale Istruttoria Credipass.<br>Si prega di non rispondere a questa email.
-                        </p>
+                        <p style="color: #999999; font-size: 11px; margin: 0;">Messaggio automatico dal portale Istruttoria Credipass.</p>
                     </td>
                 </tr>
             </table>
@@ -387,105 +308,39 @@
 </body>
 </html>`;
 
-            const response = await fetch('/api/send-email', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    to: [emailCliente],
-                    subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`,
-                    html: emailHtmlTemplate
-                })
-            });
-
-            if (response.ok) {
-                alert("✅ Richiesta di integrazione inviata con successo!");
-                location.reload();
-            } else {
-                const result = await response.json();
-                throw new Error(result.error || "Errore dal server email");
-            }
-
-        } catch(e) { 
-            console.error("Errore completo:", e);
-            alert("❌ Errore durante l'invio:\n" + e.message); 
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> INVIA AL CLIENTE';
-            btn.disabled = false;
-        }
+        try {
+            await db.collection("pratiche_mutuo").doc(idCliente).set({ richiestaIntegrazioneAttiva: true, notaPerCliente: nota, elencoDocRichiesti: carrello }, {merge:true});
+            await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: [emailCliente], subject: `Integrazione Documenti: ${idCliente.replace(/_/g, ' ')}`, html: emailHtmlTemplate })});
+            alert("✅ Inviata!"); location.reload();
+        } catch(e) { alert("Errore"); btn.disabled = false; btn.innerHTML = 'REINVIA'; }
     }
 
-    // --- DOWNLOAD ZIP REALE ---
     async function scaricaTuttoZip() {
         const btn = document.getElementById('btnZip');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zipping...';
-        btn.disabled = true;
-
+        btn.innerHTML = 'Zipping...'; btn.disabled = true;
         const zip = new JSZip();
-        
-        const idNormale = idCliente; 
-        const idSpazi = idCliente.replace(/_/g, ' ').replace(/-/g, ' '); 
-        const idTrattini = idCliente.replace(/_/g, '-').replace(/ /g, '-');
-        
-        let folderReference = null;
-        const tentativi = [idNormale, idSpazi, idTrattini, idNormale.toLowerCase(), idSpazi.toLowerCase(), idTrattini.toLowerCase()];
-        const tentativiUnici = [...new Set(tentativi)]; 
-        
-        for (let variante of tentativiUnici) {
-            try {
-                let res = await storage.ref(`Fascicoli/${variante}`).listAll();
-                if (res.items.length > 0) {
-                    folderReference = res.items;
-                    break;
-                }
-            } catch(e) {} 
-        }
-
         try {
-            if (!folderReference || folderReference.length === 0) {
-                alert("Nessun file presente nel fascicolo da scaricare.");
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                return;
-            }
-
-            const downloadPromises = folderReference.map(async (item) => {
+            const res = await storage.ref(`Fascicoli/${idCliente}`).listAll();
+            const downloadPromises = res.items.map(async (item) => {
                 const url = await item.getDownloadURL();
                 const response = await fetch(url);
                 const blob = await response.blob();
                 zip.file(item.name, blob);
             });
-
             await Promise.all(downloadPromises);
-
             const content = await zip.generateAsync({ type: "blob" });
             saveAs(content, `Fascicolo_${idCliente}.zip`);
-
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        } catch (e) {
-            console.error(e);
-            alert("Errore durante la creazione dello ZIP.");
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+            btn.innerHTML = 'SCARICA ARCHIVIO ZIP'; btn.disabled = false;
+        } catch (e) { alert("Errore"); btn.disabled = false; }
     }
 
-    // --- ESITO REPORT IA ---
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
         const body = document.getElementById('aiBody');
-        body.innerHTML = 'Analisi in corso... <i class="fas fa-spinner fa-spin"></i>';
-        
-        try {
-            const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
-            if(!snap.exists || !snap.data().praticaCompleta) { 
-                body.innerHTML = "Nessuna analisi IA ancora elaborata per questo cliente."; 
-                return; 
-            }
-            body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
-        } catch(e) {
-            body.innerHTML = "Impossibile recuperare il report al momento.";
-        }
+        body.innerHTML = 'Analisi...';
+        const snap = await db.collection("analisi_deliberante").doc(idCliente).get();
+        if(!snap.exists || !snap.data().praticaCompleta) { body.innerHTML = "Non trovato."; return; }
+        body.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#f8f9fa; padding:15px; border-radius:10px;">${snap.data().praticaCompleta.practiceSummary.reportTestuale}</pre>`;
     }
 </script>
 </body>
