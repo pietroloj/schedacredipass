@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
@@ -24,6 +25,7 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.firestore();
 </script>
+
 <style>
     body { font-family: 'Poppins', sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; color: #333; display: flex; justify-content: center; }
     .app-container { background-color: #f8f9fa; width: 100%; max-width: 1400px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; border: 8px solid #333; }
@@ -382,7 +384,6 @@
     color: #002d72;
 }
 
-
 .btn-archive-circle:hover::after {
     opacity: 1;
     visibility: visible;
@@ -592,7 +593,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </div>
         </div>
 
-        <div class="logo-area-stack" style="margin-right: 60px;"> <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
+        <div class="logo-area-stack" style="margin-right: 60px;"> 
+            <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
             <img src="/images/logo-20anni.png" class="logo-anniv" alt="20 Anni">
         </div>
 
@@ -817,7 +819,6 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                         <input type="radio" id="imp_altra" name="imposta" value="Seconda/Altro"><label for="imp_altra">Altra Finalità (2%)</label>
                     </div>
                 </div>
-
                 <div class="separated-box">
                     <div class="separated-box-title">Mediazione Credipass</div>
                     <div class="toggle-group blue" style="flex-direction: column; gap: 5px;">
@@ -830,7 +831,6 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                         </div>
                     </div>
                 </div>
-
                 <div class="separated-box" style="background:#e9ecef; justify-content:center; text-align:center; font-weight:bold; color:#002d72; padding:10px; border-radius:6px;">
                     CERTIFICAZIONE DOCUMENTALE<br>€ 76,00 per richiedente
                 </div>
@@ -844,8 +844,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="btn-wrapper">
             <button class="btn-action btn-pdf" id="btn_stampa_pdf"><i class="fas fa-file-pdf"></i> 1. SALVA E SCARICA IL PDF</button>
-            <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP</button>
-            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL CON AREA CLIENTI</button>
+            <button class="btn-action btn-wa" id="btn_elabora"><i class="fab fa-whatsapp"></i> 2. CREA MESSAGGIO WHATSAPP E SALVA</button>
+            <button class="btn-action btn-email" id="btn_email"><i class="fas fa-envelope"></i> 3. INVIA EMAIL E SALVA DATI PER L'IA</button>
         </div>
     </div>
 </div>
@@ -947,18 +947,42 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- AUTOFIL DATA E LUOGO (CON SALVAGENTE) ---
     document.getElementById('campo_data').value = new Date().toLocaleDateString('it-IT');
 
-    if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
-                .then(response => response.json())
-                .then(data => {
-                    const citta = data.city || data.locality || data.principalSubdivision;
-                    if (citta) document.getElementById('campo_luogo').value = citta;
-                }).catch(e => console.log(e));
-        }, function() {});
+    function inserisciCitta(citta) {
+        const campo = document.getElementById('campo_luogo');
+        if (campo && !campo.value && citta) campo.value = citta;
     }
+
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Tenta la traduzione primaria (il tuo GPS originale)
+                fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=it`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const citta = data.city || data.locality || data.principalSubdivision;
+                        if (citta) {
+                            inserisciCitta(citta);
+                        } else {
+                            // Se l'API restituisce vuoto, passa al Piano B
+                            throw new Error("Città non trovata dall'API primaria");
+                        }
+                    })
+                    .catch(e => {
+                        // Piano B: Usa l'IP se il traduttore GPS fa i capricci
+                        fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>inserisciCitta(d.city)).catch(err=>console.log(err));
+                    });
+            }, 
+            function(error) {
+                // Se rifiuti il GPS o ci mette troppo tempo, usa subito l'IP
+                fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>inserisciCitta(d.city)).catch(err=>console.log(err));
+            },
+            { enableHighAccuracy: true, timeout: 6000 }
+        );
+    }
+    // --- FINE AUTOFIL ---
 
     const sitRadios = document.querySelectorAll('input[name="sit_abitativa"]');
     const boxAffitto = document.getElementById('dettagli_affitto');
@@ -1006,45 +1030,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (s.startsWith('39')) return s;
         return '39' + s;
     }
-    // --- NUOVA FUNZIONE: SALVA DATI SCHEDA NEL DATABASE ---
-    async function sincronizzaSchedaConDatabase() {
-        const clienteNome = document.getElementById('cliente_nome').value.trim();
-        if (!clienteNome) return; // Non salva se il nome è vuoto
 
-        // Crea l'ID cliente pulito e aggiunge il nome del secondo richiedente (se c'è)
-        const cliente2Nome = document.getElementById('cliente2_nome').value.trim();
-        let idBase = slugifyCredipassPart(clienteNome);
-        if (cliente2Nome) {
-            idBase += " - " + cliente2Nome;
-        }
-
-        const datiScheda = {
-            cliente_email: document.getElementById('cliente_email').value || "",
-            cliente_cell: document.getElementById('cliente_cell').value || "",
-            importo_richiesto: document.getElementById('mutuo_importo').value || "0",
-            valore_immobile: document.getElementById('immobile_valore').value || "0",
-            reddito_richiedente_1: document.getElementById('cliente_reddito').value || "0",
-            reddito_richiedente_2: document.getElementById('cliente2_reddito').value || "0",
-            durata_mutuo: document.getElementById('mutuo_durata').value || "0",
-            finalita: S('fin', ''),
-            prodotto: S('prodotto', ''),
-            tasso: S('tasso', ''),
-            ultimo_aggiornamento_scheda: firebase.firestore.FieldValue.serverTimestamp() // Se ti dà errore, togli questa riga, ma non dovrebbe.
-        };
-
-        try {
-            // Nota: devi avere 'db' inizializzato. Aggiungiamo il controllo.
-            if(typeof db !== 'undefined') {
-                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
-                console.log("✅ Dati sincronizzati per l'IA");
-            } else {
-                console.log("Firebase non è inizializzato in questa pagina. Inizializzalo se vuoi salvare i dati.");
-            }
-        } catch (e) {
-            console.error("❌ Errore salvataggio dati:", e);
-        }
-    }
-    // --- FINE NUOVA FUNZIONE ---
     function getClientFirstName(fullName) {
         const cleaned = String(fullName || '').trim();
         if (!cleaned) return 'Cliente';
@@ -1066,7 +1052,6 @@ window.addEventListener('DOMContentLoaded', () => {
         return types.includes('AUTONOMO');
     }
 
-    // --- NUOVA LOGICA CENTRALIZZATA PER LISTE DOCUMENTI (URL E TESTO) ---
     function generateDocumentList() {
         const nome1Val = V('cliente_nome', 'Cliente');
         const nome2Val = V('cliente2_nome', '-');
@@ -1879,61 +1864,32 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Crea l'ID cliente pulito e aggiunge il nome del secondo richiedente (se c'è)
         const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
-        let idBase = slugifyCredipassPart(clienteNome);
+        let idBase = window.slugifyCredipassPart ? window.slugifyCredipassPart(clienteNome) : clienteNome.toLowerCase().replace(/\s+/g, '-');
         if (cliente2Nome) {
             idBase += " - " + cliente2Nome;
         }
 
-        const datiScheda = {
-            cliente_email: document.getElementById('cliente_email')?.value || "",
-            cliente_cell: document.getElementById('cliente_cell')?.value || "",
-            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
-            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
-            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
-            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
-            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
-            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
-            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
-            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
+        const safeVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value : "";
         };
 
-        try {
-            // Controlla se Firebase è inizializzato nella index.html
-            if (typeof db !== 'undefined') {
-                datiScheda.ultimo_aggiornamento_scheda = firebase.firestore.FieldValue.serverTimestamp();
-                await db.collection("pratiche_mutuo").doc(idBase).set(datiScheda, { merge: true });
-                console.log("✅ Dati sincronizzati per l'IA");
-            } else {
-                console.log("⚠️ Firebase non inizializzato. I dati non sono stati salvati nel cloud.");
-            }
-        } catch (e) {
-            console.error("❌ Errore salvataggio dati:", e);
-        }
-    }
-    // --- FINE NUOVA FUNZIONE ---
-
-    // --- INIZIO NUOVA FUNZIONE: SALVATAGGIO AI ---
-    async function sincronizzaSchedaConDatabase() {
-        const clienteNome = document.getElementById('cliente_nome')?.value.trim();
-        if (!clienteNome) return; 
-
-        const cliente2Nome = document.getElementById('cliente2_nome')?.value.trim();
-        let idBase = slugifyCredipassPart(clienteNome);
-        if (cliente2Nome) {
-            idBase += " - " + cliente2Nome;
-        }
+        const safeRadio = (name) => {
+            const el = document.querySelector('input[name="' + name + '"]:checked');
+            return el ? el.value : "";
+        };
 
         const datiScheda = {
-            cliente_email: document.getElementById('cliente_email')?.value || "",
-            cliente_cell: document.getElementById('cliente_cell')?.value || "",
-            importo_richiesto: document.getElementById('mutuo_importo')?.value || "0",
-            valore_immobile: document.getElementById('immobile_valore')?.value || "0",
-            reddito_richiedente_1: document.getElementById('cliente_reddito')?.value || "0",
-            reddito_richiedente_2: document.getElementById('cliente2_reddito')?.value || "0",
-            durata_mutuo: document.getElementById('mutuo_durata')?.value || "0",
-            finalita: document.querySelector('input[name="fin"]:checked')?.value || "",
-            prodotto: document.querySelector('input[name="prodotto"]:checked')?.value || "",
-            tasso: document.querySelector('input[name="tasso"]:checked')?.value || ""
+            cliente_email: safeVal('cliente_email'),
+            cliente_cell: safeVal('cliente_cell'),
+            importo_richiesto: safeVal('mutuo_importo') || "0",
+            valore_immobile: safeVal('immobile_valore') || "0",
+            reddito_richiedente_1: safeVal('cliente_reddito') || "0",
+            reddito_richiedente_2: safeVal('cliente2_reddito') || "0",
+            durata_mutuo: safeVal('mutuo_durata') || "0",
+            finalita: safeRadio('fin'),
+            prodotto: safeRadio('prodotto'),
+            tasso: safeRadio('tasso')
         };
 
         try {
@@ -1956,7 +1912,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // SALVATAGGIO PRIMA DI APRIRE WHATSAPP
+        // 🚀 SALVATAGGIO PRIMA DI APRIRE MODAL WHATSAPP
         await sincronizzaSchedaConDatabase();
         
         openWaChoiceModal();
@@ -2032,34 +1988,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('email-notes-modal').style.display = 'none';
     });
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Errore durante l’invio email');
-
-            alert('Email inviata correttamente al cliente.');
-        } catch (err) {
-            console.error(err);
-            alert('Errore invio email: ' + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    }
-
-    document.getElementById('btn_email').addEventListener('click', async () => {
-        // SALVATAGGIO PRIMA DI APRIRE MODAL EMAIL
-        await sincronizzaSchedaConDatabase();
-        
-        document.getElementById('email-notes-modal').style.display = 'flex';
-    });
-
-    document.getElementById('btn_email_si').addEventListener('click', () => eseguiInvioEmail(true));
-    document.getElementById('btn_email_no').addEventListener('click', () => eseguiInvioEmail(false));
-    document.getElementById('btn_email_cancel').addEventListener('click', () => {
-        document.getElementById('email-notes-modal').style.display = 'none';
-    });
-
     const setupPol = (id, target, type) => {
-        document.getElementById(id).addEventListener('change', function() {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('change', function() {
             const sel = document.getElementById(target);
             sel.innerHTML = '';
             let opts = {};
@@ -2080,10 +2012,10 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             (opts[this.value] || [' ']).forEach(o => {
-                const el = document.createElement('option');
-                el.text = o;
-                el.value = o;
-                sel.add(el);
+                const elOpt = document.createElement('option');
+                elOpt.text = o;
+                elOpt.value = o;
+                sel.add(elOpt);
             });
             sel.value = opts[this.value] ? opts[this.value][0] : ' ';
         });
@@ -2091,6 +2023,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     setupPol('tipo_incendio', 'importo_incendio', 'incendio');
     setupPol('tipo_Personale', 'importo_Personale', 'Personale');
+
 });
 </script>
 </body>
