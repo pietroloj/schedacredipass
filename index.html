@@ -341,8 +341,6 @@ hr {
     border-color: #002d72;
 }
 
-/* STATO CIVILE */
-
 .stato-civile-options {
     display: grid;
     grid-template-columns: repeat(5, minmax(0,1fr));
@@ -383,8 +381,6 @@ hr {
     border-color: #C99700;
 }
 
-/* IMPOSTA SOSTITUTIVA */
-
 .imposta-options {
     display: grid;
     grid-template-columns: 1fr;
@@ -417,8 +413,6 @@ hr {
     color: white;
     border-color: #002d72;
 }
-
-/* MEDIAZIONE */
 
 .mediazione-wrapper {
     display: flex;
@@ -486,8 +480,6 @@ hr {
     pointer-events: none;
 }
 
-/* CF */
-
 .cf-input {
     text-transform: uppercase;
     font-weight: 700;
@@ -510,8 +502,6 @@ hr {
     color: #dc3545;
     font-weight: 600;
 }
-
-/* FINANZIAMENTI / FITTI */
 
 .finanziamento-item,
 .fitto-item {
@@ -579,8 +569,6 @@ hr {
     color: #8a6800;
 }
 
-/* BOTTONI */
-
 .btn-aggiorna {
     margin-top: 8px;
     background: rgba(201,151,0,.10);
@@ -646,8 +634,6 @@ hr {
     background: #28a745;
 }
 
-/* MODALI */
-
 .modal-overlay {
     display: none;
     position: fixed;
@@ -712,8 +698,6 @@ hr {
     background: #e9ecef;
     color: #333;
 }
-
-/* PDF */
 
 #custom-preview-modal {
     display: none;
@@ -876,8 +860,6 @@ hr {
     word-break: break-word;
 }
 
-/* SOLO PER PDF: FITTI E FINANZIAMENTI UNO SOTTO L'ALTRO */
-
 #p_finanziamenti_dettaglio,
 #p_fitti_dettaglio {
     white-space: pre-line;
@@ -1019,24 +1001,15 @@ hr {
 
         <div class="wa-modal-buttons">
 
-            <button
-                class="wa-option-btn wa-option-diretto"
-                id="btn_email_si"
-            >
+            <button class="wa-option-btn wa-option-diretto" id="btn_email_si">
                 Sì, includile
             </button>
 
-            <button
-                class="wa-option-btn wa-option-backoffice"
-                id="btn_email_no"
-            >
+            <button class="wa-option-btn wa-option-backoffice" id="btn_email_no">
                 No, omettile
             </button>
 
-            <button
-                class="wa-option-btn wa-option-cancel"
-                id="btn_email_cancel"
-            >
+            <button class="wa-option-btn wa-option-cancel" id="btn_email_cancel">
                 Annulla
             </button>
 
@@ -1058,11 +1031,7 @@ hr {
 
             <div class="p-sidebar">
 
-                <img
-                    src="/images/logo-credipass.png"
-                    class="p-logo"
-                    crossorigin="anonymous"
-                >
+                <img src="/images/logo-credipass.png" class="p-logo" crossorigin="anonymous">
 
                 <div class="p-side-block">
 
@@ -1138,10 +1107,7 @@ hr {
                         NOTE
                     </div>
 
-                    <div
-                        class="p-notes"
-                        id="p_note"
-                    ></div>
+                    <div class="p-notes" id="p_note"></div>
 
                 </div>
 
@@ -1153,22 +1119,15 @@ hr {
                     SCHEDA DI CONSULENZA
                 </h1>
 
-                <span
-                    class="p-titolo-nomi"
-                    id="p_titolo_nomi"
-                ></span>
+                <span class="p-titolo-nomi" id="p_titolo_nomi"></span>
 
-                <div class="p-section-title">
-                    ANAGRAFICA
-                </div>
+                <div class="p-section-title">ANAGRAFICA</div>
 
                 <div class="p-grid-2">
 
                     <div class="p-card">
 
-                        <div class="p-card-title">
-                            1° RICHIEDENTE
-                        </div>
+                        <div class="p-card-title">1° RICHIEDENTE</div>
 
                         <div class="p-data-row">
                             <span>Nome</span>
@@ -1189,9 +1148,7 @@ hr {
 
                     <div class="p-card">
 
-                        <div class="p-card-title">
-                            2° RICHIEDENTE
-                        </div>
+                        <div class="p-card-title">2° RICHIEDENTE</div>
 
                         <div class="p-data-row">
                             <span>Nome</span>
@@ -1212,9 +1169,7 @@ hr {
 
                 </div>
 
-                <div class="p-section-title">
-                    STATO CIVILE
-                </div>
+                <div class="p-section-title">STATO CIVILE</div>
 
                 <div class="p-grid-2">
 
@@ -1258,9 +1213,7 @@ hr {
 
                 </div>
 
-                <div class="p-section-title">
-                    REDDITI
-                </div>
+                <div class="p-section-title">REDDITI</div>
 
                 <div class="p-card">
 
@@ -1285,9 +1238,7 @@ hr {
 
                 </div>
 
-                <div class="p-section-title">
-                    MUTUO RICHIESTO
-                </div>
+                <div class="p-section-title">MUTUO RICHIESTO</div>
 
                 <div class="p-card p-card-gold">
 
@@ -1327,9 +1278,7 @@ hr {
 
                 </div>
 
-                <div class="p-section-title">
-                    IMPEGNI FINANZIARI
-                </div>
+                <div class="p-section-title">IMPEGNI FINANZIARI</div>
 
                 <div class="p-card">
 
@@ -1350,14 +1299,9 @@ hr {
 
                 </div>
 
-                <div class="p-section-title">
-                    NOTE
-                </div>
+                <div class="p-section-title">NOTE</div>
 
-                <div
-                    class="p-notes-box"
-                    id="p_note_box_text"
-                ></div>
+                <div class="p-notes-box" id="p_note_box_text"></div>
 
                 <div class="p-footer">
                     Generato il
@@ -1380,34 +1324,19 @@ hr {
 
         <div class="ref-photo-container">
 
-            <img
-                id="referente_foto_preview"
-                src=""
-            >
+            <img id="referente_foto_preview" src="">
 
-            <i
-                id="referente_foto_placeholder"
-                class="fas fa-user-tie"
-            ></i>
+            <i id="referente_foto_placeholder" class="fas fa-user-tie"></i>
 
         </div>
 
         <div class="header-box">
 
-            <span class="ruolo">
-                Referente Consulenza
-            </span>
+            <span class="ruolo">Referente Consulenza</span>
 
-            <input
-                type="text"
-                id="campo_referente"
-                class="header-editable"
-                value="PIETRO LO IACONO"
-            >
+            <input type="text" id="campo_referente" class="header-editable" value="PIETRO LO IACONO">
 
-            <span class="ruolo" style="margin-top:5px">
-                Sede / Indirizzo
-            </span>
+            <span class="ruolo" style="margin-top:5px">Sede / Indirizzo</span>
 
             <textarea
                 id="campo_indirizzo"
@@ -1416,23 +1345,11 @@ hr {
             >VIA MARTIRI DEL DISSENSO 99/101
 SANTA MARIA CAPUA VETERE (CE)</textarea>
 
-            <span class="ruolo" style="margin-top:5px">
-                Email e Contatti
-            </span>
+            <span class="ruolo" style="margin-top:5px">Email e Contatti</span>
 
-            <input
-                type="text"
-                id="campo_email"
-                class="header-editable info-sub"
-                value="pietro.loiacono@credipass.it"
-            >
+            <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
 
-            <input
-                type="text"
-                id="campo_cellulare"
-                class="header-editable info-sub"
-                value="3925701385"
-            >
+            <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
 
         </div>
 
@@ -1440,67 +1357,29 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
     <div class="header-box" style="max-width:450px">
 
-        <span class="ruolo">
-            Email Automazione
-        </span>
+        <span class="ruolo">Email Automazione</span>
 
-        <input
-            type="text"
-            id="campo_email_auto"
-            class="header-editable info-sub"
-            value="segreteria.passaretti@credipass.it"
-        >
+        <input type="text" id="campo_email_auto" class="header-editable info-sub" value="segreteria.passaretti@credipass.it">
 
-        <span class="ruolo" style="margin-top:8px">
-            Email Agenzia Immobiliare
-        </span>
+        <span class="ruolo" style="margin-top:8px">Email Agenzia Immobiliare</span>
 
-        <input
-            type="text"
-            id="campo_email_agenzia"
-            class="header-editable info-sub"
-            value=""
-        >
+        <input type="text" id="campo_email_agenzia" class="header-editable info-sub" value="">
 
-        <span class="ruolo" style="margin-top:8px">
-            WhatsApp Automazione
-        </span>
+        <span class="ruolo" style="margin-top:8px">WhatsApp Automazione</span>
 
-        <input
-            type="text"
-            id="campo_wa_auto"
-            class="header-editable info-sub"
-            value="393760552826"
-        >
+        <input type="text" id="campo_wa_auto" class="header-editable info-sub" value="393760552826">
 
         <div style="margin-top:12px">
 
-            <span class="ruolo" style="color:#C99700">
-                Foto Profilo
-            </span>
+            <span class="ruolo" style="color:#C99700">Foto Profilo</span>
 
             <div style="display:flex;gap:5px">
 
-                <input
-                    type="text"
-                    id="ref_provincia"
-                    class="header-editable info-sub"
-                    placeholder="Provincia"
-                >
+                <input type="text" id="ref_provincia" class="header-editable info-sub" placeholder="Provincia">
 
-                <input
-                    type="text"
-                    id="ref_nome"
-                    class="header-editable info-sub"
-                    placeholder="Nome"
-                >
+                <input type="text" id="ref_nome" class="header-editable info-sub" placeholder="Nome">
 
-                <input
-                    type="text"
-                    id="ref_cognome"
-                    class="header-editable info-sub"
-                    placeholder="Cognome"
-                >
+                <input type="text" id="ref_cognome" class="header-editable info-sub" placeholder="Cognome">
 
             </div>
 
@@ -1518,24 +1397,15 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
     <div class="logo-area-stack">
 
-        <img
-            src="/images/logo-credipass.png"
-            class="logo-main"
-        >
+        <img src="/images/logo-credipass.png" class="logo-main">
 
-        <img
-            src="/images/logo-20anni.png"
-            class="logo-anniv"
-        >
+        <img src="/images/logo-20anni.png" class="logo-anniv">
 
     </div>
 
     <div class="header-actions">
 
-        <a
-            href="main/ricerca-clienti.html"
-            class="btn-archive-circle"
-        >
+        <a href="main/ricerca-clienti.html" class="btn-archive-circle">
             <i class="fas fa-folder-open"></i>
         </a>
 
@@ -1552,29 +1422,13 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 <div class="grid-2" style="margin-bottom:20px">
 
     <div class="form-group">
-
-        <label>
-            Luogo Incontro
-        </label>
-
-        <input
-            type="text"
-            id="campo_luogo"
-        >
-
+        <label>Luogo Incontro</label>
+        <input type="text" id="campo_luogo">
     </div>
 
     <div class="form-group">
-
-        <label>
-            Data
-        </label>
-
-        <input
-            type="text"
-            id="campo_data"
-        >
-
+        <label>Data</label>
+        <input type="text" id="campo_data">
     </div>
 
 </div>
@@ -1590,9 +1444,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                1° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">1° RICHIEDENTE</div>
 
             <div class="grid-2">
 
@@ -1611,14 +1463,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <div class="grid-3">
 
                 <div class="form-group">
-
                     <label>Data di nascita</label>
-
-                    <input
-                        type="date"
-                        id="cliente_data_nascita"
-                    >
-
+                    <input type="date" id="cliente_data_nascita">
                 </div>
 
                 <div class="form-group">
@@ -1626,39 +1472,20 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                     <label>Sesso</label>
 
                     <select id="cliente_sesso">
-
-                        <option value="">
-                            - Seleziona -
-                        </option>
-
-                        <option value="M">
-                            Maschio
-                        </option>
-
-                        <option value="F">
-                            Femmina
-                        </option>
-
+                        <option value="">- Seleziona -</option>
+                        <option value="M">Maschio</option>
+                        <option value="F">Femmina</option>
                     </select>
 
                 </div>
 
                 <div class="form-group">
 
-                    <label>
-                        Comune / Stato di nascita
-                    </label>
+                    <label>Comune / Stato di nascita</label>
 
-                    <input
-                        type="text"
-                        id="cliente_comune_nascita"
-                        placeholder="Es. Caserta"
-                    >
+                    <input type="text" id="cliente_comune_nascita" placeholder="Es. Caserta">
 
-                    <div
-                        id="cliente_comune_status"
-                        class="comune-status"
-                    ></div>
+                    <div id="cliente_comune_status" class="comune-status"></div>
 
                 </div>
 
@@ -1668,20 +1495,11 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                 <label>Codice Fiscale</label>
 
-                <input
-                    type="text"
-                    id="cliente_cf"
-                    class="cf-input"
-                    maxlength="16"
-                >
+                <input type="text" id="cliente_cf" class="cf-input" maxlength="16">
 
                 <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
 
-                    <button
-                        type="button"
-                        class="btn-small btn-cf"
-                        onclick="calcolaCFRichiedente(1)"
-                    >
+                    <button type="button" class="btn-small btn-cf" onclick="calcolaCFRichiedente(1)">
                         <i class="fas fa-calculator"></i>
                         Genera Codice Fiscale
                     </button>
@@ -1704,9 +1522,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                2° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">2° RICHIEDENTE</div>
 
             <div class="grid-2">
 
@@ -1734,39 +1550,20 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                     <label>Sesso</label>
 
                     <select id="cliente2_sesso">
-
-                        <option value="">
-                            - Seleziona -
-                        </option>
-
-                        <option value="M">
-                            Maschio
-                        </option>
-
-                        <option value="F">
-                            Femmina
-                        </option>
-
+                        <option value="">- Seleziona -</option>
+                        <option value="M">Maschio</option>
+                        <option value="F">Femmina</option>
                     </select>
 
                 </div>
 
                 <div class="form-group">
 
-                    <label>
-                        Comune / Stato di nascita
-                    </label>
+                    <label>Comune / Stato di nascita</label>
 
-                    <input
-                        type="text"
-                        id="cliente2_comune_nascita"
-                        placeholder="Es. Caserta"
-                    >
+                    <input type="text" id="cliente2_comune_nascita" placeholder="Es. Caserta">
 
-                    <div
-                        id="cliente2_comune_status"
-                        class="comune-status"
-                    ></div>
+                    <div id="cliente2_comune_status" class="comune-status"></div>
 
                 </div>
 
@@ -1776,20 +1573,11 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                 <label>Codice Fiscale</label>
 
-                <input
-                    type="text"
-                    id="cliente2_cf"
-                    class="cf-input"
-                    maxlength="16"
-                >
+                <input type="text" id="cliente2_cf" class="cf-input" maxlength="16">
 
                 <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
 
-                    <button
-                        type="button"
-                        class="btn-small btn-cf"
-                        onclick="calcolaCFRichiedente(2)"
-                    >
+                    <button type="button" class="btn-small btn-cf" onclick="calcolaCFRichiedente(2)">
                         <i class="fas fa-calculator"></i>
                         Genera Codice Fiscale
                     </button>
@@ -1825,9 +1613,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                1° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">1° RICHIEDENTE</div>
 
             <div class="form-group">
 
@@ -1906,9 +1692,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                2° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">2° RICHIEDENTE</div>
 
             <div class="form-group">
 
@@ -2000,9 +1784,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                1° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">1° RICHIEDENTE</div>
 
             <div class="form-group">
 
@@ -2027,20 +1809,15 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </div>
 
             <div class="form-group">
-
                 <label>Reddito Netto €</label>
-
                 <input type="text" id="cliente_reddito" value="">
-
             </div>
 
         </div>
 
         <div class="richiedente-box">
 
-            <div class="richiedente-title">
-                2° RICHIEDENTE
-            </div>
+            <div class="richiedente-title">2° RICHIEDENTE</div>
 
             <div class="form-group">
 
@@ -2065,11 +1842,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </div>
 
             <div class="form-group">
-
                 <label>Reddito Netto €</label>
-
                 <input type="text" id="cliente2_reddito" value="">
-
             </div>
 
         </div>
@@ -2148,13 +1922,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </button>
 
             <div class="totale-fitti-box">
-
                 Totale redditi mensili da fitto:
-
-                <span id="totale_fitti_mensili">
-                    0,00 €
-                </span>
-
+                <span id="totale_fitti_mensili">0,00 €</span>
             </div>
 
         </div>
@@ -2194,11 +1963,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
         </div>
 
         <div class="form-group">
-
             <label>Importo Assegno €</label>
-
             <input type="text" id="assegno_importo">
-
         </div>
 
     </div>
@@ -2250,11 +2016,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <div class="grid-2">
 
                 <div class="form-group">
-
                     <label>Canone Mensile €</label>
-
                     <input type="text" id="canone_affitto">
-
                 </div>
 
                 <div class="form-group">
@@ -2350,9 +2113,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="separated-box">
 
-            <div class="separated-box-title">
-                Tipologia Tasso
-            </div>
+            <div class="separated-box-title">Tipologia Tasso</div>
 
             <div class="toggle-group blue">
 
@@ -2371,9 +2132,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
         <div class="separated-box">
 
-            <div class="separated-box-title">
-                Prodotto Bancario
-            </div>
+            <div class="separated-box-title">Prodotto Bancario</div>
 
             <div class="toggle-group blue">
 
@@ -2406,9 +2165,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
     <div class="separated-box" style="margin-bottom:20px">
 
-        <div class="separated-box-title">
-            MUTUO IN ESSERE
-        </div>
+        <div class="separated-box-title">MUTUO IN ESSERE</div>
 
         <div class="form-group">
 
@@ -2472,9 +2229,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
     <div class="separated-box">
 
-        <div class="separated-box-title">
-            FINANZIAMENTI IN CORSO
-        </div>
+        <div class="separated-box-title">FINANZIAMENTI IN CORSO</div>
 
         <div class="form-group">
 
@@ -2552,13 +2307,8 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             </button>
 
             <div class="totale-rate-box">
-
                 Totale rate mensili finanziamenti:
-
-                <span id="totale_rate_finanziamenti">
-                    0,00 €
-                </span>
-
+                <span id="totale_rate_finanziamenti">0,00 €</span>
             </div>
 
         </div>
@@ -2574,12 +2324,10 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <label>Polizza Incendio e Scoppio</label>
 
             <select id="tipo_incendio">
-
                 <option value="">- Seleziona -</option>
                 <option value="Banca">Banca</option>
                 <option value="Premio Rateizzato">Premio Rateizzato</option>
                 <option value="Premio Totale">Premio Totale</option>
-
             </select>
 
         </div>
@@ -2589,13 +2337,11 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             <label>Polizza Personale</label>
 
             <select id="tipo_personale">
-
                 <option value="">- Seleziona -</option>
                 <option value="No Polizza">No Polizza</option>
                 <option value="Banca">Banca</option>
                 <option value="Premio Rateizzato">Premio Rateizzato</option>
                 <option value="Premio Totale">Premio Totale</option>
-
             </select>
 
         </div>
@@ -2605,19 +2351,13 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
     <div class="grid-2">
 
         <div class="form-group">
-
             <label>Istruttoria Banca</label>
-
             <input type="text" id="istr_banca" placeholder="€">
-
         </div>
 
         <div class="form-group">
-
             <label>Perizia</label>
-
             <input type="text" id="perizia_costo" placeholder="€">
-
         </div>
 
     </div>
@@ -2662,9 +2402,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <input type="radio" id="med_2" name="mediazione" value="2%">
 
-                        <label for="med_2">
-                            2%
-                        </label>
+                        <label for="med_2">2%</label>
 
                     </div>
 
@@ -2672,9 +2410,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <input type="radio" id="med_3" name="mediazione" value="3%">
 
-                        <label for="med_3">
-                            3%
-                        </label>
+                        <label for="med_3">3%</label>
 
                     </div>
 
@@ -2686,9 +2422,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <input type="radio" id="med_altro" name="mediazione" value="Altro">
 
-                        <label for="med_altro">
-                            Altro
-                        </label>
+                        <label for="med_altro">Altro</label>
 
                     </div>
 
@@ -2696,9 +2430,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <input type="text" id="mediazione_custom" placeholder="Es. 1,5">
 
-                        <span class="mediazione-percent-symbol">
-                            %
-                        </span>
+                        <span class="mediazione-percent-symbol">%</span>
 
                     </div>
 
@@ -2724,11 +2456,9 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
             min-height:80px;
         "
     >
-
         CERTIFICAZIONE DOCUMENTALE
         <br>
         € 76,00 per richiedente
-
     </div>
 
 </div>
@@ -2907,21 +2637,15 @@ function parseEuro(value) {
     if (s.includes(',') && s.includes('.')) {
 
         if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
-
             s = s.replace(/\./g,'').replace(',','.');
-
         }
         else {
-
             s = s.replace(/,/g,'');
-
         }
 
     }
     else if (s.includes(',')) {
-
         s = s.replace(',','.');
-
     }
 
     const n = parseFloat(s);
@@ -3007,29 +2731,19 @@ async function caricaLuoghiCF() {
         );
 
     if (!response.ok) {
-
-        throw new Error(
-            'Impossibile caricare il database dei Comuni.'
-        );
-
+        throw new Error('Impossibile caricare il database dei Comuni.');
     }
 
     const raw = await response.json();
 
     if (Array.isArray(raw)) {
-
         luoghiCF = raw;
-
     }
     else if (Array.isArray(raw?.data)) {
-
         luoghiCF = raw.data;
-
     }
     else if (Array.isArray(raw?.records)) {
-
         luoghiCF = raw.records;
-
     }
     else {
 
@@ -3109,11 +2823,7 @@ async function trovaCodiceLuogo(nome) {
         [];
 
     if (!results.length) {
-
-        throw new Error(
-            `Comune/Stato "${nome}" non trovato.`
-        );
-
+        throw new Error(`Comune/Stato "${nome}" non trovato.`);
     }
 
     const record = results[0];
@@ -3197,15 +2907,7 @@ function codiceNome(nome) {
     const cons = consonants(value);
 
     if (cons.length >= 4) {
-
-        return (
-            cons[0]
-            +
-            cons[2]
-            +
-            cons[3]
-        );
-
+        return cons[0] + cons[2] + cons[3];
     }
 
     return (
@@ -3269,21 +2971,13 @@ async function generaCF(
         !sesso ||
         !comune
     ) {
-
-        throw new Error(
-            'Compila tutti i dati anagrafici.'
-        );
-
+        throw new Error('Compila tutti i dati anagrafici.');
     }
 
     const codiceComune =
         await trovaCodiceLuogo(comune);
 
-    const [
-        anno,
-        mese,
-        giorno
-    ] =
+    const [anno,mese,giorno] =
         data
             .split('-')
             .map(Number);
@@ -3326,11 +3020,7 @@ async function generaCF(
         +
         codiceComune;
 
-    return (
-        first15
-        +
-        carattereControlloCF(first15)
-    );
+    return first15 + carattereControlloCF(first15);
 
 }
 
@@ -3346,17 +3036,11 @@ async function(numero) {
 
         const cf =
             await generaCF(
-
                 V(prefix + '_nome',''),
-
                 V(prefix + '_cognome',''),
-
                 V(prefix + '_data_nascita',''),
-
                 V(prefix + '_sesso',''),
-
                 V(prefix + '_comune_nascita','')
-
             );
 
         document
@@ -3437,11 +3121,7 @@ async function decodificaCF(cf) {
             .replace(/[^A-Z0-9]/g,'');
 
     if (original.length !== 16) {
-
-        throw new Error(
-            'Codice Fiscale non valido.'
-        );
-
+        throw new Error('Codice Fiscale non valido.');
     }
 
     const normalized =
@@ -3502,7 +3182,6 @@ async function decodificaCF(cf) {
             : 1900 + yy;
 
     const data =
-
         year
         +
         '-'
@@ -3533,14 +3212,9 @@ async function decodificaCF(cf) {
 window.loadCredipassReferentePhoto =
 async function() {
 
-    const provincia =
-        V('ref_provincia','');
-
-    const nome =
-        V('ref_nome','');
-
-    const cognome =
-        V('ref_cognome','');
+    const provincia = V('ref_provincia','');
+    const nome = V('ref_nome','');
+    const cognome = V('ref_cognome','');
 
     if (
         !provincia ||
@@ -3548,10 +3222,7 @@ async function() {
         !cognome
     ) {
 
-        alert(
-            'Inserisci Provincia, Nome e Cognome.'
-        );
-
+        alert('Inserisci Provincia, Nome e Cognome.');
         return;
 
     }
@@ -3560,9 +3231,7 @@ async function() {
 
         const response =
             await fetch(
-
                 `/.netlify/functions/get-credipass-photo?provincia=${encodeURIComponent(provincia)}&nome=${encodeURIComponent(nome)}&cognome=${encodeURIComponent(cognome)}`
-
             );
 
         const data =
@@ -3806,10 +3475,8 @@ function rinumeraFitti() {
                 );
 
             if (titolo) {
-
                 titolo.textContent =
                     `FITTO ${numero}`;
-
             }
 
         }
@@ -3847,10 +3514,8 @@ function aggiornaTotaleFitti() {
         );
 
     if (output) {
-
         output.textContent =
             formatCurrency(totale);
-
     }
 
     return totale;
@@ -3944,8 +3609,6 @@ function fittiText() {
         .join(' | ');
 
 }
-
-/* SOLO PDF: UN FITTO PER RIGA */
 
 function fittiTextPDF() {
 
@@ -4044,45 +3707,16 @@ function templateFinanziamento(numero) {
 
                 <select class="fin-finalita">
 
-                    <option value="">
-                        - Seleziona -
-                    </option>
-
-                    <option value="Prestito Personale">
-                        Prestito Personale
-                    </option>
-
-                    <option value="Auto">
-                        Auto
-                    </option>
-
-                    <option value="Arredamento">
-                        Arredamento
-                    </option>
-
-                    <option value="Cessione del Quinto">
-                        Cessione del Quinto
-                    </option>
-
-                    <option value="Delega">
-                        Delega
-                    </option>
-
-                    <option value="Carta Revolving">
-                        Carta Revolving
-                    </option>
-
-                    <option value="Consolidamento">
-                        Consolidamento
-                    </option>
-
-                    <option value="Liquidità">
-                        Liquidità
-                    </option>
-
-                    <option value="Altro">
-                        Altro
-                    </option>
+                    <option value="">- Seleziona -</option>
+                    <option value="Prestito Personale">Prestito Personale</option>
+                    <option value="Auto">Auto</option>
+                    <option value="Arredamento">Arredamento</option>
+                    <option value="Cessione del Quinto">Cessione del Quinto</option>
+                    <option value="Delega">Delega</option>
+                    <option value="Carta Revolving">Carta Revolving</option>
+                    <option value="Consolidamento">Consolidamento</option>
+                    <option value="Liquidità">Liquidità</option>
+                    <option value="Altro">Altro</option>
 
                 </select>
 
@@ -4120,10 +3754,8 @@ function rinumeraFinanziamenti() {
                 );
 
             if (title) {
-
                 title.textContent =
                     `FINANZIAMENTO ${numero}`;
-
             }
 
         }
@@ -4263,8 +3895,6 @@ function finanziamentiText() {
 
 }
 
-/* SOLO PDF: UN FINANZIAMENTO PER RIGA */
-
 function finanziamentiTextPDF() {
 
     const finanziamenti =
@@ -4386,98 +4016,43 @@ async function sincronizzaSchedaConDatabase() {
 
     const dati = {
 
-        cliente_nome:
-            V('cliente_nome',''),
+        cliente_nome:V('cliente_nome',''),
+        cliente_cognome:V('cliente_cognome',''),
+        cliente_nome_completo:nomeCompleto(1),
+        cliente_cf:V('cliente_cf',''),
+        cliente_data_nascita:V('cliente_data_nascita',''),
+        cliente_sesso:V('cliente_sesso',''),
+        cliente_comune_nascita:V('cliente_comune_nascita',''),
+        cliente_email:V('cliente_email',''),
+        cliente_cell:V('cliente_cell',''),
 
-        cliente_cognome:
-            V('cliente_cognome',''),
+        cliente2_nome:V('cliente2_nome',''),
+        cliente2_cognome:V('cliente2_cognome',''),
+        cliente2_nome_completo:nomeCompleto(2),
+        cliente2_cf:V('cliente2_cf',''),
+        cliente2_data_nascita:V('cliente2_data_nascita',''),
+        cliente2_sesso:V('cliente2_sesso',''),
+        cliente2_comune_nascita:V('cliente2_comune_nascita',''),
+        cliente2_email:V('cliente2_email',''),
+        cliente2_cell:V('cliente2_cell',''),
 
-        cliente_nome_completo:
-            nomeCompleto(1),
+        stato_civile_r1:S('stato1',''),
+        omologa_r1:S('omologa1',''),
+        mantenimento_r1:S('mantenimento1',''),
+        mantenimento_importo_r1:V('mantenimento1_importo',''),
 
-        cliente_cf:
-            V('cliente_cf',''),
+        stato_civile_r2:S('stato2',''),
+        omologa_r2:S('omologa2',''),
+        mantenimento_r2:S('mantenimento2',''),
+        mantenimento_importo_r2:V('mantenimento2_importo',''),
 
-        cliente_data_nascita:
-            V('cliente_data_nascita',''),
+        lav1:S('lav1',''),
+        reddito_richiedente_1:V('cliente_reddito',''),
 
-        cliente_sesso:
-            V('cliente_sesso',''),
+        lav2:S('lav2',''),
+        reddito_richiedente_2:V('cliente2_reddito',''),
 
-        cliente_comune_nascita:
-            V('cliente_comune_nascita',''),
-
-        cliente_email:
-            V('cliente_email',''),
-
-        cliente_cell:
-            V('cliente_cell',''),
-
-        cliente2_nome:
-            V('cliente2_nome',''),
-
-        cliente2_cognome:
-            V('cliente2_cognome',''),
-
-        cliente2_nome_completo:
-            nomeCompleto(2),
-
-        cliente2_cf:
-            V('cliente2_cf',''),
-
-        cliente2_data_nascita:
-            V('cliente2_data_nascita',''),
-
-        cliente2_sesso:
-            V('cliente2_sesso',''),
-
-        cliente2_comune_nascita:
-            V('cliente2_comune_nascita',''),
-
-        cliente2_email:
-            V('cliente2_email',''),
-
-        cliente2_cell:
-            V('cliente2_cell',''),
-
-        stato_civile_r1:
-            S('stato1',''),
-
-        omologa_r1:
-            S('omologa1',''),
-
-        mantenimento_r1:
-            S('mantenimento1',''),
-
-        mantenimento_importo_r1:
-            V('mantenimento1_importo',''),
-
-        stato_civile_r2:
-            S('stato2',''),
-
-        omologa_r2:
-            S('omologa2',''),
-
-        mantenimento_r2:
-            S('mantenimento2',''),
-
-        mantenimento_importo_r2:
-            V('mantenimento2_importo',''),
-
-        lav1:
-            S('lav1',''),
-
-        reddito_richiedente_1:
-            V('cliente_reddito',''),
-
-        lav2:
-            S('lav2',''),
-
-        reddito_richiedente_2:
-            V('cliente2_reddito',''),
-
-        reddito_fitto:
-            S('reddito_fitto',''),
+        reddito_fitto:S('reddito_fitto',''),
 
         reddito_fitto_importo:
             fitti[0]?.importo
@@ -4489,77 +4064,52 @@ async function sincronizzaSchedaConDatabase() {
             ||
             '',
 
-        fitti_dettaglio:
-            fitti,
+        fitti_dettaglio:fitti,
 
         totale_fitti_mensili:
             aggiornaTotaleFitti(),
 
-        num_componenti:
-            V('num_componenti',''),
+        num_componenti:V('num_componenti',''),
 
-        assegno:
-            S('assegno',''),
+        assegno:S('assegno',''),
 
-        assegno_importo:
-            V('assegno_importo',''),
+        assegno_importo:V('assegno_importo',''),
 
-        eta_f1:
-            V('eta_f1',''),
+        eta_f1:V('eta_f1',''),
+        eta_f2:V('eta_f2',''),
+        eta_f3:V('eta_f3',''),
 
-        eta_f2:
-            V('eta_f2',''),
+        sit_abitativa:S('sit_abitativa',''),
 
-        eta_f3:
-            V('eta_f3',''),
+        canone_affitto:V('canone_affitto',''),
 
-        sit_abitativa:
-            S('sit_abitativa',''),
+        contratto_reg:S('contratto_reg',''),
 
-        canone_affitto:
-            V('canone_affitto',''),
+        finalita:S('fin',''),
 
-        contratto_reg:
-            S('contratto_reg',''),
+        prodotto:S('prodotto',''),
 
-        finalita:
-            S('fin',''),
+        tasso:S('tasso',''),
 
-        prodotto:
-            S('prodotto',''),
+        importo_richiesto:V('mutuo_importo',''),
 
-        tasso:
-            S('tasso',''),
+        valore_compravendita:V('mutuo_compravendita',''),
 
-        importo_richiesto:
-            V('mutuo_importo',''),
+        valore_immobile:V('immobile_valore',''),
 
-        valore_compravendita:
-            V('mutuo_compravendita',''),
+        durata_mutuo:V('mutuo_durata',''),
 
-        valore_immobile:
-            V('immobile_valore',''),
+        gia_mutuo:S('gia_mutuo',''),
 
-        durata_mutuo:
-            V('mutuo_durata',''),
+        mutuo_pre_istituto:V('mutuo_pre_istituto',''),
 
-        gia_mutuo:
-            S('gia_mutuo',''),
+        rata_mutuo_pre:V('rata_mutuo_pre',''),
 
-        mutuo_pre_istituto:
-            V('mutuo_pre_istituto',''),
+        mutuo_pre_scadenza:V('mutuo_pre_scadenza',''),
 
-        rata_mutuo_pre:
-            V('rata_mutuo_pre',''),
+        mutuo_pre_finalita:V('mutuo_pre_finalita',''),
 
-        mutuo_pre_scadenza:
-            V('mutuo_pre_scadenza',''),
-
-        mutuo_pre_finalita:
-            V('mutuo_pre_finalita',''),
-
-        fin_corso:
-            S('fin_corso',''),
+        fin_corso:S('fin_corso',''),
 
         finanziamenti_dettaglio:
             finanziamenti,
@@ -4572,38 +4122,27 @@ async function sincronizzaSchedaConDatabase() {
         totale_rate_finanziamenti:
             aggiornaTotaleFinanziamenti(),
 
-        tipo_incendio:
-            V('tipo_incendio',''),
+        tipo_incendio:V('tipo_incendio',''),
 
-        tipo_personale:
-            V('tipo_personale',''),
+        tipo_personale:V('tipo_personale',''),
 
-        istr_banca:
-            V('istr_banca',''),
+        istr_banca:V('istr_banca',''),
 
-        perizia_costo:
-            V('perizia_costo',''),
+        perizia_costo:V('perizia_costo',''),
 
-        imposta:
-            S('imposta',''),
+        imposta:S('imposta',''),
 
-        mediazione:
-            getMediazione(),
+        mediazione:getMediazione(),
 
-        note_consulenza:
-            V('note_consulenza',''),
+        note_consulenza:V('note_consulenza',''),
 
-        luogo_incontro:
-            V('campo_luogo',''),
+        luogo_incontro:V('campo_luogo',''),
 
-        data_consulenza:
-            V('campo_data',''),
+        data_consulenza:V('campo_data',''),
 
-        referente:
-            V('campo_referente',''),
+        referente:V('campo_referente',''),
 
-        email_agenzia_immobiliare:
-            V('campo_email_agenzia',''),
+        email_agenzia_immobiliare:V('campo_email_agenzia',''),
 
         ultimo_aggiornamento_scheda:
             firebase
@@ -4653,20 +4192,9 @@ function compilaPDF() {
     const nome2 =
         nomeCompleto(2);
 
-    setPrint(
-        'p_referente',
-        V('campo_referente','-')
-    );
-
-    setPrint(
-        'p_luogo',
-        V('campo_luogo','-')
-    );
-
-    setPrint(
-        'p_data',
-        V('campo_data','-')
-    );
+    setPrint('p_referente',V('campo_referente','-'));
+    setPrint('p_luogo',V('campo_luogo','-'));
+    setPrint('p_data',V('campo_data','-'));
 
     setPrint(
         'p_titolo_nomi',
@@ -4679,30 +4207,16 @@ function compilaPDF() {
         )
     );
 
-    setPrint(
-        'p_nome1',
-        nome1
-    );
-
-    setPrint(
-        'p_cf1',
-        V('cliente_cf','-')
-    );
+    setPrint('p_nome1',nome1);
+    setPrint('p_cf1',V('cliente_cf','-'));
 
     setPrint(
         'p_nascita1',
         `${V('cliente_data_nascita','-')} - ${V('cliente_comune_nascita','-')}`
     );
 
-    setPrint(
-        'p_nome2',
-        nome2 || '-'
-    );
-
-    setPrint(
-        'p_cf2',
-        V('cliente2_cf','-')
-    );
+    setPrint('p_nome2',nome2 || '-');
+    setPrint('p_cf2',V('cliente2_cf','-'));
 
     setPrint(
         'p_nascita2',
@@ -4713,10 +4227,7 @@ function compilaPDF() {
             '-'
     );
 
-    setPrint(
-        'p_stato1',
-        S('stato1','-')
-    );
+    setPrint('p_stato1',S('stato1','-'));
 
     setPrint(
         'p_omologa1',
@@ -4814,10 +4325,7 @@ function compilaPDF() {
             'No'
     );
 
-    setPrint(
-        'p_finalita',
-        S('fin','-')
-    );
+    setPrint('p_finalita',S('fin','-'));
 
     setPrint(
         'p_importo',
@@ -4853,10 +4361,7 @@ function compilaPDF() {
         )
     );
 
-    setPrint(
-        'p_tasso',
-        S('tasso','-')
-    );
+    setPrint('p_tasso',S('tasso','-'));
 
     setPrint(
         'p_mutuo_corso',
@@ -4900,25 +4405,10 @@ function compilaPDF() {
             'No'
     );
 
-    setPrint(
-        'p_tipo_inc',
-        V('tipo_incendio','-')
-    );
-
-    setPrint(
-        'p_tipo_personale',
-        V('tipo_personale','-')
-    );
-
-    setPrint(
-        'p_imposta',
-        S('imposta','-')
-    );
-
-    setPrint(
-        'p_mediazione',
-        getMediazione()
-    );
+    setPrint('p_tipo_inc',V('tipo_incendio','-'));
+    setPrint('p_tipo_personale',V('tipo_personale','-'));
+    setPrint('p_imposta',S('imposta','-'));
+    setPrint('p_mediazione',getMediazione());
 
     const note =
         V(
@@ -4926,15 +4416,8 @@ function compilaPDF() {
             'Nessuna nota aggiuntiva.'
         );
 
-    setPrint(
-        'p_note',
-        note
-    );
-
-    setPrint(
-        'p_note_box_text',
-        note
-    );
+    setPrint('p_note',note);
+    setPrint('p_note_box_text',note);
 
     setPrint(
         'p_generato_il',
@@ -4946,7 +4429,9 @@ function compilaPDF() {
 
 }
 
-/* WHATSAPP */
+/* =========================================================
+   WHATSAPP
+   ========================================================= */
 
 function openWhatsApp(
     phone,
@@ -4957,39 +4442,763 @@ function openWhatsApp(
         String(phone || '')
             .replace(/\D/g,'');
 
+    if (!cleanPhone) {
+
+        alert(
+            'Numero WhatsApp non disponibile.'
+        );
+
+        return;
+
+    }
+
+    const url =
+        `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+
     window.open(
-
-        `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`,
-
+        url,
         '_blank'
-
     );
 
 }
 
-function buildWhatsAppCliente() {
+/* DATE */
 
-    const nome =
-        V('cliente_nome','Cliente');
+function formatDateItalian(date) {
 
-    return `Ciao ${nome}
-
-DOCUMENTAZIONE PRATICA (${S('fin','-')})
-
-Come da accordi, puoi inviarmi la documentazione necessaria per procedere con la pratica.
-
-Per qualsiasi necessità resto a disposizione.`;
+    return date.toLocaleDateString(
+        'it-IT',
+        {
+            day:'2-digit',
+            month:'2-digit',
+            year:'numeric'
+        }
+    );
 
 }
 
-function buildWhatsAppBackoffice() {
+function ultimoGiornoTrimestreCompletato(
+    data = new Date()
+) {
+
+    const year =
+        data.getFullYear();
+
+    const month =
+        data.getMonth();
+
+    if (month <= 2) {
+
+        return new Date(
+            year - 1,
+            11,
+            31
+        );
+
+    }
+
+    if (month <= 5) {
+
+        return new Date(
+            year,
+            2,
+            31
+        );
+
+    }
+
+    if (month <= 8) {
+
+        return new Date(
+            year,
+            5,
+            30
+        );
+
+    }
+
+    return new Date(
+        year,
+        8,
+        30
+    );
+
+}
+
+function trimestrePrecedente(
+    quarterEnd
+) {
+
+    const year =
+        quarterEnd.getFullYear();
+
+    const month =
+        quarterEnd.getMonth();
+
+    if (month === 11) {
+        return new Date(year,8,30);
+    }
+
+    if (month === 8) {
+        return new Date(year,5,30);
+    }
+
+    if (month === 5) {
+        return new Date(year,2,31);
+    }
+
+    return new Date(
+        year - 1,
+        11,
+        31
+    );
+
+}
+
+function giornoSuccessivo(
+    date
+) {
+
+    const result =
+        new Date(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate()
+        );
+
+    result.setDate(
+        result.getDate() + 1
+    );
+
+    return result;
+
+}
+
+/* DOCUMENTI CONTO */
+
+function documentazioneConti(
+    tipoLavoro
+) {
+
+    const oggi =
+        new Date();
+
+    const ultimoTrimestre =
+        ultimoGiornoTrimestreCompletato(
+            oggi
+        );
+
+    const inizioMovimenti =
+        giornoSuccessivo(
+            ultimoTrimestre
+        );
+
+    if (
+        tipoLavoro === 'AUTONOMO'
+    ) {
+
+        const trimestrePrima =
+            trimestrePrecedente(
+                ultimoTrimestre
+            );
+
+        return `• 🏦 Estratti conto trimestrali degli ultimi 6 mesi:
+   - trimestre al ${formatDateItalian(trimestrePrima)}
+   - trimestre al ${formatDateItalian(ultimoTrimestre)}
+• 📊 Lista movimenti aggiornata dal ${formatDateItalian(inizioMovimenti)} ad oggi, con saldo iniziale e saldo finale visibili`;
+
+    }
+
+    return `• 🏦 Estratto conto trimestrale al ${formatDateItalian(ultimoTrimestre)}
+• 📊 Lista movimenti aggiornata dal ${formatDateItalian(inizioMovimenti)} ad oggi, con saldo iniziale e saldo finale visibili`;
+
+}
+
+/* ANAGRAFICA */
+
+function documentazioneAnagrafica() {
+
+    let documenti = `👤 ANAGRAFICA
+
+• 🪪 Carta d’Identità fronte/retro in corso di validità
+• 💳 Tessera Sanitaria fronte/retro in corso di validità
+• 🏠 Certificato Cumulativo di Residenza e Stato di Famiglia`;
+
+    const stato1 =
+        S(
+            'stato1',
+            ''
+        );
+
+    const stato2 =
+        S(
+            'stato2',
+            ''
+        );
+
+    if (
+        stato1.includes('SEPARAZIONE BENI')
+        ||
+        stato2.includes('SEPARAZIONE BENI')
+    ) {
+
+        documenti +=
+            `\n• 💍 Atto / Estratto di matrimonio con annotazione della separazione dei beni`;
+
+    }
+
+    if (
+        stato1 === 'SEPARATO/A'
+        ||
+        stato2 === 'SEPARATO/A'
+    ) {
+
+        documenti +=
+            `\n• ⚖️ Sentenza / Decreto / Omologa di separazione completa`;
+
+    }
+
+    if (
+        stato1 === 'DIVORZIATO/A'
+        ||
+        stato2 === 'DIVORZIATO/A'
+    ) {
+
+        documenti +=
+            `\n• ⚖️ Sentenza di divorzio completa`;
+
+    }
+
+    if (
+        S('mantenimento1','')
+        ===
+        'Sì'
+        ||
+        S('mantenimento2','')
+        ===
+        'Sì'
+    ) {
+
+        documenti +=
+            `\n• 💶 Documentazione relativa all’assegno di mantenimento previsto dal provvedimento`;
+
+    }
+
+    return documenti;
+
+}
+
+/* REDDITO */
+
+function documentazioneRedditoRichiedente(
+    numero
+) {
+
+    const tipo =
+        S(
+            `lav${numero}`,
+            ''
+        );
+
+    const nome =
+        nomeCompleto(
+            numero
+        );
+
+    if (
+        numero === 2
+        &&
+        !nome
+    ) {
+        return '';
+    }
+
+    const titolo =
+        numero === 1
+            ? '1° RICHIEDENTE'
+            : '2° RICHIEDENTE';
+
+    if (
+        tipo === 'AUTONOMO'
+    ) {
+
+        return `💼 REDDITI ${titolo} – AUTONOMO / P.IVA
+
+• 📄 Ultimi 2 Modelli Redditi / Modelli Unici completi
+• 📩 Ricevute telematiche di presentazione delle dichiarazioni
+• 🧾 Ultimi F24 versati
+• 🏢 Visura Camerale aggiornata, se prevista
+${documentazioneConti('AUTONOMO')}`;
+
+    }
+
+    if (
+        tipo === 'STATALE'
+    ) {
+
+        return `💼 REDDITI ${titolo} – DIPENDENTE PUBBLICO
+
+• 📄 Ultime 2 buste paga
+• 📜 Ultima Certificazione Unica / CU disponibile
+• 📃 Attestazione di servizio aggiornata
+${documentazioneConti('STATALE')}`;
+
+    }
+
+    if (
+        tipo === 'DETERMINATO'
+    ) {
+
+        return `💼 REDDITI ${titolo} – TEMPO DETERMINATO
+
+• 📄 Ultime 2 buste paga
+• 📜 Ultima Certificazione Unica / CU disponibile
+• 📃 Contratto di lavoro completo
+• 📃 Eventuali proroghe / rinnovi
+${documentazioneConti('DETERMINATO')}`;
+
+    }
+
+    if (
+        tipo === 'INDETERMINATO'
+    ) {
+
+        return `💼 REDDITI ${titolo} – DIPENDENTE
+
+• 📄 Ultime 2 buste paga
+• 📜 Ultima Certificazione Unica / CU disponibile
+• 📃 Contratto di lavoro o attestazione di servizio
+${documentazioneConti('INDETERMINATO')}`;
+
+    }
+
+    return `💼 REDDITI ${titolo}
+
+• 📄 Documentazione reddituale aggiornata
+${documentazioneConti('')}`;
+
+}
+
+/* FITTI */
+
+function documentazioneFitti() {
+
+    if (
+        S(
+            'reddito_fitto',
+            'No'
+        )
+        !==
+        'Sì'
+    ) {
+        return '';
+    }
+
+    return `🏘️ REDDITI DA LOCAZIONE
+
+• 📑 Contratti di locazione registrati
+• 🧾 Ultima dichiarazione dei redditi nella quale risultano i redditi da locazione
+• 🏦 Evidenza degli accrediti dei canoni sul conto corrente`;
+
+}
+
+/* FINALITÀ */
+
+function documentazioneFinalita() {
+
+    const finalita =
+        S(
+            'fin',
+            ''
+        );
+
+    if (
+        finalita === 'ACQUISTO'
+    ) {
+
+        return `🏠 DOCUMENTAZIONE IMMOBILIARE
+
+• 🧱 Atto di provenienza dell’immobile
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata
+• 🏗️ Concessione edilizia / titoli edilizi disponibili
+• 🧾 Agibilità, se disponibile
+• ✍️ Preliminare di compravendita o proposta d’acquisto accettata`;
+
+    }
+
+    if (
+        finalita === 'VOUCHER'
+    ) {
+
+        return `🎫 DOCUMENTAZIONE VOUCHER
+
+In questa fase non è necessaria la documentazione immobiliare.
+
+La documentazione relativa all’immobile verrà richiesta successivamente, una volta individuato l’immobile.`;
+
+    }
+
+    if (
+        finalita === 'RISTRUTTURAZIONE'
+    ) {
+
+        return `🏗️ DOCUMENTAZIONE IMMOBILE / RISTRUTTURAZIONE
+
+• 🧱 Atto di provenienza dell’immobile
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata
+• 🏗️ Titoli edilizi disponibili
+• 🧾 Agibilità, se disponibile
+• 📏 Computo metrico estimativo dettagliato dei lavori
+• 📝 Eventuali preventivi delle imprese`;
+
+    }
+
+    if (
+        finalita === 'CONSOLIDAMENTO'
+    ) {
+
+        return `💳 DOCUMENTAZIONE CONSOLIDAMENTO
+
+• 📋 Contratti dei finanziamenti da estinguere
+• 📆 Conteggi estintivi aggiornati dei finanziamenti da consolidare
+• 🧾 Evidenza delle rate in corso, ove disponibile`;
+
+    }
+
+    if (
+        finalita === 'SURROGA'
+    ) {
+
+        return `🏦 DOCUMENTAZIONE SURROGA
+
+• 📄 Contratto del mutuo attualmente in essere
+• 📊 Piano di ammortamento aggiornato
+• 🧾 Ultima quietanza / ricevuta della rata
+• 🧱 Atto di provenienza dell’immobile
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata`;
+
+    }
+
+    if (
+        finalita === 'LIQUIDITÀ'
+    ) {
+
+        return `🏠 DOCUMENTAZIONE IMMOBILE
+
+• 🧱 Atto di provenienza dell’immobile
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata
+• 🏗️ Titoli edilizi disponibili
+• 🧾 Agibilità, se disponibile`;
+
+    }
+
+    if (
+        finalita === 'RIFINANZIAMENTO'
+    ) {
+
+        return `🏦 DOCUMENTAZIONE RIFINANZIAMENTO
+
+• 📄 Contratto del mutuo / finanziamento da rifinanziare
+• 📊 Piano di ammortamento aggiornato
+• 📆 Conteggio estintivo aggiornato
+• 🧱 Atto di provenienza dell’immobile
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata`;
+
+    }
+
+    if (
+        finalita === 'SOSTITUZIONE + ACQUISTO'
+    ) {
+
+        return `🏠 DOCUMENTAZIONE SOSTITUZIONE + ACQUISTO
+
+IMMOBILE DA ACQUISTARE
+• 🧱 Atto di provenienza
+• 📐 Planimetria catastale
+• 📋 Visura catastale aggiornata
+• ✍️ Preliminare di compravendita o proposta accettata
+
+MUTUO / FINANZIAMENTO DA SOSTITUIRE
+• 📄 Contratto del mutuo in essere
+• 📊 Piano di ammortamento aggiornato
+• 📆 Conteggio estintivo aggiornato`;
+
+    }
+
+    return '';
+
+}
+
+/* ALTRI DOCUMENTI */
+
+function documentazioneAltriDocumenti() {
+
+    let documenti =
+        `💳 ALTRI DOCUMENTI`;
+
+    if (
+        S(
+            'fin_corso',
+            'No'
+        )
+        ===
+        'Sì'
+    ) {
+
+        documenti +=
+            `\n\n• 📋 Contratti dei finanziamenti in corso`;
+
+    }
+
+    if (
+        S(
+            'gia_mutuo',
+            'No'
+        )
+        ===
+        'Sì'
+    ) {
+
+        documenti +=
+            `\n• 🏦 Documentazione relativa al mutuo attualmente in essere`;
+
+    }
+
+    documenti +=
+        `\n• 🌐 CTC online – accesso tramite SPID
+👉 https://www.ctconline.it`;
+
+    return documenti;
+
+}
+
+/* NOTA CONTO */
+
+function notaEstrattiConto() {
+
+    const autonomo =
+
+        S(
+            'lav1',
+            ''
+        )
+        ===
+        'AUTONOMO'
+
+        ||
+
+        S(
+            'lav2',
+            ''
+        )
+        ===
+        'AUTONOMO';
+
+    if (autonomo) {
+
+        return `📝 NOTA IMPORTANTE
+
+Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti personali, aziendali e cointestati.
+
+Per i richiedenti autonomi sono necessari gli ultimi 6 mesi completi di estratti conto, oltre alla lista movimenti aggiornata successiva all’ultimo trimestre disponibile.
+
+Nella lista movimenti deve essere chiaramente visibile il saldo aggiornato.`;
+
+    }
+
+    return `📝 NOTA IMPORTANTE
+
+Gli estratti conto e le liste movimenti devono essere forniti per tutti i conti personali e cointestati.
+
+Nella lista movimenti deve essere chiaramente visibile il saldo aggiornato.`;
+
+}
+
+/* CHECKLIST CLIENTE */
+
+function buildWhatsAppCliente() {
+
+    const finalita =
+        S(
+            'fin',
+            '-'
+        );
+
+    const sezioni = [];
+
+    sezioni.push(
+        `✉️ CHECKLIST DOCUMENTALE – ${finalita}`
+    );
+
+    sezioni.push(
+        `Come da accordi, ti invio la lista dei documenti necessari per procedere con la pratica${nomeCompleto(2) ? ' per entrambi i richiedenti' : ''} 👇`
+    );
+
+    sezioni.push(
+        documentazioneAnagrafica()
+    );
+
+    sezioni.push(
+        documentazioneRedditoRichiedente(
+            1
+        )
+    );
+
+    if (
+        nomeCompleto(2)
+    ) {
+
+        sezioni.push(
+            documentazioneRedditoRichiedente(
+                2
+            )
+        );
+
+    }
+
+    const fitti =
+        documentazioneFitti();
+
+    if (fitti) {
+        sezioni.push(fitti);
+    }
+
+    const finalitaDocs =
+        documentazioneFinalita();
+
+    if (finalitaDocs) {
+        sezioni.push(finalitaDocs);
+    }
+
+    sezioni.push(
+        documentazioneAltriDocumenti()
+    );
+
+    sezioni.push(
+        notaEstrattiConto()
+    );
+
+    sezioni.push(
+        `Per qualsiasi dubbio o supporto resto a disposizione 👋`
+    );
+
+    return sezioni
+        .filter(Boolean)
+        .join('\n\n');
+
+}
+
+/* LINK CORTO BACK OFFICE */
+
+async function creaLinkWhatsAppCorto() {
+
+    const phone =
+        normalizePhone(
+            V(
+                'cliente_cell',
+                ''
+            )
+        );
+
+    if (!phone) {
+
+        throw new Error(
+            'Numero cellulare cliente mancante.'
+        );
+
+    }
+
+    const message =
+        buildWhatsAppCliente();
+
+    const ora =
+        new Date();
+
+    const scadenza =
+        new Date(
+            ora.getTime()
+            +
+            24 * 60 * 60 * 1000
+        );
+
+    const docRef =
+        await db
+            .collection(
+                'whatsapp_links'
+            )
+            .add({
+
+                phone:
+                    phone,
+
+                message:
+                    message,
+
+                cliente:
+                    nomeCompleto(1),
+
+                finalita:
+                    S(
+                        'fin',
+                        ''
+                    ),
+
+                createdAt:
+                    firebase
+                        .firestore
+                        .FieldValue
+                        .serverTimestamp(),
+
+                expiresAt:
+                    firebase
+                        .firestore
+                        .Timestamp
+                        .fromDate(
+                            scadenza
+                        )
+
+            });
+
+    const url =
+        new URL(
+            window.location.href
+        );
+
+    url.search = '';
+    url.hash = '';
+
+    url.searchParams.set(
+        'wa',
+        docRef.id
+    );
+
+    return url.toString();
+
+}
+
+/* MESSAGGIO BACK OFFICE */
+
+function buildWhatsAppBackoffice(
+    shortLink
+) {
 
     return `RICHIESTA INVIO DOCUMENTALE
 
 Cliente: ${nomeCompleto(1)}
 Codice Fiscale: ${V('cliente_cf','-')}
 Cellulare: ${V('cliente_cell','-')}
+Referente: ${V('campo_referente','-')}
 Finalità: ${S('fin','-')}
+
+LINK DIRETTO DA INVIARE AL CLIENTE:
+${shortLink}
+
+Cliccando il link si apre direttamente WhatsApp del cliente con la checklist documentale già compilata.
 
 REDDITI DA FITTO:
 ${S('reddito_fitto','No') === 'Sì' ? fittiText() : 'No'}
@@ -5008,6 +5217,222 @@ ${formatCurrency(aggiornaTotaleFinanziamenti())}
 
 Generato il:
 ${new Date().toLocaleString('it-IT')}`;
+
+}
+
+/* APERTURA LINK CORTO */
+
+async function gestisciLinkWhatsAppCorto() {
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const linkId =
+        params.get(
+            'wa'
+        );
+
+    if (!linkId) {
+        return false;
+    }
+
+    try {
+
+        document.body.innerHTML = `
+
+            <div
+                style="
+                    position:fixed;
+                    inset:0;
+                    background:#f4f7f6;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-family:Arial,sans-serif;
+                    z-index:999999999;
+                "
+            >
+
+                <div
+                    style="
+                        background:white;
+                        padding:35px;
+                        border-radius:15px;
+                        box-shadow:0 10px 30px rgba(0,0,0,.15);
+                        text-align:center;
+                        max-width:420px;
+                        width:90%;
+                    "
+                >
+
+                    <div style="font-size:45px;margin-bottom:15px">
+                        💬
+                    </div>
+
+                    <div
+                        style="
+                            color:#002d72;
+                            font-size:20px;
+                            font-weight:700;
+                            margin-bottom:10px;
+                        "
+                    >
+                        Apertura WhatsApp...
+                    </div>
+
+                    <div
+                        style="
+                            color:#666;
+                            font-size:14px;
+                        "
+                    >
+                        Sto preparando la checklist documentale.
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+        const snapshot =
+            await db
+                .collection(
+                    'whatsapp_links'
+                )
+                .doc(
+                    linkId
+                )
+                .get();
+
+        if (
+            !snapshot.exists
+        ) {
+
+            throw new Error(
+                'Link non trovato o non più disponibile.'
+            );
+
+        }
+
+        const data =
+            snapshot.data();
+
+        if (
+            !data.phone
+            ||
+            !data.message
+        ) {
+
+            throw new Error(
+                'Dati del collegamento incompleti.'
+            );
+
+        }
+
+        if (
+            data.expiresAt
+            &&
+            data.expiresAt.toDate
+        ) {
+
+            const expiry =
+                data.expiresAt.toDate();
+
+            if (
+                new Date() > expiry
+            ) {
+
+                throw new Error(
+                    'Questo collegamento è scaduto.'
+                );
+
+            }
+
+        }
+
+        const cleanPhone =
+            String(
+                data.phone
+            )
+            .replace(
+                /\D/g,
+                ''
+            );
+
+        const waUrl =
+            `https://wa.me/${cleanPhone}?text=${encodeURIComponent(data.message)}`;
+
+        window.location.replace(
+            waUrl
+        );
+
+        return true;
+
+    }
+    catch(error) {
+
+        document.body.innerHTML = `
+
+            <div
+                style="
+                    position:fixed;
+                    inset:0;
+                    background:#f4f7f6;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-family:Arial,sans-serif;
+                "
+            >
+
+                <div
+                    style="
+                        background:white;
+                        padding:35px;
+                        border-radius:15px;
+                        box-shadow:0 10px 30px rgba(0,0,0,.15);
+                        text-align:center;
+                        max-width:460px;
+                        width:90%;
+                    "
+                >
+
+                    <div style="font-size:40px;margin-bottom:15px">
+                        ⚠️
+                    </div>
+
+                    <div
+                        style="
+                            color:#002d72;
+                            font-size:20px;
+                            font-weight:700;
+                            margin-bottom:10px;
+                        "
+                    >
+                        Impossibile aprire il collegamento
+                    </div>
+
+                    <div
+                        style="
+                            color:#666;
+                            font-size:14px;
+                        "
+                    >
+                        ${String(error.message || error)}
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+        return true;
+
+    }
 
 }
 
@@ -5331,7 +5756,19 @@ ${
 
 window.addEventListener(
 'DOMContentLoaded',
-() => {
+async () => {
+
+    /*
+    SE LA PAGINA È STATA APERTA DAL LINK CORTO
+    DEL BACK OFFICE, APRE WHATSAPP DEL CLIENTE.
+    */
+
+    const aperturaWhatsApp =
+        await gestisciLinkWhatsAppCorto();
+
+    if (aperturaWhatsApp) {
+        return;
+    }
 
     document.getElementById(
         'campo_data'
@@ -6108,12 +6545,18 @@ window.addEventListener(
         }
     );
 
+    /*
+    BACK OFFICE:
+    CREA PRIMA IL LINK CORTO FIRESTORE
+    E POI INVIA QUELLO AL BACK OFFICE.
+    */
+
     document.getElementById(
         'btn_wa_backoffice'
     )
     .addEventListener(
         'click',
-        () => {
+        async () => {
 
             const phone =
                 normalizePhone(
@@ -6123,18 +6566,58 @@ window.addEventListener(
                     )
                 );
 
-            openWhatsApp(
-                phone,
-                buildWhatsAppBackoffice()
-            );
+            if (!phone) {
 
-            document.getElementById(
-                'wa-choice-modal'
-            ).style.display =
-                'none';
+                alert(
+                    'Inserisci il numero WhatsApp del Back Office.'
+                );
+
+                return;
+
+            }
+
+            try {
+
+                const shortLink =
+                    await creaLinkWhatsAppCorto();
+
+                openWhatsApp(
+                    phone,
+                    buildWhatsAppBackoffice(
+                        shortLink
+                    )
+                );
+
+                document.getElementById(
+                    'wa-choice-modal'
+                ).style.display =
+                    'none';
+
+            }
+            catch(error) {
+
+                console.error(
+                    'Errore creazione link WhatsApp:',
+                    error
+                );
+
+                alert(
+                    'Impossibile creare il link WhatsApp: '
+                    +
+                    error.message
+                    +
+                    '\n\nVerifica che Firestore consenta la scrittura nella collection "whatsapp_links".'
+                );
+
+            }
 
         }
     );
+
+    /*
+    INVIO DIRETTO CLIENTE:
+    CHECKLIST COMPLETA.
+    */
 
     document.getElementById(
         'btn_wa_diretto'
