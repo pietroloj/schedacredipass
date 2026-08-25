@@ -876,7 +876,9 @@ hr {
     word-break: break-word;
 }
 
-/* MODIFICA SOLO PER FITTI NEL PDF */
+/* SOLO PER PDF: FITTI E FINANZIAMENTI UNO SOTTO L'ALTRO */
+
+#p_finanziamenti_dettaglio,
 #p_fitti_dettaglio {
     white-space: pre-line;
     line-height: 1.5;
@@ -3943,7 +3945,7 @@ function fittiText() {
 
 }
 
-/* MODIFICA SOLO PER VISUALIZZAZIONE FITTI NEL PDF */
+/* SOLO PDF: UN FITTO PER RIGA */
 
 function fittiTextPDF() {
 
@@ -4258,6 +4260,37 @@ function finanziamentiText() {
             }
         )
         .join(' | ');
+
+}
+
+/* SOLO PDF: UN FINANZIAMENTO PER RIGA */
+
+function finanziamentiTextPDF() {
+
+    const finanziamenti =
+        getFinanziamentiDettaglio();
+
+    if (!finanziamenti.length) {
+        return '-';
+    }
+
+    return finanziamenti
+        .map(
+            (fin,index) => {
+
+                return (
+                    `${index + 1}) ${fin.istituto || 'Istituto'}`
+                    +
+                    ` • Rata: ${fin.rata ? formatEuro(fin.rata) : '-'}`
+                    +
+                    ` • Scadenza: ${fin.scadenza || '-'}`
+                    +
+                    ` • Finalità: ${fin.finalita || '-'}`
+                );
+
+            }
+        )
+        .join('\n');
 
 }
 
@@ -4862,7 +4895,7 @@ function compilaPDF() {
         ===
         'Sì'
             ?
-            finanziamentiText()
+            finanziamentiTextPDF()
             :
             'No'
     );
