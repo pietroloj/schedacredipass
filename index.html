@@ -5093,7 +5093,70 @@ function buildWhatsAppCliente() {
 
 }
 
-/* LINK CORTO BACK OFFICE */
+/* LINK COMPATTO BACK OFFICE - SENZA FIRESTORE */
+
+/*
+    Il link viene costruito interamente nel browser.
+    Non viene scritto nulla nella collection "whatsapp_links".
+
+    Per evitare che WhatsApp spezzi il collegamento:
+    - telefono e checklist vengono codificati in Base64 URL-safe;
+    - nel link compaiono solo caratteri sicuri: lettere, numeri, - e _;
+    - il payload viene inserito nell'hash (#wa=...), quindi non viene inviato
+      al server e non richiede permessi Firestore.
+*/
+
+function utf8ToBase64Url(value) {
+
+    const bytes =
+        new TextEncoder()
+            .encode(
+                String(value || '')
+            );
+
+    let binary = '';
+
+    bytes.forEach(
+        byte => {
+            binary +=
+                String.fromCharCode(byte);
+        }
+    );
+
+    return btoa(binary)
+        .replace(/\+/g,'-')
+        .replace(/\//g,'_')
+        .replace(/=+$/g,'');
+
+}
+
+function base64UrlToUtf8(value) {
+
+    let base64 =
+        String(value || '')
+            .replace(/-/g,'+')
+            .replace(/_/g,'/');
+
+    while (
+        base64.length % 4
+    ) {
+        base64 += '=';
+    }
+
+    const binary =
+        atob(base64);
+
+    const bytes =
+        Uint8Array.from(
+            binary,
+            char =>
+                char.charCodeAt(0)
+        );
+
+    return new TextDecoder('utf-8')
+        .decode(bytes);
+
+}
 
 async function creaLinkWhatsAppCorto() {
 
@@ -5116,68 +5179,34 @@ async function creaLinkWhatsAppCorto() {
     const message =
         buildWhatsAppCliente();
 
-    const ora =
-        new Date();
+    const payload =
+        JSON.stringify({
+            p: phone,
+            m: message
+        });
 
-    const scadenza =
-        new Date(
-            ora.getTime()
-            +
-            24 * 60 * 60 * 1000
+    const encoded =
+        utf8ToBase64Url(
+            payload
         );
 
-    const docRef =
-        await db
-            .collection(
-                'whatsapp_links'
-            )
-            .add({
+    /*
+        Manteniamo solamente origin + pathname.
+        In questo modo il link non eredita query string o hash precedenti.
+    */
 
-                phone:
-                    phone,
+    const baseUrl =
+        window.location.origin
+        +
+        window.location.pathname;
 
-                message:
-                    message,
-
-                cliente:
-                    nomeCompleto(1),
-
-                finalita:
-                    S(
-                        'fin',
-                        ''
-                    ),
-
-                createdAt:
-                    firebase
-                        .firestore
-                        .FieldValue
-                        .serverTimestamp(),
-
-                expiresAt:
-                    firebase
-                        .firestore
-                        .Timestamp
-                        .fromDate(
-                            scadenza
-                        )
-
-            });
-
-    const url =
-        new URL(
-            window.location.href
-        );
-
-    url.search = '';
-    url.hash = '';
-
-    url.searchParams.set(
-        'wa',
-        docRef.id
+    return (
+        baseUrl
+        +
+        '#wa='
+        +
+        encoded
     );
-
-    return url.toString();
 
 }
 
@@ -5220,25 +5249,59 @@ ${new Date().toLocaleString('it-IT')}`;
 
 }
 
-/* APERTURA LINK CORTO */
+/* APERTURA LINK COMPATTO */
 
 async function gestisciLinkWhatsAppCorto() {
 
-    const params =
-        new URLSearchParams(
-            window.location.search
+    const hash =
+        String(
+            window.location.hash
+            ||
+            ''
         );
 
-    const linkId =
-        params.get(
-            'wa'
-        );
-
-    if (!linkId) {
+    if (
+        !hash.startsWith('#wa=')
+    ) {
         return false;
     }
 
     try {
+
+        const encoded =
+            hash.substring(4);
+
+        if (!encoded) {
+
+            throw new Error(
+                'Collegamento WhatsApp non valido.'
+            );
+
+        }
+
+        const decoded =
+            base64UrlToUtf8(
+                encoded
+            );
+
+        const data =
+            JSON.parse(
+                decoded
+            );
+
+        if (
+            !data
+            ||
+            !data.p
+            ||
+            !data.m
+        ) {
+
+            throw new Error(
+                'Dati del collegamento incompleti.'
+            );
+
+        }
 
         document.body.innerHTML = `
 
@@ -5268,7 +5331,7 @@ async function gestisciLinkWhatsAppCorto() {
                 >
 
                     <div style="font-size:45px;margin-bottom:15px">
-                        💬
+                        &#128172;
                     </div>
 
                     <div
@@ -5297,73 +5360,25 @@ async function gestisciLinkWhatsAppCorto() {
 
         `;
 
-        const snapshot =
-            await db
-                .collection(
-                    'whatsapp_links'
-                )
-                .doc(
-                    linkId
-                )
-                .get();
-
-        if (
-            !snapshot.exists
-        ) {
-
-            throw new Error(
-                'Link non trovato o non più disponibile.'
-            );
-
-        }
-
-        const data =
-            snapshot.data();
-
-        if (
-            !data.phone
-            ||
-            !data.message
-        ) {
-
-            throw new Error(
-                'Dati del collegamento incompleti.'
-            );
-
-        }
-
-        if (
-            data.expiresAt
-            &&
-            data.expiresAt.toDate
-        ) {
-
-            const expiry =
-                data.expiresAt.toDate();
-
-            if (
-                new Date() > expiry
-            ) {
-
-                throw new Error(
-                    'Questo collegamento è scaduto.'
-                );
-
-            }
-
-        }
-
         const cleanPhone =
             String(
-                data.phone
+                data.p
             )
             .replace(
                 /\D/g,
                 ''
             );
 
+        if (!cleanPhone) {
+
+            throw new Error(
+                'Numero cellulare cliente non valido.'
+            );
+
+        }
+
         const waUrl =
-            `https://wa.me/${cleanPhone}?text=${encodeURIComponent(data.message)}`;
+            `https://wa.me/${cleanPhone}?text=${encodeURIComponent(data.m)}`;
 
         window.location.replace(
             waUrl
@@ -5373,6 +5388,11 @@ async function gestisciLinkWhatsAppCorto() {
 
     }
     catch(error) {
+
+        console.error(
+            'Errore apertura link WhatsApp:',
+            error
+        );
 
         document.body.innerHTML = `
 
@@ -5401,7 +5421,7 @@ async function gestisciLinkWhatsAppCorto() {
                 >
 
                     <div style="font-size:40px;margin-bottom:15px">
-                        ⚠️
+                        &#9888;&#65039;
                     </div>
 
                     <div
@@ -6547,7 +6567,7 @@ async () => {
 
     /*
     BACK OFFICE:
-    CREA PRIMA IL LINK CORTO FIRESTORE
+    CREA UN LINK COMPATTO URL-SAFE SENZA FIRESTORE
     E POI INVIA QUELLO AL BACK OFFICE.
     */
 
@@ -6605,8 +6625,6 @@ async () => {
                     'Impossibile creare il link WhatsApp: '
                     +
                     error.message
-                    +
-                    '\n\nVerifica che Firestore consenta la scrittura nella collection "whatsapp_links".'
                 );
 
             }
