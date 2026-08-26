@@ -108,15 +108,4 @@ Restituisci solo dati realmente leggibili.
   });
 }
 
-module.exports = { extractIncome };REGOLE PER MODELLO REDDITI / UNICO:
-- estrai i valori fiscali solo dai quadri/campi effettivamente presenti e coerenti con lo schema.
-- non sommare automaticamente componenti che potrebbero essere già comprese nel reddito complessivo.
-
-${practiceContext}
-`.trim(),
-    userText: `Analizza il documento reddituale richiesto come ${tipoDocumentoAtteso} (base ${codiceBase}). Estrai tutti i dati previsti dallo schema che sono realmente visibili. Mantieni separati i dati documentali dalle eventuali informazioni presenti nel contesto pratica.`,
-    contentItems,
-  });
-}
-
 module.exports = { extractIncome };
