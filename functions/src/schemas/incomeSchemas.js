@@ -1,6 +1,7 @@
 const incomeExtractionSchema = {
   type: "object",
   additionalProperties: false,
+
   properties: {
     valido: { type: "boolean" },
     motivo_errore: { type: "string" },
@@ -9,35 +10,54 @@ const incomeExtractionSchema = {
     dati_estratti: {
       type: "object",
       additionalProperties: false,
+
       properties: {
         anno_fiscale: { type: "string" },
         tipo_reddito: { type: "string" },
 
-        // CU / CUD
+        /*
+         * CERTIFICAZIONE UNICA / CUD
+         */
         reddito_lordo_annuo: { type: "string" },
         irpef: { type: "string" },
         addizionale_regionale: { type: "string" },
 
-        // CU: punti 26, 27 e 29 tenuti distinti
+        // CU punti 26, 27 e 29: devono restare separati.
         addizionale_comunale_acconto_anno: { type: "string" },
         addizionale_comunale_saldo_anno: { type: "string" },
         addizionale_comunale_acconto_anno_successivo: { type: "string" },
 
-        // Informativo: non viene sottratto una seconda volta quando
-        // il reddito del punto 1/2/3 è imponibile fiscale CU.
+        giorni_lavorati: { type: "string" },
+
+        /*
+         * DATO INFORMATIVO.
+         * Non viene sottratto una seconda volta dal reddito fiscale CU.
+         */
         contributi_previdenziali_lavoratore: { type: "string" },
 
-        giorni_lavorati: { type: "string" },
         data_assunzione: { type: "string" },
         tempo_indeterminato: { type: "boolean" },
 
-        // Solo controllo/coerenza, non fonte primaria del calcolo CU
+        /*
+         * BUSTA PAGA: utile come controllo, non sostituisce il calcolo CU.
+         */
         netto_mensile_rilevato_documento: { type: "string" },
 
         cessione_del_quinto_presente: { type: "boolean" },
         pignoramento_presente: { type: "boolean" },
 
-        // ISEE
+        /*
+         * MODELLO REDDITI / UNICO.
+         * Vengono estratti ma NON usati con la formula CU.
+         */
+        reddito_complessivo_unico: { type: "string" },
+        reddito_imponibile_unico: { type: "string" },
+        imposta_netta_unico: { type: "string" },
+        contributi_deducibili_unico: { type: "string" },
+
+        /*
+         * ISEE
+         */
         valore_isee: { type: "string" },
         protocollo_isee: { type: "string" },
         validita_isee: { type: "string" }
@@ -52,13 +72,17 @@ const incomeExtractionSchema = {
         "addizionale_comunale_acconto_anno",
         "addizionale_comunale_saldo_anno",
         "addizionale_comunale_acconto_anno_successivo",
-        "contributi_previdenziali_lavoratore",
         "giorni_lavorati",
+        "contributi_previdenziali_lavoratore",
         "data_assunzione",
         "tempo_indeterminato",
         "netto_mensile_rilevato_documento",
         "cessione_del_quinto_presente",
         "pignoramento_presente",
+        "reddito_complessivo_unico",
+        "reddito_imponibile_unico",
+        "imposta_netta_unico",
+        "contributi_deducibili_unico",
         "valore_isee",
         "protocollo_isee",
         "validita_isee"
