@@ -71,6 +71,10 @@ const {
 } = require("./services/decisionEngine");
 
 const {
+  calculatePracticeIncome,
+} = require("./services/practiceIncomeCalculator");
+
+const {
   getSummaryDoc,
   saveSummaryDoc,
   saveAuditEntry,
@@ -837,14 +841,24 @@ function mergePracticeFinancials({
   rataMutuoStimata,
   rateAltriFinanziamenti,
 }) {
+  const practiceIncome =
+    calculatePracticeIncome(
+      documentAnalyses,
+      practiceData
+    );
+
   const merged = {
     redditoBancarioMensile:
-      null,
+      practiceIncome
+        .redditoNettoMensile,
 
     fonteReddito:
-      "non_disponibile",
+      practiceIncome
+        .fonteReddito,
 
     redditiPerRichiedente:
+      practiceIncome
+        .redditiPerRichiedente ||
       {},
 
     dti:
@@ -854,7 +868,8 @@ function mergePracticeFinancials({
       null,
 
     scoreIncome:
-      null,
+      practiceIncome
+        .score,
 
     scoreBank:
       null,
@@ -863,7 +878,13 @@ function mergePracticeFinancials({
       false,
 
     criticitaFinanziarie:
-      [],
+      [
+        ...(
+          practiceIncome
+            .criticita ||
+          []
+        ),
+      ],
 
     puntiForzaFinanziari:
       [],
@@ -883,16 +904,9 @@ function mergePracticeFinancials({
   };
 
 
-  /*
-   * REDDITI DOCUMENTALI:
-   * scegliamo una sola fonte principale per ogni richiedente.
-   * Priorità: CU > Unico > busta paga.
-   */
-  const incomeCandidates =
-    [];
-
   const bankScores =
     [];
+
 
   for (
     const doc of
@@ -902,57 +916,6 @@ function mergePracticeFinancials({
       doc
         .decisioneBackend ||
       {};
-
-    const base =
-      doc
-        .tipoDocumentoBase ||
-      stripNumericSuffix(
-        doc
-          .tipoDocumento ||
-        ""
-      );
-
-    if (
-      dec
-        .redditoBancarioMensile !==
-        undefined &&
-      dec
-        .redditoBancarioMensile !==
-        null
-    ) {
-      incomeCandidates.push({
-        applicant:
-          getApplicantKey(
-            doc
-              .tipoDocumento
-          ),
-
-        tipoDocumento:
-          doc
-            .tipoDocumento,
-
-        tipoDocumentoBase:
-          base,
-
-        priority:
-          getIncomePriority(
-            base
-          ),
-
-        reddito:
-          dec
-            .redditoBancarioMensile,
-
-        score:
-          dec
-            .score,
-
-        dettaglio:
-          dec
-            .dettaglioCalcoloRedditoCU ||
-          null,
-      });
-    }
 
     if (
       dec
@@ -1089,183 +1052,26 @@ function mergePracticeFinancials({
   }
 
 
-  const selectedIncomeByApplicant =
-    new Map();
-
-  for (
-    const candidate of
-    incomeCandidates
-  ) {
-    const current =
-      selectedIncomeByApplicant.get(
-        candidate
-          .applicant
-      );
-
-    if (
-      !current ||
-      candidate
-        .priority >
-        current
-          .priority
-    ) {
-      selectedIncomeByApplicant.set(
-        candidate
-          .applicant,
-        candidate
-      );
-    }
-  }
-
-
-  if (
-    selectedIncomeByApplicant
-      .size >
-    0
-  ) {
-    let total =
-      0;
-
-    const scores =
-      [];
-
-    for (
-      const [
-        applicant,
-        item,
-      ] of
-      selectedIncomeByApplicant
-    ) {
-      const reddito =
-        normalizeNumber(
-          item
-            .reddito
-        );
-
-      if (
-        Number.isFinite(
-          reddito
-        )
-      ) {
-        total +=
-          reddito;
-
-        merged
-          .redditiPerRichiedente[
-            applicant
-          ] = {
-            reddito,
-
-            fonte:
-              item
-                .tipoDocumento,
-
-            dettaglio:
-              item
-                .dettaglio,
-          };
-      }
-
-      if (
-        Number.isFinite(
-          normalizeNumber(
-            item
-              .score
-          )
-        )
-      ) {
-        scores.push(
-          item
-            .score
-        );
-      }
-    }
-
-    if (
-      total > 0
-    ) {
-      merged
-        .redditoBancarioMensile =
-        total;
-
-      merged
-        .fonteReddito =
-        "documentazione_verificata";
-    }
-
-    merged
-      .scoreIncome =
-      average(
-        scores
-      );
-  }
-
-
-  /*
-   * FALLBACK SCHEDA CONSULENZA:
-   * solo quando NON abbiamo reddito calcolato da documenti.
-   */
-  if (
-    merged
-      .redditoBancarioMensile ===
-    null
-  ) {
-    const r1 =
-      normalizeNumber(
-        practiceData
-          .reddito_richiedente_1 ??
-        practiceData
-          .cliente_reddito
-      );
-
-    const r2 =
-      normalizeNumber(
-        practiceData
-          .reddito_richiedente_2 ??
-        practiceData
-          .cliente2_reddito
-      );
-
-    const declared =
-      (
-        Number.isFinite(r1)
-          ? r1
-          : 0
-      ) +
-      (
-        Number.isFinite(r2)
-          ? r2
-          : 0
-      );
-
-    if (
-      declared > 0
-    ) {
-      merged
-        .redditoBancarioMensile =
-        declared;
-
-      merged
-        .fonteReddito =
-        "scheda_consulenza_non_verificato";
-
-      merged
-        .criticitaFinanziarie
-        .push(
-          "Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale"
-        );
-    }
-  }
-
-
   if (
     bankScores.length
   ) {
+    const total =
+      bankScores.reduce(
+        (sum, value) =>
+          sum +
+          (
+            normalizeNumber(
+              value
+            ) ||
+            0
+          ),
+        0
+      );
+
     merged
       .scoreBank =
-      average(
-        bankScores
-      );
+      total /
+      bankScores.length;
   }
 
 
@@ -1293,6 +1099,7 @@ function mergePracticeFinancials({
       new Set(
         merged
           .criticitaFinanziarie
+          .filter(Boolean)
       )
     );
 
@@ -1303,6 +1110,7 @@ function mergePracticeFinancials({
       new Set(
         merged
           .puntiForzaFinanziari
+          .filter(Boolean)
       )
     );
 
@@ -1328,6 +1136,7 @@ function mergePracticeFinancials({
             .alertBancari[
               key
             ]
+            .filter(Boolean)
         )
       );
   }
