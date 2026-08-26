@@ -61,6 +61,9 @@ const {
 } = require("./services/bankMatcher");
 
 const {
+  calcolaRedditoBancarioMensilePrudenziale,
+  calcolaDTI,
+  calcolaLTV,
   scoreIncomeDecision,
   scoreBankDecision,
   reviewPolicy,
@@ -85,12 +88,7 @@ const {
 |
 */
 
-const {
-  calcolaRedditoBancarioMensilePrudenziale,
-  calcolaDTI,
-  calcolaLTV,
-  formatNumberIT,
-} = require("./utils/mathHelpers");
+const { normalizeNumber, formatNumberIT } = require("./utils/numbers");
 
 
 /*
@@ -165,69 +163,6 @@ function normalizeString(value) {
   return String(value ?? "")
     .trim()
     .toLowerCase();
-}
-
-
-function firstDefined(...values) {
-  for (const value of values) {
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      return value;
-    }
-  }
-  return null;
-}
-
-function toNumberSafe(value) {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-
-  let s = String(value).trim().replace(/€/g, "").replace(/\s/g, "");
-  if (!s) return null;
-
-  if (s.includes(",") && s.includes(".")) {
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (s.includes(",")) {
-    s = s.replace(",", ".");
-  }
-
-  const n = Number(s.replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? n : null;
-}
-
-function extractionData(doc) {
-  const root = doc?.estrazione || {};
-  const nested = root?.dati_estratti || {};
-  return { ...root, ...nested };
-}
-
-function documentSubjectIndex(tipoDocumento = "") {
-  const m = String(tipoDocumento).match(/(?:_|)(1|2)$/);
-  return m ? Number(m[1]) : null;
-}
-
-function isIncomeDocument(tipoDocumento = "") {
-  const base = stripNumericSuffix(String(tipoDocumento || "").replace(/^doc_/, ""));
-  return ["cud", "cu", "unici", "unico", "bustepaga", "busta_paga", "redditi"].includes(base);
-}
-
-function isBankDocument(tipoDocumento = "") {
-  const base = stripNumericSuffix(String(tipoDocumento || "").replace(/^doc_/, ""));
-  return ["ec", "mov", "estrattoconto", "estratto_conto", "movimenti"].includes(base);
-}
-
-function normalizeEvidenceItem(item) {
-  if (typeof item === "string") return item.trim();
-  if (!item || typeof item !== "object") return "";
-  return [
-    item.data,
-    item.controparte,
-    item.ordinante,
-    item.descrizione,
-    item.causale,
-    item.importo,
-    item.frequenza,
-    item.note,
-  ].filter(Boolean).join(" - ");
 }
 
 
@@ -606,44 +541,97 @@ async function loadClientDocumentAnalyses(
       .collection("audit")
       .get();
 
-  /*
-   * Manteniamo separati R1/R2 e documenti differenti.
-   * In passato il suffisso numerico veniva perso e, ad esempio,
-   * doc_cud1 e doc_cud2 finivano nella stessa chiave: l'ultimo sovrascriveva l'altro.
-   */
-  const latestByDocumentKey = new Map();
+  const latestByDocType =
+    new Map();
 
   auditSnap.forEach((doc) => {
-    const data = doc.data() || {};
+    const data =
+      doc.data() || {};
 
+    /*
+     * Dai nuovi upload salviamo il codice completo (es. doc_cud1/doc_cud2)
+     * dentro decisioneBackend._tipoDocumentoOriginale.
+     * Gli audit precedenti continueranno a funzionare usando il tipo base.
+     */
     const tipoDocumento =
-      data.codiceDocumento ||
-      data.tipoDocumentoAtteso ||
+      data
+        .decisioneBackend
+        ?._tipoDocumentoOriginale ||
+      data
+        .tipoDocumentoOriginale ||
+      data
+        .tipoDocumentoAtteso ||
       "";
 
+    if (!tipoDocumento) {
+      return;
+    }
+
+    const tipoDocumentoBase =
+      stripNumericSuffix(
+        tipoDocumento
+      );
+
     const createdAt =
-      data.createdAt?.toMillis?.() || 0;
+      data
+        .createdAt
+        ?.toMillis?.() ||
+      0;
 
-    if (!tipoDocumento) return;
+    const key =
+      String(
+        tipoDocumento
+      );
 
-    const key = String(tipoDocumento).trim().toLowerCase();
-    const current = latestByDocumentKey.get(key);
+    const current =
+      latestByDocType.get(
+        key
+      );
 
-    if (!current || createdAt > current.createdAt) {
-      latestByDocumentKey.set(key, {
-        createdAt,
-        tipoDocumento,
-        tipoDocumentoBase: stripNumericSuffix(tipoDocumento),
-        classificazione: data.classificazione || null,
-        estrazione: data.estrazione || null,
-        decisioneBackend: data.decisioneBackend || null,
-        review: data.review || null,
-        decisionCode: data.decisionCode || "",
-      });
+    if (
+      !current ||
+      createdAt >
+        current.createdAt
+    ) {
+      latestByDocType.set(
+        key,
+        {
+          createdAt,
+          tipoDocumento,
+          tipoDocumentoBase,
+
+          classificazione:
+            data
+              .classificazione ||
+            null,
+
+          estrazione:
+            data
+              .estrazione ||
+            null,
+
+          decisioneBackend:
+            data
+              .decisioneBackend ||
+            null,
+
+          review:
+            data
+              .review ||
+            null,
+
+          decisionCode:
+            data
+              .decisionCode ||
+            "",
+        }
+      );
     }
   });
 
-  return Array.from(latestByDocumentKey.values());
+  return Array.from(
+    latestByDocType.values()
+  );
 }
 
 
@@ -652,6 +640,87 @@ async function loadClientDocumentAnalyses(
 | MERGE DATI FINANZIARI
 |--------------------------------------------------------------------------
 */
+
+function getApplicantKey(
+  tipoDocumento = ""
+) {
+  const raw =
+    String(
+      tipoDocumento
+    );
+
+  const match =
+    raw.match(/(\d+)$/);
+
+  if (!match) {
+    return "unknown";
+  }
+
+  return `r${match[1]}`;
+}
+
+
+function getIncomePriority(
+  tipoDocumentoBase = ""
+) {
+  const base =
+    String(
+      tipoDocumentoBase
+    ).toLowerCase();
+
+  if (
+    base.includes("cud") ||
+    base.includes("cu")
+  ) {
+    return 100;
+  }
+
+  if (
+    base.includes("unici") ||
+    base.includes("unico") ||
+    base.includes("redditi")
+  ) {
+    return 80;
+  }
+
+  if (
+    base.includes("bustepaga") ||
+    base.includes("busta")
+  ) {
+    return 50;
+  }
+
+  return 0;
+}
+
+
+function average(
+  values = []
+) {
+  const nums =
+    values
+      .map((v) =>
+        normalizeNumber(v)
+      )
+      .filter(
+        (v) =>
+          Number.isFinite(v)
+      );
+
+  if (!nums.length) {
+    return null;
+  }
+
+  return (
+    nums.reduce(
+      (sum, n) =>
+        sum + n,
+      0
+    ) /
+    nums.length
+  );
+}
+
 
 function mergePracticeFinancials({
   documentAnalyses,
@@ -662,214 +731,500 @@ function mergePracticeFinancials({
   rateAltriFinanziamenti,
 }) {
   const merged = {
-    redditoBancarioMensile: null,
-    redditoFonte: "",
-    dti: null,
-    ltv: null,
-    scoreIncome: null,
-    scoreBank: null,
-    criticitaFinanziarie: [],
-    puntiForzaFinanziari: [],
-    evidenzeBancarie: {
-      gambling: [],
+    redditoBancarioMensile:
+      null,
+
+    fonteReddito:
+      "non_disponibile",
+
+    redditiPerRichiedente:
+      {},
+
+    dti:
+      null,
+
+    ltv:
+      null,
+
+    scoreIncome:
+      null,
+
+    scoreBank:
+      null,
+
+    bankDataAvailable:
+      false,
+
+    criticitaFinanziarie:
+      [],
+
+    puntiForzaFinanziari:
+      [],
+
+    alertBancari: {
+      scommesse: [],
       contanti: [],
-      rateRilevate: [],
-      stipendi: [],
-      movimentiRicorrenti: [],
-      saldoNegativoOScoperti: false,
+      rate: [],
+      entrateStraordinarie:
+        [],
+      riscossione: [],
+      crypto: [],
+      accrediti: [],
+      saldoNegativoOScoperti:
+        false,
     },
   };
 
-  const incomeBySubject = new Map();
-  const incomeWithoutSubject = [];
-  const incomeScores = [];
-  const bankScores = [];
 
-  for (const doc of documentAnalyses) {
-    const dec = doc.decisioneBackend || {};
-    const e = extractionData(doc);
-    const tipo = doc.tipoDocumento || "";
+  /*
+   * REDDITI DOCUMENTALI:
+   * scegliamo una sola fonte principale per ogni richiedente.
+   * Priorità: CU > Unico > busta paga.
+   */
+  const incomeCandidates =
+    [];
 
-    if (isIncomeDocument(tipo)) {
-      const subject = documentSubjectIndex(tipo);
-      const candidate = toNumberSafe(dec.redditoBancarioMensile);
+  const bankScores =
+    [];
 
-      if (candidate !== null && candidate > 0) {
-        if (subject) {
-          const arr = incomeBySubject.get(subject) || [];
-          arr.push(candidate);
-          incomeBySubject.set(subject, arr);
-        } else {
-          incomeWithoutSubject.push(candidate);
-        }
+  for (
+    const doc of
+    documentAnalyses
+  ) {
+    const dec =
+      doc
+        .decisioneBackend ||
+      {};
+
+    const base =
+      doc
+        .tipoDocumentoBase ||
+      stripNumericSuffix(
+        doc
+          .tipoDocumento ||
+        ""
+      );
+
+    if (
+      dec
+        .redditoBancarioMensile !==
+        undefined &&
+      dec
+        .redditoBancarioMensile !==
+        null
+    ) {
+      incomeCandidates.push({
+        applicant:
+          getApplicantKey(
+            doc
+              .tipoDocumento
+          ),
+
+        tipoDocumento:
+          doc
+            .tipoDocumento,
+
+        tipoDocumentoBase:
+          base,
+
+        priority:
+          getIncomePriority(
+            base
+          ),
+
+        reddito:
+          dec
+            .redditoBancarioMensile,
+
+        score:
+          dec
+            .score,
+
+        dettaglio:
+          dec
+            .dettaglioCalcoloRedditoCU ||
+          null,
+      });
+    }
+
+    if (
+      dec
+        .scoreComportamentoBancario !==
+        undefined &&
+      dec
+        .scoreComportamentoBancario !==
+        null
+    ) {
+      merged
+        .bankDataAvailable =
+        true;
+
+      bankScores.push(
+        dec
+          .scoreComportamentoBancario
+      );
+
+      merged
+        .alertBancari
+        .scommesse
+        .push(
+          ...(
+            dec
+              .alertScommesse ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .contanti
+        .push(
+          ...(
+            dec
+              .alertContanti ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .rate
+        .push(
+          ...(
+            dec
+              .alertRateFinanziamenti ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .entrateStraordinarie
+        .push(
+          ...(
+            dec
+              .alertEntrateStraordinarie ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .riscossione
+        .push(
+          ...(
+            dec
+              .alertRiscossione ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .crypto
+        .push(
+          ...(
+            dec
+              .alertCrypto ||
+            []
+          )
+        );
+
+      merged
+        .alertBancari
+        .accrediti
+        .push(
+          ...(
+            dec
+              .accreditiStipendioPensione ||
+            []
+          )
+        );
+
+      if (
+        dec
+          .saldoNegativoOScoperti
+      ) {
+        merged
+          .alertBancari
+          .saldoNegativoOScoperti =
+          true;
+      }
+    }
+
+    if (
+      Array.isArray(
+        dec
+          .criticita
+      )
+    ) {
+      merged
+        .criticitaFinanziarie
+        .push(
+          ...dec
+            .criticita
+        );
+    }
+
+    if (
+      Array.isArray(
+        dec
+          .puntiForza
+      )
+    ) {
+      merged
+        .puntiForzaFinanziari
+        .push(
+          ...dec
+            .puntiForza
+        );
+    }
+  }
+
+
+  const selectedIncomeByApplicant =
+    new Map();
+
+  for (
+    const candidate of
+    incomeCandidates
+  ) {
+    const current =
+      selectedIncomeByApplicant.get(
+        candidate
+          .applicant
+      );
+
+    if (
+      !current ||
+      candidate
+        .priority >
+        current
+          .priority
+    ) {
+      selectedIncomeByApplicant.set(
+        candidate
+          .applicant,
+        candidate
+      );
+    }
+  }
+
+
+  if (
+    selectedIncomeByApplicant
+      .size >
+    0
+  ) {
+    let total =
+      0;
+
+    const scores =
+      [];
+
+    for (
+      const [
+        applicant,
+        item,
+      ] of
+      selectedIncomeByApplicant
+    ) {
+      const reddito =
+        normalizeNumber(
+          item
+            .reddito
+        );
+
+      if (
+        Number.isFinite(
+          reddito
+        )
+      ) {
+        total +=
+          reddito;
+
+        merged
+          .redditiPerRichiedente[
+            applicant
+          ] = {
+            reddito,
+
+            fonte:
+              item
+                .tipoDocumento,
+
+            dettaglio:
+              item
+                .dettaglio,
+          };
       }
 
-      const score = toNumberSafe(dec.score);
-      if (score !== null) incomeScores.push(score);
-    }
-
-    const bankScore = toNumberSafe(dec.scoreComportamentoBancario);
-    if (bankScore !== null) bankScores.push(bankScore);
-
-    if (Array.isArray(dec.criticita)) merged.criticitaFinanziarie.push(...dec.criticita);
-    if (Array.isArray(dec.puntiForza)) merged.puntiForzaFinanziari.push(...dec.puntiForza);
-
-    if (isBankDocument(tipo) || Array.isArray(e.movimenti_gambling_rilevati) || Array.isArray(e.stipendi_rilevati)) {
-      if (Array.isArray(e.movimenti_gambling_rilevati)) {
-        merged.evidenzeBancarie.gambling.push(...e.movimenti_gambling_rilevati);
-      }
-
-      if (Array.isArray(e.rate_rilevate)) {
-        merged.evidenzeBancarie.rateRilevate.push(...e.rate_rilevate);
-      }
-
-      if (Array.isArray(e.stipendi_rilevati)) {
-        merged.evidenzeBancarie.stipendi.push(...e.stipendi_rilevati);
-      }
-
-      if (Array.isArray(e.movimenti_ricorrenti)) {
-        merged.evidenzeBancarie.movimentiRicorrenti.push(...e.movimenti_ricorrenti);
-
-        for (const item of e.movimenti_ricorrenti) {
-          const txt = normalizeEvidenceItem(item).toLowerCase();
-          if (/versamento contanti|versamento di contanti|prelievo contanti|prelievo atm|prelievo bancomat|cash/.test(txt)) {
-            merged.evidenzeBancarie.contanti.push(item);
-          }
-        }
-      }
-
-      if (e.saldo_negativo_o_scoperti === true) {
-        merged.evidenzeBancarie.saldoNegativoOScoperti = true;
+      if (
+        Number.isFinite(
+          normalizeNumber(
+            item
+              .score
+          )
+        )
+      ) {
+        scores.push(
+          item
+            .score
+        );
       }
     }
-  }
 
-  /* Reddito documentale: per ogni richiedente scegliamo prudentemente il valore più basso positivo tra i documenti disponibili. */
-  if (incomeBySubject.size > 0) {
-    let totale = 0;
-    for (const values of incomeBySubject.values()) {
-      const valid = values.filter((v) => Number.isFinite(v) && v > 0);
-      if (valid.length) totale += Math.min(...valid);
-    }
-    if (totale > 0) {
-      merged.redditoBancarioMensile = totale;
-      merged.redditoFonte = "documenti_reddituali_r1_r2";
-    }
-  }
+    if (
+      total > 0
+    ) {
+      merged
+        .redditoBancarioMensile =
+        total;
 
-  if (merged.redditoBancarioMensile === null && incomeWithoutSubject.length > 0) {
-    merged.redditoBancarioMensile = Math.min(...incomeWithoutSubject.filter((v) => v > 0));
-    merged.redditoFonte = "documento_reddituale";
-  }
-
-  /* Fallback su estrazione numerica pura se il decision engine del documento non ha restituito il reddito. */
-  if (merged.redditoBancarioMensile === null) {
-    const candidates = [];
-
-    for (const doc of documentAnalyses) {
-      if (!isIncomeDocument(doc.tipoDocumento)) continue;
-      const estratti = doc?.estrazione?.dati_estratti || doc?.estrazione || {};
-      const value = calcolaRedditoBancarioMensilePrudenziale(estratti);
-      if (Number.isFinite(value) && value > 0) candidates.push(value);
+      merged
+        .fonteReddito =
+        "documentazione_verificata";
     }
 
-    if (candidates.length) {
-      merged.redditoBancarioMensile = Math.min(...candidates);
-      merged.redditoFonte = "fallback_estrazione_documentale";
+    merged
+      .scoreIncome =
+      average(
+        scores
+      );
+  }
+
+
+  /*
+   * FALLBACK SCHEDA CONSULENZA:
+   * solo quando NON abbiamo reddito calcolato da documenti.
+   */
+  if (
+    merged
+      .redditoBancarioMensile ===
+    null
+  ) {
+    const r1 =
+      normalizeNumber(
+        practiceData
+          .reddito_richiedente_1 ??
+        practiceData
+          .cliente_reddito
+      );
+
+    const r2 =
+      normalizeNumber(
+        practiceData
+          .reddito_richiedente_2 ??
+        practiceData
+          .cliente2_reddito
+      );
+
+    const declared =
+      (
+        Number.isFinite(r1)
+          ? r1
+          : 0
+      ) +
+      (
+        Number.isFinite(r2)
+          ? r2
+          : 0
+      );
+
+    if (
+      declared > 0
+    ) {
+      merged
+        .redditoBancarioMensile =
+        declared;
+
+      merged
+        .fonteReddito =
+        "scheda_consulenza_non_verificato";
+
+      merged
+        .criticitaFinanziarie
+        .push(
+          "Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale"
+        );
     }
   }
 
-  /* Ultimo fallback: dati dichiarati nella scheda consulenza. */
-  if (merged.redditoBancarioMensile === null) {
-    const r1 = toNumberSafe(firstDefined(practiceData.reddito_richiedente_1, practiceData.cliente_reddito));
-    const r2 = toNumberSafe(firstDefined(practiceData.reddito_richiedente_2, practiceData.cliente2_reddito));
-    const dichiarato = (r1 || 0) + (r2 || 0);
 
-    if (dichiarato > 0) {
-      merged.redditoBancarioMensile = dichiarato;
-      merged.redditoFonte = "scheda_consulenza_non_verificato";
-      merged.criticitaFinanziarie.push("Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale");
-    }
+  if (
+    bankScores.length
+  ) {
+    merged
+      .scoreBank =
+      average(
+        bankScores
+      );
   }
 
-  if (incomeScores.length) {
-    merged.scoreIncome = Math.min(...incomeScores);
-  }
 
-  if (bankScores.length) {
-    merged.scoreBank = Math.min(...bankScores);
-  }
-
-  const rateDichiarate = toNumberSafe(rateAltriFinanziamenti);
-
-  if (merged.dti === null && merged.redditoBancarioMensile !== null) {
-    merged.dti = calcolaDTI(
-      merged.redditoBancarioMensile,
-      toNumberSafe(rataMutuoStimata),
-      rateDichiarate
+  merged
+    .dti =
+    calcolaDTI(
+      merged
+        .redditoBancarioMensile,
+      rataMutuoStimata,
+      rateAltriFinanziamenti
     );
-  }
 
-  if (merged.ltv === null) {
-    merged.ltv = calcolaLTV(
-      toNumberSafe(importoMutuo),
-      toNumberSafe(valoreImmobile)
+
+  merged
+    .ltv =
+    calcolaLTV(
+      importoMutuo,
+      valoreImmobile
     );
+
+
+  merged
+    .criticitaFinanziarie =
+    Array.from(
+      new Set(
+        merged
+          .criticitaFinanziarie
+      )
+    );
+
+
+  merged
+    .puntiForzaFinanziari =
+    Array.from(
+      new Set(
+        merged
+          .puntiForzaFinanziari
+      )
+    );
+
+
+  for (
+    const key of [
+      "scommesse",
+      "contanti",
+      "rate",
+      "entrateStraordinarie",
+      "riscossione",
+      "crypto",
+      "accrediti",
+    ]
+  ) {
+    merged
+      .alertBancari[
+        key
+      ] =
+      Array.from(
+        new Set(
+          merged
+            .alertBancari[
+              key
+            ]
+        )
+      );
   }
 
-  /* Score reddituale di fallback: serve solo quando il decision engine non ne ha prodotto uno. */
-  if (merged.scoreIncome === null && Number.isFinite(merged.dti)) {
-    merged.scoreIncome =
-      merged.dti <= 30 ? 90 :
-      merged.dti <= 35 ? 82 :
-      merged.dti <= 40 ? 72 :
-      merged.dti <= 45 ? 60 : 45;
-  }
-
-  /* Score bancario di fallback, basato solo sulle evidenze realmente estratte. */
-  if (merged.scoreBank === null) {
-    const bank = merged.evidenzeBancarie;
-    const hasBankEvidence =
-      bank.gambling.length ||
-      bank.contanti.length ||
-      bank.rateRilevate.length ||
-      bank.stipendi.length ||
-      bank.movimentiRicorrenti.length ||
-      bank.saldoNegativoOScoperti;
-
-    if (hasBankEvidence) {
-      let score = 85;
-      if (bank.saldoNegativoOScoperti) score -= 22;
-      score -= Math.min(bank.gambling.length * 8, 32);
-      score -= Math.min(bank.contanti.length * 3, 15);
-      score -= Math.min(bank.rateRilevate.length * 3, 15);
-      if (bank.stipendi.length >= 2) score += 5;
-      merged.scoreBank = Math.max(0, Math.min(100, score));
-    }
-  }
-
-  if (merged.evidenzeBancarie.gambling.length) {
-    merged.criticitaFinanziarie.push(`Rilevati ${merged.evidenzeBancarie.gambling.length} movimenti riconducibili a gioco/scommesse da approfondire`);
-  }
-
-  if (merged.evidenzeBancarie.contanti.length) {
-    merged.criticitaFinanziarie.push(`Rilevati ${merged.evidenzeBancarie.contanti.length} movimenti in contanti/ATM meritevoli di verifica`);
-  }
-
-  if (merged.evidenzeBancarie.saldoNegativoOScoperti) {
-    merged.criticitaFinanziarie.push("Rilevati saldo negativo, scoperto o insoluti nel comportamento bancario");
-  }
-
-  if (merged.evidenzeBancarie.rateRilevate.length) {
-    merged.criticitaFinanziarie.push(`Rilevati ${merged.evidenzeBancarie.rateRilevate.length} movimenti potenzialmente riconducibili a rate/finanziamenti`);
-  }
-
-  if (merged.evidenzeBancarie.stipendi.length >= 2) {
-    merged.puntiForzaFinanziari.push("Accrediti stipendio/pensione ricorrenti rilevati negli estratti conto");
-  }
-
-  merged.criticitaFinanziarie = Array.from(new Set(merged.criticitaFinanziarie.filter(Boolean)));
-  merged.puntiForzaFinanziari = Array.from(new Set(merged.puntiForzaFinanziari.filter(Boolean)));
 
   return merged;
 }
@@ -891,82 +1246,243 @@ function buildPracticeSummary({
   rataMutuoStimata,
   finalitaMutuo,
 }) {
-  const severity = anomalies.hasBlocking ? "error" : reviewFlags.reviewManuale ? "warning" : "success";
+  const severity =
+    anomalies
+      .hasBlocking
+      ? "error"
+      : reviewFlags
+          .reviewManuale
+      ? "warning"
+      : "success";
 
-  const esito = anomalies.hasBlocking
-    ? "Pratica con anomalie bloccanti"
-    : reviewFlags.reviewManuale
-    ? "Pratica da revisionare"
-    : "Pratica coerente";
 
-  const bank = mergedFinancials.evidenzeBancarie || {};
-  const prezzo = snapshot.operazione?.prezzoCompravendita || null;
-  const indirizzo = snapshot.immobile?.indirizzo || null;
-  const comune = snapshot.immobile?.comune || null;
+  const esito =
+    anomalies
+      .hasBlocking
+      ? "Pratica con anomalie bloccanti"
+      : reviewFlags
+          .reviewManuale
+      ? "Pratica da revisionare"
+      : "Pratica coerente";
 
-  const reportLines = [
+
+  const soggettiLabel =
+    (
+      snapshot
+        .soggetti
+        ?.nominativi ||
+      []
+    ).join(", ") ||
+    "N/D";
+
+
+  const report = [
     "📁 DOSSIER PRATICA MUTUO",
+
     `Esito: ${esito}`,
-    `Soggetti: ${snapshot.soggetti?.nominativi?.length ? snapshot.soggetti.nominativi.join(" / ") : "N/D"}`,
-    `Immobile: ${indirizzo ? `${indirizzo}${comune ? ` - ${comune}` : ""}` : "N/D"}`,
-    `Prezzo compravendita: ${prezzo || "N/D"}`,
-    importoMutuo !== null ? `Importo mutuo: € ${formatNumberIT(importoMutuo)}` : "Importo mutuo: N/D",
-    valoreImmobile !== null ? `Valore immobile: € ${formatNumberIT(valoreImmobile)}` : "Valore immobile: N/D",
-    mergedFinancials.redditoBancarioMensile !== null
-      ? `Reddito mensile considerato: € ${formatNumberIT(mergedFinancials.redditoBancarioMensile)} (${mergedFinancials.redditoFonte || "fonte N/D"})`
+
+    `Soggetti: ${soggettiLabel}`,
+
+    snapshot
+      .immobile
+      ?.indirizzo
+      ? `Immobile: ${snapshot.immobile.indirizzo}`
+      : "Immobile: N/D",
+
+    snapshot
+      .operazione
+      ?.prezzoCompravendita
+      ? `Prezzo compravendita: ${snapshot.operazione.prezzoCompravendita}`
+      : "Prezzo compravendita: N/D",
+
+    importoMutuo !== null
+      ? `Importo mutuo: € ${formatNumberIT(importoMutuo)}`
+      : "Importo mutuo: N/D",
+
+    valoreImmobile !== null
+      ? `Valore immobile: € ${formatNumberIT(valoreImmobile)}`
+      : "Valore immobile: N/D",
+
+    mergedFinancials
+      .redditoBancarioMensile !==
+    null
+      ? `Reddito mensile considerato: € ${formatNumberIT(
+          mergedFinancials
+            .redditoBancarioMensile
+        )} (${mergedFinancials.fonteReddito})`
       : "Reddito mensile considerato: N/D",
-    mergedFinancials.dti !== null ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%` : "DTI: N/D",
-    mergedFinancials.ltv !== null ? `LTV: ${formatNumberIT(mergedFinancials.ltv)}%` : "LTV: N/D",
-    mergedFinancials.scoreIncome !== null ? `Score reddito: ${formatNumberIT(mergedFinancials.scoreIncome)}/100` : "Score reddito: N/D",
-    mergedFinancials.scoreBank !== null ? `Score bancario: ${formatNumberIT(mergedFinancials.scoreBank)}/100` : "Score bancario: N/D",
-    `Movimenti gioco/scommesse rilevati: ${(bank.gambling || []).length}`,
-    `Movimenti contanti/ATM da verificare: ${(bank.contanti || []).length}`,
-    `Rate/finanziamenti rilevati su conto: ${(bank.rateRilevate || []).length}`,
-    `Saldo negativo/scoperti: ${bank.saldoNegativoOScoperti ? "Sì" : "No"}`,
-    anomalies.anomalieBloccanti.length
+
+    mergedFinancials
+      .dti !==
+    null
+      ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%`
+      : "DTI: N/D",
+
+    mergedFinancials
+      .ltv !==
+    null
+      ? `LTV: ${formatNumberIT(mergedFinancials.ltv)}%`
+      : "LTV: N/D",
+
+    mergedFinancials
+      .scoreIncome !==
+    null
+      ? `Score reddito: ${formatNumberIT(mergedFinancials.scoreIncome)}/100`
+      : "Score reddito: N/D",
+
+    mergedFinancials
+      .scoreBank !==
+    null
+      ? `Score bancario: ${formatNumberIT(mergedFinancials.scoreBank)}/100`
+      : "Score bancario: N/D (nessun estratto conto/lista movimenti analizzato)",
+
+    mergedFinancials
+      .bankDataAvailable
+      ? `Movimenti gioco/scommesse rilevati: ${mergedFinancials.alertBancari.scommesse.length}`
+      : "Movimenti gioco/scommesse rilevati: N/D",
+
+    mergedFinancials
+      .bankDataAvailable
+      ? `Movimenti contanti/ATM da verificare: ${mergedFinancials.alertBancari.contanti.length}`
+      : "Movimenti contanti/ATM da verificare: N/D",
+
+    mergedFinancials
+      .bankDataAvailable
+      ? `Rate/finanziamenti rilevati su conto: ${mergedFinancials.alertBancari.rate.length}`
+      : "Rate/finanziamenti rilevati su conto: N/D",
+
+    mergedFinancials
+      .bankDataAvailable
+      ? `Saldo negativo/scoperti: ${
+          mergedFinancials
+            .alertBancari
+            .saldoNegativoOScoperti
+            ? "Sì"
+            : "No"
+        }`
+      : "Saldo negativo/scoperti: N/D",
+
+    anomalies
+      .anomalieBloccanti
+      .length
       ? `Anomalie bloccanti: ${anomalies.anomalieBloccanti.join(" | ")}`
       : "Anomalie bloccanti: nessuna",
-    anomalies.anomalieWarning.length
-      ? `Warning: ${anomalies.anomalieWarning.join(" | ")}`
-      : "Warning: nessuno",
-    mergedFinancials.criticitaFinanziarie.length
-      ? `Criticità finanziarie: ${mergedFinancials.criticitaFinanziarie.join(" | ")}`
-      : "Criticità finanziarie: nessuna rilevata",
+
+    reviewFlags
+      .motiviReview
+      .length
+      ? `Elementi da verificare: ${reviewFlags.motiviReview.join(" | ")}`
+      : "Elementi da verificare: nessuno",
   ];
+
 
   return {
     esito,
     severity,
+
     riepilogo: {
-      soggetti: snapshot.soggetti,
-      immobile: snapshot.immobile,
+      soggetti:
+        snapshot
+          .soggetti,
+
+      immobile:
+        snapshot
+          .immobile,
+
       operazione: {
-        ...snapshot.operazione,
-        importoMutuo: importoMutuo ?? null,
-        valoreImmobile: valoreImmobile ?? null,
-        rataMutuoStimata: rataMutuoStimata ?? null,
-        finalitaMutuo: finalitaMutuo ?? null,
+        ...snapshot
+          .operazione,
+
+        importoMutuo:
+          importoMutuo ??
+          null,
+
+        valoreImmobile:
+          valoreImmobile ??
+          null,
+
+        rataMutuoStimata:
+          rataMutuoStimata ??
+          null,
+
+        finalitaMutuo:
+          finalitaMutuo ??
+          null,
       },
+
       reddito: {
-        ...snapshot.reddito,
-        redditoBancarioMensile: mergedFinancials.redditoBancarioMensile,
-        redditoFonte: mergedFinancials.redditoFonte,
-        dti: mergedFinancials.dti,
-        ltv: mergedFinancials.ltv,
+        ...snapshot
+          .reddito,
+
+        redditoBancarioMensile:
+          mergedFinancials
+            .redditoBancarioMensile,
+
+        fonteReddito:
+          mergedFinancials
+            .fonteReddito,
+
+        redditiPerRichiedente:
+          mergedFinancials
+            .redditiPerRichiedente,
+
+        dti:
+          mergedFinancials
+            .dti,
+
+        ltv:
+          mergedFinancials
+            .ltv,
       },
-      esposizioni: snapshot.esposizioni,
-      banca: snapshot.banca,
+
+      banca: {
+        ...snapshot
+          .banca,
+
+        score:
+          mergedFinancials
+            .scoreBank,
+
+        disponibile:
+          mergedFinancials
+            .bankDataAvailable,
+
+        alert:
+          mergedFinancials
+            .alertBancari,
+      },
+
+      esposizioni:
+        snapshot
+          .esposizioni,
     },
-    anomalie: anomalies,
-    review: reviewFlags,
+
+    anomalie:
+      anomalies,
+
+    review:
+      reviewFlags,
+
     indicatori: {
-      scoreIncome: mergedFinancials.scoreIncome,
-      scoreBank: mergedFinancials.scoreBank,
-      criticitaFinanziarie: mergedFinancials.criticitaFinanziarie,
-      puntiForzaFinanziari: mergedFinancials.puntiForzaFinanziari,
-      evidenzeBancarie: mergedFinancials.evidenzeBancarie,
+      scoreIncome:
+        mergedFinancials
+          .scoreIncome,
+
+      scoreBank:
+        mergedFinancials
+          .scoreBank,
+
+      criticitaFinanziarie:
+        mergedFinancials
+          .criticitaFinanziarie,
+
+      puntiForzaFinanziari:
+        mergedFinancials
+          .puntiForzaFinanziari,
     },
-    reportTestuale: reportLines.join("\n"),
+
+    reportTestuale:
+      report.join("\n"),
   };
 }
 
@@ -997,8 +1513,6 @@ exports.analizzaDocumentoAI =
         idCliente,
 
         tipoDocumentoAtteso,
-
-        codiceDocumento = null,
 
         urlFileBase64,
 
@@ -1645,10 +2159,7 @@ exports.analizzaDocumentoAI =
             analysisKey,
 
             tipoDocumentoAtteso:
-              codiceDocumento || codiceBase,
-
-            codiceDocumento:
-              codiceDocumento || codiceBase,
+              codiceBase,
 
             precheck,
 
@@ -2055,6 +2566,13 @@ exports.analizzaDocumentoAI =
             decisioneBackend: {
               ...decisioneBackend,
 
+              /*
+               * Conserviamo anche il codice originale,
+               * ad esempio doc_cud1/doc_cud2.
+               */
+              _tipoDocumentoOriginale:
+                tipoDocumentoAtteso,
+
               practiceSnapshot,
 
               practiceAnomalies,
@@ -2148,10 +2666,7 @@ exports.analizzaDocumentoAI =
           analysisKey,
 
           tipoDocumentoAtteso:
-            codiceDocumento || codiceBase,
-
-          codiceDocumento:
-            codiceDocumento || codiceBase,
+            codiceBase,
 
           precheck,
 
@@ -2236,229 +2751,485 @@ exports.analizzaDocumentoAI =
 exports.ricostruisciPraticaCompleta =
   onCall(
     {
-      secrets: ["OPENAI_API_KEY"],
+      secrets: [
+        "OPENAI_API_KEY",
+      ],
     },
 
     async (request) => {
-      const data = request.data || {};
+      const data =
+        request.data || {};
+
 
       const {
         idCliente,
+
         importoMutuo = null,
+
         valoreImmobile = null,
-        rataMutuoStimata = null,
-        rateAltriFinanziamenti = null,
+
+        rataMutuoStimata =
+          null,
+
+        rateAltriFinanziamenti =
+          null,
+
         finalitaMutuo = null,
       } = data;
 
+
       if (!idCliente) {
-        throw new HttpsError("invalid-argument", "ID cliente mancante.");
+        throw new HttpsError(
+          "invalid-argument",
+
+          "ID cliente mancante."
+        );
       }
 
+
       try {
-        /* 1. Scheda consulenza / dossier principale */
-        const praticaSnap = await adminDb
-          .collection("pratiche_mutuo")
-          .doc(idCliente)
-          .get();
+        /*
+        |--------------------------------------------------------------------------
+        | SCHEDA CONSULENZA / DATI PRATICA
+        |--------------------------------------------------------------------------
+        */
 
-        const practiceData = praticaSnap.exists ? (praticaSnap.data() || {}) : {};
+        const practiceDocSnap =
+          await adminDb
+            .collection("pratiche_mutuo")
+            .doc(idCliente)
+            .get();
 
-        /* 2. Risoluzione parametri: chiamata live > scheda consulenza > fallback prudente */
-        const resolvedImportoMutuo = toNumberSafe(firstDefined(
-          importoMutuo,
-          practiceData.importo_richiesto,
-          practiceData.mutuo_importo
-        ));
+        const practiceData =
+          practiceDocSnap.exists
+            ? (
+                practiceDocSnap.data() ||
+                {}
+              )
+            : {};
 
-        const resolvedPrezzoCompravendita = toNumberSafe(firstDefined(
-          practiceData.valore_compravendita,
-          practiceData.mutuo_compravendita
-        ));
 
-        const resolvedValoreImmobile = toNumberSafe(firstDefined(
-          valoreImmobile,
-          practiceData.valore_immobile,
-          practiceData.immobile_valore,
-          resolvedPrezzoCompravendita
-        ));
+        const resolvedImportoMutuo =
+          normalizeNumber(
+            importoMutuo ??
+            practiceData.importo_richiesto ??
+            practiceData.mutuo_importo
+          );
 
-        const resolvedRataMutuoStimata = toNumberSafe(firstDefined(
-          rataMutuoStimata,
-          practiceData.rata_mutuo_stimata,
-          practiceData.rata_stimata,
-          practiceData.mutuo_rata,
-          practiceData.rata_nuovo_mutuo
-        ));
+        const resolvedValoreImmobile =
+          normalizeNumber(
+            valoreImmobile ??
+            practiceData.valore_immobile ??
+            practiceData.immobile_valore
+          );
 
-        const resolvedRateAltriFinanziamenti = toNumberSafe(firstDefined(
-          rateAltriFinanziamenti,
-          practiceData.totale_rate_finanziamenti,
-          practiceData.rata_fin_pre
-        ));
+        const resolvedRataMutuoStimata =
+          normalizeNumber(
+            rataMutuoStimata ??
+            practiceData.rata_mutuo_stimata ??
+            practiceData.rata_stimata ??
+            practiceData.mutuo_rata ??
+            practiceData.rata_nuovo_mutuo
+          );
 
-        const resolvedFinalitaMutuo = firstDefined(
-          finalitaMutuo,
-          practiceData.finalita,
-          practiceData.mutuo_finalita
-        );
+        const resolvedRateAltriFinanziamenti =
+          normalizeNumber(
+            rateAltriFinanziamenti ??
+            practiceData.totale_rate_finanziamenti ??
+            practiceData.rata_fin_pre
+          );
 
-        /* 3. Tutte le analisi documentali, mantenendo distinti R1/R2 */
-        const documentAnalyses = await loadClientDocumentAnalyses(idCliente);
+        const resolvedFinalitaMutuo =
+          finalitaMutuo ??
+          practiceData.finalita ??
+          practiceData.mutuo_finalita ??
+          null;
 
-        if (!documentAnalyses.length) {
-          return {
-            ok: false,
-            stato: "no_documents",
-            messaggio: "Nessun documento analizzato trovato per questo cliente.",
-            datiSchedaDisponibili: Object.keys(practiceData).length > 0,
-          };
+
+        /*
+        |--------------------------------------------------------------------------
+        | DOCUMENTI ANALIZZATI
+        |--------------------------------------------------------------------------
+        */
+
+        const documentAnalyses =
+          await loadClientDocumentAnalyses(
+            idCliente
+          );
+
+        /* Anche senza documenti continuiamo con i dati della scheda, marcandoli come non verificati. */
+/*
+        |--------------------------------------------------------------------------
+        | SNAPSHOT
+        |--------------------------------------------------------------------------
+        */
+
+        const snapshot =
+          buildPracticeSnapshot(
+            documentAnalyses,
+            practiceData
+          );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ANOMALIE
+        |--------------------------------------------------------------------------
+        */
+
+        const anomalies =
+          detectPracticeAnomalies(
+            snapshot
+          );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATI FINANZIARI
+        |--------------------------------------------------------------------------
+        */
+
+        const mergedFinancials =
+          mergePracticeFinancials({
+            documentAnalyses,
+            practiceData,
+
+            importoMutuo:
+              resolvedImportoMutuo,
+
+            valoreImmobile:
+              resolvedValoreImmobile,
+
+            rataMutuoStimata:
+              resolvedRataMutuoStimata,
+
+            rateAltriFinanziamenti:
+              resolvedRateAltriFinanziamenti,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVIEW FLAGS
+        |--------------------------------------------------------------------------
+        */
+
+        const extraReviewReasons =
+          [];
+
+        if (
+          mergedFinancials
+            .fonteReddito ===
+          "scheda_consulenza_non_verificato"
+        ) {
+          extraReviewReasons.push(
+            "Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale"
+          );
         }
 
-        /* 4. Snapshot unificato: documenti verificati + fallback scheda consulenza */
-        const snapshot = buildPracticeSnapshot(documentAnalyses, practiceData);
-
-        if (!snapshot.operazione.prezzoCompravendita && resolvedPrezzoCompravendita !== null) {
-          snapshot.operazione.prezzoCompravendita = resolvedPrezzoCompravendita;
-        }
-        if (!snapshot.operazione.importoMutuo && resolvedImportoMutuo !== null) {
-          snapshot.operazione.importoMutuo = resolvedImportoMutuo;
-        }
-        if (!snapshot.operazione.valoreImmobile && resolvedValoreImmobile !== null) {
-          snapshot.operazione.valoreImmobile = resolvedValoreImmobile;
-        }
-        if (!snapshot.operazione.rataMutuoStimata && resolvedRataMutuoStimata !== null) {
-          snapshot.operazione.rataMutuoStimata = resolvedRataMutuoStimata;
-        }
-        if (!snapshot.operazione.finalita && resolvedFinalitaMutuo) {
-          snapshot.operazione.finalita = resolvedFinalitaMutuo;
+        if (
+          !mergedFinancials
+            .bankDataAvailable
+        ) {
+          extraReviewReasons.push(
+            "Analisi bancaria non disponibile: nessun estratto conto/lista movimenti elaborato"
+          );
         }
 
-        /* 5. Anomalie sul dossier già riconciliato */
-        const anomalies = detectPracticeAnomalies(snapshot);
-
-        /* 6. Dati finanziari aggregati R1/R2 + analisi bancaria */
-        const mergedFinancials = mergePracticeFinancials({
-          documentAnalyses,
-          practiceData,
-          importoMutuo: resolvedImportoMutuo,
-          valoreImmobile: resolvedValoreImmobile,
-          rataMutuoStimata: resolvedRataMutuoStimata,
-          rateAltriFinanziamenti: resolvedRateAltriFinanziamenti,
-        });
-
-        /* 7. Review manuale: anomalie documentali + criticità finanziarie */
-        const motiviReview = Array.from(new Set([
-          ...(anomalies.anomalieBloccanti || []),
-          ...(anomalies.anomalieWarning || []),
-          ...documentAnalyses.flatMap((d) => d.review?.motiviReview || []),
-          ...(mergedFinancials.criticitaFinanziarie || []),
-        ].filter(Boolean)));
 
         const reviewFlags = {
           reviewManuale:
-            anomalies.hasBlocking ||
-            (anomalies.anomalieWarning || []).length > 0 ||
-            documentAnalyses.some((d) => d.review?.reviewManuale === true) ||
-            (mergedFinancials.criticitaFinanziarie || []).length > 0,
-          motiviReview,
+            anomalies
+              .hasBlocking ||
+
+            anomalies
+              .anomalieWarning
+              .length >
+              0 ||
+
+            documentAnalyses
+              .some(
+                (d) =>
+                  d
+                    .review
+                    ?.reviewManuale ===
+                  true
+              ) ||
+
+            extraReviewReasons
+              .length >
+              0,
+
+          motiviReview:
+            Array.from(
+              new Set([
+                ...anomalies
+                  .anomalieBloccanti,
+
+                ...anomalies
+                  .anomalieWarning,
+
+                ...documentAnalyses
+                  .flatMap(
+                    (d) =>
+                      d
+                        .review
+                        ?.motiviReview ||
+                      []
+                  ),
+
+                ...mergedFinancials
+                  .criticitaFinanziarie,
+
+                ...extraReviewReasons,
+              ])
+            ),
         };
 
-        /* 8. Summary completo */
-        const practiceSummary = buildPracticeSummary({
-          snapshot,
-          anomalies,
-          mergedFinancials,
-          reviewFlags,
-          importoMutuo: resolvedImportoMutuo,
-          valoreImmobile: resolvedValoreImmobile,
-          rataMutuoStimata: resolvedRataMutuoStimata,
-          finalitaMutuo: resolvedFinalitaMutuo,
-        });
 
-        /* 9. Matching banche */
-        const bankMatch = await matchBanksForPractice({
-          practiceSummary,
-          documentAnalyses,
-          anomalies,
-          mergedFinancials,
-          finalitaMutuo: resolvedFinalitaMutuo,
-        });
+        /*
+        |--------------------------------------------------------------------------
+        | SUMMARY
+        |--------------------------------------------------------------------------
+        */
 
-        const finalDecisionCode = anomalies.hasBlocking
-          ? "PRACTICE_BLOCKING_ANOMALY"
-          : reviewFlags.reviewManuale
-          ? "PRACTICE_REVIEW"
-          : "PRACTICE_OK";
+        const practiceSummary =
+          buildPracticeSummary({
+            snapshot,
+
+            anomalies,
+
+            mergedFinancials,
+
+            reviewFlags,
+
+            importoMutuo:
+              resolvedImportoMutuo,
+
+            valoreImmobile:
+              resolvedValoreImmobile,
+
+            rataMutuoStimata:
+              resolvedRataMutuoStimata,
+
+            finalitaMutuo:
+              resolvedFinalitaMutuo,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | BANK MATCHING
+        |--------------------------------------------------------------------------
+        */
+
+        const bankMatch =
+          await matchBanksForPractice({
+            practiceSummary,
+
+            documentAnalyses,
+
+            anomalies,
+
+            mergedFinancials,
+
+            finalitaMutuo:
+              resolvedFinalitaMutuo,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DECISION CODE
+        |--------------------------------------------------------------------------
+        */
+
+        const finalDecisionCode =
+          anomalies.hasBlocking
+            ? "PRACTICE_BLOCKING_ANOMALY"
+
+            : reviewFlags
+                .reviewManuale
+            ? "PRACTICE_REVIEW"
+
+            : "PRACTICE_OK";
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PAYLOAD
+        |--------------------------------------------------------------------------
+        */
 
         const payload = {
-          aggiornatoIl: admin.firestore.FieldValue.serverTimestamp(),
-          pipelineVersion: POLICY.pipelineVersion,
+          aggiornatoIl:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+
+          pipelineVersion:
+            POLICY.pipelineVersion,
+
           praticaCompleta: {
-            decisionCode: finalDecisionCode,
-            documentiConsiderati: documentAnalyses.map((d) => ({
-              tipoDocumento: d.tipoDocumento,
-              tipoDocumentoBase: d.tipoDocumentoBase || stripNumericSuffix(d.tipoDocumento || ""),
-              decisionCode: d.decisionCode || "",
-              reviewManuale: d.review?.reviewManuale === true,
-              motiviReview: d.review?.motiviReview || [],
-            })),
-            datiSchedaConsulenza: {
-              disponibili: Object.keys(practiceData).length > 0,
-              importoMutuo: resolvedImportoMutuo,
-              prezzoCompravendita: resolvedPrezzoCompravendita,
-              valoreImmobile: resolvedValoreImmobile,
-              rataMutuoStimata: resolvedRataMutuoStimata,
-              rateAltriFinanziamenti: resolvedRateAltriFinanziamenti,
-              finalitaMutuo: resolvedFinalitaMutuo,
-            },
+            decisionCode:
+              finalDecisionCode,
+
+
+            documentiConsiderati:
+              documentAnalyses.map(
+                (d) => ({
+                  tipoDocumento:
+                    d.tipoDocumento,
+
+                  decisionCode:
+                    d.decisionCode ||
+                    "",
+
+                  reviewManuale:
+                    d.review
+                      ?.reviewManuale ===
+                    true,
+
+                  motiviReview:
+                    d.review
+                      ?.motiviReview ||
+                    [],
+                })
+              ),
+
+
             snapshot,
+
             anomalies,
+
             mergedFinancials,
+
             reviewFlags,
+
             practiceSummary,
+
             bankMatch,
           },
         };
 
-        await adminDb
-          .collection("analisi_deliberante")
-          .doc(idCliente)
-          .set(payload, { merge: true });
 
-        if (reviewFlags.reviewManuale) {
+        /*
+        |--------------------------------------------------------------------------
+        | FIRESTORE
+        |--------------------------------------------------------------------------
+        */
+
+        await adminDb
+          .collection(
+            "analisi_deliberante"
+          )
+          .doc(idCliente)
+          .set(
+            payload,
+            {
+              merge: true,
+            }
+          );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVIEW PRATICA
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          reviewFlags.reviewManuale
+        ) {
           await adminDb
-            .collection("manual_reviews")
-            .doc(`practice_${idCliente}`)
-            .set({
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              status: "pending",
-              idCliente,
-              scope: "practice",
-              decisionCode: finalDecisionCode,
-              motiviReview: reviewFlags.motiviReview,
-              snapshot,
-              anomalies,
-              mergedFinancials,
-            }, { merge: true });
+            .collection(
+              "manual_reviews"
+            )
+            .doc(
+              `practice_${idCliente}`
+            )
+            .set(
+              {
+                createdAt:
+                  admin.firestore
+                    .FieldValue
+                    .serverTimestamp(),
+
+                status:
+                  "pending",
+
+                idCliente,
+
+                scope:
+                  "practice",
+
+                decisionCode:
+                  finalDecisionCode,
+
+                motiviReview:
+                  reviewFlags
+                    .motiviReview,
+
+                snapshot,
+
+                anomalies,
+              },
+
+              {
+                merge: true,
+              }
+            );
         }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RISPOSTA
+        |--------------------------------------------------------------------------
+        */
 
         return {
           ok: true,
-          stato: anomalies.hasBlocking
-            ? "practice_blocking_anomaly"
-            : reviewFlags.reviewManuale
-            ? "practice_review"
-            : "practice_ok",
-          decisionCode: finalDecisionCode,
-          pratica: practiceSummary,
-          mergedFinancials,
-          bancheConsigliate: bankMatch?.consigliate || [],
-          bancheAlternative: bankMatch?.alternative || [],
+
+          stato:
+            anomalies.hasBlocking
+              ? "practice_blocking_anomaly"
+
+              : reviewFlags
+                  .reviewManuale
+              ? "practice_review"
+
+              : "practice_ok",
+
+          decisionCode:
+            finalDecisionCode,
+
+          pratica:
+            practiceSummary,
+
+          bancheConsigliate:
+            bankMatch?.consigliate ||
+            [],
+
+          bancheAlternative:
+            bankMatch?.alternative ||
+            [],
         };
-      } catch (error) {
-        console.error("ERRORE ricostruisciPraticaCompleta:", error);
-        throw new HttpsError("internal", error?.message || "Errore nella ricostruzione pratica.");
+      }
+
+      catch (error) {
+        console.error(
+          "ERRORE ricostruisciPraticaCompleta:",
+          error
+        );
+
+
+        throw new HttpsError(
+          "internal",
+
+          error?.message ||
+            "Errore nella ricostruzione pratica."
+        );
       }
     }
   );
