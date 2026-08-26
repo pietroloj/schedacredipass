@@ -497,6 +497,113 @@ CONTESTO PRATICA MUTUO
 }
 
 
+
+/*
+|--------------------------------------------------------------------------
+| NORMALIZZAZIONE CODICI DOCUMENTO DAL FRONTEND
+|--------------------------------------------------------------------------
+|
+| Il frontend storico invia:
+|   tipoDocumentoAtteso = descrizione umana (es. "Estratto conto trimestrale")
+|   codiceDocumento     = codice tecnico (es. "ec1", "cud1")
+|
+| Il backend, invece, lavora con codici canonici:
+|   doc_ec1, doc_cud1, doc_mov1, ...
+|
+| Senza questa conversione CU ed estratti conto finiscono nell'extractor
+| generico e quindi score reddito / score bancario restano N/D.
+|
+*/
+
+function normalizeIncomingDocumentCode({
+  codiceDocumento,
+  tipoDocumentoAtteso,
+}) {
+  const rawCode = String(codiceDocumento || "").trim().toLowerCase();
+  const rawExpected = String(tipoDocumentoAtteso || "").trim().toLowerCase();
+
+  const code = rawCode || rawExpected;
+
+  // Se è già canonico, non tocchiamolo.
+  if (/^doc_[a-z0-9_]+$/i.test(code)) {
+    return code;
+  }
+
+  // Se contiene un suffisso R1/R2, lo preserviamo.
+  const suffixMatch = code.match(/(\d+)$/);
+  const suffix = suffixMatch ? suffixMatch[1] : "";
+  const base = code.replace(/\d+$/, "");
+
+  const FIELD_TO_CANONICAL = {
+    ci: "doc_ci",
+    ts: "doc_ts",
+    residenza: "doc_residenza",
+    matrimonio: "doc_matrimonio",
+    isee: "doc_isee",
+
+    bustepaga: "doc_bustepaga",
+    cud: "doc_cud",
+    cu: "doc_cud",
+    unici: "doc_unici",
+    unico: "doc_unici",
+    redditi: "doc_unici",
+    f24: "doc_f24",
+    visura: "doc_visura",
+
+    ec: "doc_ec",
+    mov: "doc_mov",
+    prestiti: "doc_prestiti",
+    mutuo_pre: "doc_mutuo_pre",
+
+    atto: "doc_atto",
+    planimetria: "doc_planimetria",
+    visuracat: "doc_visuracat",
+    preliminare: "doc_preliminare",
+    preventivo: "doc_preventivo",
+
+    contratto: "doc_contratto",
+    integrazione: "doc_integrazione",
+    extra: "doc_extra",
+  };
+
+  if (FIELD_TO_CANONICAL[base]) {
+    return `${FIELD_TO_CANONICAL[base]}${suffix}`;
+  }
+
+  // Fallback sulle descrizioni umane inviate dal vecchio upload.html.
+  const human = rawExpected;
+
+  const HUMAN_RULES = [
+    [/certificazione unica|cud\b/, "doc_cud"],
+    [/busta paga|cedolino/, "doc_bustepaga"],
+    [/modello redditi|modello unico|unico con ricevuta/, "doc_unici"],
+    [/estratto conto/, "doc_ec"],
+    [/lista movimenti|movimenti conto/, "doc_mov"],
+    [/carta d.identit|carta identit/, "doc_ci"],
+    [/tessera sanitaria|codice fiscale/, "doc_ts"],
+    [/isee/, "doc_isee"],
+    [/visura camerale/, "doc_visura"],
+    [/f24/, "doc_f24"],
+    [/atto di provenienza|atto provenienza/, "doc_atto"],
+    [/planimetria/, "doc_planimetria"],
+    [/visura catastale/, "doc_visuracat"],
+    [/preliminare|proposta/, "doc_preliminare"],
+  ];
+
+  for (const [regex, canonical] of HUMAN_RULES) {
+    if (regex.test(human)) {
+      return `${canonical}${suffix}`;
+    }
+  }
+
+  // Ultimo fallback: prefisso doc_ su un codice tecnico semplice.
+  if (/^[a-z][a-z0-9_]*\d*$/i.test(code)) {
+    return `doc_${code}`;
+  }
+
+  return code;
+}
+
 /*
 |--------------------------------------------------------------------------
 | ANALYSIS KEY
@@ -1514,6 +1621,8 @@ exports.analizzaDocumentoAI =
 
         tipoDocumentoAtteso,
 
+        codiceDocumento = null,
+
         urlFileBase64,
 
         urlFileBase64Front,
@@ -1561,10 +1670,32 @@ exports.analizzaDocumentoAI =
       }
 
 
+      const codiceDocumentoNormalizzato =
+        normalizeIncomingDocumentCode({
+          codiceDocumento,
+          tipoDocumentoAtteso,
+        });
+
       const codiceBase =
         stripNumericSuffix(
-          tipoDocumentoAtteso
+          codiceDocumentoNormalizzato
         );
+
+      console.log("AI document routing", {
+        tipoDocumentoAtteso,
+        codiceDocumento,
+        codiceDocumentoNormalizzato,
+        codiceBase,
+        gruppo: DOC_GROUPS.income.includes(codiceBase)
+          ? "income"
+          : DOC_GROUPS.bank.includes(codiceBase)
+          ? "bank"
+          : DOC_GROUPS.identity.includes(codiceBase)
+          ? "identity"
+          : DOC_GROUPS.realEstate.includes(codiceBase)
+          ? "realEstate"
+          : "generic",
+      });
 
 
       /*
@@ -2571,7 +2702,7 @@ exports.analizzaDocumentoAI =
                * ad esempio doc_cud1/doc_cud2.
                */
               _tipoDocumentoOriginale:
-                tipoDocumentoAtteso,
+                codiceDocumentoNormalizzato,
 
               practiceSnapshot,
 
