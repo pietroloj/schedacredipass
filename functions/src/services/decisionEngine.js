@@ -105,14 +105,202 @@ function scoreIncomeDecision({ estrazione, data }) {
   };
 }
 
+function normalizeTextArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((x) => {
+      if (typeof x === "string") return x.trim();
+      if (x && typeof x === "object") {
+        return [
+          x.descrizione,
+          x.causale,
+          x.controparte,
+          x.importo,
+          x.data,
+          x.note,
+        ].filter(Boolean).join(" - ");
+      }
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function containsAnyKeyword(text = "", keywords = []) {
+  const lower = String(text || "").toLowerCase();
+  return keywords.some((k) => lower.includes(String(k).toLowerCase()));
+}
+
 function scoreBankDecision({ estrazione }) {
-  const gambling = (estrazione.movimenti_gambling_rilevati || []).filter((x) => containsGamblingKeyword(x));
-  let score = 75;
-  if (estrazione.saldo_negativo_o_scoperti) score -= 15;
-  score -= Math.min((estrazione.rate_rilevate || []).length * 3, 15);
-  score -= Math.min(gambling.length * 10, 30);
+  const bank = estrazione || {};
+
+  const gamblingRaw = normalizeTextArray(bank.movimenti_gambling_rilevati);
+  const recurring = normalizeTextArray(bank.movimenti_ricorrenti);
+  const rates = normalizeTextArray(bank.rate_rilevate);
+  const salaries = normalizeTextArray(bank.stipendi_rilevati);
+
+  // Manteniamo il filtro tramite GAMBLING_KEYWORDS, ma se l'estrattore ha
+  // già classificato esplicitamente un movimento come gambling non lo perdiamo.
+  const gambling = gamblingRaw.filter(
+    (x) =>
+      containsGamblingKeyword(x) ||
+      containsAnyKeyword(x, [
+        "snai", "sisal", "lottomatica", "eurobet", "bet365",
+        "pokerstars", "planetwin", "goldbet", "betfair",
+        "william hill", "bwin", "admiralbet", "better",
+        "scommessa", "scommesse", "gaming", "gioco"
+      ])
+  );
+
+  const cashKeywords = [
+    "versamento contanti",
+    "versamento di contanti",
+    "versamento cash",
+    "prelievo contanti",
+    "prelievo atm",
+    "prelievo bancomat",
+    "sportello contanti",
+    "cash"
+  ];
+
+  const cashMovements = recurring.filter((x) =>
+    containsAnyKeyword(x, cashKeywords)
+  );
+
+  const extraordinaryKeywords = [
+    "entrata straordinaria",
+    "bonifico straordinario",
+    "vendita preziosi",
+    "vendita oro",
+    "vendita bene",
+    "prestito ricevuto",
+    "giroconto",
+    "trasferimento da altro conto"
+  ];
+
+  const extraordinaryMovements = recurring.filter((x) =>
+    containsAnyKeyword(x, extraordinaryKeywords)
+  );
+
+  const debtCollectionKeywords = [
+    "agenzia entrate",
+    "agenzia delle entrate",
+    "riscossione",
+    "ader",
+    "pignor",
+    "precetto"
+  ];
+
+  const collectionMovements = recurring.filter((x) =>
+    containsAnyKeyword(x, debtCollectionKeywords)
+  );
+
+  const cryptoKeywords = [
+    "binance", "coinbase", "crypto.com", "kraken", "bitstamp",
+    "bitpanda", "criptovalut", "crypto"
+  ];
+
+  const cryptoMovements = recurring.filter((x) =>
+    containsAnyKeyword(x, cryptoKeywords)
+  );
+
+  const criticita = [];
+  const puntiForza = [];
+
+  if (bank.saldo_negativo_o_scoperti) {
+    criticita.push("Saldo negativo, scoperto, insoluto o utilizzo anomalo del fido rilevato");
+  }
+
+  if (rates.length > 0) {
+    criticita.push(`Rilevati ${rates.length} movimenti potenzialmente riconducibili a rate/finanziamenti da verificare`);
+  }
+
+  if (gambling.length > 0) {
+    criticita.push(`Rilevati ${gambling.length} movimenti riconducibili a gioco/scommesse`);
+  }
+
+  if (cashMovements.length > 0) {
+    criticita.push(`Rilevati ${cashMovements.length} movimenti in contanti/prelievi ATM meritevoli di verifica`);
+  }
+
+  if (extraordinaryMovements.length > 0) {
+    criticita.push("Rilevate entrate o movimentazioni straordinarie da non assimilare automaticamente a risparmio ordinario");
+  }
+
+  if (collectionMovements.length > 0) {
+    criticita.push("Rilevati movimenti verso enti di riscossione o causali assimilabili da approfondire");
+  }
+
+  if (cryptoMovements.length > 0) {
+    criticita.push("Rilevati movimenti verso operatori crypto/exchange da contestualizzare");
+  }
+
+  if (salaries.length > 0) {
+    puntiForza.push(`Rilevati ${salaries.length} accrediti riconducibili a stipendio/pensione`);
+  }
+
+  if (!bank.saldo_negativo_o_scoperti) {
+    puntiForza.push("Nessun saldo negativo/scoperto esplicitamente rilevato nel documento analizzato");
+  }
+
+  let score = 82;
+
+  if (bank.saldo_negativo_o_scoperti) score -= 22;
+  score -= Math.min(rates.length * 4, 16);
+  score -= Math.min(gambling.length * 10, 35);
+  score -= Math.min(cashMovements.length * 4, 16);
+  score -= Math.min(extraordinaryMovements.length * 4, 12);
+  score -= Math.min(collectionMovements.length * 10, 20);
+  score -= Math.min(cryptoMovements.length * 3, 9);
+
+  if (salaries.length >= 2) score += 4;
+
   score = Math.max(0, Math.min(100, score));
-  return { scoreComportamentoBancario: score, alertScommesse: gambling };
+
+  const severita =
+    bank.saldo_negativo_o_scoperti ||
+    collectionMovements.length > 0 ||
+    gambling.length >= 3
+      ? "alta"
+      : gambling.length > 0 ||
+        cashMovements.length > 0 ||
+        rates.length > 0 ||
+        extraordinaryMovements.length > 0
+      ? "media"
+      : "bassa";
+
+  const reviewManuale =
+    criticita.length > 0;
+
+  return {
+    scoreComportamentoBancario: score,
+    severitaComportamentoBancario: severita,
+    reviewManualeBanca: reviewManuale,
+
+    alertScommesse: gambling,
+    alertContanti: cashMovements,
+    alertRateFinanziamenti: rates,
+    alertEntrateStraordinarie: extraordinaryMovements,
+    alertRiscossione: collectionMovements,
+    alertCrypto: cryptoMovements,
+    accreditiStipendioPensione: salaries,
+
+    criticita,
+    puntiForza,
+
+    reportBancario: [
+      "ANALISI COMPORTAMENTO BANCARIO",
+      `Score comportamento bancario: ${score}/100`,
+      `Severità: ${severita}`,
+      `Saldo negativo/scoperti: ${bank.saldo_negativo_o_scoperti ? "Sì" : "No"}`,
+      `Movimenti gioco/scommesse: ${gambling.length}`,
+      `Movimenti contanti/ATM da verificare: ${cashMovements.length}`,
+      `Rate/finanziamenti rilevati: ${rates.length}`,
+      `Entrate straordinarie: ${extraordinaryMovements.length}`,
+      `Movimenti riscossione: ${collectionMovements.length}`,
+      `Movimenti crypto/exchange: ${cryptoMovements.length}`,
+      `Accrediti stipendio/pensione: ${salaries.length}`,
+    ].join("\n"),
+  };
 }
 
 function reviewPolicy({ classificazione, estrazione, tipoDocumentoAtteso, practiceAnomalies }) {
@@ -135,6 +323,14 @@ function reviewPolicy({ classificazione, estrazione, tipoDocumentoAtteso, practi
     }
   }
 
+  if (DOC_GROUPS.bank.includes(tipoDocumentoAtteso)) {
+    const bankDecision = scoreBankDecision({ estrazione });
+
+    if (bankDecision.reviewManualeBanca) {
+      reasons.push(...bankDecision.criticita);
+    }
+  }
+
   if (practiceAnomalies?.hasBlocking) reasons.push(...practiceAnomalies.anomalieBloccanti);
   if (practiceAnomalies?.anomalieWarning?.length) reasons.push(...practiceAnomalies.anomalieWarning);
 
@@ -151,7 +347,11 @@ function getDecisionCode({ stato, codiceBase, reviewManuale, classificazione, de
   if (practiceAnomalies?.hasBlocking) return DECISION_CODES.PRACTICE_BLOCKING_ANOMALY;
   if (DOC_GROUPS.identity.includes(codiceBase)) return reviewManuale ? DECISION_CODES.IDENTITY_REVIEW : DECISION_CODES.IDENTITY_OK;
   if (DOC_GROUPS.income.includes(codiceBase)) return reviewManuale ? DECISION_CODES.INCOME_REVIEW : DECISION_CODES.INCOME_OK;
-  if (DOC_GROUPS.bank.includes(codiceBase)) return (decisioneBackend?.alertScommesse || []).length > 0 ? DECISION_CODES.BANK_ALERT_GAMBLING : DECISION_CODES.BANK_OK;
+  if (DOC_GROUPS.bank.includes(codiceBase)) {
+    if ((decisioneBackend?.alertScommesse || []).length > 0) return DECISION_CODES.BANK_ALERT_GAMBLING;
+    if (reviewManuale || decisioneBackend?.reviewManualeBanca) return DECISION_CODES.PRACTICE_REVIEW;
+    return DECISION_CODES.BANK_OK;
+  }
   if (DOC_GROUPS.realEstate.includes(codiceBase)) return reviewManuale ? DECISION_CODES.REALESTATE_REVIEW : DECISION_CODES.REALESTATE_OK;
   return reviewManuale ? DECISION_CODES.PRACTICE_REVIEW : DECISION_CODES.PRACTICE_OK;
 }
