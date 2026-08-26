@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -54,14 +55,101 @@
     
     .loading { text-align: center; padding: 30px; color: #002d72; display: none; }
     .no-results { text-align: center; padding: 30px; color: #777; display: none; }
+
+    .header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .header-title-wrap {
+        flex: 1 1 auto;
+        text-align: left;
+    }
+
+    .btn-return-consulenza {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #002d72;
+        color: #fff;
+        text-decoration: none;
+        padding: 11px 15px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        transition: .2s;
+        white-space: nowrap;
+    }
+
+    .btn-return-consulenza:hover {
+        background: #C99700;
+        color: #002d72;
+    }
+
+    .badge-practice-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        color: white;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .client-progress-info {
+        margin-top: 4px;
+        font-size: 10px;
+        color: #66717c;
+        font-weight: 600;
+    }
+
+    @media (max-width: 700px) {
+        .header {
+            padding: 22px 20px;
+        }
+
+        .header-title-wrap {
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn-return-consulenza {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .client-info-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .client-actions {
+            justify-content: flex-end;
+        }
+    }
+
 </style>
 </head>
 <body>
 
 <div class="search-container">
     <div class="header">
-        <h1>Archivio Pratiche</h1>
-        <p style="color: #C99700; margin-top:5px; font-weight:600;">Gestione e Ricerca Clienti</p>
+        <div class="header-top">
+            <div class="header-title-wrap">
+                <h1>Archivio Pratiche</h1>
+                <p style="color: #C99700; margin-top:5px; margin-bottom:0; font-weight:600;">Gestione e Ricerca Clienti</p>
+            </div>
+
+            <a href="index.html" class="btn-return-consulenza">
+                <i class="fas fa-arrow-left"></i> TORNA ALLA SCHEDA CONSULENZA
+            </a>
+        </div>
     </div>
 
     <div class="search-box">
@@ -90,6 +178,30 @@
     var db = firebase.firestore();
     var storage = firebase.storage();
     var tuttiIClienti = []; 
+
+    const STATO_PRATICA_CONFIG = {
+        da_istruire: { label: "Da istruire", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
+        istruttoria: { label: "Istruttoria", border: "#2f80ed", bg: "#f2f7ff", badge: "#2f80ed" },
+        integrazione_documenti: { label: "Integrazione documenti", border: "#d39e00", bg: "#fffaf0", badge: "#b8860b" },
+        caricato_banca: { label: "Caricato in banca", border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        valutazione_reddituale: { label: "Valutazione reddituale", border: "#7b61a8", bg: "#f7f4fb", badge: "#7b61a8" },
+        delibera_reddituale_ok: { label: "Delibera reddituale OK", border: "#28a745", bg: "#f2fbf5", badge: "#28a745" },
+        delibera_reddituale_ko: { label: "Delibera reddituale KO", border: "#dc3545", bg: "#fff4f5", badge: "#dc3545" },
+        attesa_perizia: { label: "Attesa perizia", border: "#f0ad4e", bg: "#fff8ed", badge: "#d88a1d" },
+        perizia_in_corso: { label: "Perizia in corso", border: "#e67e22", bg: "#fff5ec", badge: "#e67e22" },
+        perizia_ok: { label: "Perizia OK", border: "#20a464", bg: "#f1fbf6", badge: "#20a464" },
+        perizia_ko: { label: "Perizia KO", border: "#c62828", bg: "#fff2f2", badge: "#c62828" },
+        attesa_documentazione_notarile: { label: "Attesa documentazione notarile", border: "#9a6b35", bg: "#fbf7f1", badge: "#9a6b35" },
+        chiamata_atto: { label: "Chiamata d'atto", border: "#087f5b", bg: "#effaf6", badge: "#087f5b" },
+        stipulato: { label: "Stipulato", border: "#198754", bg: "#effaf3", badge: "#198754" },
+        sospesa: { label: "Sospesa", border: "#495057", bg: "#f1f3f5", badge: "#495057" },
+        rinunciata: { label: "Rinunciata / KO", border: "#b02a37", bg: "#fff2f3", badge: "#b02a37" }
+    };
+
+    function getStatoPraticaConfig(stato) {
+        return STATO_PRATICA_CONFIG[stato] || STATO_PRATICA_CONFIG.da_istruire;
+    }
+
 
     async function caricaClientiDaDB() {
         document.getElementById('loadingIndicator').style.display = 'block';
@@ -136,30 +248,38 @@
         lista.forEach(cliente => {
             const card = document.createElement('div');
             
-            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente' && k !== 'richiestaIntegrazioneAttiva' && k !== 'notaPerCliente' && k !== 'elencoDocRichiesti' && k !== 'ultimoInvioNotifica' && k !== 'ultimo_aggiornamento_scheda' && k !== 'importo_richiesto' && k !== 'valore_immobile' && k !== 'reddito_richiedente_1' && k !== 'reddito_richiedente_2' && k !== 'durata_mutuo' && k !== 'finalita' && k !== 'prodotto' && k !== 'tasso' && k !== 'cliente_email' && k !== 'cliente_cell');
+            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente' && k !== 'richiestaIntegrazioneAttiva' && k !== 'notaPerCliente' && k !== 'elencoDocRichiesti' && k !== 'ultimoInvioNotifica' && k !== 'ultimo_aggiornamento_scheda' && k !== 'importo_richiesto' && k !== 'valore_immobile' && k !== 'reddito_richiedente_1' && k !== 'reddito_richiedente_2' && k !== 'durata_mutuo' && k !== 'finalita' && k !== 'prodotto' && k !== 'tasso' && k !== 'cliente_email' && k !== 'cliente_cell' && k !== 'stato_pratica' && k !== 'stato_pratica_label' && k !== 'stato_pratica_aggiornato_il');
             const fileCaricati = chiaviCaricate.length;
             const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
             
-            let classeStato = "status-vuoto"; 
-            let badgeHtml = `<span class="badge-status badge-rosso"><i class="fas fa-folder-open"></i> APERTA</span>`; 
-            let testoInfo = `Pratica Inserita`;
+            let statoDocumenti = "Pratica inserita";
 
             if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
-                classeStato = "status-completo";
-                badgeHtml = `<span class="badge-status badge-verde"><i class="fas fa-check-circle"></i> COMPLETO</span>`;
-                testoInfo = `Documenti acquisiti`;
+                statoDocumenti = "Documenti acquisiti";
             } else if (fileCaricati > 0) {
-                classeStato = "status-incompleto";
-                badgeHtml = `<span class="badge-status badge-giallo"><i class="fas fa-exclamation-triangle"></i> IN CORSO</span>`;
-                testoInfo = `${fileCaricati} Documenti caricati`;
+                statoDocumenti = `${fileCaricati} documenti caricati`;
+            } else if (fileRichiesti > 0) {
+                statoDocumenti = `0/${fileRichiesti} documenti acquisiti`;
             }
 
-            card.className = `client-card ${classeStato}`;
+            const statoPratica = cliente.dati.stato_pratica || "da_istruire";
+            const statoCfg = getStatoPraticaConfig(statoPratica);
+
+            const badgeHtml = `
+                <span class="badge-practice-state" style="background:${statoCfg.badge};">
+                    <i class="fas fa-circle"></i> ${statoCfg.label}
+                </span>
+            `;
+
+            card.className = "client-card";
+            card.style.borderLeftColor = statoCfg.border;
+            card.style.backgroundColor = statoCfg.bg;
             card.innerHTML = `
                 <div class="client-info-container">
                     <div class="client-data" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
                         <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
-                        <p>ID: ${cliente.idOriginale} <br> ${testoInfo}</p>
+                        <p>ID: ${cliente.idOriginale}</p>
+                        <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
                     </div>
                     <div class="client-actions">
                         <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
