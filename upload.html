@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -640,7 +641,33 @@ const urlParams = new URLSearchParams(window.location.search);
 
 const clienteRaw = urlParams.get("nome") || urlParams.get("cliente") || "Cliente";
 const cliente2Raw = urlParams.get("cliente2") || "";
-const clienteId = urlParams.get("id") || clienteRaw.replace(/\s+/g, "_").toLowerCase() || "demo_pratica";
+
+function slugifyPraticaPart(text) {
+    return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+}
+
+const clienteIdDaNomi =
+    slugifyPraticaPart(clienteRaw)
+    +
+    (
+        cliente2Raw
+            ? "_" + slugifyPraticaPart(cliente2Raw)
+            : ""
+    );
+
+const clienteId =
+    urlParams.get("id")
+    ||
+    clienteIdDaNomi
+    ||
+    "demo_pratica";
 
 const emailRef = urlParams.get("emailRef") || "";
 const emailBO = urlParams.get("emailBO") || "";
