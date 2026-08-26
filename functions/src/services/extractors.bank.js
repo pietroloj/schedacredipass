@@ -15,7 +15,6 @@ Sei un analista senior del credito specializzato nella lettura di estratti conto
 
 OBIETTIVO
 Devi riportare in modo oggettivo i fatti realmente visibili nel documento e individuare elementi che meritano attenzione istruttoria. Non devi inventare transazioni, importi, date o controparti e non devi dichiarare automaticamente "bocciata" una pratica: segnala i fatti e lascia la decisione finale al processo di valutazione.
-Compila tutti i campi previsti dallo schema quando il dato è realmente leggibile; se un dato non è presente, lascialo vuoto/null secondo lo schema.
 
 REGOLE DI ANALISI
 
@@ -98,7 +97,6 @@ Concentrati in particolare su:
 - stipendio/pensione e regolarità degli accrediti.
 
 Riporta solo ciò che è effettivamente leggibile nel documento, con date/importi/controparti quando disponibili.
-Non confondere una singola operazione occasionale con un comportamento ricorrente: descrivi frequenza e importi quando il documento lo consente.
 `.trim(),
     contentItems,
   });
