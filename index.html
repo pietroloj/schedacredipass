@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -5894,7 +5895,7 @@ function buildChecklistFromSnapshot(
     aggiungiVoce(
         anagrafica,
         EMOJI.casa,
-        'Certificato Cumulativo di Residenza e Stato di Famiglia'
+        'Certificato Contestuale di Residenza e Stato di Famiglia (da scaricare sul sito dell’Anagrafe Nazionale con SPID)'
     );
 
     const applicants =
@@ -6415,10 +6416,15 @@ function buildChecklistFromSnapshot(
 
 function buildWhatsAppCliente() {
 
-    return buildChecklistFromSnapshot(
-        getChecklistSnapshot(),
-        new Date()
-    );
+    const checklist =
+        buildChecklistFromSnapshot(
+            getChecklistSnapshot(),
+            new Date()
+        );
+
+    return `https://www.credipass.it
+
+${checklist}`;
 
 }
 
@@ -6472,7 +6478,9 @@ function buildWhatsAppBackoffice() {
     const shortLink =
         createShortChecklistURL();
 
-    return `RICHIESTA INVIO DOCUMENTALE
+    return `https://www.credipass.it
+
+RICHIESTA INVIO DOCUMENTALE
 
 Cliente: ${nomeCompleto(1)}
 Codice Fiscale: ${V('cliente_cf','-')}
@@ -6534,43 +6542,35 @@ function handleShortWhatsAppLink() {
         return true;
     }
 
-    const message =
+    const checklist =
         buildChecklistFromSnapshot(
             snapshot,
             new Date()
         );
 
+    const message =
+        `https://www.credipass.it\n\n${checklist}`;
+
+    const cleanPhone =
+        String(snapshot.phone || '')
+            .replace(/\D/g,'');
+
+    const whatsappUrl =
+        `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+
     /*
-        Puliamo l'URL del browser prima di aprire WhatsApp
-        per evitare che tornando indietro riparta in automatico.
+        IMPORTANTE:
+        il link del Back Office arriva su questa pagina con ?wa=1&...
+        e da qui facciamo un REDIRECT nella stessa scheda del browser.
+
+        Non usiamo window.open() perché, non essendoci un click diretto
+        dell'utente sul comando JavaScript, browser e smartphone possono
+        bloccarlo come popup. In quel caso si rimaneva sulla scheda di
+        consulenza invece di arrivare a WhatsApp.
     */
 
-    try {
-
-        const cleanUrl =
-            window.location.origin
-            +
-            window.location.pathname;
-
-        window.history.replaceState(
-            {},
-            document.title,
-            cleanUrl
-        );
-
-    }
-    catch(e) {}
-
-    setTimeout(
-        () => {
-
-            openWhatsApp(
-                snapshot.phone,
-                message
-            );
-
-        },
-        250
+    window.location.replace(
+        whatsappUrl
     );
 
     return true;
