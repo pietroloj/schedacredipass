@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -7680,72 +7681,159 @@ function compilaPDF() {
 function safeHtml(text) {
 
     return String(text || '')
-        .replace(
-            /&/g,
-            '&amp;'
-        )
-        .replace(
-            /</g,
-            '&lt;'
-        )
-        .replace(
-            />/g,
-            '&gt;'
-        )
-        .replace(
-            /"/g,
-            '&quot;'
-        )
-        .replace(
-            /'/g,
-            '&#039;'
-        );
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
 
 }
 
-function emailRow(
-    label,
-    value
-) {
+function emailHasValue(value) {
+
+    const v =
+        String(value ?? '')
+            .trim();
+
+    return (
+        v !== ''
+        &&
+        v !== '-'
+        &&
+        v !== 'N/D'
+        &&
+        v !== 'undefined'
+        &&
+        v !== 'null'
+    );
+
+}
+
+function emailMoney(value) {
+
+    if (!emailHasValue(value)) {
+        return '';
+    }
+
+    return formatEuro(value);
+
+}
+
+function emailRowDynamic(label,value,options = {}) {
+
+    if (!emailHasValue(value)) {
+        return '';
+    }
+
+    const highlight =
+        options.highlight
+            ? 'color:#002d72;font-size:18px;'
+            : 'color:#263238;';
 
     return `
+        <tr>
+            <td
+                style="
+                    padding:8px 0;
+                    border-bottom:1px solid #edf0f3;
+                    color:#78828c;
+                    font-size:12px;
+                    width:42%;
+                    vertical-align:top;
+                "
+            >
+                ${safeHtml(label)}
+            </td>
 
-    <tr>
+            <td
+                style="
+                    padding:8px 0;
+                    border-bottom:1px solid #edf0f3;
+                    font-size:13px;
+                    font-weight:bold;
+                    vertical-align:top;
+                    ${highlight}
+                "
+            >
+                ${options.raw ? value : safeHtml(value)}
+            </td>
+        </tr>
+    `;
 
+}
+
+function emailMiniCard(label,value,width = '50%') {
+
+    if (!emailHasValue(value)) {
+        return '';
+    }
+
+    return `
         <td
+            width="${width}"
+            valign="top"
+            style="padding:0 6px 10px 0;"
+        >
+            <div
+                style="
+                    background:#f8fafc;
+                    border:1px solid #e5eaf0;
+                    border-radius:10px;
+                    padding:15px;
+                "
+            >
+                <div
+                    style="
+                        font-size:10px;
+                        color:#808992;
+                        text-transform:uppercase;
+                        letter-spacing:.4px;
+                        margin-bottom:5px;
+                    "
+                >
+                    ${safeHtml(label)}
+                </div>
+
+                <div
+                    style="
+                        font-size:14px;
+                        color:#263238;
+                        font-weight:bold;
+                        line-height:1.45;
+                    "
+                >
+                    ${safeHtml(value)}
+                </div>
+            </div>
+        </td>
+    `;
+
+}
+
+function emailSectionTitle(numero,titolo) {
+
+    return `
+        <div
             style="
-                padding:7px;
-                border-bottom:1px solid #eee;
-                color:#666;
-                width:40%;
+                font-size:14px;
+                font-weight:700;
+                color:#002d72;
+                border-bottom:2px solid #C99700;
+                padding-bottom:7px;
+                margin-bottom:14px;
             "
         >
-            ${safeHtml(label)}
-        </td>
-
-        <td
-            style="
-                padding:7px;
-                border-bottom:1px solid #eee;
-            "
-        >
-            <strong>
-                ${safeHtml(value)}
-            </strong>
-        </td>
-
-    </tr>
-
+            ${numero}. ${safeHtml(titolo)}
+        </div>
     `;
 
 }
 
 /* ==========================================================
-   CHECKLIST EMAIL
-   Stessa logica della checklist WhatsApp
+   CHECKLIST EMAIL DINAMICA
    ========================================================== */
 
-function checklistToEmailHtml() {
+function getChecklistEmailSections() {
 
     const text =
         buildChecklistFromSnapshot(
@@ -7753,14 +7841,306 @@ function checklistToEmailHtml() {
             new Date()
         );
 
-    const escaped =
-        safeHtml(text);
+    const rawSections =
+        String(text || '')
+            .split(/\n{2,}/)
+            .map(s => s.trim())
+            .filter(Boolean);
 
-    return escaped
-        .replace(
-            /\n/g,
-            '<br>'
-        );
+    /*
+        Le prime due sezioni sono titolo e introduzione della checklist.
+        Nella mail le ricreiamo graficamente, quindi le escludiamo.
+    */
+    return rawSections.slice(2).map(section => {
+
+        const lines =
+            section
+                .split('\n')
+                .map(line => line.trimEnd())
+                .filter(Boolean);
+
+        const title =
+            lines.shift()
+            ||
+            'Documentazione';
+
+        return {
+            title,
+            lines
+        };
+
+    });
+
+}
+
+function checklistCardsEmailHtml() {
+
+    const sections =
+        getChecklistEmailSections();
+
+    if (!sections.length) {
+        return '';
+    }
+
+    const cards =
+        sections.map(section => {
+
+            const items =
+                section.lines
+                    .map(line => {
+
+                        if (/^\s*-\s/.test(line)) {
+
+                            return `
+                                <div
+                                    style="
+                                        padding-left:18px;
+                                        margin:3px 0;
+                                        color:#68717a;
+                                        font-size:12px;
+                                        line-height:1.6;
+                                    "
+                                >
+                                    ${safeHtml(line)}
+                                </div>
+                            `;
+
+                        }
+
+                        return `
+                            <div
+                                style="
+                                    margin:5px 0;
+                                    color:#555f68;
+                                    font-size:12px;
+                                    line-height:1.7;
+                                "
+                            >
+                                ${safeHtml(line)}
+                            </div>
+                        `;
+
+                    })
+                    .join('');
+
+            return `
+                <tr>
+                    <td style="padding:0 0 12px 0;">
+                        <div
+                            style="
+                                background:#f8f9fa;
+                                border:1px solid #e3e7eb;
+                                border-radius:10px;
+                                padding:16px 18px;
+                            "
+                        >
+                            <div
+                                style="
+                                    font-size:14px;
+                                    font-weight:bold;
+                                    color:#002d72;
+                                    margin-bottom:9px;
+                                "
+                            >
+                                ${safeHtml(section.title)}
+                            </div>
+
+                            ${items}
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+        }).join('');
+
+    return `
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+        >
+            ${cards}
+        </table>
+    `;
+
+}
+
+/* ==========================================================
+   DOCUMENTI AREA CLIENTI
+   ========================================================== */
+
+function getUploadDocumentCodes() {
+
+    const snapshot =
+        getChecklistSnapshot();
+
+    const codes =
+        new Set();
+
+    /* ANAGRAFICA R1 */
+    codes.add('ci1');
+    codes.add('ts1');
+    codes.add('residenza1');
+
+    /* ANAGRAFICA R2 */
+    if (snapshot.r2) {
+
+        codes.add('ci2');
+        codes.add('ts2');
+
+    }
+
+    const applicants =
+        [
+            snapshot.r1,
+            snapshot.r2
+        ].filter(Boolean);
+
+    applicants.forEach((applicant,index) => {
+
+        const n =
+            index + 1;
+
+        if (
+            applicant.stato ===
+            'CONIUGATO/A - SEPARAZIONE BENI'
+        ) {
+            codes.add('matrimonio');
+        }
+
+        if (
+            applicant.stato ===
+            'SEPARATO/A'
+        ) {
+            codes.add('separazione');
+        }
+
+        if (
+            applicant.stato ===
+            'DIVORZIATO/A'
+        ) {
+            codes.add('divorzio');
+        }
+
+        if (
+            applicant.mantenimento ===
+            'Sì'
+        ) {
+            codes.add('mantenimento');
+        }
+
+        if (
+            applicant.lavoro === 'DIPENDENTE'
+            ||
+            isDipendente(applicant.lavoro)
+        ) {
+
+            codes.add(`bustepaga${n}`);
+            codes.add(`cud${n}`);
+            codes.add(`contratto${n}`);
+            codes.add(`ec${n}`);
+            codes.add(`mov${n}`);
+
+        }
+
+        if (
+            applicant.lavoro === 'AUTONOMO'
+            ||
+            isAutonomo(applicant.lavoro)
+        ) {
+
+            codes.add(`unici${n}`);
+            codes.add(`ricevute${n}`);
+            codes.add(`f24${n}`);
+            codes.add(`visura${n}`);
+            codes.add(`ec${n}`);
+            codes.add(`mov${n}`);
+
+        }
+
+    });
+
+    if (snapshot.redditoFitto) {
+
+        codes.add('locazioni');
+        codes.add('redditi_locazione');
+        codes.add('accrediti_locazione');
+
+    }
+
+    if (
+        snapshot.finalita !==
+        'VOUCHER'
+    ) {
+
+        codes.add('atto');
+        codes.add('planimetria');
+        codes.add('visura_catastale');
+
+        if (
+            snapshot.finalita === 'ACQUISTO'
+            ||
+            snapshot.finalita === 'SOSTITUZIONE + ACQUISTO'
+        ) {
+
+            codes.add('titoli_edilizi');
+            codes.add('agibilita');
+            codes.add('preliminare');
+
+        }
+
+        if (
+            snapshot.finalita ===
+            'RISTRUTTURAZIONE'
+        ) {
+
+            codes.add('computo_metrico');
+
+        }
+
+    }
+
+    if (
+        snapshot.mutuoEsistente
+        ||
+        snapshot.finalita === 'SURROGA'
+        ||
+        snapshot.finalita === 'RIFINANZIAMENTO'
+        ||
+        snapshot.finalita === 'SOSTITUZIONE + ACQUISTO'
+    ) {
+
+        codes.add('mutuo_pre');
+
+    }
+
+    if (
+        snapshot.finanziamenti
+        ||
+        snapshot.finalita ===
+        'CONSOLIDAMENTO'
+    ) {
+
+        codes.add('prestiti');
+
+    }
+
+    if (
+        snapshot.finalita ===
+        'CONSOLIDAMENTO'
+    ) {
+
+        codes.add('conteggi_estintivi');
+
+    }
+
+    /* CTC richiesto sempre */
+    codes.add('ctc');
+
+    return [
+        ...codes
+    ];
 
 }
 
@@ -7808,6 +8188,18 @@ function buildUploadAreaUrl() {
 
     }
 
+    const documentCodes =
+        getUploadDocumentCodes();
+
+    if (documentCodes.length) {
+
+        params.set(
+            'docs',
+            documentCodes.join(',')
+        );
+
+    }
+
     const refEmail =
         V(
             'campo_email',
@@ -7848,9 +8240,324 @@ function buildUploadAreaUrl() {
 
 }
 
+/* ==========================================================
+   GUIDE ANPR / CTC
+   ========================================================== */
+
+function buildGuidaANPRHtml() {
+
+    return `
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="
+                background:#f5f8fc;
+                border:1px solid #dce5ef;
+                border-radius:14px;
+            "
+        >
+            <tr>
+                <td style="padding:22px 24px;">
+
+                    <div
+                        style="
+                            color:#002d72;
+                            font-size:17px;
+                            font-weight:bold;
+                            margin-bottom:8px;
+                        "
+                    >
+                        📄 Come richiedere il Certificato Contestuale
+                    </div>
+
+                    <div
+                        style="
+                            color:#69737d;
+                            font-size:13px;
+                            line-height:1.6;
+                            margin-bottom:18px;
+                        "
+                    >
+                        Il certificato può essere richiesto online tramite il portale ufficiale
+                        dell’Anagrafe Nazionale della Popolazione Residente.
+                    </div>
+
+                    ${emailGuideStep(
+                        '1',
+                        `Accedi al sito ufficiale ANPR:<br>
+                        <a href="https://www.anagrafenazionale.interno.it/"
+                           style="color:#003b86;font-weight:bold;text-decoration:underline;">
+                           www.anagrafenazionale.interno.it
+                        </a>`
+                    )}
+
+                    ${emailGuideStep(
+                        '2',
+                        'Accedi ai servizi al cittadino utilizzando <strong>SPID, CIE o CNS</strong>.'
+                    )}
+
+                    ${emailGuideStep(
+                        '3',
+                        'Entra nella sezione dedicata ai <strong>Certificati anagrafici</strong> e avvia la richiesta di un nuovo certificato.'
+                    )}
+
+                    ${emailGuideStep(
+                        '4',
+                        `Richiedi il certificato contenente le informazioni relative a:
+                        <div style="margin-top:9px;background:#ffffff;border:1px solid #d8e0e8;border-radius:9px;padding:11px 14px;">
+                            ✓ Residenza<br>
+                            ✓ Stato di Famiglia
+                        </div>`
+                    )}
+
+                    ${emailGuideStep(
+                        '5',
+                        'Scarica il certificato in formato PDF e caricalo successivamente nella tua <strong>Area Clienti Credipass</strong>.',
+                        true
+                    )}
+
+                    <div style="text-align:center;margin-top:17px;">
+                        <a
+                            href="https://www.anagrafenazionale.interno.it/"
+                            style="
+                                display:inline-block;
+                                background:#003b86;
+                                color:#ffffff;
+                                text-decoration:none;
+                                padding:13px 24px;
+                                border-radius:8px;
+                                font-size:13px;
+                                font-weight:bold;
+                            "
+                        >
+                            VAI AL PORTALE ANPR
+                        </a>
+                    </div>
+
+                </td>
+            </tr>
+        </table>
+    `;
+
+}
+
+function buildGuidaCTCHtml() {
+
+    return `
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="
+                background:#f5f8fc;
+                border:1px solid #dce5ef;
+                border-radius:14px;
+            "
+        >
+            <tr>
+                <td style="padding:22px 24px;">
+
+                    <div
+                        style="
+                            color:#002d72;
+                            font-size:17px;
+                            font-weight:bold;
+                            margin-bottom:8px;
+                        "
+                    >
+                        🌐 Come richiedere il CTC Online
+                    </div>
+
+                    <div
+                        style="
+                            color:#69737d;
+                            font-size:13px;
+                            line-height:1.6;
+                            margin-bottom:18px;
+                        "
+                    >
+                        La richiesta può essere effettuata online accedendo al portale CTC.
+                    </div>
+
+                    ${emailGuideStep(
+                        '1',
+                        `Accedi al sito:
+                        <a href="https://www.ctconline.it"
+                           style="color:#003b86;font-weight:bold;text-decoration:underline;">
+                           www.ctconline.it
+                        </a>`
+                    )}
+
+                    ${emailGuideStep(
+                        '2',
+                        'Seleziona <strong>Istanza Online</strong>.'
+                    )}
+
+                    ${emailGuideStep(
+                        '3',
+                        'Clicca su <strong>Crea Nuova Istanza</strong>.'
+                    )}
+
+                    ${emailGuideStep(
+                        '4',
+                        'Accedi tramite <strong>SPID</strong>.'
+                    )}
+
+                    ${emailGuideStep(
+                        '5',
+                        'Seleziona <strong>Richiesta Accesso</strong>.'
+                    )}
+
+                    ${emailGuideStep(
+                        '6',
+                        'Inserisci il tuo indirizzo <strong>email</strong> e prosegui seguendo le indicazioni del portale.',
+                        true
+                    )}
+
+                    <div style="text-align:center;margin-top:17px;">
+                        <a
+                            href="https://www.ctconline.it"
+                            style="
+                                display:inline-block;
+                                background:#003b86;
+                                color:#ffffff;
+                                text-decoration:none;
+                                padding:13px 24px;
+                                border-radius:8px;
+                                font-size:13px;
+                                font-weight:bold;
+                            "
+                        >
+                            VAI AL PORTALE CTC
+                        </a>
+                    </div>
+
+                </td>
+            </tr>
+        </table>
+    `;
+
+}
+
+function emailGuideStep(number,html,last = false) {
+
+    return `
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="
+                margin-bottom:${last ? '0' : '11px'};
+            "
+        >
+            <tr>
+
+                <td
+                    width="42"
+                    valign="top"
+                >
+                    <div
+                        style="
+                            width:28px;
+                            height:28px;
+                            line-height:28px;
+                            background:${last ? '#003b86' : '#D8A300'};
+                            border-radius:50%;
+                            color:#ffffff;
+                            font-size:12px;
+                            text-align:center;
+                            font-weight:bold;
+                        "
+                    >
+                        ${number}
+                    </div>
+                </td>
+
+                <td
+                    valign="top"
+                    style="
+                        padding:4px 0 0 5px;
+                        color:#525d67;
+                        font-size:13px;
+                        line-height:1.55;
+                    "
+                >
+                    ${html}
+                </td>
+
+            </tr>
+        </table>
+    `;
+
+}
+
+/* ==========================================================
+   EMAIL HTML PRINCIPALE
+   ========================================================== */
+
 function buildEmailHtml(
     includeNotes
 ) {
+
+    const nome1 =
+        nomeCompleto(1)
+        ||
+        'Cliente';
+
+    const nome2 =
+        nomeCompleto(2);
+
+    const lavoro1 =
+        S(
+            'lav1',
+            ''
+        );
+
+    const lavoro2 =
+        nome2
+            ?
+            S(
+                'lav2',
+                ''
+            )
+            :
+            '';
+
+    const reddito1 =
+        emailMoney(
+            V(
+                'cliente_reddito',
+                ''
+            )
+        );
+
+    const reddito2 =
+        nome2
+            ?
+            emailMoney(
+                V(
+                    'cliente2_reddito',
+                    ''
+                )
+            )
+            :
+            '';
+
+    const dataConsulenza =
+        V(
+            'campo_data',
+            ''
+        );
+
+    const luogoConsulenza =
+        V(
+            'campo_luogo',
+            ''
+        );
 
     const note =
         V(
@@ -7858,17 +8565,96 @@ function buildEmailHtml(
             ''
         );
 
-    const nome1 =
-        nomeCompleto(1);
+    const finalita =
+        S(
+            'fin',
+            ''
+        );
 
-    const nome2 =
-        nomeCompleto(2);
+    const prodotto =
+        S(
+            'prodotto',
+            ''
+        );
+
+    const importo =
+        emailMoney(
+            V(
+                'mutuo_importo',
+                ''
+            )
+        );
+
+    const compravendita =
+        emailMoney(
+            V(
+                'mutuo_compravendita',
+                ''
+            )
+        );
+
+    const valoreImmobile =
+        emailMoney(
+            V(
+                'immobile_valore',
+                ''
+            )
+        );
+
+    const durata =
+        emailHasValue(
+            V(
+                'mutuo_durata',
+                ''
+            )
+        )
+            ?
+            `${V('mutuo_durata','')} anni`
+            :
+            '';
+
+    const tasso =
+        S(
+            'tasso',
+            ''
+        );
+
+    const stato1 =
+        S(
+            'stato1',
+            ''
+        );
+
+    const stato2 =
+        nome2
+            ?
+            S(
+                'stato2',
+                ''
+            )
+            :
+            '';
+
+    const componenti =
+        V(
+            'num_componenti',
+            ''
+        );
+
+    const assegno =
+        assegnoUnicoText();
+
+    const figli =
+        figliText();
+
+    const situazioneAbitativa =
+        situazioneAbitativaText();
 
     const uploadUrl =
         buildUploadAreaUrl();
 
-    const checklistHtml =
-        checklistToEmailHtml();
+    const checklistCards =
+        checklistCardsEmailHtml();
 
     const imgPreview =
         document.getElementById(
@@ -7888,21 +8674,290 @@ function buildEmailHtml(
             :
             '';
 
+    const referente =
+        V(
+            'campo_referente',
+            ''
+        );
+
+    const refEmail =
+        V(
+            'campo_email',
+            ''
+        );
+
+    const refCell =
+        V(
+            'campo_cellulare',
+            ''
+        );
+
+    const indirizzo =
+        V(
+            'campo_indirizzo',
+            ''
+        );
+
+    const hasFamilyData =
+        [
+            stato1,
+            stato2,
+            componenti,
+            assegno,
+            figli,
+            situazioneAbitativa
+        ].some(emailHasValue);
+
+    const hasMutuoData =
+        [
+            finalita,
+            prodotto,
+            importo,
+            compravendita,
+            valoreImmobile,
+            durata,
+            tasso
+        ].some(emailHasValue);
+
+    const hasCosts =
+        (
+            S('gia_mutuo','No') === 'Sì'
+            ||
+            S('fin_corso','No') === 'Sì'
+            ||
+            emailHasValue(V('tipo_incendio',''))
+            ||
+            emailHasValue(V('tipo_personale',''))
+            ||
+            emailHasValue(V('istr_banca',''))
+            ||
+            emailHasValue(V('perizia_costo',''))
+            ||
+            emailHasValue(S('imposta',''))
+            ||
+            emailHasValue(getMediazione())
+        );
+
+    let sectionNumber = 1;
+
+    const anagraficaNumero =
+        sectionNumber++;
+
+    const famigliaNumero =
+        hasFamilyData
+            ?
+            sectionNumber++
+            :
+            null;
+
+    const mutuoNumero =
+        hasMutuoData
+            ?
+            sectionNumber++
+            :
+            null;
+
+    const costiNumero =
+        hasCosts
+            ?
+            sectionNumber++
+            :
+            null;
+
+    const noteNumero =
+        (
+            includeNotes
+            &&
+            emailHasValue(note)
+        )
+            ?
+            sectionNumber++
+            :
+            null;
+
+    const checklistNumero =
+        sectionNumber++;
+
     return `
-
 <!DOCTYPE html>
-
 <html lang="it">
 
 <head>
+
 <meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+    Riepilogo Consulenza Credipass
+</title>
+
 </head>
 
 <body
     style="
         margin:0;
-        background:#f4f7f6;
+        padding:0;
+        background:#eef2f6;
         font-family:Arial,Helvetica,sans-serif;
+        color:#263238;
+    "
+>
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    bgcolor="#eef2f6"
+>
+
+<tr>
+
+<td
+    align="center"
+    style="padding:35px 12px;"
+>
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+        max-width:680px;
+        background:#ffffff;
+        border-radius:16px;
+        overflow:hidden;
+        box-shadow:0 10px 35px rgba(0,45,114,.12);
+        border:1px solid #e3e8ee;
+    "
+>
+
+<!-- HEADER -->
+
+<tr>
+
+<td
+    align="center"
+    bgcolor="#002d72"
+    style="
+        padding:32px 25px 26px;
+        border-bottom:4px solid #C99700;
+    "
+>
+
+<img
+    src="https://consulenza-credipass.it/images/logo-credipass.png"
+    width="205"
+    alt="Credipass"
+    style="
+        display:block;
+        max-width:205px;
+        border:0;
+        margin:0 auto;
+    "
+>
+
+<div
+    style="
+        margin-top:20px;
+        color:#ffffff;
+        font-size:23px;
+        font-weight:700;
+        line-height:1.2;
+    "
+>
+    La tua consulenza è pronta
+</div>
+
+<div
+    style="
+        margin-top:8px;
+        color:#dbe5f4;
+        font-size:13px;
+        line-height:1.5;
+    "
+>
+    Riepilogo della consulenza e documentazione necessaria
+</div>
+
+</td>
+
+</tr>
+
+<!-- INTRO -->
+
+<tr>
+
+<td
+    style="
+        padding:32px 34px 20px;
+    "
+>
+
+<div
+    style="
+        font-size:17px;
+        color:#002d72;
+        font-weight:700;
+        margin-bottom:12px;
+    "
+>
+    Gentile ${safeHtml(nome1)},
+</div>
+
+<div
+    style="
+        font-size:14px;
+        line-height:1.7;
+        color:#586069;
+    "
+>
+    grazie per aver scelto Credipass.
+
+    ${
+        emailHasValue(dataConsulenza)
+        ||
+        emailHasValue(luogoConsulenza)
+            ?
+            `
+            Di seguito trovi il riepilogo della consulenza
+            ${
+                emailHasValue(dataConsulenza)
+                    ?
+                    `effettuata il <strong style="color:#263238;">${safeHtml(dataConsulenza)}</strong>`
+                    :
+                    ''
+            }
+            ${
+                emailHasValue(luogoConsulenza)
+                    ?
+                    ` ${emailHasValue(dataConsulenza) ? 'a' : 'effettuata a'} <strong style="color:#263238;">${safeHtml(luogoConsulenza)}</strong>`
+                    :
+                    ''
+            }.
+            `
+            :
+            `Di seguito trovi il riepilogo della consulenza.`
+    }
+
+</div>
+
+</td>
+
+</tr>
+
+<!-- STATO PRATICA -->
+
+<tr>
+
+<td
+    style="
+        padding:5px 34px 26px;
     "
 >
 
@@ -7912,26 +8967,990 @@ function buildEmailHtml(
     cellspacing="0"
     border="0"
     style="
-        padding:30px 10px;
-        background:#f4f7f6;
+        background:#f6f8fb;
+        border-radius:12px;
+        border:1px solid #e4e9ef;
     "
 >
 
 <tr>
 
-<td align="center">
+<td
+    align="center"
+    width="25%"
+    style="padding:18px 4px;"
+>
+    <div
+        style="
+            width:26px;
+            height:26px;
+            line-height:26px;
+            border-radius:50%;
+            background:#002d72;
+            color:#ffffff;
+            margin:0 auto 7px;
+            font-size:12px;
+            font-weight:bold;
+        "
+    >
+        ✓
+    </div>
+
+    <div
+        style="
+            font-size:10px;
+            color:#002d72;
+            font-weight:bold;
+        "
+    >
+        CONSULENZA
+    </div>
+</td>
+
+<td
+    align="center"
+    width="25%"
+    style="padding:18px 4px;"
+>
+    <div
+        style="
+            width:26px;
+            height:26px;
+            line-height:26px;
+            border-radius:50%;
+            background:#C99700;
+            color:white;
+            margin:0 auto 7px;
+            font-size:12px;
+            font-weight:bold;
+        "
+    >
+        2
+    </div>
+
+    <div
+        style="
+            font-size:10px;
+            color:#8a6800;
+            font-weight:bold;
+        "
+    >
+        DOCUMENTI
+    </div>
+</td>
+
+<td
+    align="center"
+    width="25%"
+    style="padding:18px 4px;"
+>
+    <div
+        style="
+            width:26px;
+            height:26px;
+            line-height:26px;
+            border-radius:50%;
+            background:#e3e8ee;
+            color:#7a858f;
+            margin:0 auto 7px;
+            font-size:12px;
+            font-weight:bold;
+        "
+    >
+        3
+    </div>
+
+    <div
+        style="
+            font-size:10px;
+            color:#7a858f;
+            font-weight:bold;
+        "
+    >
+        ISTRUTTORIA
+    </div>
+</td>
+
+<td
+    align="center"
+    width="25%"
+    style="padding:18px 4px;"
+>
+    <div
+        style="
+            width:26px;
+            height:26px;
+            line-height:26px;
+            border-radius:50%;
+            background:#e3e8ee;
+            color:#7a858f;
+            margin:0 auto 7px;
+            font-size:12px;
+            font-weight:bold;
+        "
+    >
+        4
+    </div>
+
+    <div
+        style="
+            font-size:10px;
+            color:#7a858f;
+            font-weight:bold;
+        "
+    >
+        DELIBERA
+    </div>
+</td>
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+
+<!-- ANAGRAFICA E REDDITO -->
+
+<tr>
+
+<td style="padding:0 34px 24px;">
+
+${emailSectionTitle(
+    anagraficaNumero,
+    'ANAGRAFICA E REDDITO'
+)}
 
 <table
-    width="600"
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+<tr>
+
+<td
+    width="${nome2 ? '50%' : '100%'}"
+    valign="top"
+    style="${nome2 ? 'padding-right:6px;' : ''}"
+>
+
+<div
+    style="
+        background:#f8fafc;
+        border-radius:12px;
+        border:1px solid #e5eaf0;
+        padding:18px 20px;
+    "
+>
+
+<div
+    style="
+        color:#002d72;
+        font-weight:700;
+        font-size:14px;
+        margin-bottom:12px;
+    "
+>
+    1° RICHIEDENTE
+</div>
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+${emailRowDynamic(
+    'Nominativo',
+    nome1
+)}
+
+${emailRowDynamic(
+    'Codice Fiscale',
+    V(
+        'cliente_cf',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Cellulare',
+    V(
+        'cliente_cell',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Email',
+    V(
+        'cliente_email',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Professione',
+    lavoro1
+)}
+
+${emailRowDynamic(
+    'Reddito netto',
+    reddito1,
+    {
+        highlight:true
+    }
+)}
+
+</table>
+
+</div>
+
+</td>
+
+${
+    nome2
+        ?
+        `
+<td
+    width="50%"
+    valign="top"
+    style="padding-left:6px;"
+>
+
+<div
+    style="
+        background:#f8fafc;
+        border-radius:12px;
+        border:1px solid #e5eaf0;
+        padding:18px 20px;
+    "
+>
+
+<div
+    style="
+        color:#002d72;
+        font-weight:700;
+        font-size:14px;
+        margin-bottom:12px;
+    "
+>
+    2° RICHIEDENTE
+</div>
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+${emailRowDynamic(
+    'Nominativo',
+    nome2
+)}
+
+${emailRowDynamic(
+    'Codice Fiscale',
+    V(
+        'cliente2_cf',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Cellulare',
+    V(
+        'cliente2_cell',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Email',
+    V(
+        'cliente2_email',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Professione',
+    lavoro2
+)}
+
+${emailRowDynamic(
+    'Reddito netto',
+    reddito2,
+    {
+        highlight:true
+    }
+)}
+
+</table>
+
+</div>
+
+</td>
+`
+        :
+        ''
+}
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+
+<!-- FAMIGLIA -->
+
+${
+    hasFamilyData
+        ?
+        `
+<tr>
+
+<td style="padding:0 34px 24px;">
+
+${emailSectionTitle(
+    famigliaNumero,
+    'FAMIGLIA E STATO CIVILE'
+)}
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+<tr>
+
+${emailMiniCard(
+    'Stato civile R1',
+    stato1
+)}
+
+${nome2
+    ?
+    emailMiniCard(
+        'Stato civile R2',
+        stato2
+    )
+    :
+    emailMiniCard(
+        'Componenti nucleo',
+        componenti
+    )
+}
+
+</tr>
+
+<tr>
+
+${nome2
+    ?
+    emailMiniCard(
+        'Componenti nucleo',
+        componenti
+    )
+    :
+    emailMiniCard(
+        'Età figli',
+        figli
+    )
+}
+
+${emailMiniCard(
+    'Assegno unico',
+    assegno
+)}
+
+</tr>
+
+${
+    nome2
+        ?
+        `
+<tr>
+${emailMiniCard(
+    'Età figli',
+    figli
+)}
+${emailMiniCard(
+    'Situazione abitativa',
+    situazioneAbitativa
+)}
+</tr>
+`
+        :
+        (
+            emailHasValue(situazioneAbitativa)
+                ?
+                `
+<tr>
+<td
+    colspan="2"
+    style="padding:0 0 10px 0;"
+>
+    <div
+        style="
+            background:#f8fafc;
+            border:1px solid #e5eaf0;
+            border-radius:10px;
+            padding:15px;
+        "
+    >
+        <div
+            style="
+                font-size:10px;
+                color:#808992;
+                text-transform:uppercase;
+                letter-spacing:.4px;
+                margin-bottom:5px;
+            "
+        >
+            SITUAZIONE ABITATIVA
+        </div>
+
+        <div
+            style="
+                font-size:14px;
+                color:#263238;
+                font-weight:bold;
+            "
+        >
+            ${safeHtml(situazioneAbitativa)}
+        </div>
+    </div>
+</td>
+</tr>
+`
+                :
+                ''
+        )
+}
+
+</table>
+
+</td>
+
+</tr>
+`
+        :
+        ''
+}
+
+<!-- MUTUO -->
+
+${
+    hasMutuoData
+        ?
+        `
+<tr>
+
+<td style="padding:0 34px 25px;">
+
+<table
+    width="100%"
     cellpadding="0"
     cellspacing="0"
     border="0"
     style="
-        width:600px;
-        max-width:100%;
-        background:white;
-        border:1px solid #ddd;
-        border-radius:8px;
+        background:#fffaf0;
+        border:2px solid #C99700;
+        border-radius:14px;
+    "
+>
+
+<tr>
+
+<td style="padding:20px;">
+
+<div
+    style="
+        font-size:15px;
+        color:#8a6800;
+        font-weight:700;
+        margin-bottom:18px;
+    "
+>
+    ${mutuoNumero}. DETTAGLI MUTUO
+</div>
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+<tr>
+
+${
+    emailHasValue(finalita)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 10px 15px 0;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Finalità
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(finalita)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+${
+    emailHasValue(prodotto)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 0 15px 10px;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Prodotto
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(prodotto)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+</tr>
+
+<tr>
+
+${
+    emailHasValue(importo)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 10px 15px 0;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Importo richiesto
+    </div>
+
+    <div
+        style="
+            font-size:21px;
+            font-weight:bold;
+            color:#002d72;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(importo)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+${
+    emailHasValue(valoreImmobile)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 0 15px 10px;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Valore immobile
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(valoreImmobile)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+</tr>
+
+<tr>
+
+${
+    emailHasValue(compravendita)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 10px 15px 0;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Prezzo acquisto
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(compravendita)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+${
+    emailHasValue(durata)
+        ?
+        `
+<td
+    width="50%"
+    style="padding:0 0 15px 10px;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Durata
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(durata)}
+    </div>
+</td>
+`
+        :
+        ''
+}
+
+</tr>
+
+${
+    emailHasValue(tasso)
+        ?
+        `
+<tr>
+<td
+    colspan="2"
+    style="padding:0;"
+>
+    <div style="font-size:11px;color:#997a17;">
+        Tasso
+    </div>
+
+    <div
+        style="
+            font-size:15px;
+            font-weight:bold;
+            color:#263238;
+            margin-top:4px;
+        "
+    >
+        ${safeHtml(tasso)}
+    </div>
+</td>
+</tr>
+`
+        :
+        ''
+}
+
+</table>
+
+</td>
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+`
+        :
+        ''
+}
+
+<!-- IMPEGNI / POLIZZE / COSTI -->
+
+${
+    hasCosts
+        ?
+        `
+<tr>
+
+<td style="padding:0 34px 24px;">
+
+${emailSectionTitle(
+    costiNumero,
+    'IMPEGNI, POLIZZE E COSTI'
+)}
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+>
+
+${
+    S('gia_mutuo','No') === 'Sì'
+        ?
+        emailRowDynamic(
+            'Mutuo in corso',
+            mutuoEsistenteText()
+        )
+        :
+        ''
+}
+
+${
+    S('fin_corso','No') === 'Sì'
+        ?
+        emailRowDynamic(
+            'Finanziamenti in corso',
+            finanziamentiText()
+        )
+        :
+        ''
+}
+
+${emailRowDynamic(
+    'Polizza incendio e scoppio',
+    V(
+        'tipo_incendio',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Polizza personale',
+    V(
+        'tipo_personale',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Istruttoria banca',
+    emailMoney(
+        V(
+            'istr_banca',
+            ''
+        )
+    )
+)}
+
+${emailRowDynamic(
+    'Perizia',
+    emailMoney(
+        V(
+            'perizia_costo',
+            ''
+        )
+    )
+)}
+
+${emailRowDynamic(
+    'Imposta sostitutiva',
+    S(
+        'imposta',
+        ''
+    )
+)}
+
+${emailRowDynamic(
+    'Mediazione Credipass',
+    getMediazione()
+)}
+
+<tr>
+    <td
+        style="
+            padding:8px 0;
+            color:#78828c;
+            font-size:12px;
+        "
+    >
+        Certificazione documentale
+    </td>
+
+    <td
+        style="
+            padding:8px 0;
+            color:#002d72;
+            font-size:13px;
+            font-weight:bold;
+        "
+    >
+        76 € per richiedente
+    </td>
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+`
+        :
+        ''
+}
+
+<!-- NOTE -->
+
+${
+    noteNumero
+        ?
+        `
+<tr>
+
+<td style="padding:0 34px 24px;">
+
+${emailSectionTitle(
+    noteNumero,
+    'NOTE DELLA CONSULENZA'
+)}
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+        background:#f8fafb;
+        border:1px dashed #cbd3da;
+        border-radius:12px;
+    "
+>
+
+<tr>
+
+<td
+    style="
+        padding:18px 20px;
+        color:#5f6870;
+        font-size:13px;
+        line-height:1.6;
+    "
+>
+    ${safeHtml(note).replace(/\n/g,'<br>')}
+</td>
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+`
+        :
+        ''
+}
+
+<!-- DOCUMENTAZIONE -->
+
+<tr>
+
+<td style="padding:0 34px 18px;">
+
+${emailSectionTitle(
+    checklistNumero,
+    'DOCUMENTAZIONE RICHIESTA'
+)}
+
+${checklistCards}
+
+</td>
+
+</tr>
+
+<!-- GUIDA ANPR -->
+
+<tr>
+
+<td style="padding:0 34px 16px;">
+
+${buildGuidaANPRHtml()}
+
+</td>
+
+</tr>
+
+<!-- GUIDA CTC -->
+
+<tr>
+
+<td style="padding:0 34px 24px;">
+
+${buildGuidaCTCHtml()}
+
+</td>
+
+</tr>
+
+<!-- AREA CLIENTI - SOLO ALLA FINE -->
+
+<tr>
+
+<td style="padding:0 34px 30px;">
+
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+        background:#002d72;
+        border-radius:14px;
         overflow:hidden;
     "
 >
@@ -7939,465 +9958,93 @@ function buildEmailHtml(
 <tr>
 
 <td
-    bgcolor="#002d72"
     align="center"
     style="
-        padding:28px;
-        border-bottom:4px solid #C99700;
+        padding:27px 25px;
     "
 >
-
-<img
-    src="https://consulenza-credipass.it/images/logo-credipass.png"
-    width="200"
-    alt="Credipass"
-    style="
-        display:block;
-        border:0;
-    "
->
-
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:30px">
-
-<h1
-    style="
-        color:#002d72;
-        font-size:22px;
-        margin-top:0;
-    "
->
-    Scheda di Consulenza
-</h1>
-
-<p
-    style="
-        font-size:14px;
-        line-height:1.6;
-        color:#444;
-    "
->
-
-Gentile
-<strong>
-${safeHtml(nome1)}
-</strong>,
-
-<br><br>
-
-di seguito trovi il riepilogo della consulenza e la documentazione necessaria per procedere con la pratica.
-
-</p>
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-    "
->
-    Anagrafica
-</h2>
-
-<table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
->
-
-${emailRow(
-    '1° Richiedente',
-    nome1
-)}
-
-${emailRow(
-    'Codice Fiscale R1',
-    V(
-        'cliente_cf',
-        '-'
-    )
-)}
-
-${nome2
-    ?
-    emailRow(
-        '2° Richiedente',
-        nome2
-    )
-    :
-    ''
-}
-
-${nome2
-    ?
-    emailRow(
-        'Codice Fiscale R2',
-        V(
-            'cliente2_cf',
-            '-'
-        )
-    )
-    :
-    ''
-}
-
-</table>
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Nucleo Familiare
-</h2>
-
-<table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
->
-
-${emailRow(
-    'Componenti',
-    V(
-        'num_componenti',
-        '-'
-    )
-)}
-
-${emailRow(
-    'Assegno Unico',
-    assegnoUnicoText()
-)}
-
-${emailRow(
-    'Età figli',
-    figliText()
-)}
-
-${emailRow(
-    'Situazione abitativa',
-    situazioneAbitativaText()
-)}
-
-</table>
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Redditi da Fitto
-</h2>
-
-<table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
->
-
-${emailRow(
-    'Fitti',
-    S(
-        'reddito_fitto',
-        'No'
-    )
-    ===
-    'Sì'
-        ?
-        fittiText()
-        :
-        'No'
-)}
-
-${emailRow(
-    'Totale mensile fitti',
-    S(
-        'reddito_fitto',
-        'No'
-    )
-    ===
-    'Sì'
-        ?
-        formatCurrency(
-            aggiornaTotaleFitti()
-        )
-        :
-        '0,00 €'
-)}
-
-</table>
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Impegni Finanziari
-</h2>
-
-<table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
->
-
-${emailRow(
-    'Mutuo esistente',
-    mutuoEsistenteText()
-)}
-
-${emailRow(
-    'Finanziamenti',
-    S(
-        'fin_corso',
-        'No'
-    )
-    ===
-    'Sì'
-        ?
-        finanziamentiText()
-        :
-        'No'
-)}
-
-${emailRow(
-    'Totale rate finanziamenti',
-    formatCurrency(
-        aggiornaTotaleFinanziamenti()
-    )
-)}
-
-</table>
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Mutuo Richiesto
-</h2>
-
-<table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
->
-
-${emailRow(
-    'Finalità',
-    S(
-        'fin',
-        '-'
-    )
-)}
-
-${emailRow(
-    'Importo',
-    formatEuro(
-        V(
-            'mutuo_importo',
-            ''
-        )
-    )
-)}
-
-${emailRow(
-    'Durata',
-    V(
-        'mutuo_durata',
-        '-'
-    )
-    !==
-    '-'
-        ?
-        V(
-            'mutuo_durata',
-            '-'
-        )
-        +
-        ' anni'
-        :
-        '-'
-)}
-
-${emailRow(
-    'Tasso',
-    S(
-        'tasso',
-        '-'
-    )
-)}
-
-${emailRow(
-    'Imposta sostitutiva',
-    S(
-        'imposta',
-        '-'
-    )
-)}
-
-${emailRow(
-    'Mediazione Credipass',
-    getMediazione()
-)}
-
-</table>
-
-${
-    includeNotes
-        ?
-        `
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Note
-</h2>
 
 <div
     style="
-        background:#f8f9fa;
-        border:1px dashed #ccc;
-        padding:15px;
-        border-radius:8px;
-        font-size:13px;
-        line-height:1.6;
+        color:#C99700;
+        font-size:11px;
+        font-weight:bold;
+        letter-spacing:.9px;
+        text-transform:uppercase;
+        margin-bottom:6px;
     "
 >
-    ${
-        note
-            ?
-            safeHtml(note)
-                .replace(
-                    /\n/g,
-                    '<br>'
-                )
-            :
-            'Nessuna nota aggiuntiva.'
-    }
-</div>
-
-`
-        :
-        ''
-}
-
-<h2
-    style="
-        color:#002d72;
-        font-size:15px;
-        border-bottom:2px solid #C99700;
-        padding-bottom:5px;
-        margin-top:25px;
-    "
->
-    Documentazione richiesta
-</h2>
-
-<div
-    style="
-        font-size:13px;
-        line-height:1.65;
-        color:#333;
-        background:#fafafa;
-        padding:18px;
-        border-radius:8px;
-        border:1px solid #eee;
-    "
->
-
-${checklistHtml}
-
+    Trasferimento documenti
 </div>
 
 <div
     style="
-        text-align:center;
-        margin-top:30px;
-        padding:25px;
-        background:#f8f9fa;
-        border:1px solid #e9ecef;
-        border-radius:8px;
+        font-size:19px;
+        font-weight:bold;
+        color:#ffffff;
+        margin-bottom:8px;
     "
 >
+    Carica la documentazione richiesta
+</div>
 
-<h3
+<div
     style="
-        margin-top:0;
-        color:#002d72;
-        font-size:18px;
+        font-size:13px;
+        line-height:1.6;
+        color:#d8e2ef;
+        margin-bottom:19px;
     "
 >
-    Trasferimento Documenti
-</h3>
-
-<p
-    style="
-        color:#555;
-        font-size:14px;
-        line-height:1.5;
-    "
->
-    Accedi all'Area Clienti per caricare in sicurezza i documenti richiesti.
-</p>
+    Accedi alla tua Area Clienti Credipass per caricare i documenti
+    richiesti o utilizzare la scansione guidata da smartphone.
+</div>
 
 <a
     href="${safeHtml(uploadUrl)}"
     style="
-        background:#C99700;
-        color:white;
         display:inline-block;
-        padding:15px 28px;
-        border-radius:8px;
+        background:#C99700;
+        color:#ffffff;
         text-decoration:none;
-        font-size:15px;
+        font-size:14px;
         font-weight:bold;
+        padding:15px 28px;
+        border-radius:9px;
     "
 >
-    ACCEDI ALL'AREA CLIENTI
+    CARICA DOCUMENTAZIONE
 </a>
 
+<div
+    style="
+        margin-top:12px;
+        color:#aebed2;
+        font-size:10px;
+    "
+>
+    Caricamento sicuro dei documenti
 </div>
 
 </td>
 
 </tr>
+
+</table>
+
+</td>
+
+</tr>
+
+<!-- REFERENTE -->
 
 <tr>
 
 <td
     bgcolor="#002d72"
     style="
-        padding:25px 30px;
+        padding:27px 34px;
+        border-top:4px solid #C99700;
     "
 >
 
@@ -8414,101 +10061,106 @@ ${
     fotoUrl
         ?
         `
-
 <td
-    width="90"
+    width="82"
     valign="middle"
-    style="
-        padding-right:15px;
-    "
 >
-
-<img
-    src="${fotoUrl}"
-    width="80"
-    height="80"
-    alt="Referente"
-    style="
-        width:80px;
-        height:80px;
-        border-radius:50%;
-        border:3px solid #C99700;
-        object-fit:cover;
-        display:block;
-    "
->
-
+    <img
+        src="${safeHtml(fotoUrl)}"
+        width="68"
+        height="68"
+        alt="Referente"
+        style="
+            display:block;
+            width:68px;
+            height:68px;
+            object-fit:cover;
+            border-radius:50%;
+            border:3px solid #C99700;
+            background:#ffffff;
+        "
+    >
 </td>
-
 `
         :
         ''
 }
 
-<td
-    valign="middle"
-    style="
-        color:white;
-        font-size:13px;
-        line-height:1.5;
-    "
->
+<td valign="middle">
 
-<strong
+${
+    emailHasValue(referente)
+        ?
+        `
+<div
     style="
         color:#C99700;
         font-size:16px;
+        font-weight:bold;
+        margin-bottom:4px;
     "
 >
-${safeHtml(
-    V(
-        'campo_referente',
+    ${safeHtml(referente)}
+</div>
+`
+        :
         ''
-    )
-)}
-</strong>
+}
 
-<br>
-
-<span
+<div
     style="
+        color:#d7e0ec;
         font-size:11px;
-        color:#ddd;
+        text-transform:uppercase;
+        letter-spacing:.6px;
+        margin-bottom:9px;
     "
 >
-Referente Consulenza Credipass
-</span>
+    Referente Consulenza Credipass
+</div>
 
-<br><br>
+<div
+    style="
+        color:#ffffff;
+        font-size:12px;
+        line-height:1.7;
+    "
+>
 
-${safeHtml(
-    V(
-        'campo_indirizzo',
+${
+    emailHasValue(refCell)
+        ?
+        `📞 ${safeHtml(refCell)}<br>`
+        :
         ''
-    )
-)
-.replace(
-    /\n/g,
-    '<br>'
-)}
+}
 
-<br>
-
-${safeHtml(
-    V(
-        'campo_email',
+${
+    emailHasValue(refEmail)
+        ?
+        `
+        ✉
+        <a
+            href="mailto:${safeHtml(refEmail)}"
+            style="color:#ffffff;text-decoration:none;"
+        >
+            ${safeHtml(refEmail)}
+        </a>
+        <br>
+        `
+        :
         ''
-    )
-)}
+}
 
-<br>
-
-${safeHtml(
-    V(
-        'campo_cellulare',
+${
+    emailHasValue(indirizzo)
+        ?
+        `📍 ${safeHtml(indirizzo).replace(/\n/g,'<br>')}`
+        :
         ''
-    )
-)}
+}
+
+</div>
 
 </td>
 
@@ -8519,8 +10171,8 @@ ${safeHtml(
 
 <img
     src="https://consulenza-credipass.it/images/logo-20anni.png"
-    width="100"
-    alt="20 Anni"
+    width="85"
+    alt="Credipass 20 anni"
     style="
         display:block;
         border:0;
@@ -8537,6 +10189,46 @@ ${safeHtml(
 
 </tr>
 
+<!-- FOOTER -->
+
+<tr>
+
+<td
+    bgcolor="#001f4d"
+    align="center"
+    style="
+        padding:18px 25px;
+    "
+>
+
+<a
+    href="https://www.credipass.it"
+    style="
+        color:#C99700;
+        font-size:13px;
+        font-weight:bold;
+        text-decoration:none;
+    "
+>
+    www.credipass.it
+</a>
+
+<div
+    style="
+        color:#9cacc1;
+        font-size:10px;
+        line-height:1.5;
+        margin-top:7px;
+    "
+>
+    Le informazioni contenute nella presente comunicazione sono riservate.<br>
+    Messaggio generato dal sistema di consulenza Credipass.
+</div>
+
+</td>
+
+</tr>
+
 </table>
 
 </td>
@@ -8548,10 +10240,11 @@ ${safeHtml(
 </body>
 
 </html>
-
 `;
 
 }
+
+
 
 /* ==========================================================
    DOM CONTENT LOADED
