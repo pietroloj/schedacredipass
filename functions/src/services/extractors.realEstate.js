@@ -4,27 +4,42 @@ const { realEstateExtractionSchema } = require("../schemas/realEstateSchemas");
 
 async function extractRealEstate({ tipoDocumentoAtteso, preparedFiles, practiceContext }) {
   const codiceBase = stripNumericSuffix(tipoDocumentoAtteso);
-  const contentItems = preparedFiles.flatMap((f) => f.contentItems);
+  const contentItems = preparedFiles.flatMap((f) => f.contentItems || []);
 
   return structuredCall({
     model: MODELS.MAIN,
     schemaName: "realestate_extraction",
     schema: realEstateExtractionSchema,
     systemText: `
-Sei un perito immobiliare e analista legale senior per pratiche di mutuo. 
-Il tuo compito è estrarre i dati con precisione chirurgica per permettere incroci antifrode tra visura, atto, preliminare e planimetria.
+Sei un perito immobiliare e analista legale senior per pratiche di mutuo.
+Devi estrarre i dati immobiliari in modo letterale e verificabile per consentire controlli incrociati tra preliminare, atto di provenienza, visura, planimetria e APE.
 
-Regole di estrazione ferree:
-1. DATI CATASTALI: Estrai Foglio, Particella e Subalterno in modo esatto. Se ci sono più subalterni, elencali. Un errore o omissione qui invalida la garanzia ipotecaria.
-2. SOGGETTI E DIRITTI: Estrai chiaramente chi vende, chi compra e le quote di proprietà (es. "Proprietà 1/1", "Nuda proprietà"). 
-3. PREZZI E CAPARRE: Sul preliminare, estrai il prezzo di vendita pattuito esatto e le caparre versate.
-4. VINCOLI E PROVENIENZA: Sull'atto di provenienza, cerca se si tratta di donazione (rischio alto), successione, o se ci sono vincoli (servitù, ipoteche pregresse).
-5. VALIDITA' (APE): Sull'Attestato di Prestazione Energetica, estrai la data di scadenza esatta.
+REGOLE GENERALI:
+- Compila tutti i campi previsti dallo schema quando il dato è realmente presente.
+- Non dedurre né inventare indirizzi, importi, dati catastali, titolarità o vincoli.
+- Se il documento contiene più immobili/subalterni, conserva l'informazione completa nei campi consentiti dallo schema.
 
-Estrai solo dati chiaramente presenti. Non dedurre nulla.
+1. IDENTIFICAZIONE IMMOBILE
+- Estrai indirizzo e comune dell'immobile quando espressamente indicati.
+- Estrai Foglio, Particella/Mappale, Subalterno, Categoria e Rendita in modo esatto.
+
+2. SOGGETTI E DIRITTI
+- Estrai intestatari, venditori, acquirenti e quote/diritti (proprietà, nuda proprietà, usufrutto ecc.) quando previsti dallo schema.
+
+3. PREZZO, CAPARRA E OPERAZIONE
+- Sul preliminare/proposta estrai il prezzo pattuito esatto e la caparra versata.
+- Non confondere valore catastale, rendita, prezzo di vendita e valore di perizia.
+
+4. PROVENIENZA E VINCOLI
+- Sull'atto di provenienza identifica, se presente, compravendita, successione, donazione o altro titolo.
+- Evidenzia ipoteche, servitù o vincoli solo quando risultano realmente dal documento e solo nei campi previsti dallo schema.
+
+5. APE
+- Estrai classe energetica e data/scadenza se presenti e previsti dallo schema.
+
 ${practiceContext}
 `.trim(),
-    userText: `Analizza il documento immobiliare di tipo ${codiceBase}. Sii estremamente preciso nei dati catastali (Foglio, Particella, Sub) e negli importi per permettere i controlli incrociati.`,
+    userText: `Analizza il documento immobiliare richiesto come ${tipoDocumentoAtteso} (base ${codiceBase}). Dai priorità a indirizzo/comune, prezzo di compravendita, dati catastali, titolarità/provenienza e APE, usando esclusivamente i campi previsti dallo schema e solo dati realmente leggibili.`,
     contentItems,
   });
 }
