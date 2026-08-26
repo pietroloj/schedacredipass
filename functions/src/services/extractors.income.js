@@ -2,9 +2,18 @@ const { MODELS, structuredCall } = require("./openaiClient");
 const { stripNumericSuffix } = require("../utils/strings");
 const { incomeExtractionSchema } = require("../schemas/incomeSchemas");
 
-async function extractIncome({ tipoDocumentoAtteso, preparedFiles, practiceContext }) {
-  const codiceBase = stripNumericSuffix(tipoDocumentoAtteso);
-  const contentItems = preparedFiles.flatMap((f) => f.contentItems || []);
+async function extractIncome({
+  tipoDocumentoAtteso,
+  preparedFiles,
+  practiceContext,
+}) {
+  const codiceBase =
+    stripNumericSuffix(tipoDocumentoAtteso);
+
+  const contentItems =
+    preparedFiles.flatMap(
+      (f) => f.contentItems || []
+    );
 
   return structuredCall({
     model: MODELS.MAIN,
@@ -15,93 +24,108 @@ async function extractIncome({ tipoDocumentoAtteso, preparedFiles, practiceConte
 Sei un analista documentale senior specializzato in documentazione reddituale per pratiche di mutuo.
 
 OBIETTIVO
-Devi LEGGERE e TRASCRIVERE i dati presenti nel documento.
-NON devi calcolare il reddito netto mensile: il calcolo viene eseguito successivamente dal backend JavaScript.
+Devi LEGGERE E TRASCRIVERE i valori presenti nel documento.
+NON devi inventare valori.
+NON devi calcolare il reddito netto bancario finale: il calcolo viene eseguito dal backend JavaScript.
 
-REGOLE GENERALI
-- Non inventare valori.
-- Non stimare valori mancanti.
-- Se un campo non è presente o non è leggibile, restituisci stringa vuota.
-- Non confondere reddito fiscale con imponibile previdenziale.
-- Non sommare arretrati, TFR, premi a tassazione separata o altri importi al reddito ordinario.
-- Non usare il netto della busta paga per sostituire il reddito fiscale della CU.
-
+============================================================
 CERTIFICAZIONE UNICA / CUD
-Per CU lavoro dipendente o pensione estrai SEMPRE, quando presenti:
+============================================================
 
-1) reddito_lordo_annuo
-   - Punto 1 se reddito lavoro dipendente a tempo indeterminato.
-   - Punto 2 se reddito lavoro dipendente a tempo determinato.
-   - Punto pertinente se pensione/altro reddito previsto dallo schema.
-   - Non usare imponibile previdenziale della sezione INPS.
+Quando il documento è una CU/CUD, estrai con precisione:
 
-2) giorni_lavorati
-   - Punto 6 per lavoro dipendente.
-   - Usa il punto pertinente indicato nel documento.
-   - 365 deve essere restituito come "365", senza conversione.
+- reddito_lordo_annuo:
+  usa il reddito fiscale ordinario indicato nei punti 1, 2 o 3 pertinenti.
+  NON usare l'imponibile previdenziale INPS.
 
-3) irpef
-   - Punto 21: Ritenute IRPEF.
+- giorni_lavorati:
+  usa il numero di giorni indicato nel punto 6/7 pertinente.
+  Se leggi 365, restituisci "365".
 
-4) addizionale_regionale
-   - Punto 22.
+- irpef:
+  punto 21, Ritenute IRPEF.
 
-5) addizionale_comunale_acconto_anno
-   - Punto 26.
+- addizionale_regionale:
+  punto 22.
 
-6) addizionale_comunale_saldo_anno
-   - Punto 27.
+- addizionale_comunale_acconto_anno:
+  punto 26.
 
-7) addizionale_comunale_acconto_anno_successivo
-   - Punto 29.
+- addizionale_comunale_saldo_anno:
+  punto 27.
 
-IMPORTANTE SULLE ADDIZIONALI COMUNALI
-- NON sommare i punti 26, 27 e 29 nell'estrazione.
-- Riporta i tre importi separatamente: sarà il backend a sommarli nel calcolo.
+- addizionale_comunale_acconto_anno_successivo:
+  punto 29.
 
-CONTRIBUTI PREVIDENZIALI
-- Se sono leggibili, puoi estrarli in contributi_previdenziali_lavoratore.
-- NON sottrarli dal reddito fiscale CU durante l'estrazione.
-- L'imponibile fiscale dei punti 1/2/3 viene trattato dal backend secondo la formula configurata.
+IMPORTANTE:
+i punti 26, 27 e 29 DEVONO rimanere separati.
+NON sommarli durante l'estrazione.
 
-ALTRE VOCI
-- Eventuali arretrati a tassazione separata (es. punti 511/513) NON devono essere inclusi nel reddito_lordo_annuo ordinario.
-- Eventuali importi della sezione previdenziale NON devono sostituire il reddito fiscale dei punti 1/2/3.
+- contributi_previdenziali_lavoratore:
+  riportali solo se chiaramente leggibili.
+  Sono informativi e NON devono sostituire il reddito fiscale CU.
 
-TIPO REDDITO
-Imposta tipo_reddito con un valore descrittivo, ad esempio:
-- lavoro_dipendente_tempo_indeterminato
-- lavoro_dipendente_tempo_determinato
-- pensione
-- autonomo
-- forfettario
-- altro
+- data_assunzione:
+  estraila se presente.
 
+- tempo_indeterminato:
+  true solo quando il documento indica chiaramente rapporto/reddito a tempo indeterminato.
+
+- tipo_reddito:
+  usa valori descrittivi come:
+  lavoro_dipendente_tempo_indeterminato,
+  lavoro_dipendente_tempo_determinato,
+  pensione,
+  autonomo,
+  forfettario,
+  altro.
+
+NON INCLUDERE NEL REDDITO ORDINARIO:
+- arretrati a tassazione separata;
+- TFR;
+- indennità soggette a tassazione separata;
+- imponibile previdenziale;
+- redditi di anni precedenti non compresi nel reddito ordinario dei punti 1/2/3.
+
+============================================================
 BUSTA PAGA
-- netto_mensile_rilevato_documento = netto effettivamente pagato.
-- Serve solo per controllo/coerenza.
-- Segnala cessione del quinto o pignoramenti se chiaramente presenti.
+============================================================
 
+Se è una busta paga:
+- estrai netto_mensile_rilevato_documento se leggibile;
+- individua cessione del quinto e pignoramento solo se chiaramente indicati;
+- NON ricostruire arbitrariamente un netto annuo CU.
+
+============================================================
 MODELLO REDDITI / UNICO
-- Estrarre solo valori effettivamente presenti.
-- Non usare automaticamente la formula CU su un Modello Redditi.
+============================================================
+
+Se è un Modello Redditi:
+- estrai reddito_complessivo_unico;
+- estrai reddito_imponibile_unico;
+- estrai imposta_netta_unico;
+- estrai contributi_deducibili_unico;
+- NON applicare la formula della CU.
+
+============================================================
+REGOLE DI QUALITÀ
+============================================================
+
+Se un campo non è presente o non è leggibile:
+- restituisci stringa vuota;
+- non stimare;
+- non sostituirlo con un valore simile preso da un'altra sezione.
 
 ${practiceContext}
 `.trim(),
 
     userText: `
-Analizza il documento reddituale richiesto come ${tipoDocumentoAtteso}.
+Analizza il documento reddituale di tipo ${codiceBase}.
 
-Se è una CU/CUD:
-- individua il reddito fiscale ordinario;
-- estrai giorni lavorati;
-- estrai IRPEF;
-- estrai addizionale regionale;
-- estrai separatamente punti 26, 27 e 29 dell'addizionale comunale;
-- non includere arretrati/TFR/tassazione separata nel reddito ordinario;
-- non calcolare il netto mensile.
+Se è una CU/CUD, presta particolare attenzione ai punti:
+1/2/3, 6/7, 21, 22, 26, 27 e 29.
 
-Restituisci solo dati realmente leggibili.
+Riporta esclusivamente i valori effettivamente leggibili.
 `.trim(),
 
     contentItems,
