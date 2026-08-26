@@ -1,6 +1,8 @@
 name: Deploy Firebase Functions
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - main
@@ -8,6 +10,7 @@ on:
       - "functions/**"
       - "firebase.json"
       - ".firebaserc"
+      - ".github/workflows/firebase-functions.yml"
 
 jobs:
   deploy:
