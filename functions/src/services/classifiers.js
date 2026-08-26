@@ -7,40 +7,39 @@ const {
 } = require("../schemas/classificationSchemas");
 const { getExpectedSides } = require("./precheck");
 
-
 /*
 |--------------------------------------------------------------------------
 | NORMALIZZAZIONE CODICE DOCUMENTO
 |--------------------------------------------------------------------------
 |
-| Gestisce sia:
+| Gestisce:
 |
 | doc_ci
 | doc_ci1
 | doc_ts2
 |
-| sia eventuali codici senza prefisso "doc_".
+| oppure codici senza prefisso "doc_".
 |
 */
 
 function normalizeDocumentCode(tipoDocumentoAtteso) {
-  let raw = String(tipoDocumentoAtteso || "").trim();
+  const raw = String(tipoDocumentoAtteso || "").trim();
 
   if (!raw) {
     return "";
   }
 
-  let codiceBase = stripNumericSuffix(raw);
+  const codiceBase = stripNumericSuffix(raw);
 
   /*
-   * Se è già presente nei documenti configurati, va bene così.
+   * Se è già un codice valido/configurato, lo restituiamo.
    */
   if (DOCS[codiceBase] || DOC_TYPES.includes(codiceBase)) {
     return codiceBase;
   }
 
   /*
-   * Proviamo ad aggiungere doc_
+   * Proviamo ad aggiungere il prefisso doc_
    */
   const conPrefisso = codiceBase.startsWith("doc_")
     ? codiceBase
@@ -51,15 +50,14 @@ function normalizeDocumentCode(tipoDocumentoAtteso) {
   }
 
   /*
-   * Fallback: restituiamo comunque quello ricevuto.
+   * Fallback permissivo.
    */
   return codiceBase;
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| NOME DOCUMENTO
+| NOME LEGGIBILE DOCUMENTO
 |--------------------------------------------------------------------------
 */
 
@@ -68,13 +66,13 @@ function getDocumentName(codiceBase) {
     return DOCS[codiceBase];
   }
 
-  return String(codiceBase || "")
-    .replace(/^doc_/, "")
-    .replace(/_/g, " ")
-    .trim()
-    || "Documento";
+  return (
+    String(codiceBase || "")
+      .replace(/^doc_/, "")
+      .replace(/_/g, " ")
+      .trim() || "Documento"
+  );
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -99,7 +97,6 @@ async function classifyDocument({
     preparedFiles.flatMap(
       (f) => f.contentItems || []
     );
-
 
   return structuredCall({
     model: MODELS.FAST,
@@ -248,13 +245,12 @@ Usa valido = false solo quando sei fortemente convinto che sia un documento comp
   });
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | SECONDO TENTATIVO
 |--------------------------------------------------------------------------
 |
-| Questo retry è volutamente ANCORA PIÙ PERMISSIVO.
+| Retry ancora più permissivo, pensato per ridurre i falsi rifiuti.
 |
 */
 
@@ -272,7 +268,6 @@ async function retryClassification({
     preparedFiles.flatMap(
       (f) => f.contentItems || []
     );
-
 
   return structuredCall({
     model: MODELS.FAST,
@@ -337,17 +332,7 @@ Se esiste una ragionevole possibilità che il documento appartenga a questa cate
   });
 }
 
-
 module.exports = {
   classifyDocument,
   retryClassification,
-};    model: MODELS.FAST,
-    schemaName: "document_classification_retry",
-    schema: classificationRetrySchema(DOC_TYPES),
-    systemText: "Sei un classificatore di fallback. Devi solo capire se il documento corrisponde al tipo atteso. Non giudicare i dati. Non inventare errori.",
-    userText: `Secondo tentativo minimale. Tipo atteso: ${codiceBase}`,
-    contentItems,
-  });
-}
-
-module.exports = { classifyDocument, retryClassification };
+};
