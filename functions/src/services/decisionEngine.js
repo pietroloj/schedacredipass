@@ -2,37 +2,17 @@ const { POLICY } = require("../config/policy");
 const { DECISION_CODES, GAMBLING_KEYWORDS, DOC_GROUPS } = require("../config/documents");
 const { normalizeNumber, round2, formatNumberIT } = require("../utils/numbers");
 const { notEmpty } = require("../utils/strings");
+const { calculateIncomeFromCU } = require("./incomeCalculator");
 
 function containsGamblingKeyword(text = "") {
   const lower = text.toLowerCase();
   return GAMBLING_KEYWORDS.some((k) => lower.includes(k));
 }
 
-// IL TUO CALCOLO CUD ESATTO
+// CALCOLO REDDITO NETTO BANCARIO DA CU
 function calcolaRedditoBancarioMensilePrudenziale(estratti) {
-  const lordo = normalizeNumber(estratti.reddito_lordo_annuo); // CUD Punti 1, 2, 3
-  const irpef = normalizeNumber(estratti.irpef) || 0; // CUD Punto 21
-  const reg = normalizeNumber(estratti.addizionale_regionale) || 0; // CUD Punto 22
-  const com = normalizeNumber(estratti.addizionale_comunale) || 0; // CUD Punti 26+27+29
-
-  const giorniLavorati = normalizeNumber(estratti.giorni_lavorati); // CUD Punto 6 o 7
-
-  if (!lordo) return null;
-
-  // Il reddito lordo nel CUD (Imponibile Fiscale) è GIÀ al netto dei contributi INPS.
-  // Quindi la formula esatta è: Lordo - Irpef - Add.Reg - Add.Com
-  const nettoAnnuo = lordo - irpef - reg - com;
-
-  if (!Number.isFinite(nettoAnnuo) || nettoAnnuo <= 0) return null;
-
-  // Trasformiamo i giorni in mesi (es. 365 -> 12 mesi, 120 -> 4 mesi)
-  let mesiLavorati = 12; // Default per un anno intero
-  if (giorniLavorati && giorniLavorati > 0 && giorniLavorati <= 365) {
-    mesiLavorati = Math.round(giorniLavorati / 30.416); // 365 / 12 = 30.416 (giorni medi mese)
-    if (mesiLavorati === 0) mesiLavorati = 1; // Evita divisioni impossibili
-  }
-
-  return round2(nettoAnnuo / mesiLavorati);
+  const dettaglio = calculateIncomeFromCU(estratti || {});
+  return dettaglio.ok ? dettaglio.redditoNettoMensile : null;
 }
 
 function calcolaDTI(redditoMensile, rataMutuo, altreRate) {
@@ -52,12 +32,22 @@ function calcolaLTV(importoMutuo, valoreImmobile) {
 
 function scoreIncomeDecision({ estrazione, data }) {
   const estratti = estrazione?.dati_estratti || {};
-  const nettoMensile = calcolaRedditoBancarioMensilePrudenziale(estratti);
+  const dettaglioRedditoCU = calculateIncomeFromCU(estratti);
+  const nettoMensile = dettaglioRedditoCU.ok
+    ? dettaglioRedditoCU.redditoNettoMensile
+    : null;
+
   const dti = calcolaDTI(nettoMensile, data.rataMutuoStimata, data.rateAltriFinanziamenti);
   const ltv = calcolaLTV(data.importoMutuo, data.valoreImmobile);
 
   const criticita = [...(estrazione.criticita_documentali || [])];
   const puntiForza = [...(estrazione.punti_forza_documentali || [])];
+
+  if (!dettaglioRedditoCU.ok && Array.isArray(dettaglioRedditoCU.campiMancanti)) {
+    dettaglioRedditoCU.campiMancanti.forEach((campo) => {
+      criticita.push(`Calcolo reddito CU non completabile: manca ${campo}`);
+    });
+  }
 
   if (estratti.tempo_indeterminato) puntiForza.push("Contratto a tempo indeterminato rilevato");
   if (notEmpty(estratti.data_assunzione)) puntiForza.push(`Data assunzione rilevata: ${estratti.data_assunzione}`);
@@ -88,6 +78,7 @@ function scoreIncomeDecision({ estrazione, data }) {
 
   return {
     redditoBancarioMensile: nettoMensile,
+    dettaglioCalcoloRedditoCU: dettaglioRedditoCU,
     dti,
     ltv,
     score,
@@ -97,6 +88,10 @@ function scoreIncomeDecision({ estrazione, data }) {
     report: [
       "📄 REPORT DELIBERANTE",
       `Reddito bancario mensile prudenziale: ${nettoMensile !== null ? `€ ${formatNumberIT(nettoMensile)}` : "N/D"}`,
+      dettaglioRedditoCU.ok ? `Reddito lordo CU: € ${formatNumberIT(dettaglioRedditoCU.redditoLordoAnnuo)}` : "Reddito lordo CU: N/D",
+      dettaglioRedditoCU.ok ? `Netto annuo dopo trattenute: € ${formatNumberIT(dettaglioRedditoCU.redditoNettoAnnuo)}` : "Netto annuo dopo trattenute: N/D",
+      dettaglioRedditoCU.ok ? `Giorni lavorati: ${dettaglioRedditoCU.giorniLavorati}` : "Giorni lavorati: N/D",
+      dettaglioRedditoCU.ok ? `Mensilità considerate: ${dettaglioRedditoCU.mensilitaConsiderate}` : "Mensilità considerate: N/D",
       `Score: ${score}/100`,
       `Fascia: ${fascia}`,
       `DTI: ${dti !== null ? `${formatNumberIT(dti)}%` : "N/D"}`,
