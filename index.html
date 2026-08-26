@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -8153,14 +8154,18 @@ function buildUploadAreaUrl() {
         nomeCompleto(2);
 
     let idPratica =
-        nome1;
+        window.slugifyCredipassPart(
+            nome1
+        );
 
     if (nome2) {
 
         idPratica +=
-            ' - '
+            '_'
             +
-            nome2;
+            window.slugifyCredipassPart(
+                nome2
+            );
 
     }
 
