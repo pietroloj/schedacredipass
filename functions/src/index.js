@@ -75,15 +75,42 @@ const {
 } = require("./repositories/firestoreRepository");
 
 
-// ============================================================================
-// FIREBASE
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| FUNZIONI MATEMATICHE
+|--------------------------------------------------------------------------
+|
+| Nel tuo precedente index.js queste erano commentate ma venivano poi
+| utilizzate all'interno di mergePracticeFinancials().
+|
+*/
+
+const {
+  calcolaRedditoBancarioMensilePrudenziale,
+  calcolaDTI,
+  calcolaLTV,
+  formatNumberIT,
+} = require("./utils/mathHelpers");
+
+
+/*
+|--------------------------------------------------------------------------
+| FIREBASE ADMIN
+|--------------------------------------------------------------------------
+*/
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const adminDb = admin.firestore();
+
+
+/*
+|--------------------------------------------------------------------------
+| GLOBAL OPTIONS
+|--------------------------------------------------------------------------
+*/
 
 setGlobalOptions({
   region: "us-central1",
@@ -92,219 +119,372 @@ setGlobalOptions({
 });
 
 
-// ============================================================================
-// HELPER MATEMATICI
-// Inseriti direttamente qui così il file è autonomo.
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| CONFIGURAZIONE AI PERMISSIVA
+|--------------------------------------------------------------------------
+|
+| Questa parte stabilisce quando l'AI può DAVVERO rifiutare un documento.
+|
+| Filosofia:
+|
+| 1. documento corretto
+|       -> ACCETTATO
+|
+| 2. AI poco sicura
+|       -> ACCETTATO + REVIEW MANUALE
+|
+| 3. tipo non determinabile
+|       -> ACCETTATO + REVIEW MANUALE
+|
+| 4. documento leggermente illeggibile
+|       -> ACCETTATO + REVIEW MANUALE
+|
+| 5. documento chiaramente diverso con confidenza >= 98%
+|       -> RIFIUTATO
+|
+| 6. documento gravemente illeggibile con confidenza >= 97%
+|       -> RIFIUTATO
+|
+*/
 
-function numero(value) {
+const PERMISSIVE_AI = {
+  hardRejectWrongDocumentConfidence: 0.98,
+  hardRejectUnreadableConfidence: 0.97,
+  lowConfidenceReviewThreshold: 0.80,
+};
 
-  if (
-    value === undefined ||
-    value === null ||
-    value === ""
-  ) {
-    return null;
-  }
 
-  if (typeof value === "number") {
+/*
+|--------------------------------------------------------------------------
+| HELPERS GENERALI
+|--------------------------------------------------------------------------
+*/
 
-    return Number.isFinite(value)
-      ? value
-      : null;
-
-  }
-
-  let str = String(value)
+function normalizeString(value) {
+  return String(value ?? "")
     .trim()
-    .replace(/[€%\s]/g, "");
-
-
-  if (!str) {
-    return null;
-  }
-
-
-  // Formato italiano 1.234,56
-  if (
-    str.includes(".") &&
-    str.includes(",")
-  ) {
-
-    if (
-      str.lastIndexOf(",") >
-      str.lastIndexOf(".")
-    ) {
-
-      str = str
-        .replace(/\./g, "")
-        .replace(",", ".");
-
-    } else {
-
-      str = str.replace(/,/g, "");
-
-    }
-
-  }
-
-  // Solo virgola
-  else if (str.includes(",")) {
-
-    str = str.replace(",", ".");
-
-  }
-
-
-  const n = Number(str);
-
-  return Number.isFinite(n)
-    ? n
-    : null;
+    .toLowerCase();
 }
 
 
-function formatNumberIT(value) {
+function normalizeConfidence(value) {
+  let n = Number(value);
 
-  const n = numero(value);
-
-  if (n === null) {
-    return "N/D";
+  if (!Number.isFinite(n)) {
+    return 0;
   }
 
-  return n.toLocaleString(
-    "it-IT",
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }
-  );
+  /*
+   * Se per qualche motivo il classifier restituisce 95 invece di 0.95,
+   * normalizziamo automaticamente.
+   */
+  if (n > 1 && n <= 100) {
+    n = n / 100;
+  }
+
+  return Math.max(0, Math.min(1, n));
 }
 
 
-function calcolaDTI(
-  redditoMensile,
-  rataMutuo,
-  altriFinanziamenti
-) {
-
-  const reddito =
-    numero(redditoMensile);
-
-  const rata =
-    numero(rataMutuo) || 0;
-
-  const altri =
-    numero(altriFinanziamenti) || 0;
+function percentConfidence(value) {
+  return Math.round(normalizeConfidence(value) * 100);
+}
 
 
-  if (
-    reddito === null ||
-    reddito <= 0
-  ) {
-    return null;
+function humanDocumentName(value) {
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return "documento non determinato";
   }
 
+  return text.replace(/_/g, " ");
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SPIEGAZIONE DEL RIFIUTO
+|--------------------------------------------------------------------------
+|
+| Costruiamo un messaggio comprensibile anche per il cliente.
+|
+*/
+
+function buildRejectionExplanation({
+  classificazione,
+  tipoDocumentoAtteso,
+  reasonType,
+}) {
+  const detected =
+    classificazione?.tipo_documento_rilevato ||
+    "non_determinabile";
+
+  const confidence =
+    percentConfidence(
+      classificazione?.confidenza_classificazione
+    );
+
+  const originalReason =
+    String(
+      classificazione?.motivo_errore || ""
+    ).trim();
+
+  const expectedLabel =
+    humanDocumentName(tipoDocumentoAtteso);
+
+  const detectedLabel =
+    humanDocumentName(detected);
+
+
+  /*
+   * DOCUMENTO ILLEGGIBILE
+   */
+
+  if (reasonType === "unreadable") {
+    let message =
+      `Il documento non può essere accettato perché risulta gravemente illeggibile.`;
+
+    if (confidence > 0) {
+      message +=
+        ` Il controllo automatico ha rilevato questa condizione con una confidenza del ${confidence}%.`;
+    }
+
+    message +=
+      ` Prova a caricare nuovamente il documento assicurandoti che sia completo, ben illuminato, a fuoco e senza parti tagliate.`;
+
+    if (originalReason) {
+      message +=
+        ` Dettaglio del controllo: ${originalReason}`;
+    }
+
+    return message;
+  }
+
+
+  /*
+   * DOCUMENTO DIFFERENTE
+   */
+
+  if (reasonType === "wrong_document") {
+    let message =
+      `Il documento caricato sembra essere diverso da quello richiesto.`;
+
+    message +=
+      ` Era richiesto "${expectedLabel}", mentre il sistema ha riconosciuto "${detectedLabel}".`;
+
+    if (confidence > 0) {
+      message +=
+        ` Confidenza del riconoscimento: ${confidence}%.`;
+    }
+
+    message +=
+      ` Verifica di aver selezionato il documento corretto e riprova.`;
+
+    if (originalReason) {
+      message +=
+        ` Dettaglio del controllo: ${originalReason}`;
+    }
+
+    return message;
+  }
+
+
+  /*
+   * FALLBACK
+   */
 
   return (
-    ((rata + altri) / reddito) *
-    100
+    originalReason ||
+    `Il documento non è stato riconosciuto correttamente. Verifica il file caricato e riprova.`
   );
 }
 
 
-function calcolaLTV(
-  importoMutuo,
-  valoreImmobile
+/*
+|--------------------------------------------------------------------------
+| VALUTAZIONE PERMISSIVA CLASSIFICAZIONE
+|--------------------------------------------------------------------------
+*/
+
+function valutaClassificazionePermissiva(
+  classificazione,
+  tipoDocumentoAtteso
 ) {
+  const confidence =
+    normalizeConfidence(
+      classificazione?.confidenza_classificazione
+    );
 
-  const mutuo =
-    numero(importoMutuo);
+  const detected =
+    normalizeString(
+      classificazione?.tipo_documento_rilevato
+    );
 
-  const valore =
-    numero(valoreImmobile);
+  const coherent =
+    classificazione?.coerenza_documentale === true;
 
+  const unreadable =
+    classificazione?.gravemente_illeggibile === true;
+
+  const originalValid =
+    classificazione?.valido === true;
+
+  const undetermined =
+    !detected ||
+    detected === "non_determinabile" ||
+    detected === "non determinabile" ||
+    detected === "unknown" ||
+    detected === "sconosciuto";
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | HARD REJECT 1
+  | Documento davvero illeggibile
+  |--------------------------------------------------------------------------
+  */
 
   if (
-    mutuo === null ||
-    valore === null ||
-    valore <= 0
+    unreadable &&
+    confidence >=
+      PERMISSIVE_AI.hardRejectUnreadableConfidence
   ) {
-    return null;
+    return {
+      hardReject: true,
+      manualReview: false,
+      reasonType: "unreadable",
+
+      motivo: buildRejectionExplanation({
+        classificazione,
+        tipoDocumentoAtteso,
+        reasonType: "unreadable",
+      }),
+    };
   }
 
 
-  return (
-    (mutuo / valore) *
-    100
-  );
+  /*
+  |--------------------------------------------------------------------------
+  | HARD REJECT 2
+  | Documento chiaramente differente
+  |--------------------------------------------------------------------------
+  |
+  | Importante:
+  | la soglia è volutamente 98%.
+  |
+  | Quindi:
+  |
+  | Carta identità richiesta
+  | tessera sanitaria rilevata 72%
+  |     -> NON BLOCCA
+  |
+  | Carta identità richiesta
+  | tessera sanitaria rilevata 99%
+  |     -> BLOCCA
+  |
+  */
+
+  if (
+    !coherent &&
+    !undetermined &&
+    confidence >=
+      PERMISSIVE_AI.hardRejectWrongDocumentConfidence
+  ) {
+    return {
+      hardReject: true,
+      manualReview: false,
+      reasonType: "wrong_document",
+
+      motivo: buildRejectionExplanation({
+        classificazione,
+        tipoDocumentoAtteso,
+        reasonType: "wrong_document",
+      }),
+    };
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | REVIEW MANUALE
+  |--------------------------------------------------------------------------
+  |
+  | Tutti i casi dubbi passano.
+  |
+  */
+
+  const motiviReview = [];
+
+  if (unreadable) {
+    motiviReview.push(
+      "Il documento potrebbe essere parzialmente illeggibile."
+    );
+  }
+
+  if (undetermined) {
+    motiviReview.push(
+      "Il tipo di documento non è stato determinato con certezza."
+    );
+  }
+
+  if (!coherent) {
+    motiviReview.push(
+      "La corrispondenza con il documento richiesto non è certa."
+    );
+  }
+
+  if (
+    confidence <
+    PERMISSIVE_AI.lowConfidenceReviewThreshold
+  ) {
+    motiviReview.push(
+      `Confidenza AI bassa (${percentConfidence(confidence)}%).`
+    );
+  }
+
+  if (!originalValid) {
+    motiviReview.push(
+      "Il classificatore automatico aveva originariamente segnalato il documento come non valido."
+    );
+  }
+
+
+  if (motiviReview.length > 0) {
+    return {
+      hardReject: false,
+      manualReview: true,
+      reasonType: "review",
+      motivo: Array.from(
+        new Set(motiviReview)
+      ).join(" "),
+    };
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | DOCUMENTO OK
+  |--------------------------------------------------------------------------
+  */
+
+  return {
+    hardReject: false,
+    manualReview: false,
+    reasonType: "accepted",
+    motivo: "",
+  };
 }
 
 
-function calcolaRedditoBancarioMensilePrudenziale(
-  estratti = {}
-) {
-
-  if (
-    !estratti ||
-    typeof estratti !== "object"
-  ) {
-    return null;
-  }
-
-
-  const possibiliValori = [
-
-    estratti.reddito_bancario_mensile,
-
-    estratti.redditoBancarioMensile,
-
-    estratti.reddito_netto_mensile,
-
-    estratti.redditoNettoMensile,
-
-    estratti.netto_mensile,
-
-    estratti.nettoMensile,
-
-    estratti.reddito_mensile,
-
-    estratti.redditoMensile,
-
-    estratti.media_netto_mensile,
-
-    estratti.mediaNettoMensile,
-
-  ];
-
-
-  for (
-    const valore of possibiliValori
-  ) {
-
-    const n =
-      numero(valore);
-
-    if (
-      n !== null &&
-      n > 0
-    ) {
-      return n;
-    }
-
-  }
-
-
-  return null;
-}
-
-
-// ============================================================================
-// HELPERS GENERALI
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| CONTESTO PRATICA
+|--------------------------------------------------------------------------
+*/
 
 function buildPracticeContext(data) {
-
   return `
 CONTESTO PRATICA MUTUO
 - Importo mutuo: ${data.importoMutuo ?? "N/D"}
@@ -316,234 +496,146 @@ CONTESTO PRATICA MUTUO
 - Finalità mutuo: ${data.finalitaMutuo ?? "N/D"}
 - Note pratica: ${data.notePratica ?? "N/D"}
 `.trim();
-
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| ANALYSIS KEY
+|--------------------------------------------------------------------------
+*/
 
 function computeAnalysisKey({
   idCliente,
   codiceBase,
   files,
 }) {
-
-  const fileHashComposite =
-    files
-      .map(
-        (f) =>
-          `${f.side}:${f.sha256}`
-      )
-      .sort()
-      .join("|");
-
+  const fileHashComposite = files
+    .map(
+      (f) =>
+        `${f.side}:${f.sha256}`
+    )
+    .sort()
+    .join("|");
 
   return sha256String(
-
     `${POLICY.pipelineVersion}|${idCliente}|${codiceBase}|${fileHashComposite}`
-
   );
-
 }
 
 
-// ============================================================================
-// NORMALIZZAZIONE CONFIDENZA AI
-//
-// Funziona sia se il classificatore restituisce:
-// 0.82
-//
-// sia se restituisce:
-// 82
-// ============================================================================
-
-function normalizeConfidence(value) {
-
-  let n =
-    Number(value);
-
-  if (!Number.isFinite(n)) {
-    return 0;
-  }
-
-
-  if (n > 1) {
-    n = n / 100;
-  }
-
-
-  if (n < 0) {
-    n = 0;
-  }
-
-
-  if (n > 1) {
-    n = 1;
-  }
-
-
-  return n;
-
-}
-
-
-// ============================================================================
-// ANALISI DOCUMENTI CLIENTE
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| CARICAMENTO ANALISI DOCUMENTI CLIENTE
+|--------------------------------------------------------------------------
+*/
 
 async function loadClientDocumentAnalyses(
   idCliente
 ) {
-
   const docRef =
     adminDb
       .collection("analisi_deliberante")
       .doc(idCliente);
-
 
   const auditSnap =
     await docRef
       .collection("audit")
       .get();
 
-
   const latestByDocType =
     new Map();
 
+  auditSnap.forEach((doc) => {
+    const data =
+      doc.data() || {};
 
-  auditSnap.forEach(
-    (doc) => {
+    const tipoDocumento =
+      data.tipoDocumentoAtteso || "";
 
-      const data =
-        doc.data() || {};
+    const createdAt =
+      data.createdAt?.toMillis?.() || 0;
 
+    if (!tipoDocumento) {
+      return;
+    }
 
-      const tipoDocumento =
-        data.tipoDocumentoAtteso ||
-        "";
+    const current =
+      latestByDocType.get(
+        tipoDocumento
+      );
 
-
-      const createdAt =
-        data.createdAt
-          ?.toMillis
-          ?.() ||
-        0;
-
-
-      if (!tipoDocumento) {
-        return;
-      }
-
-
-      const current =
-        latestByDocType.get(
-          tipoDocumento
-        );
-
-
-      if (
-        !current ||
-        createdAt >
-          current.createdAt
-      ) {
-
-        latestByDocType.set(
-
+    if (
+      !current ||
+      createdAt > current.createdAt
+    ) {
+      latestByDocType.set(
+        tipoDocumento,
+        {
+          createdAt,
           tipoDocumento,
 
-          {
+          classificazione:
+            data.classificazione ||
+            null,
 
-            createdAt,
+          estrazione:
+            data.estrazione ||
+            null,
 
-            tipoDocumento,
+          decisioneBackend:
+            data.decisioneBackend ||
+            null,
 
-            classificazione:
-              data.classificazione ||
-              null,
+          review:
+            data.review ||
+            null,
 
-            estrazione:
-              data.estrazione ||
-              null,
-
-            decisioneBackend:
-              data.decisioneBackend ||
-              null,
-
-            review:
-              data.review ||
-              null,
-
-            decisionCode:
-              data.decisionCode ||
-              "",
-
-          }
-
-        );
-
-      }
-
+          decisionCode:
+            data.decisionCode ||
+            "",
+        }
+      );
     }
-  );
-
+  });
 
   return Array.from(
     latestByDocType.values()
   );
-
 }
 
 
-// ============================================================================
-// MERGE DATI FINANZIARI
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| MERGE DATI FINANZIARI
+|--------------------------------------------------------------------------
+*/
 
 function mergePracticeFinancials({
-
   documentAnalyses,
-
   importoMutuo,
-
   valoreImmobile,
-
   rataMutuoStimata,
-
   rateAltriFinanziamenti,
-
 }) {
-
   const merged = {
+    redditoBancarioMensile: null,
+    dti: null,
+    ltv: null,
 
-    redditoBancarioMensile:
-      null,
+    scoreIncome: null,
+    scoreBank: null,
 
-    dti:
-      null,
-
-    ltv:
-      null,
-
-    scoreIncome:
-      null,
-
-    scoreBank:
-      null,
-
-    criticitaFinanziarie:
-      [],
-
-    puntiForzaFinanziari:
-      [],
-
+    criticitaFinanziarie: [],
+    puntiForzaFinanziari: [],
   };
 
 
   for (
-    const doc
-    of documentAnalyses
+    const doc of documentAnalyses
   ) {
-
     const dec =
-      doc.decisioneBackend ||
-      {};
+      doc.decisioneBackend || {};
 
 
     if (
@@ -552,10 +644,8 @@ function mergePracticeFinancials({
       dec.redditoBancarioMensile !==
         null
     ) {
-
       merged.redditoBancarioMensile =
         dec.redditoBancarioMensile;
-
     }
 
 
@@ -563,10 +653,8 @@ function mergePracticeFinancials({
       dec.dti !== undefined &&
       dec.dti !== null
     ) {
-
       merged.dti =
         dec.dti;
-
     }
 
 
@@ -574,10 +662,8 @@ function mergePracticeFinancials({
       dec.ltv !== undefined &&
       dec.ltv !== null
     ) {
-
       merged.ltv =
         dec.ltv;
-
     }
 
 
@@ -585,10 +671,8 @@ function mergePracticeFinancials({
       dec.score !== undefined &&
       dec.score !== null
     ) {
-
       merged.scoreIncome =
         dec.score;
-
     }
 
 
@@ -598,50 +682,40 @@ function mergePracticeFinancials({
       dec.scoreComportamentoBancario !==
         null
     ) {
-
       merged.scoreBank =
         dec.scoreComportamentoBancario;
-
     }
 
 
     if (
-      Array.isArray(
-        dec.criticita
-      )
+      Array.isArray(dec.criticita)
     ) {
-
-      merged
-        .criticitaFinanziarie
-        .push(
-          ...dec.criticita
-        );
-
+      merged.criticitaFinanziarie.push(
+        ...dec.criticita
+      );
     }
 
 
     if (
-      Array.isArray(
-        dec.puntiForza
-      )
+      Array.isArray(dec.puntiForza)
     ) {
-
-      merged
-        .puntiForzaFinanziari
-        .push(
-          ...dec.puntiForza
-        );
-
+      merged.puntiForzaFinanziari.push(
+        ...dec.puntiForza
+      );
     }
-
   }
 
+
+  /*
+  |--------------------------------------------------------------------------
+  | REDDITO BANCARIO FALLBACK
+  |--------------------------------------------------------------------------
+  */
 
   if (
     merged.redditoBancarioMensile ===
     null
   ) {
-
     const incomeDoc =
       documentAnalyses.find(
         (d) =>
@@ -657,55 +731,51 @@ function mergePracticeFinancials({
           )
       );
 
-
     const estratti =
-      incomeDoc
-        ?.estrazione
-        ?.dati_estratti ||
-      {};
-
+      incomeDoc?.estrazione
+        ?.dati_estratti || {};
 
     merged.redditoBancarioMensile =
       calcolaRedditoBancarioMensilePrudenziale(
         estratti
       );
-
   }
 
+
+  /*
+  |--------------------------------------------------------------------------
+  | DTI
+  |--------------------------------------------------------------------------
+  */
 
   if (
     merged.dti === null &&
     merged.redditoBancarioMensile !==
       null
   ) {
-
     merged.dti =
       calcolaDTI(
-
         merged.redditoBancarioMensile,
-
         rataMutuoStimata,
-
         rateAltriFinanziamenti
-
       );
-
   }
 
+
+  /*
+  |--------------------------------------------------------------------------
+  | LTV
+  |--------------------------------------------------------------------------
+  */
 
   if (
     merged.ltv === null
   ) {
-
     merged.ltv =
       calcolaLTV(
-
         importoMutuo,
-
         valoreImmobile
-
       );
-
   }
 
 
@@ -726,34 +796,25 @@ function mergePracticeFinancials({
 
 
   return merged;
-
 }
 
 
-// ============================================================================
-// SUMMARY PRATICA
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| SUMMARY PRATICA
+|--------------------------------------------------------------------------
+*/
 
 function buildPracticeSummary({
-
   snapshot,
-
   anomalies,
-
   mergedFinancials,
-
   reviewFlags,
-
   importoMutuo,
-
   valoreImmobile,
-
   rataMutuoStimata,
-
   finalitaMutuo,
-
 }) {
-
   const severity =
     anomalies.hasBlocking
       ? "error"
@@ -764,24 +825,17 @@ function buildPracticeSummary({
 
   const esito =
     anomalies.hasBlocking
-      ?
-        "Pratica con anomalie bloccanti"
-      :
-      reviewFlags.reviewManuale
-      ?
-        "Pratica da revisionare"
-      :
-        "Pratica coerente";
+      ? "Pratica con anomalie bloccanti"
+      : reviewFlags.reviewManuale
+      ? "Pratica da revisionare"
+      : "Pratica coerente";
 
 
   return {
-
     esito,
-
     severity,
 
     riepilogo: {
-
       soggetti:
         snapshot.soggetti,
 
@@ -789,7 +843,6 @@ function buildPracticeSummary({
         snapshot.immobile,
 
       operazione: {
-
         ...snapshot.operazione,
 
         importoMutuo:
@@ -807,11 +860,9 @@ function buildPracticeSummary({
         finalitaMutuo:
           finalitaMutuo ??
           null,
-
       },
 
       reddito: {
-
         ...snapshot.reddito,
 
         redditoBancarioMensile:
@@ -819,35 +870,31 @@ function buildPracticeSummary({
             .redditoBancarioMensile,
 
         dti:
-          mergedFinancials
-            .dti,
+          mergedFinancials.dti,
 
         ltv:
-          mergedFinancials
-            .ltv,
-
+          mergedFinancials.ltv,
       },
 
       esposizioni:
         snapshot.esposizioni,
-
     },
+
 
     anomalie:
       anomalies,
 
+
     review:
       reviewFlags,
 
-    indicatori: {
 
+    indicatori: {
       scoreIncome:
-        mergedFinancials
-          .scoreIncome,
+        mergedFinancials.scoreIncome,
 
       scoreBank:
-        mergedFinancials
-          .scoreBank,
+        mergedFinancials.scoreBank,
 
       criticitaFinanziarie:
         mergedFinancials
@@ -856,710 +903,1094 @@ function buildPracticeSummary({
       puntiForzaFinanziari:
         mergedFinancials
           .puntiForzaFinanziari,
-
     },
 
-    reportTestuale: [
 
+    reportTestuale: [
       "📁 DOSSIER PRATICA MUTUO",
 
       `Esito: ${esito}`,
 
-      snapshot
-        .immobile
-        ?.indirizzo
-        ?
-        `Immobile: ${snapshot.immobile.indirizzo}`
-        :
-        "Immobile: N/D",
+      snapshot.immobile?.indirizzo
+        ? `Immobile: ${snapshot.immobile.indirizzo}`
+        : "Immobile: N/D",
 
-      snapshot
-        .operazione
+      snapshot.operazione
         ?.prezzoCompravendita
-        ?
-        `Prezzo compravendita: ${snapshot.operazione.prezzoCompravendita}`
-        :
-        "Prezzo compravendita: N/D",
+        ? `Prezzo compravendita: ${snapshot.operazione.prezzoCompravendita}`
+        : "Prezzo compravendita: N/D",
 
       mergedFinancials
         .redditoBancarioMensile !==
-        null
-        ?
-        `Reddito bancario mensile: € ${formatNumberIT(mergedFinancials.redditoBancarioMensile)}`
-        :
-        "Reddito bancario mensile: N/D",
+      null
+        ? `Reddito bancario mensile: € ${formatNumberIT(
+            mergedFinancials
+              .redditoBancarioMensile
+          )}`
+        : "Reddito bancario mensile: N/D",
 
-      mergedFinancials
-        .dti !==
-        null
-        ?
-        `DTI: ${formatNumberIT(mergedFinancials.dti)}%`
-        :
-        "DTI: N/D",
+      mergedFinancials.dti !==
+      null
+        ? `DTI: ${formatNumberIT(
+            mergedFinancials.dti
+          )}%`
+        : "DTI: N/D",
 
-      mergedFinancials
-        .ltv !==
-        null
-        ?
-        `LTV: ${formatNumberIT(mergedFinancials.ltv)}%`
-        :
-        "LTV: N/D",
+      mergedFinancials.ltv !==
+      null
+        ? `LTV: ${formatNumberIT(
+            mergedFinancials.ltv
+          )}%`
+        : "LTV: N/D",
 
       anomalies
         .anomalieBloccanti
         .length
-        ?
-        `Anomalie bloccanti: ${anomalies.anomalieBloccanti.join(" | ")}`
-        :
-        "Anomalie bloccanti: nessuna",
+        ? `Anomalie bloccanti: ${anomalies.anomalieBloccanti.join(
+            " | "
+          )}`
+        : "Anomalie bloccanti: nessuna",
 
       anomalies
         .anomalieWarning
         .length
-        ?
-        `Warning: ${anomalies.anomalieWarning.join(" | ")}`
-        :
-        "Warning: nessuno",
-
+        ? `Warning: ${anomalies.anomalieWarning.join(
+            " | "
+          )}`
+        : "Warning: nessuno",
     ].join("\n"),
-
   };
-
 }
 
 
-// ============================================================================
-// ============================================================================
-// CLOUD FUNCTION: ANALIZZA DOCUMENTO
-// ============================================================================
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| CLOUD FUNCTION
+| ANALIZZA DOCUMENTO AI
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+*/
 
 exports.analizzaDocumentoAI =
-onCall(
-  {
-    secrets: [
-      "OPENAI_API_KEY",
-    ],
-  },
+  onCall(
+    {
+      secrets: [
+        "OPENAI_API_KEY",
+      ],
+    },
 
-  async (request) => {
-
-    const data =
-      request.data ||
-      {};
+    async (request) => {
+      const data =
+        request.data || {};
 
 
-    const {
+      const {
+        idCliente,
 
-      idCliente,
+        tipoDocumentoAtteso,
 
-      tipoDocumentoAtteso,
+        urlFileBase64,
 
-      urlFileBase64,
+        urlFileBase64Front,
 
-      urlFileBase64Front,
+        urlFileBase64Back,
 
-      urlFileBase64Back,
+        importoMutuo = null,
 
-      importoMutuo =
-        null,
+        valoreImmobile = null,
 
-      valoreImmobile =
-        null,
+        rataMutuoStimata = null,
 
-      rataMutuoStimata =
-        null,
+        rateAltriFinanziamenti =
+          null,
 
-      rateAltriFinanziamenti =
-        null,
+        durataAnni = null,
 
-      durataAnni =
-        null,
+        prodottoBancario = null,
 
-      prodottoBancario =
-        null,
+        finalitaMutuo = null,
 
-      finalitaMutuo =
-        null,
-
-      notePratica =
-        null,
-
-    } = data;
+        notePratica = null,
+      } = data;
 
 
-    // ======================================================================
-    // DATI OBBLIGATORI
-    // ======================================================================
+      /*
+      |--------------------------------------------------------------------------
+      | VALIDAZIONE PARAMETRI
+      |--------------------------------------------------------------------------
+      */
 
-    if (!idCliente) {
-
-      throw new HttpsError(
-        "invalid-argument",
-        "ID cliente mancante."
-      );
-
-    }
-
-
-    if (!tipoDocumentoAtteso) {
-
-      throw new HttpsError(
-        "invalid-argument",
-        "Tipo documento atteso mancante."
-      );
-
-    }
+      if (!idCliente) {
+        throw new HttpsError(
+          "invalid-argument",
+          "ID cliente mancante."
+        );
+      }
 
 
-    const codiceBase =
-      stripNumericSuffix(
-        tipoDocumentoAtteso
-      );
+      if (!tipoDocumentoAtteso) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Tipo documento atteso mancante."
+        );
+      }
 
 
-    const files = [];
+      const codiceBase =
+        stripNumericSuffix(
+          tipoDocumentoAtteso
+        );
 
 
-    if (
-      urlFileBase64Front
-    ) {
+      /*
+      |--------------------------------------------------------------------------
+      | FILE
+      |--------------------------------------------------------------------------
+      */
 
-      files.push({
-        side: "front",
-        base64:
-          urlFileBase64Front,
-      });
-
-    }
+      const files = [];
 
 
-    if (
-      urlFileBase64Back
-    ) {
-
-      files.push({
-        side: "back",
-        base64:
-          urlFileBase64Back,
-      });
-
-    }
+      if (urlFileBase64Front) {
+        files.push({
+          side: "front",
+          base64:
+            urlFileBase64Front,
+        });
+      }
 
 
-    if (
-      urlFileBase64 &&
-      files.length === 0
-    ) {
-
-      files.push({
-        side: "single",
-        base64:
-          urlFileBase64,
-      });
-
-    }
+      if (urlFileBase64Back) {
+        files.push({
+          side: "back",
+          base64:
+            urlFileBase64Back,
+        });
+      }
 
 
-    // ======================================================================
-    // PRECHECK TECNICO
-    //
-    // QUESTO RIMANE SEVERO:
-    // se il file è tecnicamente inutilizzabile non ha senso proseguire.
-    // ======================================================================
-
-    const precheck =
-      technicalPrecheck({
-
-        files,
-
-        tipoDocumentoAtteso:
-          codiceBase,
-
-      });
+      if (
+        urlFileBase64 &&
+        files.length === 0
+      ) {
+        files.push({
+          side: "single",
+          base64:
+            urlFileBase64,
+        });
+      }
 
 
-    if (!precheck.ok) {
+      /*
+      |--------------------------------------------------------------------------
+      | PRECHECK TECNICO
+      |--------------------------------------------------------------------------
+      |
+      | Questo resta bloccante.
+      |
+      | Se il file è realmente corrotto / vuoto / tecnicamente inutilizzabile
+      | non ha senso farlo passare.
+      |
+      */
 
-      return buildBaseResponse({
+      const precheck =
+        technicalPrecheck({
+          files,
 
-        ok:
-          false,
+          tipoDocumentoAtteso:
+            codiceBase,
+        });
 
-        stato:
-          "precheck_failed",
 
-        tipoDocumentoAtteso:
-          codiceBase,
+      if (!precheck.ok) {
+        const motivoPrecheck =
+          precheck.motivo ||
+          "Il file non può essere elaborato.";
 
-        valido:
-          false,
+        return buildBaseResponse({
+          ok: false,
 
-        decisionCode:
-          "PRECHECK_FAILED",
+          stato:
+            "precheck_failed",
 
-        pipelineVersion:
-          POLICY.pipelineVersion,
+          tipoDocumentoAtteso:
+            codiceBase,
 
-        ui:
-          buildUiResult({
+          valido: false,
 
-            severity:
-              "error",
+          motivo_errore:
+            motivoPrecheck,
+
+          spiegazione_rifiuto:
+            motivoPrecheck,
+
+          decisionCode:
+            "PRECHECK_FAILED",
+
+          pipelineVersion:
+            POLICY.pipelineVersion,
+
+          ui: buildUiResult({
+            severity: "error",
 
             titolo:
               "File non valido",
 
             messaggio:
-              precheck.motivo,
+              motivoPrecheck,
 
             badge: [
               "Precheck KO",
             ],
-
           }),
-
-      });
-
-    }
-
-
-    // ======================================================================
-    // VARIABILI PIPELINE
-    // ======================================================================
-
-    let preparedFiles =
-      [];
-
-    let classificazione =
-      null;
-
-    let retryClassificazione =
-      null;
-
-    let estrazione =
-      null;
-
-    let decisioneBackend =
-      null;
-
-    let practiceSnapshot =
-      null;
-
-    let practiceAnomalies =
-      null;
-
-    let review = {
-
-      reviewManuale:
-        false,
-
-      motiviReview:
-        [],
-
-    };
-
-    let analysisKey =
-      "";
-
-
-    // ======================================================================
-    // NUOVE VARIABILI PER CLASSIFICAZIONE PERMISSIVA
-    // ======================================================================
-
-    let classificazioneForzataInReview =
-      false;
-
-    let motiviClassificazioneForzata =
-      [];
-
-
-    try {
-
-      // ====================================================================
-      // PREPARAZIONE FILE
-      // ====================================================================
-
-      preparedFiles =
-        await uploadAndPrepareContents(
-          files
-        );
-
-
-      analysisKey =
-        computeAnalysisKey({
-
-          idCliente,
-
-          codiceBase,
-
-          files:
-            preparedFiles,
-
         });
-
-
-      // ====================================================================
-      // CACHE
-      // ====================================================================
-
-      if (
-        POLICY.enableIdempotencyCache
-      ) {
-
-        const summary =
-          await getSummaryDoc(
-            idCliente
-          );
-
-
-        if (
-          summary
-            ?.analysisKey ===
-            analysisKey &&
-          summary
-            ?.analysisResultCached
-        ) {
-
-          return summary
-            .analysisResultCached;
-
-        }
-
       }
 
 
-      // ====================================================================
-      // PRIMA CLASSIFICAZIONE
-      // ====================================================================
+      /*
+      |--------------------------------------------------------------------------
+      | VARIABILI PIPELINE
+      |--------------------------------------------------------------------------
+      */
 
-      classificazione =
-        await classifyDocument({
+      let preparedFiles = [];
 
-          tipoDocumentoAtteso:
+      let classificazione =
+        null;
+
+      let retryClassificazione =
+        null;
+
+      let estrazione =
+        null;
+
+      let decisioneBackend =
+        null;
+
+      let practiceSnapshot =
+        null;
+
+      let practiceAnomalies =
+        null;
+
+      let review = {
+        reviewManuale: false,
+        motiviReview: [],
+      };
+
+      let analysisKey = "";
+
+      let valutazioneClassificazione =
+        {
+          hardReject: false,
+          manualReview: false,
+          motivo: "",
+        };
+
+
+      try {
+        /*
+        |--------------------------------------------------------------------------
+        | PREPARAZIONE CONTENUTI
+        |--------------------------------------------------------------------------
+        */
+
+        preparedFiles =
+          await uploadAndPrepareContents(
+            files
+          );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CHIAVE ANALISI
+        |--------------------------------------------------------------------------
+        */
+
+        analysisKey =
+          computeAnalysisKey({
+            idCliente,
+
             codiceBase,
 
-          preparedFiles,
-
-        });
-
-
-      let confidence =
-        normalizeConfidence(
-
-          classificazione
-            ?.confidenza_classificazione
-
-        );
+            files:
+              preparedFiles,
+          });
 
 
-      // ====================================================================
-      // RETRY CLASSIFICAZIONE
-      //
-      // Se AI è incerta proviamo una seconda volta.
-      // ====================================================================
+        /*
+        |--------------------------------------------------------------------------
+        | CACHE
+        |--------------------------------------------------------------------------
+        */
 
-      const sogliaRetry =
-        normalizeConfidence(
-
-          POLICY
-            .classificationConfidenceReject ??
-          0.75
-
-        );
-
-
-      const tipoPrimaClassificazione =
-        String(
-
-          classificazione
-            ?.tipo_documento_rilevato ||
-          ""
-
-        )
-          .trim()
-          .toLowerCase();
+        if (
+          POLICY.enableIdempotencyCache
+        ) {
+          const summary =
+            await getSummaryDoc(
+              idCliente
+            );
 
 
-      const richiedeRetry =
-
-        tipoPrimaClassificazione ===
-          "non_determinabile"
-
-        ||
-
-        tipoPrimaClassificazione ===
-          "non determinabile"
-
-        ||
-
-        confidence <
-          sogliaRetry;
+          if (
+            summary?.analysisKey ===
+              analysisKey &&
+            summary
+              ?.analysisResultCached
+          ) {
+            return summary
+              .analysisResultCached;
+          }
+        }
 
 
-      if (richiedeRetry) {
+        /*
+        |--------------------------------------------------------------------------
+        | PRIMA CLASSIFICAZIONE
+        |--------------------------------------------------------------------------
+        */
 
-        retryClassificazione =
-          await retryClassification({
-
+        classificazione =
+          await classifyDocument({
             tipoDocumentoAtteso:
               codiceBase,
 
             preparedFiles,
-
           });
 
 
-        const retryConfidence =
-          normalizeConfidence(
+        /*
+        |--------------------------------------------------------------------------
+        | NORMALIZZAZIONE CONFIDENZA
+        |--------------------------------------------------------------------------
+        */
 
-            retryClassificazione
-              ?.confidenza_classificazione
+        classificazione = {
+          ...classificazione,
 
+          confidenza_classificazione:
+            normalizeConfidence(
+              classificazione
+                ?.confidenza_classificazione
+            ),
+        };
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RETRY
+        |--------------------------------------------------------------------------
+        |
+        | Facciamo un secondo tentativo se:
+        |
+        | - tipo non determinabile
+        | - confidenza inferiore alla soglia configurata
+        | - classificatore originale dice non valido
+        |
+        */
+
+        const tipoRilevato =
+          normalizeString(
+            classificazione
+              ?.tipo_documento_rilevato
           );
 
 
-        if (
-          retryConfidence >
-          confidence
-        ) {
+        const needsRetry =
+          tipoRilevato ===
+            "non_determinabile" ||
+          classificazione
+            .confidenza_classificazione <
+            POLICY
+              .classificationConfidenceReject ||
+          classificazione.valido ===
+            false;
 
-          classificazione = {
 
-            ...classificazione,
+        if (needsRetry) {
+          retryClassificazione =
+            await retryClassification({
+              tipoDocumentoAtteso:
+                codiceBase,
 
-            tipo_documento_rilevato:
+              preparedFiles,
+            });
+
+
+          if (
+            retryClassificazione
+          ) {
+            retryClassificazione = {
+              ...retryClassificazione,
+
+              confidenza_classificazione:
+                normalizeConfidence(
+                  retryClassificazione
+                    ?.confidenza_classificazione
+                ),
+            };
+
+
+            if (
               retryClassificazione
-                .tipo_documento_rilevato,
-
-            coerenza_documentale:
-              retryClassificazione
-                .coerenza_documentale,
-
-            gravemente_illeggibile:
-              retryClassificazione
-                .gravemente_illeggibile,
-
-            confidenza_classificazione:
-              retryClassificazione
-                .confidenza_classificazione,
-
-            motivo_errore:
-              retryClassificazione
-                .motivo_errore
-              ||
+                .confidenza_classificazione >
               classificazione
-                .motivo_errore,
+                .confidenza_classificazione
+            ) {
+              classificazione = {
+                ...classificazione,
 
-            leggibile_umano:
-              retryClassificazione
-                .leggibile_umano
-              ??
-              classificazione
-                .leggibile_umano,
+                tipo_documento_rilevato:
+                  retryClassificazione
+                    .tipo_documento_rilevato,
 
-            valido:
-              Boolean(
-                retryClassificazione
-                  .coerenza_documentale
-              )
-              &&
-              !Boolean(
-                retryClassificazione
-                  .gravemente_illeggibile
-              ),
+                coerenza_documentale:
+                  retryClassificazione
+                    .coerenza_documentale,
 
-          };
+                gravemente_illeggibile:
+                  retryClassificazione
+                    .gravemente_illeggibile,
 
+                confidenza_classificazione:
+                  retryClassificazione
+                    .confidenza_classificazione,
 
-          confidence =
-            retryConfidence;
+                motivo_errore:
+                  retryClassificazione
+                    .motivo_errore ||
+                  classificazione
+                    .motivo_errore,
 
+                valido:
+                  retryClassificazione
+                    .coerenza_documentale &&
+                  !retryClassificazione
+                    .gravemente_illeggibile,
+              };
+            }
+          }
         }
 
-      }
+
+        /*
+        |--------------------------------------------------------------------------
+        | NUOVA VALUTAZIONE PERMISSIVA
+        |--------------------------------------------------------------------------
+        */
+
+        valutazioneClassificazione =
+          valutaClassificazionePermissiva(
+            classificazione,
+            codiceBase
+          );
 
 
-      // ====================================================================
-      // ====================================================================
-      // CLASSIFICAZIONE PERMISSIVA
-      // ====================================================================
-      //
-      // REGOLA:
-      //
-      // 1. AI incerta       -> ACCETTA + REVIEW
-      // 2. Non determinato  -> ACCETTA + REVIEW
-      // 3. Poco leggibile   -> ACCETTA + REVIEW
-      // 4. Documento diverso con confidenza debole -> ACCETTA + REVIEW
-      //
-      // BLOCCO SOLO:
-      //
-      // A. gravemente illeggibile
-      // B. documento chiaramente diverso con confidenza >= 95%
-      //
-      // ====================================================================
+        console.log(
+          "========================================"
+        );
 
+        console.log(
+          "VALUTAZIONE AI PERMISSIVA"
+        );
 
-      confidence =
-        normalizeConfidence(
+        console.log({
+          cliente:
+            idCliente,
 
-          classificazione
-            ?.confidenza_classificazione
+          documentoAtteso:
+            codiceBase,
 
+          documentoRilevato:
+            classificazione
+              ?.tipo_documento_rilevato,
+
+          confidenza:
+            classificazione
+              ?.confidenza_classificazione,
+
+          confidenzaPercentuale:
+            percentConfidence(
+              classificazione
+                ?.confidenza_classificazione
+            ),
+
+          coerenza:
+            classificazione
+              ?.coerenza_documentale,
+
+          gravementeIlleggibile:
+            classificazione
+              ?.gravemente_illeggibile,
+
+          validoOriginale:
+            classificazione
+              ?.valido,
+
+          hardReject:
+            valutazioneClassificazione
+              .hardReject,
+
+          reviewManuale:
+            valutazioneClassificazione
+              .manualReview,
+
+          motivo:
+            valutazioneClassificazione
+              .motivo,
+        });
+
+        console.log(
+          "========================================"
         );
 
 
-      const tipoRilevato =
-        String(
+        /*
+        |--------------------------------------------------------------------------
+        | HARD REJECT
+        |--------------------------------------------------------------------------
+        |
+        | Arriviamo qui SOLO se:
+        |
+        | - documento chiaramente diverso >= 98%
+        |
+        | oppure
+        |
+        | - documento gravemente illeggibile >= 97%
+        |
+        */
 
-          classificazione
-            ?.tipo_documento_rilevato ||
-          ""
-
-        )
-          .trim()
-          .toLowerCase();
-
-
-      const tipoAtteso =
-        String(
-          codiceBase ||
-          ""
-        )
-          .trim()
-          .toLowerCase();
-
-
-      const nonDeterminabile =
-
-        !tipoRilevato
-
-        ||
-
-        tipoRilevato ===
-          "non_determinabile"
-
-        ||
-
-        tipoRilevato ===
-          "non determinabile"
-
-        ||
-
-        tipoRilevato ===
-          "unknown"
-
-        ||
-
-        tipoRilevato ===
-          "sconosciuto"
-
-        ||
-
-        tipoRilevato ===
-          "nd"
-
-        ||
-
-        tipoRilevato ===
-          "n/d";
+        if (
+          valutazioneClassificazione
+            .hardReject
+        ) {
+          const stato =
+            "classified_rejected";
 
 
-      // ====================================================================
-      // HARD REJECT 1
-      // Documento veramente illeggibile
-      // ====================================================================
-
-      const hardUnreadable =
-
-        classificazione
-          ?.gravemente_illeggibile ===
-          true;
+          /*
+           * Motivo leggibile dal cliente
+           */
+          const motivoRifiuto =
+            valutazioneClassificazione
+              .motivo ||
+            "Il documento caricato non corrisponde a quello richiesto.";
 
 
-      // ====================================================================
-      // HARD REJECT 2
-      //
-      // Documento chiaramente diverso.
-      //
-      // Uso 95%.
-      // Quindi un mismatch al 60%, 70%, 80% NON blocca.
-      // ====================================================================
+          /*
+           * Inseriamo il motivo anche dentro classificazione.
+           * In questo modo il tuo frontend può leggerlo sia da:
+           *
+           * risposta.motivo_errore
+           *
+           * sia da:
+           *
+           * risposta.classificazione.motivo_errore
+           */
+          classificazione = {
+            ...classificazione,
 
-      const hardMismatch =
+            motivo_errore:
+              motivoRifiuto,
 
-        !nonDeterminabile
-
-        &&
-
-        tipoRilevato !==
-          tipoAtteso
-
-        &&
-
-        confidence >=
-          0.95;
+            spiegazione_rifiuto:
+              motivoRifiuto,
+          };
 
 
-      // ====================================================================
-      // RIFIUTO EFFETTIVO
-      // ====================================================================
+          const decisionCode =
+            getDecisionCode({
+              stato,
 
-      if (
-        hardUnreadable ||
-        hardMismatch
-      ) {
+              codiceBase,
 
-        const motiviRifiuto =
-          [];
+              reviewManuale:
+                false,
+
+              classificazione,
+            });
 
 
-        if (hardUnreadable) {
+          const result =
+            buildBaseResponse({
+              ok: true,
 
-          motiviRifiuto.push(
+              stato,
 
-            "Il documento risulta gravemente illeggibile e non consente una verifica attendibile."
+              tipoDocumentoAtteso:
+                codiceBase,
 
-          );
+              tipoDocumentoRilevato:
+                classificazione
+                  ?.tipo_documento_rilevato ||
+                null,
 
+              confidence:
+                classificazione
+                  ?.confidenza_classificazione ||
+                0,
+
+              valido: false,
+
+              /*
+               * IMPORTANTISSIMO:
+               * questi campi arrivano direttamente
+               * al tuo upload.html.
+               */
+              motivo_errore:
+                motivoRifiuto,
+
+              spiegazione_rifiuto:
+                motivoRifiuto,
+
+              decisionCode,
+
+              analysisKey,
+
+              pipelineVersion:
+                POLICY.pipelineVersion,
+
+              classificazione,
+
+              ui: buildUiResult({
+                severity:
+                  "error",
+
+                titolo:
+                  "Documento non accettato",
+
+                messaggio:
+                  motivoRifiuto,
+
+                badge: [
+                  "Documento KO",
+
+                  `${percentConfidence(
+                    classificazione
+                      ?.confidenza_classificazione
+                  )}%`,
+                ],
+              }),
+            });
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | SALVATAGGIO SUMMARY
+          |--------------------------------------------------------------------------
+          */
+
+          await saveSummaryDoc({
+            idCliente,
+
+            pipelineVersion:
+              POLICY.pipelineVersion,
+
+            analysisKey,
+
+            tipoDocumentoAtteso:
+              codiceBase,
+
+            classificazione,
+
+            estrazione: null,
+
+            decisioneBackend:
+              null,
+
+            review: {
+              reviewManuale:
+                false,
+
+              motiviReview:
+                [],
+            },
+
+            ui:
+              result.ui,
+
+            preparedFiles,
+
+            decisionCode,
+
+            resultCached:
+              result,
+          });
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | AUDIT
+          |--------------------------------------------------------------------------
+          */
+
+          await saveAuditEntry({
+            idCliente,
+
+            pipelineVersion:
+              POLICY.pipelineVersion,
+
+            analysisKey,
+
+            tipoDocumentoAtteso:
+              codiceBase,
+
+            precheck,
+
+            classificazione,
+
+            retryClassificazione,
+
+            estrazione: null,
+
+            decisioneBackend:
+              null,
+
+            review: {
+              reviewManuale:
+                false,
+
+              motiviReview:
+                [],
+            },
+
+            preparedFiles,
+
+            decisionCode,
+          });
+
+
+          return result;
         }
 
 
-        if (hardMismatch) {
+        /*
+        |--------------------------------------------------------------------------
+        | DOCUMENTO DUBBIO
+        |--------------------------------------------------------------------------
+        |
+        | NON LO RIFIUTIAMO.
+        |
+        | Forziamo valido = true per permettere alla pipeline di continuare.
+        |
+        */
 
-          motiviRifiuto.push(
+        if (
+          valutazioneClassificazione
+            .manualReview
+        ) {
+          classificazione = {
+            ...classificazione,
 
-            `Il documento rilevato (${classificazione.tipo_documento_rilevato}) non corrisponde al documento richiesto (${codiceBase}).`
+            valido: true,
 
-          );
+            /*
+             * Conserviamo comunque il fatto
+             * che l'AI aveva dei dubbi.
+             */
+            classificazione_originalmente_incerta:
+              true,
 
+            motivo_review:
+              valutazioneClassificazione
+                .motivo,
+          };
         }
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONTESTO PRATICA
+        |--------------------------------------------------------------------------
+        */
+
+        const practiceContext =
+          buildPracticeContext({
+            importoMutuo,
+
+            valoreImmobile,
+
+            rataMutuoStimata,
+
+            rateAltriFinanziamenti,
+
+            durataAnni,
+
+            prodottoBancario,
+
+            finalitaMutuo,
+
+            notePratica,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ESTRAZIONE IN BASE AL GRUPPO DOCUMENTALE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          DOC_GROUPS.identity.includes(
+            codiceBase
+          )
+        ) {
+          estrazione =
+            await extractIdentity({
+              tipoDocumentoAtteso:
+                codiceBase,
+
+              preparedFiles,
+            });
+        }
+
+        else if (
+          DOC_GROUPS.income.includes(
+            codiceBase
+          )
+        ) {
+          estrazione =
+            await extractIncome({
+              tipoDocumentoAtteso:
+                codiceBase,
+
+              preparedFiles,
+
+              practiceContext,
+            });
+
+
+          decisioneBackend =
+            scoreIncomeDecision({
+              estrazione,
+
+              data: {
+                importoMutuo,
+
+                valoreImmobile,
+
+                rataMutuoStimata,
+
+                rateAltriFinanziamenti,
+              },
+            });
+        }
+
+        else if (
+          DOC_GROUPS.bank.includes(
+            codiceBase
+          )
+        ) {
+          estrazione =
+            await extractBank({
+              tipoDocumentoAtteso:
+                codiceBase,
+
+              preparedFiles,
+
+              practiceContext,
+            });
+
+
+          decisioneBackend =
+            scoreBankDecision({
+              estrazione,
+            });
+        }
+
+        else if (
+          DOC_GROUPS.realEstate.includes(
+            codiceBase
+          )
+        ) {
+          estrazione =
+            await extractRealEstate({
+              tipoDocumentoAtteso:
+                codiceBase,
+
+              preparedFiles,
+
+              practiceContext,
+            });
+        }
+
+        else {
+          estrazione =
+            await extractGeneric({
+              tipoDocumentoAtteso:
+                codiceBase,
+
+              preparedFiles,
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SNAPSHOT
+        |--------------------------------------------------------------------------
+        */
+
+        practiceSnapshot =
+          buildPracticeSnapshot([
+            {
+              tipoDocumento:
+                codiceBase,
+
+              classificazione,
+
+              estrazione,
+            },
+          ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ANOMALIE
+        |--------------------------------------------------------------------------
+        */
+
+        practiceAnomalies =
+          detectPracticeAnomalies(
+            practiceSnapshot
+          );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVIEW POLICY STANDARD
+        |--------------------------------------------------------------------------
+        */
+
+        review =
+          reviewPolicy({
+            classificazione,
+
+            estrazione,
+
+            tipoDocumentoAtteso:
+              codiceBase,
+
+            practiceAnomalies,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | FORZIAMO REVIEW SE CLASSIFICAZIONE DUBBIA
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          valutazioneClassificazione
+            .manualReview
+        ) {
+          review.reviewManuale =
+            true;
+
+
+          review.motiviReview =
+            Array.from(
+              new Set([
+                ...(
+                  review.motiviReview ||
+                  []
+                ),
+
+                valutazioneClassificazione
+                  .motivo ||
+                  "Classificazione AI da verificare manualmente.",
+              ])
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | STATO
+        |--------------------------------------------------------------------------
+        */
 
         const stato =
-          "classified_rejected";
+          review.reviewManuale
+            ? "manual_review"
+            : "completed";
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | DECISION CODE
+        |--------------------------------------------------------------------------
+        */
 
         const decisionCode =
           getDecisionCode({
-
             stato,
 
             codiceBase,
 
             reviewManuale:
-              false,
+              review.reviewManuale,
 
             classificazione,
 
+            decisioneBackend,
+
+            practiceAnomalies,
           });
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | MESSAGGIO UI
+        |--------------------------------------------------------------------------
+        */
+
+        let uiTitolo;
+
+        let uiMessaggio;
+
+        let uiSeverity;
+
+
+        if (
+          review.reviewManuale
+        ) {
+          uiTitolo =
+            "Documento acquisito - verifica consigliata";
+
+          uiMessaggio =
+            valutazioneClassificazione
+              .motivo ||
+            "Il documento è stato acquisito, ma alcuni elementi richiedono una verifica manuale.";
+
+          uiSeverity =
+            "warning";
+        }
+
+        else {
+          uiTitolo =
+            "Documento valido";
+
+          uiMessaggio =
+            "Documento coerente, leggibile e analizzato correttamente.";
+
+          uiSeverity =
+            "success";
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RISULTATO
+        |--------------------------------------------------------------------------
+        */
+
         const result =
           buildBaseResponse({
-
-            ok:
-              true,
+            ok: true,
 
             stato,
 
@@ -1568,12 +1999,34 @@ onCall(
 
             tipoDocumentoRilevato:
               classificazione
-                .tipo_documento_rilevato,
+                ?.tipo_documento_rilevato,
 
-            confidence,
+            confidence:
+              classificazione
+                ?.confidenza_classificazione,
 
-            valido:
-              false,
+            /*
+             * Anche in review manuale il documento
+             * è valido per il caricamento.
+             */
+            valido: true,
+
+            reviewManuale:
+              review.reviewManuale,
+
+            motiviReview:
+              review.motiviReview,
+
+            /*
+             * Motivo mostrabile anche dal frontend
+             * se vuoi visualizzare un warning.
+             */
+            motivo_review:
+              review.reviewManuale
+                ? review.motiviReview.join(
+                    " "
+                  )
+                : "",
 
             decisionCode,
 
@@ -1584,34 +2037,54 @@ onCall(
 
             classificazione,
 
-            ui:
-              buildUiResult({
+            estrazione,
 
-                severity:
-                  "error",
+            decisioneBackend: {
+              ...decisioneBackend,
 
-                titolo:
-                  "Documento non valido",
+              practiceSnapshot,
 
-                messaggio:
-                  motiviRifiuto.join(" ")
-                  ||
+              practiceAnomalies,
+            },
+
+            ui: buildUiResult({
+              severity:
+                uiSeverity,
+
+              titolo:
+                uiTitolo,
+
+              messaggio:
+                uiMessaggio,
+
+              badge: [
+                codiceBase,
+
+                classificazione
+                  .leggibile_umano
+                  ? "Leggibile"
+                  : "Da verificare",
+
+                review.reviewManuale
+                  ? "Review"
+                  : "OK",
+
+                `${percentConfidence(
                   classificazione
-                    .motivo_errore
-                  ||
-                  "Il documento caricato non può essere utilizzato.",
-
-                badge: [
-                  "Documento rifiutato",
-                ],
-
-              }),
-
+                    ?.confidenza_classificazione
+                )}%`,
+              ],
+            }),
           });
 
 
-        await saveSummaryDoc({
+        /*
+        |--------------------------------------------------------------------------
+        | SALVATAGGIO SUMMARY
+        |--------------------------------------------------------------------------
+        */
 
+        await saveSummaryDoc({
           idCliente,
 
           pipelineVersion:
@@ -1624,11 +2097,10 @@ onCall(
 
           classificazione,
 
-          estrazione:
-            null,
+          estrazione,
 
           decisioneBackend:
-            null,
+            result.decisioneBackend,
 
           review,
 
@@ -1642,11 +2114,19 @@ onCall(
           resultCached:
             result,
 
+          practiceSnapshot,
+
+          practiceAnomalies,
         });
 
 
-        await saveAuditEntry({
+        /*
+        |--------------------------------------------------------------------------
+        | AUDIT
+        |--------------------------------------------------------------------------
+        */
 
+        await saveAuditEntry({
           idCliente,
 
           pipelineVersion:
@@ -1663,11 +2143,10 @@ onCall(
 
           retryClassificazione,
 
-          estrazione:
-            null,
+          estrazione,
 
           decisioneBackend:
-            null,
+            result.decisioneBackend,
 
           review,
 
@@ -1675,881 +2154,196 @@ onCall(
 
           decisionCode,
 
+          practiceSnapshot,
+
+          practiceAnomalies,
         });
 
 
-        return result;
-
-      }
-
-
-      // ====================================================================
-      // DA QUI IN POI NON BLOCHIAMO PIÙ IL CLIENTE
-      // ====================================================================
-
-
-      // --------------------------------------------------------------------
-      // Classificazione originale negativa
-      // --------------------------------------------------------------------
-
-      if (
-        classificazione
-          ?.valido ===
-          false
-      ) {
-
-        classificazioneForzataInReview =
-          true;
-
-
-        motiviClassificazioneForzata
-          .push(
-
-            classificazione
-              ?.motivo_errore
-            ||
-            "La classificazione automatica non è risultata sufficientemente certa."
-
-          );
-
-      }
-
-
-      // --------------------------------------------------------------------
-      // Documento non determinabile
-      // --------------------------------------------------------------------
-
-      if (
-        nonDeterminabile
-      ) {
-
-        classificazioneForzataInReview =
-          true;
-
-
-        motiviClassificazioneForzata
-          .push(
-
-            "Il tipo di documento non è stato determinato con certezza dall'AI."
-
-          );
-
-      }
-
-
-      // --------------------------------------------------------------------
-      // Confidenza classificazione sotto 75%
-      // --------------------------------------------------------------------
-
-      if (
-        confidence <
-        0.75
-      ) {
-
-        classificazioneForzataInReview =
-          true;
-
-
-        motiviClassificazioneForzata
-          .push(
-
-            `Confidenza della classificazione ridotta (${Math.round(confidence * 100)}%).`
-
-          );
-
-      }
-
-
-      // --------------------------------------------------------------------
-      // Documento diverso, MA AI non sufficientemente sicura per bloccarlo
-      // --------------------------------------------------------------------
-
-      if (
-        !nonDeterminabile &&
-        tipoRilevato !==
-          tipoAtteso &&
-        confidence <
-          0.95
-      ) {
-
-        classificazioneForzataInReview =
-          true;
-
-
-        motiviClassificazioneForzata
-          .push(
-
-            `Possibile classificazione differente (${classificazione.tipo_documento_rilevato}), ma con confidenza insufficiente per rifiutare automaticamente il documento.`
-
-          );
-
-      }
-
-
-      // --------------------------------------------------------------------
-      // Documento leggibile per umano ma AI dubbia
-      // --------------------------------------------------------------------
-
-      if (
-        classificazione
-          ?.leggibile_umano ===
-          true
-        &&
-        classificazione
-          ?.valido ===
-          false
-      ) {
-
-        classificazioneForzataInReview =
-          true;
-
-
-        motiviClassificazioneForzata
-          .push(
-
-            "Il documento appare leggibile ma la classificazione automatica è dubbia."
-
-          );
-
-      }
-
-
-      // ====================================================================
-      // FORZIAMO IL PROSEGUIMENTO DEL DOCUMENTO
-      //
-      // Il documento viene quindi estratto e analizzato.
-      // La revisione manuale rimane registrata.
-      // ====================================================================
-
-      classificazione = {
-
-        ...classificazione,
-
-        valido:
-          true,
-
-        confidenza_normalizzata:
-          confidence,
-
-        accettato_permissivamente:
-          classificazioneForzataInReview,
-
-        richiede_verifica_manuale:
-          classificazioneForzataInReview,
-
-      };
-
-
-      // ====================================================================
-      // CONTESTO PRATICA
-      // ====================================================================
-
-      const practiceContext =
-        buildPracticeContext({
-
-          importoMutuo,
-
-          valoreImmobile,
-
-          rataMutuoStimata,
-
-          rateAltriFinanziamenti,
-
-          durataAnni,
-
-          prodottoBancario,
-
-          finalitaMutuo,
-
-          notePratica,
-
-        });
-
-
-      // ====================================================================
-      // ESTRAZIONE DATI
-      // ====================================================================
-
-      if (
-        DOC_GROUPS
-          .identity
-          .includes(
-            codiceBase
-          )
-      ) {
-
-        estrazione =
-          await extractIdentity({
+        /*
+        |--------------------------------------------------------------------------
+        | MANUAL REVIEW
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          review.reviewManuale
+        ) {
+          await upsertManualReview({
+            idCliente,
 
             tipoDocumentoAtteso:
               codiceBase,
 
-            preparedFiles,
-
-          });
-
-      }
-
-
-      else if (
-        DOC_GROUPS
-          .income
-          .includes(
-            codiceBase
-          )
-      ) {
-
-        estrazione =
-          await extractIncome({
-
-            tipoDocumentoAtteso:
-              codiceBase,
-
-            preparedFiles,
-
-            practiceContext,
-
-          });
-
-
-        decisioneBackend =
-          scoreIncomeDecision({
-
-            estrazione,
-
-            data: {
-
-              importoMutuo,
-
-              valoreImmobile,
-
-              rataMutuoStimata,
-
-              rateAltriFinanziamenti,
-
-            },
-
-          });
-
-      }
-
-
-      else if (
-        DOC_GROUPS
-          .bank
-          .includes(
-            codiceBase
-          )
-      ) {
-
-        estrazione =
-          await extractBank({
-
-            tipoDocumentoAtteso:
-              codiceBase,
-
-            preparedFiles,
-
-            practiceContext,
-
-          });
-
-
-        decisioneBackend =
-          scoreBankDecision({
-            estrazione,
-          });
-
-      }
-
-
-      else if (
-        DOC_GROUPS
-          .realEstate
-          .includes(
-            codiceBase
-          )
-      ) {
-
-        estrazione =
-          await extractRealEstate({
-
-            tipoDocumentoAtteso:
-              codiceBase,
-
-            preparedFiles,
-
-            practiceContext,
-
-          });
-
-      }
-
-
-      else {
-
-        estrazione =
-          await extractGeneric({
-
-            tipoDocumentoAtteso:
-              codiceBase,
-
-            preparedFiles,
-
-          });
-
-      }
-
-
-      // ====================================================================
-      // SNAPSHOT DOCUMENTO
-      // ====================================================================
-
-      practiceSnapshot =
-        buildPracticeSnapshot([
-
-          {
-
-            tipoDocumento:
-              codiceBase,
+            analysisKey,
 
             classificazione,
 
             estrazione,
 
-          },
+            motiviReview:
+              review.motiviReview,
 
-        ]);
+            decisionCode,
+          });
+        }
 
 
-      // ====================================================================
-      // ANOMALIE
-      // ====================================================================
+        return result;
+      }
 
-      practiceAnomalies =
-        detectPracticeAnomalies(
-          practiceSnapshot
+      catch (error) {
+        console.error(
+          "ERRORE analizzaDocumentoAI:",
+          error
         );
 
+        throw new HttpsError(
+          "internal",
 
-      // ====================================================================
-      // REVIEW POLICY ORIGINALE
-      // ====================================================================
-
-      review =
-        reviewPolicy({
-
-          classificazione,
-
-          estrazione,
-
-          tipoDocumentoAtteso:
-            codiceBase,
-
-          practiceAnomalies,
-
-        });
-
-
-      if (
-        !review ||
-        typeof review !==
-          "object"
-      ) {
-
-        review = {
-
-          reviewManuale:
-            false,
-
-          motiviReview:
-            [],
-
-        };
-
+          error?.message ||
+            "Errore del server AI."
+        );
       }
-
-
-      if (
-        !Array.isArray(
-          review.motiviReview
-        )
-      ) {
-
-        review.motiviReview =
-          [];
-
-      }
-
-
-      // ====================================================================
-      // APPLICAZIONE REVIEW DELLA LOGICA PERMISSIVA
-      // ====================================================================
-
-      if (
-        classificazioneForzataInReview
-      ) {
-
-        review = {
-
-          ...review,
-
-          reviewManuale:
-            true,
-
-          motiviReview:
-            Array.from(
-
-              new Set([
-
-                ...(
-                  review
-                    .motiviReview ||
-                  []
-                ),
-
-                ...motiviClassificazioneForzata,
-
-              ])
-
-            ),
-
-        };
-
-      }
-
-
-      const stato =
-
-        review.reviewManuale
-
-          ?
-
-          "manual_review"
-
-          :
-
-          "completed";
-
-
-      const decisionCode =
-        getDecisionCode({
-
-          stato,
-
-          codiceBase,
-
-          reviewManuale:
-            review.reviewManuale,
-
-          classificazione,
-
-          decisioneBackend,
-
-          practiceAnomalies,
-
-        });
-
-
-      // ====================================================================
-      // RISPOSTA
-      //
-      // ATTENZIONE:
-      // valido è TRUE anche se serve revisione.
-      //
-      // Questo è ciò che impedisce al tuo upload.html di bloccare il cliente.
-      // ====================================================================
-
-      const result =
-        buildBaseResponse({
-
-          ok:
-            true,
-
-          stato,
-
-          tipoDocumentoAtteso:
-            codiceBase,
-
-          tipoDocumentoRilevato:
-            classificazione
-              .tipo_documento_rilevato,
-
-          confidence,
-
-          valido:
-            true,
-
-          reviewManuale:
-            review.reviewManuale,
-
-          motiviReview:
-            review.motiviReview,
-
-          decisionCode,
-
-          analysisKey,
-
-          pipelineVersion:
-            POLICY.pipelineVersion,
-
-          classificazione,
-
-          estrazione,
-
-          decisioneBackend: {
-
-            ...(
-              decisioneBackend ||
-              {}
-            ),
-
-            practiceSnapshot,
-
-            practiceAnomalies,
-
-          },
-
-          ui:
-            buildUiResult({
-
-              severity:
-                review.reviewManuale
-                  ?
-                  "warning"
-                  :
-                  "success",
-
-              titolo:
-                review.reviewManuale
-                  ?
-                  "Documento acquisito - verifica consigliata"
-                  :
-                  "Documento valido",
-
-              messaggio:
-                review.reviewManuale
-                  ?
-                  "Il documento è stato acquisito correttamente. Alcuni elementi saranno verificati durante la revisione della pratica."
-                  :
-                  "Documento coerente, leggibile e analizzato correttamente.",
-
-              badge: [
-
-                codiceBase,
-
-                classificazione
-                  .leggibile_umano ===
-                  false
-                  ?
-                  "Leggibilità da verificare"
-                  :
-                  "Acquisito",
-
-                review
-                  .reviewManuale
-                  ?
-                  "Review"
-                  :
-                  "OK",
-
-              ],
-
-            }),
-
-        });
-
-
-      // ====================================================================
-      // SALVATAGGIO SUMMARY
-      // ====================================================================
-
-      await saveSummaryDoc({
-
-        idCliente,
-
-        pipelineVersion:
-          POLICY.pipelineVersion,
-
-        analysisKey,
-
-        tipoDocumentoAtteso:
-          codiceBase,
-
-        classificazione,
-
-        estrazione,
-
-        decisioneBackend:
-          result.decisioneBackend,
-
-        review,
-
-        ui:
-          result.ui,
-
-        preparedFiles,
-
-        decisionCode,
-
-        resultCached:
-          result,
-
-        practiceSnapshot,
-
-        practiceAnomalies,
-
-      });
-
-
-      // ====================================================================
-      // AUDIT
-      // ====================================================================
-
-      await saveAuditEntry({
-
-        idCliente,
-
-        pipelineVersion:
-          POLICY.pipelineVersion,
-
-        analysisKey,
-
-        tipoDocumentoAtteso:
-          codiceBase,
-
-        precheck,
-
-        classificazione,
-
-        retryClassificazione,
-
-        estrazione,
-
-        decisioneBackend:
-          result.decisioneBackend,
-
-        review,
-
-        preparedFiles,
-
-        decisionCode,
-
-        practiceSnapshot,
-
-        practiceAnomalies,
-
-      });
-
-
-      // ====================================================================
-      // MANUAL REVIEW
-      // ====================================================================
-
-      if (
-        review.reviewManuale
-      ) {
-
-        await upsertManualReview({
-
-          idCliente,
-
-          tipoDocumentoAtteso:
-            codiceBase,
-
-          analysisKey,
-
-          classificazione,
-
-          estrazione,
-
-          motiviReview:
-            review.motiviReview,
-
-          decisionCode,
-
-        });
-
-      }
-
-
-      return result;
-
     }
+  );
 
 
-    catch (error) {
-
-      console.error(
-        "ERRORE analizzaDocumentoAI:",
-        error
-      );
-
-
-      throw new HttpsError(
-
-        "internal",
-
-        error?.message ||
-        "Errore del server AI."
-
-      );
-
-    }
-
-  }
-);
-
-
-// ============================================================================
-// ============================================================================
-// CLOUD FUNCTION: RICOSTRUISCI PRATICA COMPLETA
-// ============================================================================
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| RICOSTRUZIONE PRATICA COMPLETA
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+*/
 
 exports.ricostruisciPraticaCompleta =
-onCall(
-  {
-    secrets: [
-      "OPENAI_API_KEY",
-    ],
-  },
+  onCall(
+    {
+      secrets: [
+        "OPENAI_API_KEY",
+      ],
+    },
 
-  async (request) => {
-
-    const data =
-      request.data ||
-      {};
+    async (request) => {
+      const data =
+        request.data || {};
 
 
-    const {
+      const {
+        idCliente,
 
-      idCliente,
+        importoMutuo = null,
 
-      importoMutuo =
-        null,
+        valoreImmobile = null,
 
-      valoreImmobile =
-        null,
+        rataMutuoStimata =
+          null,
 
-      rataMutuoStimata =
-        null,
+        rateAltriFinanziamenti =
+          null,
 
-      rateAltriFinanziamenti =
-        null,
-
-      finalitaMutuo =
-        null,
-
-    } = data;
+        finalitaMutuo = null,
+      } = data;
 
 
-    if (!idCliente) {
+      if (!idCliente) {
+        throw new HttpsError(
+          "invalid-argument",
 
-      throw new HttpsError(
-
-        "invalid-argument",
-
-        "ID cliente mancante."
-
-      );
-
-    }
-
-
-    try {
-
-      // ====================================================================
-      // RECUPERO TUTTE LE ANALISI
-      // ====================================================================
-
-      const documentAnalyses =
-        await loadClientDocumentAnalyses(
-          idCliente
+          "ID cliente mancante."
         );
-
-
-      if (
-        !documentAnalyses.length
-      ) {
-
-        return {
-
-          ok:
-            false,
-
-          stato:
-            "no_documents",
-
-          messaggio:
-            "Nessun documento analizzato trovato per questo cliente.",
-
-        };
-
       }
 
 
-      // ====================================================================
-      // SNAPSHOT PRATICA
-      // ====================================================================
+      try {
+        /*
+        |--------------------------------------------------------------------------
+        | DOCUMENTI ANALIZZATI
+        |--------------------------------------------------------------------------
+        */
 
-      const snapshot =
-        buildPracticeSnapshot(
-          documentAnalyses
-        );
-
-
-      // ====================================================================
-      // ANOMALIE
-      // ====================================================================
-
-      const anomalies =
-        detectPracticeAnomalies(
-          snapshot
-        );
+        const documentAnalyses =
+          await loadClientDocumentAnalyses(
+            idCliente
+          );
 
 
-      // ====================================================================
-      // DATI FINANZIARI
-      // ====================================================================
+        if (
+          !documentAnalyses.length
+        ) {
+          return {
+            ok: false,
 
-      const mergedFinancials =
-        mergePracticeFinancials({
+            stato:
+              "no_documents",
 
-          documentAnalyses,
-
-          importoMutuo,
-
-          valoreImmobile,
-
-          rataMutuoStimata,
-
-          rateAltriFinanziamenti,
-
-        });
+            messaggio:
+              "Nessun documento analizzato trovato per questo cliente.",
+          };
+        }
 
 
-      // ====================================================================
-      // REVIEW COMPLESSIVA
-      // ====================================================================
+        /*
+        |--------------------------------------------------------------------------
+        | SNAPSHOT
+        |--------------------------------------------------------------------------
+        */
 
-      const reviewFlags = {
+        const snapshot =
+          buildPracticeSnapshot(
+            documentAnalyses
+          );
 
-        reviewManuale:
 
-          anomalies.hasBlocking
+        /*
+        |--------------------------------------------------------------------------
+        | ANOMALIE
+        |--------------------------------------------------------------------------
+        */
 
-          ||
+        const anomalies =
+          detectPracticeAnomalies(
+            snapshot
+          );
 
-          anomalies
-            .anomalieWarning
-            .length >
-            0
 
-          ||
+        /*
+        |--------------------------------------------------------------------------
+        | DATI FINANZIARI
+        |--------------------------------------------------------------------------
+        */
 
-          documentAnalyses
-            .some(
+        const mergedFinancials =
+          mergePracticeFinancials({
+            documentAnalyses,
+
+            importoMutuo,
+
+            valoreImmobile,
+
+            rataMutuoStimata,
+
+            rateAltriFinanziamenti,
+          });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVIEW FLAGS
+        |--------------------------------------------------------------------------
+        */
+
+        const reviewFlags = {
+          reviewManuale:
+            anomalies.hasBlocking ||
+
+            anomalies
+              .anomalieWarning
+              .length >
+              0 ||
+
+            documentAnalyses.some(
               (d) =>
                 d.review
                   ?.reviewManuale ===
@@ -2557,127 +2351,112 @@ onCall(
             ),
 
 
-        motiviReview:
-          Array.from(
+          motiviReview:
+            Array.from(
+              new Set([
+                ...anomalies
+                  .anomalieBloccanti,
 
-            new Set([
+                ...anomalies
+                  .anomalieWarning,
 
-              ...anomalies
-                .anomalieBloccanti,
-
-              ...anomalies
-                .anomalieWarning,
-
-              ...documentAnalyses
-                .flatMap(
+                ...documentAnalyses.flatMap(
                   (d) =>
                     d.review
                       ?.motiviReview ||
                     []
                 ),
-
-            ])
-
-          ),
-
-      };
+              ])
+            ),
+        };
 
 
-      // ====================================================================
-      // SUMMARY
-      // ====================================================================
+        /*
+        |--------------------------------------------------------------------------
+        | SUMMARY
+        |--------------------------------------------------------------------------
+        */
 
-      const practiceSummary =
-        buildPracticeSummary({
+        const practiceSummary =
+          buildPracticeSummary({
+            snapshot,
 
-          snapshot,
+            anomalies,
 
-          anomalies,
+            mergedFinancials,
 
-          mergedFinancials,
+            reviewFlags,
 
-          reviewFlags,
+            importoMutuo,
 
-          importoMutuo,
+            valoreImmobile,
 
-          valoreImmobile,
+            rataMutuoStimata,
 
-          rataMutuoStimata,
-
-          finalitaMutuo,
-
-        });
-
-
-      // ====================================================================
-      // BANK MATCHING
-      // ====================================================================
-
-      const bankMatch =
-        await matchBanksForPractice({
-
-          practiceSummary,
-
-          documentAnalyses,
-
-          anomalies,
-
-          mergedFinancials,
-
-          finalitaMutuo,
-
-        });
+            finalitaMutuo,
+          });
 
 
-      // ====================================================================
-      // DECISION CODE
-      // ====================================================================
+        /*
+        |--------------------------------------------------------------------------
+        | BANK MATCHING
+        |--------------------------------------------------------------------------
+        */
 
-      const finalDecisionCode =
+        const bankMatch =
+          await matchBanksForPractice({
+            practiceSummary,
 
-        anomalies.hasBlocking
+            documentAnalyses,
 
-          ?
+            anomalies,
 
-          "PRACTICE_BLOCKING_ANOMALY"
+            mergedFinancials,
 
-          :
-
-          reviewFlags.reviewManuale
-
-          ?
-
-          "PRACTICE_REVIEW"
-
-          :
-
-          "PRACTICE_OK";
+            finalitaMutuo,
+          });
 
 
-      // ====================================================================
-      // PAYLOAD FIRESTORE
-      // ====================================================================
+        /*
+        |--------------------------------------------------------------------------
+        | DECISION CODE
+        |--------------------------------------------------------------------------
+        */
 
-      const payload = {
+        const finalDecisionCode =
+          anomalies.hasBlocking
+            ? "PRACTICE_BLOCKING_ANOMALY"
 
-        aggiornatoIl:
-          admin.firestore
-            .FieldValue
-            .serverTimestamp(),
+            : reviewFlags
+                .reviewManuale
+            ? "PRACTICE_REVIEW"
 
-        pipelineVersion:
-          POLICY.pipelineVersion,
+            : "PRACTICE_OK";
 
-        praticaCompleta: {
 
-          decisionCode:
-            finalDecisionCode,
+        /*
+        |--------------------------------------------------------------------------
+        | PAYLOAD
+        |--------------------------------------------------------------------------
+        */
 
-          documentiConsiderati:
-            documentAnalyses
-              .map(
+        const payload = {
+          aggiornatoIl:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+
+          pipelineVersion:
+            POLICY.pipelineVersion,
+
+          praticaCompleta: {
+            decisionCode:
+              finalDecisionCode,
+
+
+            documentiConsiderati:
+              documentAnalyses.map(
                 (d) => ({
-
                   tipoDocumento:
                     d.tipoDocumento,
 
@@ -2685,183 +2464,163 @@ onCall(
                     d.decisionCode ||
                     "",
 
+                  reviewManuale:
+                    d.review
+                      ?.reviewManuale ===
+                    true,
+
+                  motiviReview:
+                    d.review
+                      ?.motiviReview ||
+                    [],
                 })
               ),
 
-          snapshot,
 
-          anomalies,
+            snapshot,
 
-          mergedFinancials,
+            anomalies,
 
-          reviewFlags,
+            mergedFinancials,
 
-          practiceSummary,
+            reviewFlags,
 
-          bankMatch,
+            practiceSummary,
 
-        },
-
-      };
-
-
-      // ====================================================================
-      // SALVATAGGIO PRATICA COMPLETA
-      // ====================================================================
-
-      await adminDb
-        .collection(
-          "analisi_deliberante"
-        )
-        .doc(
-          idCliente
-        )
-        .set(
-          payload,
-          {
-            merge:
-              true,
-          }
-        );
+            bankMatch,
+          },
+        };
 
 
-      // ====================================================================
-      // MANUAL REVIEW PRATICA
-      // ====================================================================
-
-      if (
-        reviewFlags.reviewManuale
-      ) {
+        /*
+        |--------------------------------------------------------------------------
+        | FIRESTORE
+        |--------------------------------------------------------------------------
+        */
 
         await adminDb
           .collection(
-            "manual_reviews"
+            "analisi_deliberante"
           )
-          .doc(
-            `practice_${idCliente}`
-          )
+          .doc(idCliente)
           .set(
+            payload,
             {
-
-              createdAt:
-                admin.firestore
-                  .FieldValue
-                  .serverTimestamp(),
-
-              status:
-                "pending",
-
-              idCliente,
-
-              scope:
-                "practice",
-
-              decisionCode:
-                finalDecisionCode,
-
-              motiviReview:
-                reviewFlags
-                  .motiviReview,
-
-              snapshot,
-
-              anomalies,
-
-            },
-
-            {
-              merge:
-                true,
+              merge: true,
             }
-
           );
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | REVIEW PRATICA
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          reviewFlags.reviewManuale
+        ) {
+          await adminDb
+            .collection(
+              "manual_reviews"
+            )
+            .doc(
+              `practice_${idCliente}`
+            )
+            .set(
+              {
+                createdAt:
+                  admin.firestore
+                    .FieldValue
+                    .serverTimestamp(),
+
+                status:
+                  "pending",
+
+                idCliente,
+
+                scope:
+                  "practice",
+
+                decisionCode:
+                  finalDecisionCode,
+
+                motiviReview:
+                  reviewFlags
+                    .motiviReview,
+
+                snapshot,
+
+                anomalies,
+              },
+
+              {
+                merge: true,
+              }
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RISPOSTA
+        |--------------------------------------------------------------------------
+        */
+
+        return {
+          ok: true,
+
+          stato:
+            anomalies.hasBlocking
+              ? "practice_blocking_anomaly"
+
+              : reviewFlags
+                  .reviewManuale
+              ? "practice_review"
+
+              : "practice_ok",
+
+          decisionCode:
+            finalDecisionCode,
+
+          pratica:
+            practiceSummary,
+
+          bancheConsigliate:
+            bankMatch?.consigliate ||
+            [],
+
+          bancheAlternative:
+            bankMatch?.alternative ||
+            [],
+        };
       }
 
-
-      // ====================================================================
-      // RETURN
-      // ====================================================================
-
-      return {
-
-        ok:
-          true,
-
-        stato:
-
-          anomalies.hasBlocking
-
-            ?
-
-            "practice_blocking_anomaly"
-
-            :
-
-            reviewFlags.reviewManuale
-
-            ?
-
-            "practice_review"
-
-            :
-
-            "practice_ok",
+      catch (error) {
+        console.error(
+          "ERRORE ricostruisciPraticaCompleta:",
+          error
+        );
 
 
-        decisionCode:
-          finalDecisionCode,
+        throw new HttpsError(
+          "internal",
 
-
-        pratica:
-          practiceSummary,
-
-
-        bancheConsigliate:
-          bankMatch
-            ?.consigliate ||
-          [],
-
-
-        bancheAlternative:
-          bankMatch
-            ?.alternative ||
-          [],
-
-      };
-
+          error?.message ||
+            "Errore nella ricostruzione pratica."
+        );
+      }
     }
+  );
 
 
-    catch (error) {
-
-      console.error(
-
-        "ERRORE ricostruisciPraticaCompleta:",
-
-        error
-
-      );
-
-
-      throw new HttpsError(
-
-        "internal",
-
-        error?.message ||
-        "Errore nella ricostruzione pratica."
-
-      );
-
-    }
-
-  }
-);
-
-
-// ============================================================================
-// IMPORT POLICY BANCARIE
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| IMPORTAZIONE POLICY BANCARIE
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+*/
 
 const {
   importaPolicyBancarieDaFileVersionata,
