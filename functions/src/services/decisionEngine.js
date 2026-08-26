@@ -15,7 +15,8 @@ const { notEmpty } = require("../utils/strings");
 
 const {
   calculateIncomeFromCU,
-  looksLikeCU,
+  calculateIncomeFromSingleDocument,
+  isCU,
 } = require("./incomeCalculator");
 
 
@@ -31,16 +32,17 @@ function containsGamblingKeyword(text = "") {
 function calcolaRedditoBancarioMensilePrudenziale(
   estratti = {}
 ) {
-  if (!looksLikeCU(estratti)) {
-    return null;
-  }
-
   const result =
-    calculateIncomeFromCU(
+    calculateIncomeFromSingleDocument(
       estratti
     );
 
-  return result.ok
+  return result.ok &&
+    Number.isFinite(
+      normalizeNumber(
+        result.redditoNettoMensile
+      )
+    )
     ? result.redditoNettoMensile
     : null;
 }
@@ -122,20 +124,20 @@ function scoreIncomeDecision({
     estrazione?.dati_estratti ||
     {};
 
-  const dettaglioCU =
-    looksLikeCU(estratti)
-      ? calculateIncomeFromCU(
-          estratti
-        )
-      : {
-          ok: false,
-          fonte: "NON_CU",
-          campiMancanti: [],
-        };
+  const dettaglioReddito =
+    calculateIncomeFromSingleDocument(
+      estratti
+    );
 
   const nettoMensile =
-    dettaglioCU.ok
-      ? dettaglioCU
+    dettaglioReddito.ok &&
+    Number.isFinite(
+      normalizeNumber(
+        dettaglioReddito
+          .redditoNettoMensile
+      )
+    )
+      ? dettaglioReddito
           .redditoNettoMensile
       : null;
 
@@ -169,16 +171,23 @@ function scoreIncomeDecision({
   ];
 
   if (
-    looksLikeCU(estratti) &&
-    !dettaglioCU.ok
+    !dettaglioReddito.ok
   ) {
     for (
       const campo of
-      dettaglioCU.campiMancanti ||
+      dettaglioReddito.campiMancanti ||
       []
     ) {
       criticita.push(
-        `Calcolo reddito CU non completabile: manca ${campo}`
+        `Calcolo reddito non completabile: manca ${campo}`
+      );
+    }
+
+    if (
+      dettaglioReddito.errore
+    ) {
+      criticita.push(
+        dettaglioReddito.errore
       );
     }
   }
@@ -311,12 +320,17 @@ function scoreIncomeDecision({
     redditoBancarioMensile:
       nettoMensile,
 
+    dettaglioCalcoloReddito:
+      dettaglioReddito,
+
     dettaglioCalcoloRedditoCU:
-      dettaglioCU,
+      isCU(estratti)
+        ? dettaglioReddito
+        : null,
 
     fonteReddito:
-      dettaglioCU.ok
-        ? "CU_VERIFICATA"
+      dettaglioReddito.ok
+        ? dettaglioReddito.metodo
         : "DOCUMENTO_NON_CALCOLABILE",
 
     dti,
@@ -335,20 +349,20 @@ function scoreIncomeDecision({
           : "N/D"
       }`,
 
-      dettaglioCU.ok
-        ? `Reddito lordo CU: € ${formatNumberIT(dettaglioCU.redditoLordoAnnuo)}`
+      dettaglioReddito.ok
+        ? `Reddito lordo CU: € ${formatNumberIT(dettaglioReddito.redditoImponibile)}`
         : "Reddito lordo CU: N/D",
 
-      dettaglioCU.ok
-        ? `Netto annuo CU dopo trattenute: € ${formatNumberIT(dettaglioCU.redditoNettoAnnuo)}`
+      dettaglioReddito.ok
+        ? `Netto annuo CU dopo trattenute: € ${formatNumberIT(dettaglioReddito.redditoNettoAnnuo)}`
         : "Netto annuo CU dopo trattenute: N/D",
 
-      dettaglioCU.ok
-        ? `Giorni lavorati: ${dettaglioCU.giorniLavorati}`
+      dettaglioReddito.ok
+        ? `Giorni lavorati: ${dettaglioReddito.giorniLavorati}`
         : "Giorni lavorati: N/D",
 
-      dettaglioCU.ok
-        ? `Mensilità considerate: ${dettaglioCU.mensilitaConsiderate}`
+      dettaglioReddito.ok
+        ? `Mensilità considerate: ${dettaglioReddito.mensilitaConsiderate}`
         : "Mensilità considerate: N/D",
 
       `Score: ${score}/100`,
