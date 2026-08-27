@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -21,6 +22,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script src="/main/auth-guard.js"></script>
@@ -38,6 +40,7 @@ if (!firebase.apps.length) {
 }
 
 const db = firebase.firestore();
+const storage = firebase.storage();
 const functionsFirebase = firebase.app().functions("us-central1");
 const authReady = CredipassAuth.guard();
 </script>
@@ -639,6 +642,32 @@ hr {
 .reddito-note-box textarea {
     min-height: 70px;
     font-size: 12px;
+}
+
+.segnalatore-box{
+    margin-bottom:20px;
+    padding:14px 16px;
+    border:1px solid #dfe5ec;
+    border-left:4px solid #002d72;
+    border-radius:8px;
+    background:#f8fafc;
+}
+.segnalatore-title{
+    color:#002d72;
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    margin-bottom:10px;
+}
+.segnalatore-grid{
+    display:grid;
+    grid-template-columns:1fr 1.4fr;
+    gap:12px;
+}
+.segnalatore-grid .form-group{margin-bottom:0}
+@media(max-width:800px){
+    .segnalatore-grid{grid-template-columns:1fr}
 }
 
 /* BOTTONI */
@@ -1542,7 +1571,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
     <div class="header-box" style="max-width:450px">
 
         <span class="ruolo">
-            Email Automazione
+            Email Backoffice
         </span>
 
         <input
@@ -1553,7 +1582,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
         >
 
         <span class="ruolo" style="margin-top:8px">
-            Email Agenzia Immobiliare
+            Email in copia conoscenza
         </span>
 
         <input
@@ -1653,6 +1682,35 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
         <input type="text" id="campo_data">
     </div>
 
+</div>
+
+<div class="segnalatore-box">
+    <div class="segnalatore-title">
+        <i class="fas fa-user-tag"></i>
+        Segnalatore (facoltativo)
+    </div>
+
+    <div class="segnalatore-grid">
+
+        <div class="form-group">
+            <label>Riferimento</label>
+            <input
+                type="text"
+                id="segnalatore_riferimento"
+                placeholder="Es. Mario Rossi / Agenzia Alfa"
+            >
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input
+                type="text"
+                id="segnalatore_email"
+                placeholder="email@esempio.it"
+            >
+        </div>
+
+    </div>
 </div>
 
 <div class="card">
@@ -2777,6 +2835,16 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
             </div>
 
+            <div class="form-group" style="margin-top:12px">
+                <label>Gestione dell'impegno</label>
+                <div class="toggle-group blue" style="max-width:420px">
+                    <input type="radio" id="mutuo_pre_mantieni" name="mutuo_pre_gestione" value="MANTENERE" checked>
+                    <label for="mutuo_pre_mantieni">Mantieni impegno</label>
+                    <input type="radio" id="mutuo_pre_estingui" name="mutuo_pre_gestione" value="ESTINGUERE">
+                    <label for="mutuo_pre_estingui">Da estinguere</label>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -2888,6 +2956,14 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         </div>
 
+                    </div>
+
+                    <div class="form-group" style="margin-top:10px">
+                        <label>Gestione dell'impegno</label>
+                        <select class="fin-gestione">
+                            <option value="MANTENERE">Mantieni impegno</option>
+                            <option value="ESTINGUERE">Da estinguere</option>
+                        </select>
                     </div>
 
                 </div>
@@ -3144,7 +3220,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
         id="btn_stampa_pdf"
     >
         <i class="fas fa-file-pdf"></i>
-        1. SALVA E SCARICA IL PDF
+        1. SALVA, SCARICA E INVIA LA SCHEDA
     </button>
 
     <button
@@ -5240,6 +5316,14 @@ function templateFinanziamento(numero) {
 
         </div>
 
+        <div class="form-group" style="margin-top:10px">
+            <label>Gestione dell'impegno</label>
+            <select class="fin-gestione">
+                <option value="MANTENERE">Mantieni impegno</option>
+                <option value="ESTINGUERE">Da estinguere</option>
+            </select>
+        </div>
+
     </div>
 
     `;
@@ -5372,6 +5456,15 @@ function getFinanziamentiDettaglio() {
                     ||
                     '';
 
+                const gestione =
+                    item
+                        .querySelector(
+                            '.fin-gestione'
+                        )
+                        ?.value
+                    ||
+                    'MANTENERE';
+
                 if (
                     istituto ||
                     rata ||
@@ -5383,7 +5476,8 @@ function getFinanziamentiDettaglio() {
                         istituto,
                         rata,
                         scadenza,
-                        finalita
+                        finalita,
+                        gestione
                     });
 
                 }
@@ -5418,6 +5512,8 @@ function finanziamentiText() {
                     ` - scad. ${fin.scadenza || '-'}`
                     +
                     ` - ${fin.finalita || '-'}`
+                    +
+                    ` - ${fin.gestione === 'ESTINGUERE' ? 'DA ESTINGUERE' : 'MANTENERE IMPEGNO'}`
                 );
 
             }
@@ -5447,6 +5543,8 @@ function finanziamentiTextPDF() {
                     ` • Scadenza: ${fin.scadenza || '-'}`
                     +
                     ` • Finalità: ${fin.finalita || '-'}`
+                    +
+                    ` • Gestione: ${fin.gestione === 'ESTINGUERE' ? 'DA ESTINGUERE' : 'MANTENERE IMPEGNO'}`
                 );
 
             }
@@ -5478,6 +5576,8 @@ function mutuoEsistenteText() {
         ` - scad. ${V('mutuo_pre_scadenza','-')}`
         +
         ` - ${V('mutuo_pre_finalita','-')}`
+        +
+        ` - ${S('mutuo_pre_gestione','MANTENERE') === 'ESTINGUERE' ? 'DA ESTINGUERE' : 'MANTENERE IMPEGNO'}`
     );
 
 }
@@ -7520,6 +7620,12 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        mutuo_pre_gestione:
+            S(
+                'mutuo_pre_gestione',
+                'MANTENERE'
+            ),
+
         /* FINANZIAMENTI */
 
         fin_corso:
@@ -7599,6 +7705,18 @@ async function sincronizzaSchedaConDatabase() {
         email_agenzia_immobiliare:
             V(
                 'campo_email_agenzia',
+                ''
+            ),
+
+        segnalatore_riferimento:
+            V(
+                'segnalatore_riferimento',
+                ''
+            ),
+
+        segnalatore_email:
+            V(
+                'segnalatore_email',
                 ''
             ),
 
@@ -7806,6 +7924,1233 @@ function situazioneAbitativaText() {
     return text;
 
 }
+
+/* ==========================================================
+   LINK PRATICA / PDF PERSISTENTE
+   ========================================================== */
+
+function getPracticeId() {
+
+    const nome1 =
+        nomeCompleto(1)
+        ||
+        'cliente';
+
+    const nome2 =
+        nomeCompleto(2);
+
+    let id =
+        window.slugifyCredipassPart(
+            nome1
+        );
+
+    if (nome2) {
+
+        id +=
+            '_'
+            +
+            window.slugifyCredipassPart(
+                nome2
+            );
+
+    }
+
+    return id;
+
+}
+
+function buildPracticeDashboardUrl() {
+
+    return (
+        window.location.origin
+        +
+        '/main/dashboard-consulente.html?clienteId='
+        +
+        encodeURIComponent(
+            getPracticeId()
+        )
+    );
+
+}
+
+async function salvaPdfPersistente(
+    blob,
+    fileName
+) {
+
+    await authReady;
+
+    const praticaId =
+        getPracticeId();
+
+    const storagePath =
+        `SchedeConsulenza/${praticaId}/Scheda_Consulenza.pdf`;
+
+    const ref =
+        storage
+            .ref()
+            .child(
+                storagePath
+            );
+
+    await ref.put(
+        blob,
+        {
+            contentType:
+                'application/pdf'
+        }
+    );
+
+    const url =
+        await ref
+            .getDownloadURL();
+
+    await db
+        .collection(
+            'pratiche_mutuo'
+        )
+        .doc(
+            praticaId
+        )
+        .set(
+            {
+                scheda_consulenza_pdf_url:
+                    url,
+
+                scheda_consulenza_pdf_path:
+                    storagePath,
+
+                scheda_consulenza_pdf_nome:
+                    fileName,
+
+                scheda_consulenza_pdf_aggiornata_il:
+                    firebase
+                        .firestore
+                        .FieldValue
+                        .serverTimestamp()
+            },
+            {
+                merge:true
+            }
+        );
+
+    return url;
+
+}
+
+
+/* ==========================================================
+   EMAIL BACK OFFICE
+   ========================================================== */
+
+function boRow(label,value) {
+
+    if (
+        !emailHasValue(
+            value
+        )
+    ) {
+        return '';
+    }
+
+    return `
+        <tr>
+            <td
+                width="38%"
+                style="
+                    padding:9px 16px;
+                    color:#7b858e;
+                    font-size:12px;
+                    background:#fafbfd;
+                    border-bottom:1px solid #e7ebef;
+                    vertical-align:top;
+                "
+            >
+                ${safeHtml(label)}
+            </td>
+
+            <td
+                width="62%"
+                style="
+                    padding:9px 16px;
+                    color:#27313a;
+                    font-size:12px;
+                    font-weight:bold;
+                    border-bottom:1px solid #e7ebef;
+                    vertical-align:top;
+                "
+            >
+                ${safeHtml(value)}
+            </td>
+        </tr>
+    `;
+
+}
+
+function boSectionTitle(title) {
+
+    return `
+        <div
+            style="
+                color:#002d72;
+                font-size:14px;
+                font-weight:bold;
+                text-transform:uppercase;
+                letter-spacing:.5px;
+                margin-bottom:11px;
+            "
+        >
+            ${safeHtml(title)}
+        </div>
+    `;
+
+}
+
+function boApplicant(numero) {
+
+    const isOne =
+        numero === 1;
+
+    const nome =
+        nomeCompleto(
+            numero
+        );
+
+    if (!nome) {
+        return '';
+    }
+
+    const prefix =
+        isOne
+            ?
+            'cliente'
+            :
+            'cliente2';
+
+    const redditoId =
+        isOne
+            ?
+            'cliente_reddito'
+            :
+            'cliente2_reddito';
+
+    const professioneId =
+        isOne
+            ?
+            'cliente_professione'
+            :
+            'cliente2_professione';
+
+    const mantenimento =
+        S(
+            `mantenimento${numero}`,
+            'No'
+        );
+
+    const mantenimentoImporto =
+        V(
+            `mantenimento${numero}_importo`,
+            ''
+        );
+
+    const tags = [];
+
+    if (
+        document.getElementById(
+            `reddito_calcolato_doc${numero}`
+        )?.checked
+    ) {
+
+        tags.push(
+            '<span style="display:inline-block;margin:3px 5px 0 0;padding:5px 8px;border-radius:999px;background:#e8f6ee;color:#087a4b;font-size:9px;font-weight:bold;">Calcolato da CU / UNICO</span>'
+        );
+
+    }
+
+    if (
+        document.getElementById(
+            `trasferta_italia${numero}`
+        )?.checked
+    ) {
+
+        tags.push(
+            '<span style="display:inline-block;margin:3px 5px 0 0;padding:5px 8px;border-radius:999px;background:#eef3ff;color:#002d72;font-size:9px;font-weight:bold;">Trasferta Italia</span>'
+        );
+
+    }
+
+    const notaReddito =
+        V(
+            `reddito_note${numero}`,
+            ''
+        );
+
+    return `
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="
+                margin-bottom:12px;
+                border:1px solid #e2e7ec;
+                border-radius:10px;
+                background:#f8fafc;
+                overflow:hidden;
+            "
+        >
+            <tr>
+                <td
+                    colspan="2"
+                    style="
+                        padding:13px 16px;
+                        background:#f2f5f8;
+                        border-bottom:1px solid #e2e7ec;
+                        color:#002d72;
+                        font-weight:bold;
+                        font-size:13px;
+                    "
+                >
+                    ${numero}° Richiedente · ${safeHtml(nome)}
+                </td>
+            </tr>
+
+            ${boRow(
+                'Codice fiscale',
+                V(
+                    `${prefix}_cf`,
+                    ''
+                )
+            )}
+
+            ${boRow(
+                'Nascita',
+                [
+                    V(
+                        `${prefix}_comune_nascita`,
+                        ''
+                    ),
+                    V(
+                        `${prefix}_data_nascita`,
+                        ''
+                    )
+                ]
+                .filter(
+                    emailHasValue
+                )
+                .join(' · ')
+            )}
+
+            ${boRow(
+                'Contratto',
+                S(
+                    `lav${numero}`,
+                    ''
+                )
+            )}
+
+            ${boRow(
+                'Professione',
+                V(
+                    professioneId,
+                    ''
+                )
+            )}
+
+            ${boRow(
+                'Reddito netto',
+                V(
+                    redditoId,
+                    ''
+                )
+                    ?
+                    formatEuro(
+                        V(
+                            redditoId,
+                            ''
+                        )
+                    )
+                    +
+                    ' / mese'
+                    :
+                    ''
+            )}
+
+            ${boRow(
+                'Stato civile',
+                S(
+                    `stato${numero}`,
+                    ''
+                )
+            )}
+
+            ${boRow(
+                'Omologa / Provvedimento',
+                S(
+                    `omologa${numero}`,
+                    ''
+                )
+            )}
+
+            ${boRow(
+                'Mantenimento',
+                mantenimento === 'Sì'
+                    ?
+                    (
+                        mantenimentoImporto
+                            ?
+                            formatEuro(
+                                mantenimentoImporto
+                            )
+                            +
+                            ' / mese'
+                            :
+                            'Sì'
+                    )
+                    :
+                    'No'
+            )}
+
+            ${
+                tags.length
+                ||
+                emailHasValue(
+                    notaReddito
+                )
+                    ?
+                    `
+                    <tr>
+                        <td
+                            colspan="2"
+                            style="
+                                padding:11px 16px 14px;
+                            "
+                        >
+                            ${tags.join('')}
+
+                            ${
+                                emailHasValue(
+                                    notaReddito
+                                )
+                                    ?
+                                    `
+                                    <div
+                                        style="
+                                            margin-top:9px;
+                                            padding:9px 10px;
+                                            border-left:3px solid #C99700;
+                                            background:#fff9e8;
+                                            color:#59636c;
+                                            font-size:10px;
+                                            line-height:1.5;
+                                        "
+                                    >
+                                        ${safeHtml(
+                                            notaReddito
+                                        )}
+                                    </div>
+                                    `
+                                    :
+                                    ''
+                            }
+                        </td>
+                    </tr>
+                    `
+                    :
+                    ''
+            }
+        </table>
+    `;
+
+}
+
+function boFitti() {
+
+    if (
+        S(
+            'reddito_fitto',
+            'No'
+        )
+        !==
+        'Sì'
+    ) {
+        return '';
+    }
+
+    const fitti =
+        getFittiDettaglio();
+
+    if (!fitti.length) {
+        return '';
+    }
+
+    return `
+        <tr>
+            <td style="padding:0 34px 22px;">
+
+                ${boSectionTitle(
+                    'Redditi da fitto'
+                )}
+
+                <table
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                >
+                    <tr>
+                    ${
+                        fitti
+                            .map(
+                                (fitto,index) => `
+                                <td
+                                    width="${100 / fitti.length}%"
+                                    valign="top"
+                                    style="
+                                        padding:${index ? '0 0 0 6px' : '0 6px 0 0'};
+                                    "
+                                >
+                                    <div
+                                        style="
+                                            border:1px solid #e2e7ec;
+                                            border-radius:9px;
+                                            background:#ffffff;
+                                            padding:14px 16px;
+                                        "
+                                    >
+                                        <div
+                                            style="
+                                                color:#002d72;
+                                                font-size:12px;
+                                                font-weight:bold;
+                                            "
+                                        >
+                                            Fitto ${index + 1}
+                                        </div>
+
+                                        <div
+                                            style="
+                                                margin-top:7px;
+                                                color:#002d72;
+                                                font-size:18px;
+                                                font-weight:bold;
+                                            "
+                                        >
+                                            ${
+                                                fitto.importo
+                                                    ?
+                                                    safeHtml(
+                                                        formatEuro(
+                                                            fitto.importo
+                                                        )
+                                                    )
+                                                    :
+                                                    '-'
+                                            }
+                                        </div>
+
+                                        <div
+                                            style="
+                                                margin-top:4px;
+                                                color:#7b858e;
+                                                font-size:10px;
+                                                line-height:1.45;
+                                            "
+                                        >
+                                            ${safeHtml(
+                                                fitto.descrizione
+                                                ||
+                                                ''
+                                            )}
+                                            ${
+                                                fitto.accredito_cc
+                                                    ?
+                                                    '<br>Accredito: '
+                                                    +
+                                                    safeHtml(
+                                                        fitto.accredito_cc
+                                                    )
+                                                    :
+                                                    ''
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                `
+                            )
+                            .join('')
+                    }
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    `;
+
+}
+
+function boImpegni() {
+
+    const finanziamenti =
+        getFinanziamentiDettaglio();
+
+    const mutuo =
+        S(
+            'gia_mutuo',
+            'No'
+        )
+        ===
+        'Sì';
+
+    if (
+        !finanziamenti.length
+        &&
+        !mutuo
+    ) {
+        return '';
+    }
+
+    let html = '';
+
+    finanziamenti.forEach(
+        (fin,index) => {
+
+            html += `
+                <table
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                    style="
+                        margin-bottom:11px;
+                        border:1px solid #e2e7ec;
+                        border-radius:10px;
+                        background:#f8fafc;
+                        overflow:hidden;
+                    "
+                >
+                    <tr>
+                        <td
+                            colspan="4"
+                            style="
+                                padding:12px 15px;
+                                background:#f2f5f8;
+                                border-bottom:1px solid #e2e7ec;
+                                color:#002d72;
+                                font-size:13px;
+                                font-weight:bold;
+                            "
+                        >
+                            ${safeHtml(
+                                fin.istituto
+                                ||
+                                `Finanziamento ${index + 1}`
+                            )}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                            FINALITÀ<br>
+                            <strong style="color:#27313a;font-size:12px;">
+                                ${safeHtml(fin.finalita || '-')}
+                            </strong>
+                        </td>
+
+                        <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                            RATA<br>
+                            <strong style="color:#27313a;font-size:12px;">
+                                ${fin.rata ? safeHtml(formatEuro(fin.rata)) : '-'}
+                            </strong>
+                        </td>
+
+                        <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                            SCADENZA<br>
+                            <strong style="color:#27313a;font-size:12px;">
+                                ${safeHtml(fin.scadenza || '-')}
+                            </strong>
+                        </td>
+
+                        <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                            GESTIONE<br>
+                            <strong
+                                style="
+                                    color:${fin.gestione === 'ESTINGUERE' ? '#b42318' : '#087a4b'};
+                                    font-size:12px;
+                                "
+                            >
+                                ${fin.gestione === 'ESTINGUERE' ? 'DA ESTINGUERE' : 'MANTENERE'}
+                            </strong>
+                        </td>
+                    </tr>
+                </table>
+            `;
+
+        }
+    );
+
+    if (mutuo) {
+
+        const gestione =
+            S(
+                'mutuo_pre_gestione',
+                'MANTENERE'
+            );
+
+        html += `
+            <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="
+                    margin-bottom:11px;
+                    border:1px solid #e2e7ec;
+                    border-radius:10px;
+                    background:#f8fafc;
+                    overflow:hidden;
+                "
+            >
+                <tr>
+                    <td
+                        colspan="4"
+                        style="
+                            padding:12px 15px;
+                            background:#f2f5f8;
+                            border-bottom:1px solid #e2e7ec;
+                            color:#002d72;
+                            font-size:13px;
+                            font-weight:bold;
+                        "
+                    >
+                        Mutuo in corso · ${safeHtml(V('mutuo_pre_istituto','-'))}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                        FINALITÀ<br>
+                        <strong style="color:#27313a;font-size:12px;">
+                            ${safeHtml(V('mutuo_pre_finalita','-'))}
+                        </strong>
+                    </td>
+
+                    <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                        RATA<br>
+                        <strong style="color:#27313a;font-size:12px;">
+                            ${safeHtml(formatEuro(V('rata_mutuo_pre','')))}
+                        </strong>
+                    </td>
+
+                    <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                        SCADENZA<br>
+                        <strong style="color:#27313a;font-size:12px;">
+                            ${safeHtml(V('mutuo_pre_scadenza','-'))}
+                        </strong>
+                    </td>
+
+                    <td width="25%" style="padding:11px 10px;color:#8a96a3;font-size:9px;">
+                        GESTIONE<br>
+                        <strong
+                            style="
+                                color:${gestione === 'ESTINGUERE' ? '#b42318' : '#087a4b'};
+                                font-size:12px;
+                            "
+                        >
+                            ${gestione === 'ESTINGUERE' ? 'DA ESTINGUERE' : 'MANTENERE'}
+                        </strong>
+                    </td>
+                </tr>
+            </table>
+        `;
+
+    }
+
+    return `
+        <tr>
+            <td style="padding:0 34px 22px;">
+                ${boSectionTitle(
+                    'Impegni finanziari'
+                )}
+                ${html}
+            </td>
+        </tr>
+    `;
+
+}
+
+function boKpi() {
+
+    const importo =
+        parseEuro(
+            V(
+                'mutuo_importo',
+                ''
+            )
+        );
+
+    const valore =
+        parseEuro(
+            V(
+                'immobile_valore',
+                ''
+            )
+        );
+
+    const reddito =
+        parseEuro(
+            V(
+                'cliente_reddito',
+                ''
+            )
+        )
+        +
+        parseEuro(
+            V(
+                'cliente2_reddito',
+                ''
+            )
+        )
+        +
+        (
+            S(
+                'reddito_fitto',
+                'No'
+            )
+            ===
+            'Sì'
+                ?
+                aggiornaTotaleFitti()
+                :
+                0
+        )
+        +
+        (
+            S(
+                'assegno',
+                'No'
+            )
+            ===
+            'Sì'
+                ?
+                parseEuro(
+                    V(
+                        'assegno_importo',
+                        ''
+                    )
+                )
+                :
+                0
+        );
+
+    const rate =
+        aggiornaTotaleFinanziamenti()
+        +
+        (
+            S(
+                'gia_mutuo',
+                'No'
+            )
+            ===
+            'Sì'
+                ?
+                parseEuro(
+                    V(
+                        'rata_mutuo_pre',
+                        ''
+                    )
+                )
+                :
+                0
+        );
+
+    const ltv =
+        importo > 0
+        &&
+        valore > 0
+            ?
+            (
+                importo
+                /
+                valore
+                *
+                100
+            )
+            .toLocaleString(
+                'it-IT',
+                {
+                    minimumFractionDigits:2,
+                    maximumFractionDigits:2
+                }
+            )
+            +
+            '%'
+            :
+            '-';
+
+    return [
+        [
+            'IMPORTO',
+            importo
+                ?
+                formatCurrency(
+                    importo
+                )
+                :
+                '-'
+        ],
+        [
+            'REDDITO',
+            reddito
+                ?
+                formatCurrency(
+                    reddito
+                )
+                :
+                '-'
+        ],
+        [
+            'RATE ATTUALI',
+            formatCurrency(
+                rate
+            )
+        ],
+        [
+            'LTV',
+            ltv
+        ]
+    ];
+
+}
+
+function buildBackofficeEmailHtml(
+    pdfUrl
+) {
+
+    const nomi =
+        [
+            nomeCompleto(1),
+            nomeCompleto(2)
+        ]
+        .filter(Boolean)
+        .join(' · ');
+
+    const kpi =
+        boKpi();
+
+    const portale =
+        buildUploadAreaUrl();
+
+    const pratica =
+        buildPracticeDashboardUrl();
+
+    const note =
+        V(
+            'note_consulenza',
+            ''
+        );
+
+    return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Scheda di Consulenza</title>
+</head>
+
+<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
+<tr>
+<td align="center" style="padding:30px 12px;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+style="max-width:760px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 34px rgba(0,0,0,.09);">
+
+<tr>
+<td bgcolor="#002d72" style="padding:30px 34px 24px;border-bottom:5px solid #C99700;">
+    <div style="color:#ffffff;font-size:28px;font-weight:bold;line-height:1.2;">
+        Scheda di Consulenza
+    </div>
+
+    <div style="margin-top:7px;color:#C99700;font-size:20px;font-weight:bold;">
+        ${safeHtml(nomi)}
+    </div>
+
+    <div style="margin-top:12px;color:#c8d4e4;font-size:11px;">
+        Consulente: ${safeHtml(V('campo_referente','-'))}
+        ${emailHasValue(V('campo_data','')) ? ' · ' + safeHtml(V('campo_data','')) : ''}
+    </div>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="#f8fafc" style="padding:16px 34px 18px;border-bottom:1px solid #e6ebf0;">
+    <div style="color:#6e7b87;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px;">
+        Stato della pratica
+    </div>
+    <div style="height:7px;background:#e8edf3;border-radius:999px;overflow:hidden;">
+        <div style="width:22%;height:7px;background:#C99700;"></div>
+    </div>
+    <div style="margin-top:8px;color:#002d72;font-size:11px;font-weight:bold;">
+        Scheda compilata
+    </div>
+</td>
+</tr>
+
+<tr>
+<td>
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+    ${kpi.map(
+        ([label,value],index) => `
+        <td width="25%" align="center"
+            style="padding:20px 8px;border-right:${index < 3 ? '1px solid #e8edf3' : '0'};border-bottom:1px solid #e8edf3;">
+            <div style="color:#8a96a3;font-size:10px;text-transform:uppercase;letter-spacing:.7px;">
+                ${safeHtml(label)}
+            </div>
+            <div style="margin-top:7px;color:#002d72;font-size:20px;font-weight:bold;">
+                ${safeHtml(value)}
+            </div>
+        </td>
+        `
+    ).join('')}
+</tr>
+</table>
+</td>
+</tr>
+
+<tr>
+<td style="padding:22px 34px 10px;">
+    ${boSectionTitle('Richiedenti')}
+    ${boApplicant(1)}
+    ${boApplicant(2)}
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 34px 22px;">
+    ${boSectionTitle('Nucleo familiare')}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="border:1px solid #e2e7ec;border-radius:10px;background:#ffffff;">
+        ${boRow('Componenti',V('num_componenti',''))}
+        ${boRow('Età figli',figliText())}
+        ${boRow('Assegno unico',assegnoUnicoText())}
+        ${boRow('Situazione abitativa',situazioneAbitativaText())}
+    </table>
+</td>
+</tr>
+
+${boFitti()}
+${boImpegni()}
+
+<tr>
+<td style="padding:0 34px 22px;">
+    ${boSectionTitle('Operazione richiesta')}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="border:1px solid #e2e7ec;border-radius:10px;background:#ffffff;">
+        ${boRow('Finalità',S('fin',''))}
+        ${boRow('Prodotto',S('prodotto',''))}
+        ${boRow('Importo richiesto',V('mutuo_importo','') ? formatEuro(V('mutuo_importo','')) : '')}
+        ${boRow('Durata',V('mutuo_durata','') ? V('mutuo_durata','') + ' anni' : '')}
+        ${boRow('Prezzo compravendita',V('mutuo_compravendita','') ? formatEuro(V('mutuo_compravendita','')) : '')}
+        ${boRow('Valore di riferimento',V('immobile_valore','') ? formatEuro(V('immobile_valore','')) : '')}
+        ${boRow('Tipologia tasso',S('tasso',''))}
+        ${boRow('Imposta sostitutiva',S('imposta',''))}
+        ${boRow('Mediazione',getMediazione())}
+    </table>
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 34px 22px;">
+    ${boSectionTitle('Costi e coperture')}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="border:1px solid #e2e7ec;border-radius:10px;background:#ffffff;">
+        ${boRow('Polizza incendio',V('tipo_incendio',''))}
+        ${boRow('Polizza personale',V('tipo_personale',''))}
+        ${boRow('Istruttoria banca',V('istr_banca','') ? formatEuro(V('istr_banca','')) : '')}
+        ${boRow('Perizia',V('perizia_costo','') ? formatEuro(V('perizia_costo','')) : '')}
+    </table>
+</td>
+</tr>
+
+${
+    emailHasValue(note)
+        ?
+        `
+        <tr>
+        <td style="padding:0 34px 22px;">
+            ${boSectionTitle('Note del consulente')}
+            <div style="background:#fff9e8;border-left:4px solid #C99700;padding:15px 16px;border-radius:8px;color:#4f5962;font-size:12px;line-height:1.65;">
+                ${safeHtml(note).replace(/\n/g,'<br>')}
+            </div>
+        </td>
+        </tr>
+        `
+        :
+        ''
+}
+
+<tr>
+<td style="padding:10px 34px 34px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+
+        <tr>
+            <td colspan="2" align="center" style="padding-bottom:14px;">
+                <a href="${safeHtml(pratica)}"
+                   style="display:block;max-width:560px;margin:0 auto;background:#002d72;color:#ffffff;text-decoration:none;padding:15px 20px;border-radius:8px;font-size:12px;font-weight:bold;border-bottom:4px solid #C99700;">
+                    APRI PRATICA
+                </a>
+            </td>
+        </tr>
+
+        <tr>
+            <td width="50%" align="center" style="padding-right:7px;">
+                <a href="${safeHtml(portale)}"
+                   style="display:block;background:#198754;color:#ffffff;text-decoration:none;padding:15px 12px;border-radius:8px;font-size:12px;font-weight:bold;">
+                    PORTALE CLIENTE
+                </a>
+            </td>
+
+            <td width="50%" align="center" style="padding-left:7px;">
+                ${
+                    pdfUrl
+                        ?
+                        `
+                        <a href="${safeHtml(pdfUrl)}"
+                           style="display:block;background:#C99700;color:#ffffff;text-decoration:none;padding:15px 12px;border-radius:8px;font-size:12px;font-weight:bold;">
+                            SCHEDA PDF
+                        </a>
+                        `
+                        :
+                        `
+                        <div style="display:block;background:#9aa4ad;color:#ffffff;padding:15px 12px;border-radius:8px;font-size:12px;font-weight:bold;">
+                            SCHEDA PDF
+                        </div>
+                        `
+                }
+            </td>
+        </tr>
+
+    </table>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="#002d72" style="padding:20px 34px;color:#ffffff;font-size:11px;line-height:1.6;">
+    <strong style="color:#C99700;">Credipass S.p.A.</strong><br>
+    Referente: ${safeHtml(V('campo_referente','-'))}
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+    `;
+
+}
+
+
+/* ==========================================================
+   EMAIL SEGNALATORE
+   Solo Portale Cliente
+   ========================================================== */
+
+function buildSegnalatoreEmailHtml() {
+
+    const segnalatore =
+        V(
+            'segnalatore_riferimento',
+            ''
+        );
+
+    const nomi =
+        [
+            nomeCompleto(1),
+            nomeCompleto(2)
+        ]
+        .filter(Boolean)
+        .join(' · ');
+
+    const portale =
+        buildUploadAreaUrl();
+
+    return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Aggiornamento pratica</title>
+</head>
+
+<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
+<tr>
+<td align="center" style="padding:30px 12px;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e3e8ee;">
+
+<tr>
+<td bgcolor="#002d72" style="padding:28px 30px 24px;border-bottom:5px solid #C99700;">
+    <div style="color:#ffffff;font-size:25px;font-weight:bold;">
+        Scheda di Consulenza
+    </div>
+    <div style="margin-top:7px;color:#C99700;font-size:18px;font-weight:bold;">
+        ${safeHtml(nomi)}
+    </div>
+</td>
+</tr>
+
+<tr>
+<td style="padding:28px 30px;">
+    <div style="color:#002d72;font-size:16px;font-weight:bold;margin-bottom:10px;">
+        ${segnalatore ? 'Gentile ' + safeHtml(segnalatore) + ',' : 'Buongiorno,'}
+    </div>
+
+    <div style="color:#59636c;font-size:13px;line-height:1.7;">
+        è disponibile l'Area Cliente relativa alla pratica indicata.
+        Dal portale è possibile verificare lo stato di avanzamento
+        e le comunicazioni pubblicate per il cliente.
+    </div>
+
+    <div align="center" style="margin-top:25px;">
+        <a href="${safeHtml(portale)}"
+           style="display:inline-block;min-width:240px;background:#002d72;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:8px;font-size:12px;font-weight:bold;border-bottom:4px solid #C99700;">
+            APRI PORTALE CLIENTE
+        </a>
+    </div>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="#002d72" style="padding:18px 30px;color:#ffffff;font-size:11px;line-height:1.6;">
+    <strong style="color:#C99700;">Credipass S.p.A.</strong><br>
+    Referente: ${safeHtml(V('campo_referente','-'))}
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+    `;
+
+}
+
 
 /* ==========================================================
    PDF
@@ -11986,6 +13331,30 @@ window.addEventListener(
                                 blob
                             );
 
+                        /*
+                         * Il PDF scaricato, quello salvato nel portale
+                         * e quello allegato alla mail sono lo stesso blob.
+                         */
+                        let pdfUrl = '';
+
+                        try {
+
+                            pdfUrl =
+                                await salvaPdfPersistente(
+                                    blob,
+                                    fileName
+                                );
+
+                        }
+                        catch(storageError) {
+
+                            console.error(
+                                'Errore salvataggio PDF persistente:',
+                                storageError
+                            );
+
+                        }
+
                         await worker.save();
 
                         const to = [
@@ -12034,12 +13403,19 @@ window.addEventListener(
                                                 bcc:[],
 
                                                 subject:
-                                                    'Scheda Consulenza Credipass - '
+                                                    'Scheda di Consulenza - '
                                                     +
-                                                    nomeCompleto(1),
+                                                    [
+                                                        nomeCompleto(1),
+                                                        nomeCompleto(2)
+                                                    ]
+                                                    .filter(Boolean)
+                                                    .join(' - '),
 
                                                 html:
-                                                    '<br>',
+                                                    buildBackofficeEmailHtml(
+                                                        pdfUrl
+                                                    ),
 
                                                 replyTo:
                                                     V(
@@ -12075,7 +13451,92 @@ window.addEventListener(
                                 throw new Error(
                                     result.error
                                     ||
-                                    'Errore invio email PDF.'
+                                    'Errore invio email scheda.'
+                                );
+
+                            }
+
+                        }
+
+                        const emailSegnalatore =
+                            V(
+                                'segnalatore_email',
+                                ''
+                            );
+
+                        if (
+                            emailHasValue(
+                                emailSegnalatore
+                            )
+                        ) {
+
+                            const responseSegnalatore =
+                                await fetch(
+
+                                    '/api/send-email',
+
+                                    {
+
+                                        method:
+                                            'POST',
+
+                                        headers:{
+                                            'Content-Type':
+                                                'application/json'
+                                        },
+
+                                        body:
+                                            JSON.stringify({
+
+                                                to:[
+                                                    emailSegnalatore
+                                                ],
+
+                                                bcc:[],
+
+                                                subject:
+                                                    'Aggiornamento pratica - '
+                                                    +
+                                                    [
+                                                        nomeCompleto(1),
+                                                        nomeCompleto(2)
+                                                    ]
+                                                    .filter(Boolean)
+                                                    .join(' - '),
+
+                                                html:
+                                                    buildSegnalatoreEmailHtml(),
+
+                                                replyTo:
+                                                    V(
+                                                        'campo_email',
+                                                        ''
+                                                    )
+
+                                            })
+
+                                    }
+
+                                );
+
+                            if (
+                                !responseSegnalatore.ok
+                            ) {
+
+                                let resultSegnalatore = {};
+
+                                try {
+
+                                    resultSegnalatore =
+                                        await responseSegnalatore.json();
+
+                                }
+                                catch(e) {}
+
+                                throw new Error(
+                                    resultSegnalatore.error
+                                    ||
+                                    'Errore invio email al segnalatore.'
                                 );
 
                             }
@@ -12083,7 +13544,11 @@ window.addEventListener(
                         }
 
                         alert(
-                            'PDF generato correttamente.'
+                            pdfUrl
+                                ?
+                                'PDF generato, salvato nel portale e email inviate correttamente.'
+                                :
+                                'PDF generato ed email inviate. Il salvataggio permanente del PDF non è riuscito: verifica le regole Firebase Storage.'
                         );
 
                     }
