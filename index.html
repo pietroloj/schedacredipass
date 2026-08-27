@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -579,6 +580,65 @@ hr {
     background: #fff8e5;
     border-left: 4px solid #C99700;
     color: #8a6800;
+}
+
+
+/* REDDITO - VERIFICA / TRASFERTA / NOTE */
+
+.reddito-meta {
+    margin-top: 9px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.reddito-check {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: 1px solid #d7dee6;
+    border-radius: 8px;
+    background: #fff;
+    color: #495057 !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
+.reddito-check input {
+    width: auto !important;
+    margin: 0;
+    accent-color: #002d72;
+}
+
+.btn-reddito-note {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #C99700;
+    border-radius: 50%;
+    background: #fff8e5;
+    color: #8a6800;
+    font-weight: 800;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reddito-note-box {
+    display: none;
+    margin-top: 9px;
+}
+
+.reddito-note-box textarea {
+    min-height: 70px;
+    font-size: 12px;
 }
 
 /* BOTTONI */
@@ -2008,13 +2068,51 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                     <input type="radio" id="aut1" name="lav1" value="AUTONOMO">
                     <label for="aut1">Autonomo</label>
 
+                    <input type="radio" id="dis1" name="lav1" value="DISOCCUPATO/A">
+                    <label for="dis1">Disoccupato/a</label>
+
                 </div>
 
             </div>
 
             <div class="form-group">
+                <label>Professione</label>
+                <input
+                    type="text"
+                    id="cliente_professione"
+                    placeholder="Es. Impiegato amministrativo, Agente di commercio..."
+                >
+            </div>
+
+            <div class="form-group">
                 <label>Reddito Netto €</label>
                 <input type="text" id="cliente_reddito" value="">
+
+                <div class="reddito-meta">
+                    <label class="reddito-check">
+                        <input type="checkbox" id="reddito_calcolato_doc1">
+                        Calcolato da CU / UNICO
+                    </label>
+
+                    <label class="reddito-check">
+                        <input type="checkbox" id="trasferta_italia1">
+                        Trasferta Italia
+                    </label>
+
+                    <button
+                        type="button"
+                        class="btn-reddito-note"
+                        data-target="reddito_note_box1"
+                        title="Aggiungi nota reddito"
+                    >+</button>
+                </div>
+
+                <div class="reddito-note-box" id="reddito_note_box1">
+                    <textarea
+                        id="reddito_note1"
+                        placeholder="Nota aggiuntiva sul reddito / trasferta..."
+                    ></textarea>
+                </div>
             </div>
 
         </div>
@@ -2043,13 +2141,51 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                     <input type="radio" id="aut2" name="lav2" value="AUTONOMO">
                     <label for="aut2">Autonomo</label>
 
+                    <input type="radio" id="dis2" name="lav2" value="DISOCCUPATO/A">
+                    <label for="dis2">Disoccupato/a</label>
+
                 </div>
 
             </div>
 
             <div class="form-group">
+                <label>Professione</label>
+                <input
+                    type="text"
+                    id="cliente2_professione"
+                    placeholder="Es. Impiegato amministrativo, Agente di commercio..."
+                >
+            </div>
+
+            <div class="form-group">
                 <label>Reddito Netto €</label>
                 <input type="text" id="cliente2_reddito" value="">
+
+                <div class="reddito-meta">
+                    <label class="reddito-check">
+                        <input type="checkbox" id="reddito_calcolato_doc2">
+                        Calcolato da CU / UNICO
+                    </label>
+
+                    <label class="reddito-check">
+                        <input type="checkbox" id="trasferta_italia2">
+                        Trasferta Italia
+                    </label>
+
+                    <button
+                        type="button"
+                        class="btn-reddito-note"
+                        data-target="reddito_note_box2"
+                        title="Aggiungi nota reddito"
+                    >+</button>
+                </div>
+
+                <div class="reddito-note-box" id="reddito_note_box2">
+                    <textarea
+                        id="reddito_note2"
+                        placeholder="Nota aggiuntiva sul reddito / trasferta..."
+                    ></textarea>
+                </div>
             </div>
 
         </div>
@@ -3263,6 +3399,405 @@ function formatCurrency(value) {
         ' €';
 
 }
+
+
+function formatMoneyInputLive(input) {
+
+    if (!input) {
+        return;
+    }
+
+    const oldValue =
+        String(input.value || '');
+
+    const oldCursor =
+        typeof input.selectionStart === 'number'
+            ? input.selectionStart
+            : oldValue.length;
+
+    /*
+     * Quante cifre erano presenti prima del cursore?
+     * Serve per rimettere il cursore nello stesso punto logico
+     * anche dopo l'aggiunta dei separatori delle migliaia.
+     */
+    const digitsBeforeCursor =
+        oldValue
+            .slice(0, oldCursor)
+            .replace(/\D/g, '')
+            .length;
+
+    /*
+     * Manteniamo una sola virgola decimale.
+     * I punti già presenti vengono considerati separatori migliaia
+     * e quindi rimossi prima di riformattare.
+     */
+    let cleaned =
+        oldValue
+            .replace(/\./g, '')
+            .replace(/[^\d,]/g, '');
+
+    const firstComma =
+        cleaned.indexOf(',');
+
+    let integerPart =
+        firstComma >= 0
+            ? cleaned.slice(0, firstComma)
+            : cleaned;
+
+    let decimalPart =
+        firstComma >= 0
+            ? cleaned
+                .slice(firstComma + 1)
+                .replace(/,/g, '')
+            : '';
+
+    /*
+     * Evitiamo zeri iniziali inutili, ma lasciamo "0"
+     * quando l'intero sarebbe vuoto.
+     */
+    integerPart =
+        integerPart
+            .replace(/^0+(?=\d)/, '');
+
+    if (!integerPart && firstComma < 0) {
+        input.value = '';
+        return;
+    }
+
+    if (!integerPart) {
+        integerPart = '0';
+    }
+
+    /*
+     * Formattazione manuale: funziona già da 4 cifre.
+     * 1000 -> 1.000
+     * 10000 -> 10.000
+     */
+    const formattedInteger =
+        integerPart.replace(
+            /\B(?=(\d{3})+(?!\d))/g,
+            '.'
+        );
+
+    /*
+     * Massimo due decimali per gli importi.
+     */
+    decimalPart =
+        decimalPart.slice(0, 2);
+
+    const newValue =
+        formattedInteger
+        +
+        (
+            firstComma >= 0
+                ? ',' + decimalPart
+                : ''
+        );
+
+    input.value =
+        newValue;
+
+    /*
+     * Riposizionamento cursore:
+     * cerchiamo la posizione dopo lo stesso numero di cifre
+     * che erano presenti prima del cursore.
+     */
+    let digitCounter = 0;
+    let newCursor = 0;
+
+    for (
+        let i = 0;
+        i < newValue.length;
+        i++
+    ) {
+        if (/\d/.test(newValue[i])) {
+            digitCounter++;
+        }
+
+        newCursor = i + 1;
+
+        if (
+            digitCounter >=
+            digitsBeforeCursor
+        ) {
+            break;
+        }
+    }
+
+    /*
+     * Se il cursore originale era dopo la virgola,
+     * manteniamolo nella parte decimale.
+     */
+    const commaBeforeCursor =
+        oldValue
+            .slice(0, oldCursor)
+            .includes(',');
+
+    if (
+        commaBeforeCursor &&
+        newValue.includes(',')
+    ) {
+        const commaPos =
+            newValue.indexOf(',');
+
+        const decimalDigitsBeforeCursor =
+            oldValue
+                .slice(
+                    oldValue.indexOf(',') + 1,
+                    oldCursor
+                )
+                .replace(/\D/g, '')
+                .length;
+
+        newCursor =
+            Math.min(
+                newValue.length,
+                commaPos +
+                1 +
+                decimalDigitsBeforeCursor
+            );
+    }
+
+    try {
+        input.setSelectionRange(
+            newCursor,
+            newCursor
+        );
+    } catch (_) {}
+}
+
+function isMoneyField(input) {
+
+    if (
+        !input ||
+        input.tagName !== 'INPUT'
+    ) {
+        return false;
+    }
+
+    const type =
+        String(
+            input.type || 'text'
+        ).toLowerCase();
+
+    if (
+        ![
+            'text',
+            'tel',
+            'search',
+            'number'
+        ].includes(type)
+    ) {
+        return false;
+    }
+
+    /*
+     * Campi che NON devono essere formattati come denaro.
+     */
+    const id =
+        String(
+            input.id || ''
+        ).toLowerCase();
+
+    const excludedIdParts = [
+        'cell',
+        'telefono',
+        'phone',
+        'cf',
+        'codice',
+        'cap',
+        'data',
+        'anno',
+        'durata',
+        'tasso',
+        'spread',
+        'irs',
+        'euribor',
+        'percent',
+        'mediazione_percent',
+        'whatsapp',
+        'wa_',
+        'email'
+    ];
+
+    if (
+        excludedIdParts.some(
+            part => id.includes(part)
+        )
+    ) {
+        return false;
+    }
+
+    /*
+     * Classi dinamiche già presenti nel gestionale.
+     */
+    if (
+        input.classList.contains(
+            'fin-rata'
+        )
+        ||
+        input.classList.contains(
+            'fitto-importo'
+        )
+    ) {
+        return true;
+    }
+
+    /*
+     * Identificatori tipici dei campi monetari.
+     */
+    const moneyIdParts = [
+        'reddito',
+        'importo',
+        'rata',
+        'valore',
+        'prezzo',
+        'costo',
+        'perizia',
+        'istr_banca',
+        'mantenimento',
+        'assegno',
+        'compravendita',
+        'caparra',
+        'saldo',
+        'fitto',
+        'canone',
+        'mutuo_importo'
+    ];
+
+    if (
+        moneyIdParts.some(
+            part => id.includes(part)
+        )
+    ) {
+        return true;
+    }
+
+    /*
+     * Fallback intelligente:
+     * controlliamo il testo della label del form-group.
+     * In questo modo anche futuri campi economici vengono
+     * riconosciuti senza doverli aggiungere a mano.
+     */
+    const formGroup =
+        input.closest(
+            '.form-group'
+        );
+
+    const labelText =
+        String(
+            formGroup
+                ?.querySelector('label')
+                ?.textContent || ''
+        )
+        .toLowerCase();
+
+    const excludedLabelWords = [
+        'tasso',
+        'spread',
+        'irs',
+        'euribor',
+        'durata',
+        'anni',
+        'cellulare',
+        'telefono',
+        'codice fiscale',
+        'data',
+        'percentuale',
+        '%'
+    ];
+
+    if (
+        excludedLabelWords.some(
+            word =>
+                labelText.includes(
+                    word
+                )
+        )
+    ) {
+        return false;
+    }
+
+    const moneyLabelWords = [
+        '€',
+        'reddito',
+        'importo',
+        'rata',
+        'valore',
+        'prezzo',
+        'costo',
+        'perizia',
+        'istruttoria',
+        'mantenimento',
+        'assegno',
+        'compravendita',
+        'caparra',
+        'saldo',
+        'fitto',
+        'canone'
+    ];
+
+    return moneyLabelWords.some(
+        word =>
+            labelText.includes(
+                word
+            )
+    );
+}
+
+function initLiveMoneyFormatting() {
+
+    /*
+     * Listener unico globale:
+     * funziona sia sui campi presenti subito,
+     * sia sui campi creati dinamicamente in futuro.
+     */
+    document.addEventListener(
+        'input',
+        event => {
+
+            const target =
+                event.target;
+
+            if (
+                isMoneyField(
+                    target
+                )
+            ) {
+                formatMoneyInputLive(
+                    target
+                );
+            }
+        }
+    );
+
+    /*
+     * Anche i valori già presenti quando la pagina si apre
+     * vengono normalizzati.
+     */
+    document
+        .querySelectorAll(
+            'input'
+        )
+        .forEach(
+            input => {
+
+                if (
+                    isMoneyField(
+                        input
+                    )
+                    &&
+                    input.value
+                ) {
+                    formatMoneyInputLive(
+                        input
+                    );
+                }
+            }
+        );
+}
+
+
 
 function nomeCompleto(numero) {
 
@@ -4887,7 +5422,7 @@ function finanziamentiText() {
 
             }
         )
-        .join(' | ');
+        .join('\n');
 
 }
 
@@ -6001,7 +6536,7 @@ function buildChecklistFromSnapshot(
     }
 
     sections.push(
-        `${EMOJI.persona} ANAGRAFICA`
+        `${EMOJI.persona} ANAGRAFICA – DOCUMENTI PER TUTTI I RICHIEDENTI`
         +
         '\n\n'
         +
@@ -6769,9 +7304,31 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        professione_richiedente_1:
+            V(
+                'cliente_professione',
+                ''
+            ),
+
         reddito_richiedente_1:
             V(
                 'cliente_reddito',
+                ''
+            ),
+
+        reddito_calcolato_cu_unico_r1:
+            document.getElementById(
+                'reddito_calcolato_doc1'
+            )?.checked === true,
+
+        trasferta_italia_r1:
+            document.getElementById(
+                'trasferta_italia1'
+            )?.checked === true,
+
+        nota_reddito_r1:
+            V(
+                'reddito_note1',
                 ''
             ),
 
@@ -6781,9 +7338,31 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        professione_richiedente_2:
+            V(
+                'cliente2_professione',
+                ''
+            ),
+
         reddito_richiedente_2:
             V(
                 'cliente2_reddito',
+                ''
+            ),
+
+        reddito_calcolato_cu_unico_r2:
+            document.getElementById(
+                'reddito_calcolato_doc2'
+            )?.checked === true,
+
+        trasferta_italia_r2:
+            document.getElementById(
+                'trasferta_italia2'
+            )?.checked === true,
+
+        nota_reddito_r2:
+            V(
+                'reddito_note2',
                 ''
             ),
 
@@ -7741,7 +8320,7 @@ function emailRowDynamic(label,value,options = {}) {
         <tr>
             <td
                 style="
-                    padding:8px 0;
+                    padding:8px 18px 8px 0;
                     border-bottom:1px solid #edf0f3;
                     color:#78828c;
                     font-size:12px;
@@ -7754,7 +8333,7 @@ function emailRowDynamic(label,value,options = {}) {
 
             <td
                 style="
-                    padding:8px 0;
+                    padding:8px 0 8px 8px;
                     border-bottom:1px solid #edf0f3;
                     font-size:13px;
                     font-weight:bold;
@@ -7767,6 +8346,146 @@ function emailRowDynamic(label,value,options = {}) {
         </tr>
     `;
 
+}
+
+
+function emailRedditoValue(numero, redditoFormattato) {
+
+    if (!emailHasValue(redditoFormattato)) {
+        return '';
+    }
+
+    const calcolato =
+        document.getElementById(
+            `reddito_calcolato_doc${numero}`
+        )?.checked === true;
+
+    const trasferta =
+        document.getElementById(
+            `trasferta_italia${numero}`
+        )?.checked === true;
+
+    const nota =
+        V(
+            `reddito_note${numero}`,
+            ''
+        );
+
+    const tags = [];
+
+    if (calcolato) {
+        tags.push(`
+            <span style="
+                display:inline-block;
+                margin:7px 6px 0 0;
+                padding:4px 7px;
+                border-radius:999px;
+                background:#e8f6ee;
+                color:#087a4b;
+                font-size:9px;
+                font-weight:bold;
+            ">
+                ✓ Calcolato da CU / UNICO
+            </span>
+        `);
+    }
+
+    if (trasferta) {
+        tags.push(`
+            <span style="
+                display:inline-block;
+                margin:7px 6px 0 0;
+                padding:4px 7px;
+                border-radius:999px;
+                background:#eef3ff;
+                color:#002d72;
+                font-size:9px;
+                font-weight:bold;
+            ">
+                ✓ Trasferta Italia
+            </span>
+        `);
+    }
+
+    const noteHtml =
+        emailHasValue(nota)
+            ?
+            `
+            <div style="
+                margin-top:8px;
+                padding:8px 10px;
+                border-left:3px solid #C99700;
+                background:#fff9e8;
+                color:#5f6870;
+                font-size:10px;
+                line-height:1.5;
+                font-weight:normal;
+            ">
+                <strong>Nota:</strong>
+                ${safeHtml(nota)}
+            </div>
+            `
+            :
+            '';
+
+    return `
+        <div style="
+            color:#002d72;
+            font-size:18px;
+            font-weight:bold;
+        ">
+            ${safeHtml(redditoFormattato)}
+        </div>
+
+        ${tags.join('')}
+        ${noteHtml}
+    `;
+}
+
+function finanziamentiEmailHtml() {
+
+    const finanziamenti =
+        getFinanziamentiDettaglio();
+
+    if (!finanziamenti.length) {
+        return '-';
+    }
+
+    return finanziamenti
+        .map(
+            (fin,index) => `
+                <div style="
+                    padding:${index === 0 ? '0' : '10px 0 0'};
+                    margin:${index === 0 ? '0' : '10px 0 0'};
+                    border-top:${index === 0 ? '0' : '1px solid #e5eaf0'};
+                    line-height:1.55;
+                ">
+                    <div style="
+                        color:#002d72;
+                        font-weight:bold;
+                        margin-bottom:3px;
+                    ">
+                        ${index + 1}. ${safeHtml(fin.istituto || 'Istituto non indicato')}
+                    </div>
+
+                    <div style="font-size:11px;color:#4d5861;">
+                        <strong>Rata:</strong>
+                        ${fin.rata ? safeHtml(formatEuro(fin.rata)) : '-'}
+                    </div>
+
+                    <div style="font-size:11px;color:#4d5861;">
+                        <strong>Scadenza:</strong>
+                        ${safeHtml(fin.scadenza || '-')}
+                    </div>
+
+                    <div style="font-size:11px;color:#4d5861;">
+                        <strong>Finalità:</strong>
+                        ${safeHtml(fin.finalita || '-')}
+                    </div>
+                </div>
+            `
+        )
+        .join('');
 }
 
 function emailMiniCard(label,value,width = '50%') {
@@ -8538,6 +9257,22 @@ function buildEmailHtml(
             :
             '';
 
+    const professione1 =
+        V(
+            'cliente_professione',
+            ''
+        );
+
+    const professione2 =
+        nome2
+            ?
+            V(
+                'cliente2_professione',
+                ''
+            )
+            :
+            '';
+
     const reddito1 =
         emailMoney(
             V(
@@ -9205,15 +9940,23 @@ ${emailRowDynamic(
 )}
 
 ${emailRowDynamic(
-    'Professione',
+    'Contratto',
     lavoro1
 )}
 
 ${emailRowDynamic(
+    'Professione',
+    professione1
+)}
+
+${emailRowDynamic(
     'Reddito netto',
-    reddito1,
+    emailRedditoValue(
+        1,
+        reddito1
+    ),
     {
-        highlight:true
+        raw:true
     }
 )}
 
@@ -9290,15 +10033,23 @@ ${emailRowDynamic(
 )}
 
 ${emailRowDynamic(
-    'Professione',
+    'Contratto',
     lavoro2
 )}
 
 ${emailRowDynamic(
+    'Professione',
+    professione2
+)}
+
+${emailRowDynamic(
     'Reddito netto',
-    reddito2,
+    emailRedditoValue(
+        2,
+        reddito2
+    ),
     {
-        highlight:true
+        raw:true
     }
 )}
 
@@ -9767,7 +10518,10 @@ ${
         ?
         emailRowDynamic(
             'Finanziamenti in corso',
-            finanziamentiText()
+            finanziamentiEmailHtml(),
+            {
+                raw:true
+            }
         )
         :
         ''
@@ -10264,6 +11018,47 @@ ${
 window.addEventListener(
 'DOMContentLoaded',
 () => {
+
+
+    initLiveMoneyFormatting();
+
+    document
+        .querySelectorAll(
+            '.btn-reddito-note'
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    'click',
+                    () => {
+
+                        const box =
+                            document.getElementById(
+                                button.dataset.target
+                            );
+
+                        if (!box) {
+                            return;
+                        }
+
+                        const open =
+                            box.style.display ===
+                            'block';
+
+                        box.style.display =
+                            open
+                                ? 'none'
+                                : 'block';
+
+                        button.textContent =
+                            open
+                                ? '+'
+                                : '−';
+                    }
+                );
+            }
+        );
 
     /* ======================================================
        DATA
