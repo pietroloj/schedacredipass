@@ -20,40 +20,338 @@ function goLogin() {
 function injectBadge(session) {
     if (document.getElementById("credipass-auth-badge")) return;
 
-    const el = document.createElement("div");
-    el.id = "credipass-auth-badge";
-    el.style.cssText =
-        "position:fixed;top:10px;right:10px;z-index:50000;" +
-        "display:flex;align-items:center;gap:8px;background:#fff;" +
-        "border:1px solid #dfe5ec;border-left:4px solid #C99700;" +
-        "box-shadow:0 5px 18px rgba(0,0,0,.15);border-radius:9px;" +
-        "padding:8px 10px;font-family:Poppins,Arial,sans-serif;font-size:10px;";
+    const headerActions =
+        document.querySelector(".header-actions");
 
-    el.innerHTML = `
-        <div style="line-height:1.25;max-width:220px">
-            <div style="font-weight:800;color:#002d72">${session.user.email || ""}</div>
-            <div style="font-size:9px;color:#7a838c">${String(session.profile.ruolo || "consulente").toUpperCase()}</div>
-        </div>
-        ${session.isAdmin ? `
-            <a href="/main/gestione-consulenti.html"
-               title="Gestione consulenti"
-               style="color:#002d72;text-decoration:none;font-size:14px;padding:3px">
-                <i class="fas fa-users-cog"></i>
-            </a>` : ""}
-        <button id="credipass-auth-logout" type="button"
-                title="Esci"
-                style="border:0;background:#eef3f8;color:#002d72;border-radius:6px;padding:6px 8px;cursor:pointer">
-            <i class="fas fa-sign-out-alt"></i>
+    const header =
+        document.querySelector(".header");
+
+    const target =
+        headerActions ||
+        header ||
+        document.body;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "credipass-auth-badge";
+
+    if (headerActions) {
+        headerActions.style.display = "flex";
+        headerActions.style.alignItems = "center";
+        headerActions.style.gap = "10px";
+        headerActions.style.flexWrap = "wrap";
+    }
+
+    wrapper.style.cssText = [
+        "position:relative",
+        "display:flex",
+        "align-items:center",
+        "gap:8px",
+        "min-width:0",
+        "max-width:290px",
+        "padding:7px 9px",
+        "border-radius:10px",
+        "background:rgba(255,255,255,.10)",
+        "border:1px solid rgba(255,255,255,.18)",
+        "border-left:4px solid #C99700",
+        "box-shadow:0 4px 12px rgba(0,0,0,.10)",
+        "font-family:Poppins,Arial,sans-serif",
+        "z-index:30",
+        "flex:0 1 auto"
+    ].join(";");
+
+    if (!headerActions && header) {
+        wrapper.style.marginLeft = "auto";
+    }
+
+    if (!headerActions && !header) {
+        wrapper.style.position = "fixed";
+        wrapper.style.top = "12px";
+        wrapper.style.right = "20px";
+        wrapper.style.maxWidth = "calc(100vw - 40px)";
+        wrapper.style.background = "#002d72";
+    }
+
+    const nomeCompleto =
+        [
+            session.profile?.nome,
+            session.profile?.cognome
+        ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    const displayName =
+        nomeCompleto ||
+        session.user?.displayName ||
+        session.user?.email ||
+        "Consulente";
+
+    const email =
+        session.user?.email || "";
+
+    const ruolo =
+        String(
+            session.profile?.ruolo || "consulente"
+        ).toUpperCase();
+
+    const iniziale =
+        String(displayName || "C")
+            .trim()
+            .charAt(0)
+            .toUpperCase();
+
+    wrapper.innerHTML = `
+        <button
+            id="credipass-user-menu-button"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            style="
+                width:100%;
+                border:0;
+                background:transparent;
+                padding:0;
+                margin:0;
+                color:#fff;
+                display:flex;
+                align-items:center;
+                gap:8px;
+                cursor:pointer;
+                font-family:inherit;
+                text-align:left;
+                min-width:0;
+            "
+        >
+            <div style="
+                width:30px;
+                height:30px;
+                border-radius:50%;
+                background:#C99700;
+                color:#002d72;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-weight:800;
+                flex-shrink:0;
+                font-size:12px;
+            ">
+                ${iniziale}
+            </div>
+
+            <div style="
+                min-width:0;
+                flex:1;
+                line-height:1.2;
+            ">
+                <div style="
+                    font-size:10px;
+                    font-weight:800;
+                    color:#fff;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    max-width:180px;
+                ">
+                    ${displayName}
+                </div>
+
+                <div style="
+                    margin-top:2px;
+                    font-size:8px;
+                    font-weight:800;
+                    color:#C99700;
+                    letter-spacing:.4px;
+                ">
+                    ${ruolo}
+                </div>
+            </div>
+
+            <i
+                class="fas fa-chevron-down"
+                id="credipass-user-menu-chevron"
+                style="
+                    font-size:9px;
+                    color:#fff;
+                    flex-shrink:0;
+                    transition:transform .2s ease;
+                "
+            ></i>
         </button>
+
+        <div
+            id="credipass-user-menu"
+            style="
+                display:none;
+                position:absolute;
+                top:calc(100% + 8px);
+                right:0;
+                width:240px;
+                background:#fff;
+                border:1px solid #dfe5ec;
+                border-radius:10px;
+                box-shadow:0 12px 30px rgba(0,0,0,.18);
+                overflow:hidden;
+                z-index:50000;
+            "
+        >
+            <div style="
+                padding:12px 14px;
+                background:#f7f9fc;
+                border-bottom:1px solid #e8edf2;
+            ">
+                <div style="
+                    color:#002d72;
+                    font-size:10px;
+                    font-weight:800;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                ">
+                    ${displayName}
+                </div>
+
+                <div style="
+                    margin-top:3px;
+                    color:#7a838c;
+                    font-size:8px;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                ">
+                    ${email}
+                </div>
+            </div>
+
+            ${session.isAdmin ? `
+                <a
+                    href="/main/gestione-consulenti.html"
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:9px;
+                        padding:11px 14px;
+                        color:#002d72;
+                        text-decoration:none;
+                        font-size:9px;
+                        font-weight:700;
+                        border-bottom:1px solid #eef1f4;
+                    "
+                >
+                    <i class="fas fa-users-cog" style="width:14px;text-align:center;"></i>
+                    Gestione consulenti
+                </a>
+            ` : ""}
+
+            <button
+                id="credipass-auth-logout"
+                type="button"
+                style="
+                    width:100%;
+                    display:flex;
+                    align-items:center;
+                    gap:9px;
+                    padding:11px 14px;
+                    border:0;
+                    background:#fff;
+                    color:#b42318;
+                    font-family:inherit;
+                    font-size:9px;
+                    font-weight:800;
+                    cursor:pointer;
+                    text-align:left;
+                "
+            >
+                <i class="fas fa-sign-out-alt" style="width:14px;text-align:center;"></i>
+                Disconnetti
+            </button>
+        </div>
     `;
 
-    document.body.appendChild(el);
+    if (headerActions) {
+        headerActions.prepend(wrapper);
+    } else {
+        target.appendChild(wrapper);
+    }
 
-    document.getElementById("credipass-auth-logout")
-        ?.addEventListener("click", async () => {
-            await firebase.auth().signOut();
-            window.location.replace(LOGIN);
-        });
+    const menuButton =
+        document.getElementById(
+            "credipass-user-menu-button"
+        );
+
+    const menu =
+        document.getElementById(
+            "credipass-user-menu"
+        );
+
+    const chevron =
+        document.getElementById(
+            "credipass-user-menu-chevron"
+        );
+
+    function setMenu(open) {
+        if (!menu || !menuButton) return;
+
+        menu.style.display =
+            open ? "block" : "none";
+
+        menuButton.setAttribute(
+            "aria-expanded",
+            open ? "true" : "false"
+        );
+
+        if (chevron) {
+            chevron.style.transform =
+                open ? "rotate(180deg)" : "rotate(0deg)";
+        }
+    }
+
+    menuButton?.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+
+            const isOpen =
+                menu &&
+                menu.style.display === "block";
+
+            setMenu(!isOpen);
+        }
+    );
+
+    document.addEventListener(
+        "click",
+        event => {
+            if (
+                wrapper &&
+                !wrapper.contains(event.target)
+            ) {
+                setMenu(false);
+            }
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (event.key === "Escape") {
+                setMenu(false);
+            }
+        }
+    );
+
+    document.getElementById(
+        "credipass-auth-logout"
+    )
+    ?.addEventListener(
+        "click",
+        async () => {
+            try {
+                await firebase.auth().signOut();
+            } finally {
+                window.location.replace(LOGIN);
+            }
+        }
+    );
 }
 
 async function ensureProfile(user) {
