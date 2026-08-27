@@ -226,6 +226,25 @@ function injectBadge(session) {
                 </div>
             </div>
 
+            <a
+                href="/main/ricerca-clienti.html"
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:9px;
+                    padding:11px 14px;
+                    color:#002d72;
+                    text-decoration:none;
+                    font-size:9px;
+                    font-weight:700;
+                    border-bottom:1px solid #eef1f4;
+                "
+            >
+                <i class="fas fa-folder-open"
+                   style="width:14px;text-align:center;"></i>
+                Archivio pratiche
+            </a>
+
             ${session.isAdmin ? `
                 <a
                     href="/main/gestione-consulenti.html"
