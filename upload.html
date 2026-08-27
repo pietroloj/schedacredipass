@@ -966,6 +966,34 @@ body {
     }
 }
 
+
+/* ===== NUOVA VERSIONE DOCUMENTO ===== */
+.doc-row.version-requested {
+    background: #fffaf0;
+    border-color: #e4c65e;
+    box-shadow: inset 4px 0 0 #C99700;
+}
+
+.version-request-note {
+    display: none;
+    margin-top: 7px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background: #fff1bf;
+    color: #6d5605;
+    font-size: 9px;
+    line-height: 1.45;
+    font-weight: 700;
+}
+
+.doc-row.version-requested .version-request-note {
+    display: block;
+}
+
+.doc-row.version-requested .status-badge {
+    display: none !important;
+}
+
 </style>
 </head>
 
@@ -1542,11 +1570,17 @@ function renderStatoDocumentiCliente(d = {}) {
             const fieldName = `doc_${doc.code}`;
             const caricato = d[fieldName] === true;
             const richiesto = richiestiSet.has(doc.code);
+            const nuovaVersione = versioneRichiesta(d, doc.code);
 
-            if (!caricato && !richiesto) continue;
+            if (!caricato && !richiesto && !nuovaVersione) continue;
 
-            const stato = caricato ? "ok" : (richiesto ? "wait" : "pending");
-            const label = caricato ? "Ricevuto" : (richiesto ? "Da caricare" : "In verifica");
+            const stato = nuovaVersione
+                ? "wait"
+                : (caricato ? "ok" : (richiesto ? "wait" : "pending"));
+
+            const label = nuovaVersione
+                ? "Nuova versione richiesta"
+                : (caricato ? "Ricevuto" : (richiesto ? "Da caricare" : "In verifica"));
 
             items.push(`
                 <div class="client-doc-status-item">
@@ -1562,80 +1596,61 @@ function renderStatoDocumentiCliente(d = {}) {
         : `<div style="font-size:10px;color:#999;">Nessun documento ancora registrato nel fascicolo.</div>`;
 }
 
-function avviaMessaggiCliente() {
-    db.collection("pratiche_mutuo")
-        .doc(clienteId)
-        .collection("messaggi_cliente")
-        .orderBy("data", "desc")
-        .limit(20)
-        .onSnapshot(snapshot => {
-            const target = document.getElementById("clienteMessaggi");
-            if (!target) return;
+function renderMessaggiDaPratica(dati = {}) {
+    const target = document.getElementById("clienteMessaggi");
+    if (!target) return;
 
-            const rows = snapshot.docs
-                .map(doc => doc.data() || {})
-                .filter(x => x.visibile_cliente !== false);
+    const rows = (Array.isArray(dati.messaggi_cliente_log)
+        ? [...dati.messaggi_cliente_log]
+        : [])
+        .filter(x => x && x.visibile_cliente !== false)
+        .sort((a, b) => Number(b.data_ms || 0) - Number(a.data_ms || 0))
+        .slice(0, 20);
 
-            if (!rows.length) {
-                target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun messaggio disponibile.</div>`;
-                return;
-            }
+    if (!rows.length) {
+        target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun messaggio disponibile.</div>`;
+        return;
+    }
 
-            target.innerHTML = rows.map(m => `
-                <div class="client-message-item">
-                    <div class="client-message-date">${escapeHtml(formatTimestampCliente(m.data) || "Aggiornamento recente")}</div>
-                    <div class="client-message-title">${escapeHtml(m.titolo || "Aggiornamento")}</div>
-                    <div class="client-message-text">${escapeHtml(m.testo || "")}</div>
-                </div>
-            `).join("");
-        }, error => {
-            console.error("Errore messaggi cliente:", error);
-        });
+    target.innerHTML = rows.map(m => `
+        <div class="client-message-item">
+            <div class="client-message-date">${escapeHtml(formatTimestampCliente(m.data_ms) || "Aggiornamento recente")}</div>
+            <div class="client-message-title">${escapeHtml(m.titolo || "Aggiornamento")}</div>
+            <div class="client-message-text">${escapeHtml(m.testo || "")}</div>
+        </div>
+    `).join("");
 }
 
-function avviaAppuntamentiCliente() {
-    db.collection("pratiche_mutuo")
-        .doc(clienteId)
-        .collection("appuntamenti_cliente")
-        .orderBy("data", "asc")
-        .limit(20)
-        .onSnapshot(snapshot => {
-            const target = document.getElementById("clienteAppuntamenti");
-            if (!target) return;
 
-            const now = new Date();
+function renderAppuntamentiDaPratica(dati = {}) {
+    const target = document.getElementById("clienteAppuntamenti");
+    if (!target) return;
 
-            const rows = snapshot.docs
-                .map(doc => doc.data() || {})
-                .filter(x => x.visibile_cliente !== false)
-                .filter(x => {
-                    if (!x.data) return true;
-                    try {
-                        const d = typeof x.data.toDate === "function" ? x.data.toDate() : new Date(x.data);
-                        return d >= new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                    } catch (_) {
-                        return true;
-                    }
-                });
+    const now = Date.now();
 
-            if (!rows.length) {
-                target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun appuntamento programmato.</div>`;
-                return;
-            }
+    const rows = (Array.isArray(dati.appuntamenti_cliente_log)
+        ? [...dati.appuntamenti_cliente_log]
+        : [])
+        .filter(x => x && x.visibile_cliente !== false)
+        .filter(x => !x.data_ms || Number(x.data_ms) >= now - 24 * 60 * 60 * 1000)
+        .sort((a, b) => Number(a.data_ms || 0) - Number(b.data_ms || 0))
+        .slice(0, 20);
 
-            target.innerHTML = rows.map(a => `
-                <div class="client-appointment-item">
-                    <div class="client-appointment-date">${escapeHtml(formatTimestampCliente(a.data) || "")}</div>
-                    <div class="client-appointment-title">${escapeHtml(a.tipo || "Appuntamento")}</div>
-                    <div class="client-appointment-meta">
-                        ${a.luogo ? `<div><i class="fas fa-location-dot"></i> ${escapeHtml(a.luogo)}</div>` : ""}
-                        ${a.note ? `<div>${escapeHtml(a.note)}</div>` : ""}
-                    </div>
-                </div>
-            `).join("");
-        }, error => {
-            console.error("Errore appuntamenti cliente:", error);
-        });
+    if (!rows.length) {
+        target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun appuntamento programmato.</div>`;
+        return;
+    }
+
+    target.innerHTML = rows.map(a => `
+        <div class="client-appointment-item">
+            <div class="client-appointment-date">${escapeHtml(formatTimestampCliente(a.data_ms) || "")}</div>
+            <div class="client-appointment-title">${escapeHtml(a.tipo || "Appuntamento")}</div>
+            <div class="client-appointment-meta">
+                ${a.luogo ? `<div><i class="fas fa-location-dot"></i> ${escapeHtml(a.luogo)}</div>` : ""}
+                ${a.note ? `<div>${escapeHtml(a.note)}</div>` : ""}
+            </div>
+        </div>
+    `).join("");
 }
 
 
@@ -1689,6 +1704,9 @@ function aggiornaPortaleCliente(dati = {}) {
     renderOperazioneMutuoCliente(dati);
     renderAzioniRichiesteCliente(dati);
     renderStatoDocumentiCliente(dati);
+    renderTimelineDaPratica(dati);
+    renderMessaggiDaPratica(dati);
+    renderAppuntamentiDaPratica(dati);
     aggiornaStepperCliente(stato);
 }
 
@@ -1745,6 +1763,83 @@ function titoloDocumentoDaCodice(codice) {
     return raw;
 }
 
+
+function mostraDocumentoNelPortale(codice) {
+    const raw = String(codice || "").replace(/^doc_/, "");
+    const row = document.getElementById(`row_doc_${raw}`);
+    if (!row) return;
+
+    row.classList.add("show-flex");
+
+    const sectionId = row.getAttribute("data-section");
+    if (sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) section.classList.add("show-block");
+    }
+}
+
+function versioneRichiesta(d = {}, codice) {
+    const richieste = Array.isArray(d.documenti_versione_richiesta)
+        ? d.documenti_versione_richiesta
+        : [];
+
+    return richieste.includes(
+        String(codice || "").replace(/^doc_/, "")
+    );
+}
+
+function applicaStatoDocumentoRiga(d = {}, codice) {
+    const raw = String(codice || "").replace(/^doc_/, "");
+    const fieldName = `doc_${raw}`;
+    const row = document.getElementById(`row_${fieldName}`);
+
+    if (!row) return;
+
+    const caricato = d[fieldName] === true || d[raw] === true;
+    const nuovaVersione = versioneRichiesta(d, raw);
+
+    if (nuovaVersione) {
+        mostraDocumentoNelPortale(raw);
+
+        row.classList.remove("caricato");
+        row.classList.add("version-requested");
+
+        const actions = row.querySelector(".actions-wrapper");
+        if (actions) actions.style.display = "flex";
+
+        const badge = row.querySelector(".status-badge");
+        if (badge) badge.style.display = "none";
+
+        const note = document.getElementById(`version_note_${fieldName}`);
+        const motivi = d.documenti_versione_motivi || {};
+        if (note && motivi[raw]) {
+            note.innerHTML =
+                `<i class="fas fa-rotate"></i> ` +
+                `È richiesta una nuova versione. ` +
+                `<strong>Motivo:</strong> ${escapeHtml(motivi[raw])}`;
+        }
+
+        return;
+    }
+
+    row.classList.remove("version-requested");
+
+    if (caricato) {
+        row.classList.add("caricato");
+
+        const actions = row.querySelector(".actions-wrapper");
+        if (actions) actions.style.display = "none";
+
+        const badge = row.querySelector(".status-badge");
+        if (badge) badge.style.display = "inline-block";
+
+        const fname = document.getElementById(`filename_camera_${fieldName}`);
+        if (fname) fname.style.display = "none";
+    } else {
+        row.classList.remove("caricato");
+    }
+}
+
 function renderAzioniRichiesteCliente(d = {}) {
     const target = document.getElementById("clienteAzioniRichieste");
     if (!target) return;
@@ -1764,12 +1859,27 @@ function renderAzioniRichiesteCliente(d = {}) {
     }
 
     const html = richiesti.map(code => {
-        const fieldName = String(code).startsWith("doc_") ? String(code) : `doc_${code}`;
-        const done = d[fieldName] === true || d[code] === true;
+        const raw = String(code).replace(/^doc_/, "");
+        const fieldName = `doc_${raw}`;
+        const nuovaVersione = versioneRichiesta(d, raw);
+
+        const presente =
+            d[fieldName] === true ||
+            d[raw] === true;
+
+        const done =
+            presente &&
+            !nuovaVersione;
+
         return `
             <div class="portal-action-item ${done ? "done" : ""}">
                 <i class="fas ${done ? "fa-circle-check" : "fa-circle-exclamation"}"></i>
-                <span>${escapeHtml(titoloDocumentoDaCodice(code))}</span>
+                <span>
+                    ${escapeHtml(titoloDocumentoDaCodice(raw))}
+                    ${nuovaVersione
+                        ? `<small style="display:block;font-weight:600;margin-top:2px;">Nuova versione richiesta</small>`
+                        : ""}
+                </span>
             </div>
         `;
     }).join("");
@@ -1782,66 +1892,39 @@ function renderAzioniRichiesteCliente(d = {}) {
     `;
 }
 
-function avviaTimelineCliente() {
-    db.collection("pratiche_mutuo")
-        .doc(clienteId)
-        .collection("attivita_cliente")
-        .orderBy("data", "desc")
-        .limit(50)
-        .onSnapshot(snapshot => {
-            const target = document.getElementById("clienteTimeline");
-            if (!target) return;
+function renderTimelineDaPratica(dati = {}) {
+    const target = document.getElementById("clienteTimeline");
+    if (!target) return;
 
-            if (snapshot.empty) {
-                target.innerHTML = `
-                    <div class="timeline-item-client">
-                        <div class="timeline-dot-client"><i class="fas fa-folder-open"></i></div>
-                        <div class="timeline-date-client">Pratica in lavorazione</div>
-                        <div class="timeline-title-client">Fascicolo disponibile</div>
-                        <div class="timeline-desc-client">Qui compariranno gli aggiornamenti della pratica.</div>
-                    </div>
-                `;
-                return;
-            }
+    const eventi = (Array.isArray(dati.attivita_cliente_log)
+        ? [...dati.attivita_cliente_log]
+        : [])
+        .filter(a => a && a.visibile_cliente !== false)
+        .sort((a, b) => Number(b.data_ms || 0) - Number(a.data_ms || 0))
+        .slice(0, 50);
 
-            const eventiVisibili = snapshot.docs
-                .map(doc => doc.data() || {})
-                .filter(a => a.visibile_cliente !== false);
+    if (!eventi.length) {
+        target.innerHTML = `
+            <div class="timeline-item-client">
+                <div class="timeline-dot-client"><i class="fas fa-folder-open"></i></div>
+                <div class="timeline-date-client">Pratica in lavorazione</div>
+                <div class="timeline-title-client">Fascicolo disponibile</div>
+                <div class="timeline-desc-client">Qui compariranno gli aggiornamenti della pratica.</div>
+            </div>
+        `;
+        return;
+    }
 
-            if (!eventiVisibili.length) {
-                target.innerHTML = `
-                    <div class="timeline-item-client">
-                        <div class="timeline-dot-client"><i class="fas fa-folder-open"></i></div>
-                        <div class="timeline-date-client">Pratica in lavorazione</div>
-                        <div class="timeline-title-client">Fascicolo disponibile</div>
-                        <div class="timeline-desc-client">Qui compariranno gli aggiornamenti della pratica.</div>
-                    </div>
-                `;
-                return;
-            }
-
-            target.innerHTML = eventiVisibili.map(a => {
-                return `
-                    <div class="timeline-item-client">
-                        <div class="timeline-dot-client">
-                            <i class="fas ${escapeHtml(a.icona || "fa-circle-info")}"></i>
-                        </div>
-                        <div class="timeline-date-client">${escapeHtml(formatTimestampCliente(a.data) || "Aggiornamento recente")}</div>
-                        <div class="timeline-title-client">${escapeHtml(a.titolo || "Aggiornamento pratica")}</div>
-                        ${a.descrizione
-                            ? `<div class="timeline-desc-client">${escapeHtml(a.descrizione)}</div>`
-                            : ""}
-                    </div>
-                `;
-            }).join("");
-        }, error => {
-            console.error("Errore timeline cliente:", error);
-            const target = document.getElementById("clienteTimeline");
-            if (target) {
-                target.innerHTML = `<div style="font-size:10px;color:#999;">Storico temporaneamente non disponibile.</div>`;
-            }
-        });
+    target.innerHTML = eventi.map(a => `
+        <div class="timeline-item-client">
+            <div class="timeline-dot-client"><i class="fas ${escapeHtml(a.icona || "fa-circle-info")}"></i></div>
+            <div class="timeline-date-client">${escapeHtml(formatTimestampCliente(a.data_ms) || "Aggiornamento recente")}</div>
+            <div class="timeline-title-client">${escapeHtml(a.titolo || "Aggiornamento pratica")}</div>
+            ${a.descrizione ? `<div class="timeline-desc-client">${escapeHtml(a.descrizione)}</div>` : ""}
+        </div>
+    `).join("");
 }
+
 
 async function registraAttivitaDaUpload({
     tipo = "documenti",
@@ -1849,23 +1932,29 @@ async function registraAttivitaDaUpload({
     descrizione = "",
     icona = "fa-file-arrow-up"
 }) {
+    const evento = {
+        id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        tipo,
+        titolo,
+        descrizione,
+        origine: "portale_cliente",
+        icona,
+        visibile_cliente: true,
+        data_ms: Date.now()
+    };
+
     try {
         await db.collection("pratiche_mutuo")
             .doc(clienteId)
-            .collection("attivita_cliente")
-            .add({
-                tipo,
-                titolo,
-                descrizione,
-                origine: "portale_cliente",
-                icona,
-                visibile_cliente: true,
-                data: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            .set({
+                attivita_cliente_log:
+                    firebase.firestore.FieldValue.arrayUnion(evento)
+            }, { merge: true });
     } catch (error) {
         console.warn("Impossibile registrare attività portale:", error);
     }
 }
+
 
 const docsStr = urlParams.get("docs") || "";
 const docsRichiesti = docsStr ? docsStr.split(",").map(x => x.trim()).filter(Boolean) : [];
@@ -1960,6 +2049,11 @@ function renderDocumenti() {
                         <span class="doc-title">${escapeHtml(doc.title)} ${infoIcon}</span>
                         ${desc}
                         ${infoBox}
+                        <div class="version-request-note" id="version_note_${fieldName}">
+                            <i class="fas fa-rotate"></i>
+                            È richiesta una nuova versione di questo documento.
+                            Il documento precedente resta conservato nel fascicolo.
+                        </div>
                     </div>
 
                     <div class="actions-wrapper">
@@ -2387,29 +2481,28 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 
     aggiornaPortaleCliente(dati);
 
-    for (const [nomeInput, caricato] of Object.entries(dati)) {
-        if (caricato === true) {
-            const riga = document.getElementById("row_" + nomeInput);
+    const richiestiDB = Array.isArray(dati.elencoDocRichiesti)
+        ? dati.elencoDocRichiesti
+        : [];
 
-            if (riga && riga.classList.contains("show-flex")) {
-                riga.classList.add("caricato");
+    const versioniDB = Array.isArray(dati.documenti_versione_richiesta)
+        ? dati.documenti_versione_richiesta
+        : [];
 
-                const btnWrapper = riga.querySelector(".actions-wrapper");
-                if (btnWrapper) btnWrapper.style.display = "none";
+    [...new Set([...richiestiDB, ...versioniDB])].forEach(code => {
+        mostraDocumentoNelPortale(code);
+    });
 
-                const badge = riga.querySelector(".status-badge");
-                if (badge) badge.style.display = "inline-block";
-
-                const fname = document.getElementById("filename_camera_" + nomeInput);
-                if (fname) fname.style.display = "none";
-            }
+    for (const gruppo of documenti) {
+        for (const doc of gruppo.docs) {
+            applicaStatoDocumentoRiga(dati, doc.code);
         }
     }
 });
 
-avviaTimelineCliente();
-avviaMessaggiCliente();
-avviaAppuntamentiCliente();
+
+
+
 
 document.getElementById("uploadForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -2445,6 +2538,8 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
         nomeCliente: clienteRaw,
         totaleRichiesti: docsRichiesti.length
     };
+
+    const codiciVersioneCaricati = [];
 
     try {
         const analizzaDocumento = functionsFirebase.httpsCallable("analizzaDocumentoAI");
@@ -2509,11 +2604,27 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
             }
 
             aggiornamentiDB[fieldName] = true;
+
+            const codiceRaw = String(fieldName).replace(/^doc_/, "");
+            if (versioneRichiesta(datiPraticaCliente, codiceRaw)) {
+                codiciVersioneCaricati.push(codiceRaw);
+            }
         }
 
-        await db.collection("pratiche_mutuo").doc(clienteId).set(aggiornamentiDB, {
+        const praticaRef = db.collection("pratiche_mutuo").doc(clienteId);
+
+        await praticaRef.set(aggiornamentiDB, {
             merge: true
         });
+
+        for (const codice of codiciVersioneCaricati) {
+            await praticaRef.update({
+                documenti_versione_richiesta:
+                    firebase.firestore.FieldValue.arrayRemove(codice),
+                [`documenti_versione_motivi.${codice}`]:
+                    firebase.firestore.FieldValue.delete()
+            });
+        }
 
         const documentiCaricatiTitoli = filesDaCaricare.map(input => {
             const code = String(input.name || "").replace(/^doc_/, "");
@@ -2521,12 +2632,14 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
         });
 
         await registraAttivitaDaUpload({
-            tipo: "documenti",
-            titolo: "Documentazione caricata",
+            tipo: codiciVersioneCaricati.length ? "nuova_versione_documenti" : "documenti",
+            titolo: codiciVersioneCaricati.length
+                ? "Nuova versione documentazione caricata"
+                : "Documentazione caricata",
             descrizione: documentiCaricatiTitoli.length
                 ? `Documenti forniti: ${documentiCaricatiTitoli.join(", ")}`
                 : "Nuova documentazione caricata nel fascicolo.",
-            icona: "fa-file-arrow-up"
+            icona: codiciVersioneCaricati.length ? "fa-rotate" : "fa-file-arrow-up"
         });
 
         try {
@@ -2537,12 +2650,26 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
                 ? praticaAggiornata.elencoDocRichiesti
                 : [];
 
+            const versioniAncoraRichieste =
+                Array.isArray(praticaAggiornata.documenti_versione_richiesta)
+                    ? praticaAggiornata.documenti_versione_richiesta
+                    : [];
+
             const integrazioneCompleta =
                 praticaAggiornata.richiestaIntegrazioneAttiva === true &&
                 richiesti.length > 0 &&
                 richiesti.every(code => {
-                    const fieldName = String(code).startsWith("doc_") ? String(code) : `doc_${code}`;
-                    return praticaAggiornata[fieldName] === true || praticaAggiornata[code] === true;
+                    const raw = String(code).replace(/^doc_/, "");
+                    const fieldName = `doc_${raw}`;
+
+                    const presente =
+                        praticaAggiornata[fieldName] === true ||
+                        praticaAggiornata[raw] === true;
+
+                    const nuovaVersioneAncoraRichiesta =
+                        versioniAncoraRichieste.includes(raw);
+
+                    return presente && !nuovaVersioneAncoraRichiesta;
                 });
 
             if (integrazioneCompleta) {
