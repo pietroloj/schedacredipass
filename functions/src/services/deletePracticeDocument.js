@@ -1,13 +1,10 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const DELETE_DOCUMENT_PIN =
-  defineSecret("DELETE_DOCUMENT_PIN");
 
 function normalizeCode(value) {
   return String(value || "")
@@ -118,7 +115,6 @@ function getBucket() {
 exports.deletePracticeDocument = onCall(
   {
     region: "us-central1",
-    secrets: [DELETE_DOCUMENT_PIN],
     timeoutSeconds: 60,
     memory: "256MiB",
   },
@@ -138,9 +134,6 @@ exports.deletePracticeDocument = onCall(
       String(data.nomeDocumento || "").trim() ||
       "Documento";
 
-    const suppliedPin =
-      String(data.deletePin || "");
-
     if (!idCliente || !fullPath) {
       throw new HttpsError(
         "invalid-argument",
@@ -148,16 +141,51 @@ exports.deletePracticeDocument = onCall(
       );
     }
 
-    const expectedPin =
-      DELETE_DOCUMENT_PIN.value();
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Accedi come consulente per eliminare documenti."
+      );
+    }
 
-    if (
-      !expectedPin ||
-      suppliedPin !== expectedPin
-    ) {
+    const callerUid = request.auth.uid;
+
+    const profileSnap =
+      await admin.firestore()
+        .collection("consulenti")
+        .doc(callerUid)
+        .get();
+
+    const callerIsAdmin =
+      profileSnap.exists &&
+      String(profileSnap.data()?.ruolo || "").toLowerCase() === "admin" &&
+      profileSnap.data()?.attivo !== false;
+
+    const practiceSnap =
+      await admin.firestore()
+        .collection("pratiche_mutuo")
+        .doc(idCliente)
+        .get();
+
+    if (!practiceSnap.exists) {
+      throw new HttpsError(
+        "not-found",
+        "Pratica non trovata."
+      );
+    }
+
+    const practiceData = practiceSnap.data() || {};
+
+    const ownerUid =
+      practiceData.consulente_uid ||
+      practiceData.workspace_uid ||
+      practiceData.owner_uid ||
+      "";
+
+    if (!callerIsAdmin && ownerUid !== callerUid) {
       throw new HttpsError(
         "permission-denied",
-        "PIN amministrativo non valido."
+        "Non hai i permessi per modificare questa pratica."
       );
     }
 
