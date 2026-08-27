@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Consulenti - Credipass</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<script src="/main/auth-guard.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f6;font-family:Poppins,sans-serif;padding:24px;color:#263238}
+.box{max-width:1050px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 12px 35px rgba(0,0,0,.12)}
+.head{padding:22px 26px;background:#002d72;color:#fff;border-bottom:5px solid #C99700;display:flex;justify-content:space-between}.head h1{font-size:19px;margin:0}.head a{color:#fff;text-decoration:none;font-size:10px;font-weight:800}
+.body{padding:24px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{border:1px solid #e1e6eb;border-radius:10px;padding:17px}h2{font-size:13px;color:#002d72;margin:0 0 13px}
+label{display:block;font-size:8px;font-weight:800;text-transform:uppercase;margin:8px 0 4px;color:#68737e}input,select{width:100%;padding:9px;border:1px solid #dce3ea;border-radius:7px;font-family:inherit;font-size:10px}
+button{border:0;border-radius:7px;background:#002d72;color:#fff;padding:10px 13px;font-family:inherit;font-size:9px;font-weight:800;margin-top:12px;cursor:pointer}.user{padding:9px 0;border-bottom:1px solid #edf0f3;font-size:10px;display:flex;justify-content:space-between}.badge{font-size:8px;font-weight:800;color:#002d72;background:#eef3f8;border-radius:999px;padding:4px 7px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="box"><div class="head"><h1><i class="fas fa-users-cog"></i> Gestione Consulenti</h1><a href="/">TORNA ALLA SCHEDA</a></div>
+<div class="body"><div class="grid">
+<div class="card"><h2>Crea nuovo consulente</h2>
+<label>Nome</label><input id="nome"><label>Cognome</label><input id="cognome"><label>Email</label><input id="email" type="email">
+<label>Password temporanea</label><input id="password" type="password"><label>Ruolo</label><select id="ruolo"><option value="consulente">Consulente</option><option value="segreteria">Segreteria</option><option value="admin">Admin</option></select>
+<button id="create">CREA ACCOUNT + WORKSPACE</button><div id="msg" style="font-size:9px;margin-top:8px"></div></div>
+<div class="card"><h2>Consulenti registrati</h2><div id="users">Caricamento...</div></div>
+</div></div></div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",authDomain:"consulenza-credipass.firebaseapp.com",projectId:"consulenza-credipass",storageBucket:"consulenza-credipass.firebasestorage.app"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),fns=firebase.app().functions("us-central1");
+async function listUsers(){
+ const box=document.getElementById("users");
+ const snap=await db.collection("consulenti").get();
+ box.innerHTML="";
+ if(snap.empty){box.textContent="Nessun utente.";return}
+ const rows=[];snap.forEach(doc=>rows.push(doc.data()||{}));
+ rows.sort((a,b)=>String(a.email||"").localeCompare(String(b.email||"")));
+ rows.forEach(d=>{
+   const el=document.createElement("div");el.className="user";
+   el.innerHTML=`<div><strong>${d.nome||""} ${d.cognome||""}</strong><br><span style="color:#7b858f">${d.email||""}</span></div><span class="badge">${String(d.ruolo||"consulente").toUpperCase()}</span>`;
+   box.appendChild(el);
+ });
+}
+document.getElementById("create").addEventListener("click",async()=>{
+ const d={nome:document.getElementById("nome").value.trim(),cognome:document.getElementById("cognome").value.trim(),email:document.getElementById("email").value.trim(),password:document.getElementById("password").value,ruolo:document.getElementById("ruolo").value};
+ const m=document.getElementById("msg");
+ if(!d.nome||!d.cognome||!d.email||d.password.length<8){m.style.color="#b42318";m.textContent="Completa i campi. Password minimo 8 caratteri.";return}
+ try{await fns.httpsCallable("createConsultant")(d);m.style.color="#23723c";m.textContent="✅ Account e workspace creati.";await listUsers()}
+ catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore creazione."}
+});
+(async()=>{await CredipassAuth.guard({adminOnly:true});await listUsers()})();
+</script></body></html>

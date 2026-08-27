@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Accesso Consulenti - Credipass</title>
+<link rel="icon" href="/images/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<style>
+*{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#eaf0f6;font-family:Poppins,sans-serif;padding:20px}
+.card{width:100%;max-width:430px;background:#fff;border-radius:17px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.brand{background:#002d72;padding:27px;text-align:center;border-bottom:5px solid #C99700}.brand img{width:205px;max-width:80%}
+.body{padding:29px}h1{color:#002d72;margin:0 0 5px;font-size:22px}.sub{font-size:11px;color:#7b858f;line-height:1.6;margin:0 0 22px}
+label{display:block;font-size:9px;font-weight:800;text-transform:uppercase;color:#002d72;margin:11px 0 5px}
+.wrap{position:relative}.wrap i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8d97a0}
+input{width:100%;padding:12px 12px 12px 40px;border:1px solid #dce3ea;border-radius:8px;font-family:inherit;outline:none}
+input:focus{border-color:#C99700;box-shadow:0 0 0 3px rgba(201,151,0,.12)}
+button{width:100%;padding:13px;border:0;border-radius:8px;background:#002d72;color:#fff;font-family:inherit;font-weight:800;margin-top:20px;cursor:pointer}
+.msg{display:none;margin-top:14px;padding:10px;border-radius:7px;font-size:10px;line-height:1.5}.msg.ok{display:block;background:#edf9f1;color:#226b39}.msg.err{display:block;background:#fff0f0;color:#a12828}
+.links{font-size:10px;margin-top:15px}.links a,.first a{color:#002d72;font-weight:700;text-decoration:none}.first{margin-top:22px;padding-top:16px;border-top:1px solid #edf0f3;text-align:center;font-size:9px;color:#87919a}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="brand"><img src="/images/logo-credipass.png" alt="Credipass"></div>
+<div class="body">
+<h1>Area Consulenti</h1>
+<p class="sub">Accedi al tuo workspace personale. Le pratiche vengono separate automaticamente per consulente.</p>
+
+<label>Email</label>
+<div class="wrap"><i class="fas fa-envelope"></i><input id="email" type="email" autocomplete="username"></div>
+<label>Password</label>
+<div class="wrap"><i class="fas fa-lock"></i><input id="password" type="password" autocomplete="current-password"></div>
+
+<button id="login"><i class="fas fa-sign-in-alt"></i> ACCEDI</button>
+<div id="msg" class="msg"></div>
+<div class="links"><a href="#" id="reset">Password dimenticata?</a></div>
+<div class="first">Prima installazione? <a href="/main/setup-admin.html">Crea il primo amministratore</a></div>
+</div>
+</div>
+
+<script>
+const firebaseConfig={
+apiKey:"AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+authDomain:"consulenza-credipass.firebaseapp.com",
+projectId:"consulenza-credipass",
+storageBucket:"consulenza-credipass.firebasestorage.app"
+};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const functionsFirebase=firebase.app().functions("us-central1");
+const email=document.getElementById("email");
+const password=document.getElementById("password");
+const msg=document.getElementById("msg");
+const btn=document.getElementById("login");
+
+function message(t,ok=false){msg.className="msg "+(ok?"ok":"err");msg.textContent=t}
+function back(){
+ const p=new URLSearchParams(location.search).get("return");
+ return p&&p.startsWith("/")?p:"/";
+}
+
+const qp=new URLSearchParams(location.search);
+if(qp.get("verify")==="1"){
+ email.value=qp.get("email")||"";
+ message("Apri l'email di verifica, conferma l'indirizzo e poi accedi nuovamente.",true);
+}
+
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+auth.onAuthStateChanged(u=>{
+ if(u&&u.emailVerified)location.replace(back());
+});
+
+async function doLogin(){
+ const e=email.value.trim(),p=password.value;
+ if(!e||!p){message("Inserisci email e password.");return}
+ btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> ACCESSO...';
+ try{
+   const r=await auth.signInWithEmailAndPassword(e,p);
+   if(!r.user.emailVerified){
+      try{await r.user.sendEmailVerification()}catch(_){}
+      await auth.signOut();
+      message("Email non verificata. Ti abbiamo inviato il messaggio di verifica.",true);
+      return;
+   }
+   await functionsFirebase.httpsCallable("ensureConsultantProfile")({});
+   location.replace(back());
+ }catch(err){
+   console.error(err);
+   message(String(err?.code||"").includes("too-many-requests")
+      ?"Troppi tentativi. Attendi qualche minuto."
+      :"Accesso non riuscito. Controlla email e password.");
+ }finally{
+   btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> ACCEDI';
+ }
+}
+btn.addEventListener("click",doLogin);
+password.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+document.getElementById("reset").addEventListener("click",async e=>{
+ e.preventDefault();
+ if(!email.value.trim()){message("Inserisci prima l'email.");return}
+ try{await auth.sendPasswordResetEmail(email.value.trim());message("Email di recupero inviata.",true)}
+ catch(err){console.error(err);message("Invio email di recupero non riuscito.")}
+});
+</script>
+</body>
+</html>

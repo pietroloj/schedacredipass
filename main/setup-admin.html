@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Primo Admin - Credipass</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#edf2f7;font-family:Poppins,sans-serif;padding:20px}
+.card{width:100%;max-width:480px;background:#fff;border-radius:15px;box-shadow:0 15px 45px rgba(0,0,0,.15);overflow:hidden;border-top:6px solid #C99700}
+.head{background:#002d72;color:#fff;padding:22px 25px}.head h1{margin:0;font-size:19px}.body{padding:25px}
+.note{font-size:10px;line-height:1.6;background:#fff7dc;border-left:4px solid #C99700;padding:11px;border-radius:7px;margin-bottom:17px}
+label{display:block;font-size:9px;font-weight:800;color:#002d72;text-transform:uppercase;margin:9px 0 4px}
+input{width:100%;padding:10px;border:1px solid #dce3ea;border-radius:7px;font-family:inherit}
+button{width:100%;padding:12px;margin-top:17px;border:0;border-radius:7px;background:#002d72;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}
+#msg{font-size:10px;line-height:1.5;margin-top:12px}a{color:#002d72}
+</style></head><body>
+<div class="card"><div class="head"><h1>Prima configurazione amministratore</h1></div><div class="body">
+<div class="note">Usa questa pagina una sola volta. Dopo la creazione del primo amministratore il server blocca automaticamente nuove inizializzazioni.</div>
+<label>Nome</label><input id="nome">
+<label>Cognome</label><input id="cognome">
+<label>Email</label><input id="email" type="email">
+<label>Password</label><input id="password" type="password" placeholder="Minimo 8 caratteri">
+<button id="create">CREA PRIMO AMMINISTRATORE</button><div id="msg"></div>
+<p style="text-align:center;font-size:9px;margin-top:18px"><a href="/main/login-consulente.html">Torna al login</a></p>
+</div></div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",authDomain:"consulenza-credipass.firebaseapp.com",projectId:"consulenza-credipass",storageBucket:"consulenza-credipass.firebasestorage.app"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const fn=firebase.app().functions("us-central1").httpsCallable("bootstrapFirstAdmin");
+document.getElementById("create").addEventListener("click",async()=>{
+ const data={
+  nome:document.getElementById("nome").value.trim(),
+  cognome:document.getElementById("cognome").value.trim(),
+  email:document.getElementById("email").value.trim(),
+  password:document.getElementById("password").value
+ };
+ const m=document.getElementById("msg");
+ if(!data.nome||!data.cognome||!data.email||data.password.length<8){m.style.color="#b42318";m.textContent="Compila tutti i campi. Password minimo 8 caratteri.";return}
+ try{
+  await fn(data);
+  m.style.color="#23723c";
+  m.innerHTML="✅ Amministratore creato. <a href='/main/login-consulente.html'>Vai al login</a>. Al primo tentativo riceverai l'email di verifica.";
+ }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Creazione non riuscita."}
+});
+</script></body></html>

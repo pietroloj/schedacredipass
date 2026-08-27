@@ -1,0 +1,3587 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fascicolo Cliente - Credipass</title>
+
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js">
+    const modalStatoEmailEl = document.getElementById("modalStatoEmail");
+    if (modalStatoEmailEl) {
+        modalStatoEmailEl.addEventListener("click", (e) => {
+            if (e.target.id === "modalStatoEmail") {
+                chiudiModalStatoEmail();
+            }
+        });
+    }
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="/main/auth-guard.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: #e9ecef;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+    }
+
+    .container {
+        max-width: 1450px;
+        margin: 0 auto;
+        background: #f8f9fa;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        border: 8px solid #333;
+    }
+
+    .header {
+        background: #002d72;
+        color: white;
+        padding: 22px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 4px solid #C99700;
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.3;
+    }
+
+    .btn-back {
+        background: rgba(255,255,255,0.12);
+        color: white;
+        text-decoration: none;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        transition: 0.2s;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .btn-back:hover {
+        background: #C99700;
+        color: #002d72;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1.55fr 0.95fr;
+        gap: 24px;
+        padding: 24px;
+        align-items: start;
+    }
+
+    .doc-category {
+        background: white;
+        border: 1px solid #e7ebf0;
+        border-radius: 14px;
+        margin-bottom: 18px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .cat-header {
+        background: #002d72;
+        color: white;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-left: 5px solid #C99700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .doc-list {
+        padding: 14px;
+    }
+
+    .doc-item {
+        background: white;
+        border: 1px solid #eef2f7;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        transition: 0.2s;
+    }
+
+    .doc-item:hover {
+        background: #f8faff;
+        border-color: #d1d9e6;
+    }
+
+    .doc-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #002d72;
+    }
+
+    .doc-filename {
+        font-size: 10px;
+        color: #999;
+        display: block;
+        margin-top: 2px;
+        word-break: break-word;
+    }
+
+    .btn-view {
+        background: #e9f0ff;
+        color: #002d72;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        transition: 0.2s;
+        flex-shrink: 0;
+    }
+
+    .btn-view:hover {
+        background: #002d72;
+        color: white;
+    }
+
+    .sidebar-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .sidebar-card h3 {
+        margin-top: 0;
+        font-size: 15px;
+        color: #002d72;
+        font-weight: 800;
+        border-bottom: 2px solid #C99700;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .data-group {
+        margin-bottom: 15px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .data-group-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #C99700;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        display: block;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 5px;
+    }
+
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 0;
+        font-size: 12px;
+        border-bottom: 1px solid #f9f9f9;
+    }
+
+    .data-row:last-child { border-bottom: none; }
+
+    .data-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .data-value {
+        color: #111;
+        font-weight: 700;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-word;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+
+    .filter-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px 2px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        transition: 0.2s;
+        user-select: none;
+    }
+
+    .filter-btn i {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+        color: #002d72;
+    }
+
+    .filter-btn.active {
+        background: #C99700;
+        color: white;
+        border-color: #C99700;
+    }
+
+    .filter-btn.active i { color: white; }
+
+    .integration-select,
+    .nota-area {
+        width: 100%;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+    }
+
+    .integration-select {
+        border: 2px solid #e9ecef;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: white;
+    }
+
+    .integration-select:focus { border-color: #C99700; }
+
+    .nota-area {
+        height: 90px;
+        border: 2px solid #e9ecef;
+        padding: 12px;
+        resize: none;
+        margin-bottom: 15px;
+    }
+
+    .nota-area:focus { border-color: #C99700; }
+
+    .btn-submit {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-family: inherit;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        font-size: 13px;
+    }
+
+    .btn-primary { background: #002d72; color: white; }
+    .btn-primary:hover { background: #001a45; }
+
+    .btn-ai { background: #C99700; color: #002d72; }
+    .btn-ai:hover { background: #b08500; color: white; }
+
+    .btn-zip { background: #28a745; color: white; }
+    .btn-zip:hover { background: #1e7e34; }
+
+    .checklist-box {
+        border: 2px dashed #cbd5e0;
+        border-radius: 10px;
+        padding: 10px;
+        background: white;
+        margin-bottom: 15px;
+        min-height: 50px;
+    }
+
+    .checklist-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: #ebf4ff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        border-left: 4px solid #C99700;
+    }
+
+    .trash-btn {
+        color: #cc0000;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .modal-content {
+        background: white;
+        width: 100%;
+        max-width: 900px;
+        border-radius: 15px;
+        padding: 30px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+        font-size: 13px;
+    }
+
+
+    /* ===== STATO AVANZAMENTO PRATICA ===== */
+    .practice-status-panel {
+        margin: 22px 24px 0 24px;
+        background: #ffffff;
+        border: 1px solid #e1e7ee;
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+
+    .practice-status-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+
+    .practice-status-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #002d72;
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .practice-status-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .practice-status-select {
+        min-width: 245px;
+        padding: 11px 13px;
+        border: 2px solid #dfe5ec;
+        border-radius: 9px;
+        background: #fff;
+        color: #263238;
+        font-family: 'Poppins', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .practice-status-select:focus {
+        border-color: #C99700;
+    }
+
+    .practice-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #fff;
+        white-space: nowrap;
+    }
+
+    .practice-status-updated {
+        margin-top: 8px;
+        text-align: right;
+        color: #8a949e;
+        font-size: 10px;
+    }
+
+    .practice-progress {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0;
+        margin-top: 18px;
+        position: relative;
+    }
+
+    .practice-progress::before {
+        content: "";
+        position: absolute;
+        top: 14px;
+        left: 8.5%;
+        right: 8.5%;
+        height: 3px;
+        background: #e4e8ed;
+        z-index: 0;
+    }
+
+    .progress-step {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+    }
+
+    .progress-dot {
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        margin: 0 auto 7px;
+        background: #e4e8ed;
+        color: #8e98a2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 1px #dfe4e9;
+    }
+
+    .progress-step.done .progress-dot,
+    .progress-step.current .progress-dot {
+        background: #002d72;
+        color: #fff;
+        box-shadow: 0 0 0 1px #002d72;
+    }
+
+    .progress-step.current .progress-dot {
+        background: #C99700;
+        box-shadow: 0 0 0 1px #C99700;
+    }
+
+    .progress-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: #7a838c;
+        text-transform: uppercase;
+        line-height: 1.25;
+    }
+
+    .progress-step.current .progress-label {
+        color: #002d72;
+        font-weight: 800;
+    }
+
+    @media (max-width: 700px) {
+        .practice-status-panel {
+            margin: 12px 10px 0 10px;
+            padding: 15px;
+        }
+
+        .practice-status-select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .practice-status-controls {
+            width: 100%;
+        }
+
+        .practice-status-badge {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .practice-progress {
+            overflow-x: auto;
+            grid-template-columns: repeat(6, minmax(80px, 1fr));
+            padding-bottom: 5px;
+        }
+
+        .practice-progress::before {
+            display: none;
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 700px) {
+        body { padding: 10px; }
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .filter-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .doc-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .btn-view {
+            align-self: flex-end;
+        }
+    }
+
+    /* ===== NOTIFICA AVANZAMENTO CLIENTE ===== */
+    .status-email-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 12000;
+        background: rgba(0,0,0,.72);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .status-email-card {
+        width: 100%;
+        max-width: 680px;
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        border-top: 6px solid #C99700;
+    }
+
+    .status-email-head {
+        background: #002d72;
+        color: #fff;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+    }
+
+    .status-email-head h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .status-email-body {
+        padding: 22px 24px 24px;
+    }
+
+    .status-email-info {
+        background: #f5f8fc;
+        border-left: 4px solid #C99700;
+        color: #56606a;
+        padding: 12px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.55;
+        margin-bottom: 16px;
+    }
+
+    .status-email-label {
+        display: block;
+        margin: 12px 0 6px;
+        color: #002d72;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+    }
+
+    .status-email-input,
+    .status-email-textarea {
+        width: 100%;
+        border: 1px solid #dfe5ec;
+        border-radius: 9px;
+        padding: 11px 12px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 12px;
+        outline: none;
+        background: #fff;
+    }
+
+    .status-email-input:focus,
+    .status-email-textarea:focus {
+        border-color: #C99700;
+        box-shadow: 0 0 0 3px rgba(201,151,0,.12);
+    }
+
+    .status-email-textarea {
+        min-height: 180px;
+        resize: vertical;
+        line-height: 1.6;
+    }
+
+    .status-email-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+    }
+
+    .status-email-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 11px 16px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .status-email-btn.secondary {
+        background: #edf0f3;
+        color: #495057;
+    }
+
+    .status-email-btn.primary {
+        background: #C99700;
+        color: #fff;
+    }
+
+    .status-email-btn.primary:hover {
+        background: #b48700;
+    }
+
+    .status-email-btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+
+    .btn-notifica-stato {
+        border: 1px solid rgba(0,45,114,.15);
+        background: #eef4fb;
+        color: #002d72;
+        border-radius: 8px;
+        padding: 10px 13px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .btn-notifica-stato:hover {
+        background: #002d72;
+        color: #fff;
+    }
+
+
+    /* ===== REGISTRO ATTIVITÀ CLIENTE ===== */
+    .activity-admin-panel {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid #e7ebf0;
+    }
+
+    .activity-admin-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #002d72;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 10px;
+    }
+
+    .activity-admin-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr auto;
+        gap: 8px;
+        align-items: end;
+    }
+
+    .activity-admin-field label {
+        display: block;
+        font-size: 9px;
+        color: #7a838c;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .activity-admin-field input {
+        width: 100%;
+        border: 1px solid #dfe5ec;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        outline: none;
+    }
+
+    .activity-admin-field input:focus {
+        border-color: #C99700;
+        box-shadow: 0 0 0 3px rgba(201,151,0,.10);
+    }
+
+    .activity-admin-btn {
+        border: 0;
+        border-radius: 8px;
+        background: #002d72;
+        color: #fff;
+        padding: 11px 14px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .activity-admin-btn:hover {
+        background: #C99700;
+    }
+
+    @media (max-width: 800px) {
+        .activity-admin-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+
+    /* ===== GESTIONE PORTALE CLIENTE PRO ===== */
+    .portal-admin-tools {
+        margin: 18px 24px 0 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .portal-admin-card {
+        background: #fff;
+        border: 1px solid #e1e7ee;
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    }
+
+    .portal-admin-card h4 {
+        margin: 0 0 14px;
+        color: #002d72;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .portal-admin-field {
+        margin-bottom: 10px;
+    }
+
+    .portal-admin-field label {
+        display: block;
+        margin-bottom: 5px;
+        color: #7a838c;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .portal-admin-field input,
+    .portal-admin-field textarea,
+    .portal-admin-field select {
+        width: 100%;
+        border: 1px solid #dfe5ec;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        outline: none;
+        background: #fff;
+    }
+
+    .portal-admin-field textarea {
+        min-height: 82px;
+        resize: vertical;
+    }
+
+    .portal-admin-field input:focus,
+    .portal-admin-field textarea:focus,
+    .portal-admin-field select:focus {
+        border-color: #C99700;
+        box-shadow: 0 0 0 3px rgba(201,151,0,.10);
+    }
+
+    .portal-admin-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .portal-admin-action {
+        width: 100%;
+        border: 0;
+        border-radius: 8px;
+        padding: 11px 13px;
+        background: #002d72;
+        color: white;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+
+    .portal-admin-action:hover {
+        background: #C99700;
+    }
+
+    @media (max-width: 900px) {
+        .portal-admin-tools {
+            grid-template-columns: 1fr;
+            margin: 12px 10px 0;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .portal-admin-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+
+    /* ===== VERSIONING DOCUMENTI ===== */
+    .doc-actions-versioning {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .btn-doc-version,
+    .btn-doc-delete {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        cursor: pointer;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .btn-doc-version {
+        background: #fff4cc;
+        color: #765b00;
+        border: 1px solid #ead27b;
+    }
+
+    .btn-doc-version:hover {
+        background: #C99700;
+        color: white;
+    }
+
+    .btn-doc-delete {
+        background: #fff0f0;
+        color: #b42318;
+        border: 1px solid #f1c1be;
+    }
+
+    .btn-doc-delete:hover {
+        background: #b42318;
+        color: white;
+    }
+
+    .doc-version-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: #fff4cc;
+        color: #765b00;
+        font-size: 8px;
+        font-weight: 800;
+    }
+
+    @media (max-width: 700px) {
+        .doc-actions-versioning {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> Fascicolo: <span id="labelCliente">...</span></h1>
+        <a href="ricerca-clienti.html" class="btn-back"><i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO</a>
+    </div>
+
+    <div class="practice-status-panel" id="practiceStatusPanel">
+        <div class="practice-status-top">
+            <div class="practice-status-title">
+                <i class="fas fa-tasks" style="color:#C99700;"></i>
+                Stato avanzamento pratica
+            </div>
+
+            <div class="practice-status-controls">
+                <select id="statoPraticaSelect" class="practice-status-select" onchange="salvaStatoPratica(this.value)">
+                    <option value="da_istruire">Da istruire</option>
+                    <option value="istruttoria">Istruttoria</option>
+                    <option value="integrazione_documenti">Integrazione documenti</option>
+                    <option value="caricato_banca">Caricato in banca</option>
+                    <option value="valutazione_reddituale">Valutazione reddituale</option>
+                    <option value="delibera_reddituale_ok">Delibera reddituale OK</option>
+                    <option value="delibera_reddituale_ko">Delibera reddituale KO</option>
+                    <option value="attesa_perizia">Attesa perizia</option>
+                    <option value="perizia_in_corso">Perizia in corso</option>
+                    <option value="perizia_ok">Perizia OK</option>
+                    <option value="perizia_ko">Perizia KO</option>
+                    <option value="attesa_documentazione_notarile">Attesa documentazione notarile</option>
+                    <option value="chiamata_atto">Chiamata d'atto</option>
+                    <option value="stipulato">Stipulato</option>
+                    <option value="sospesa">Sospesa</option>
+                    <option value="rinunciata">Rinunciata / KO</option>
+                </select>
+
+                <span id="statoPraticaBadge" class="practice-status-badge" style="background:#6c757d;">
+                    <i class="fas fa-circle"></i> Da istruire
+                </span>
+
+                <button type="button" class="btn-notifica-stato" onclick="apriNotificaStatoManuale()">
+                    <i class="fas fa-envelope"></i> NOTIFICA CLIENTE
+                </button>
+            </div>
+        </div>
+
+        <div id="statoPraticaUpdated" class="practice-status-updated"></div>
+
+        <div class="practice-progress" id="practiceProgress">
+            <div class="progress-step" data-step="0">
+                <div class="progress-dot">1</div>
+                <div class="progress-label">Richiesta</div>
+            </div>
+            <div class="progress-step" data-step="1">
+                <div class="progress-dot">2</div>
+                <div class="progress-label">Istruttoria</div>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="progress-dot">3</div>
+                <div class="progress-label">Banca / Delibera</div>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="progress-dot">4</div>
+                <div class="progress-label">Perizia</div>
+            </div>
+            <div class="progress-step" data-step="4">
+                <div class="progress-dot">5</div>
+                <div class="progress-label">Notaio / Atto</div>
+            </div>
+            <div class="progress-step" data-step="5">
+                <div class="progress-dot">6</div>
+                <div class="progress-label">Stipula</div>
+            </div>
+        </div>
+
+        <div class="activity-admin-panel">
+            <div class="activity-admin-title">
+                <i class="fas fa-history" style="color:#C99700;"></i>
+                Registro attività visibile al cliente
+            </div>
+
+            <div class="activity-admin-grid">
+                <div class="activity-admin-field">
+                    <label>Titolo attività</label>
+                    <input id="attivitaClienteTitolo" type="text" placeholder="Es. Documentazione verificata">
+                </div>
+
+                <div class="activity-admin-field">
+                    <label>Descrizione</label>
+                    <input id="attivitaClienteDescrizione" type="text" placeholder="Nota breve visibile nell'Area Clienti">
+                </div>
+
+                <button type="button" class="activity-admin-btn" onclick="registraAttivitaManualeCliente()">
+                    <i class="fas fa-plus"></i> REGISTRA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="portal-admin-tools">
+        <div class="portal-admin-card">
+            <h4><i class="fas fa-message" style="color:#C99700;"></i> Messaggio al cliente</h4>
+
+            <div class="portal-admin-field">
+                <label>Titolo</label>
+                <input id="messaggioClienteTitolo" type="text" placeholder="Es. Aggiornamento pratica">
+            </div>
+
+            <div class="portal-admin-field">
+                <label>Messaggio</label>
+                <textarea id="messaggioClienteTesto" placeholder="Scrivi un aggiornamento breve e chiaro visibile nell'Area Clienti..."></textarea>
+            </div>
+
+            <button type="button" class="portal-admin-action" onclick="salvaMessaggioCliente()">
+                <i class="fas fa-paper-plane"></i> PUBBLICA NEL PORTALE
+            </button>
+        </div>
+
+        <div class="portal-admin-card">
+            <h4><i class="fas fa-calendar-check" style="color:#C99700;"></i> Appuntamento pratica</h4>
+
+            <div class="portal-admin-field">
+                <label>Tipo appuntamento</label>
+                <select id="appuntamentoClienteTipo">
+                    <option value="Perizia">Perizia</option>
+                    <option value="Firma domanda mutuo">Firma domanda mutuo</option>
+                    <option value="Incontro in filiale">Incontro in filiale</option>
+                    <option value="Chiamata d'atto">Chiamata d'atto</option>
+                    <option value="Stipula">Stipula</option>
+                    <option value="Altro">Altro</option>
+                </select>
+            </div>
+
+            <div class="portal-admin-row">
+                <div class="portal-admin-field">
+                    <label>Data</label>
+                    <input id="appuntamentoClienteData" type="date">
+                </div>
+                <div class="portal-admin-field">
+                    <label>Ora</label>
+                    <input id="appuntamentoClienteOra" type="time">
+                </div>
+            </div>
+
+            <div class="portal-admin-field">
+                <label>Luogo</label>
+                <input id="appuntamentoClienteLuogo" type="text" placeholder="Es. Via Roma 12 / Studio notarile / Filiale">
+            </div>
+
+            <div class="portal-admin-field">
+                <label>Note</label>
+                <input id="appuntamentoClienteNote" type="text" placeholder="Informazioni utili per il cliente">
+            </div>
+
+            <button type="button" class="portal-admin-action" onclick="salvaAppuntamentoCliente()">
+                <i class="fas fa-calendar-plus"></i> SALVA APPUNTAMENTO
+            </button>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <div id="documentiArea">
+            <div id="loading" class="empty-state">
+                <i class="fas fa-spinner fa-spin fa-3x" style="color:#002d72;"></i>
+                <p style="margin-top:15px; font-weight:600;">Recupero documenti dal cloud...</p>
+            </div>
+
+            <div id="cat-ANAGRAFICA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-user"></i> Anagrafica</div>
+                <div class="doc-list" id="list-ANAGRAFICA"></div>
+            </div>
+
+            <div id="cat-REDDITO" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-wallet"></i> Reddituale</div>
+                <div class="doc-list" id="list-REDDITO"></div>
+            </div>
+
+            <div id="cat-BANCA" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-university"></i> Banca e Patrimonio</div>
+                <div class="doc-list" id="list-BANCA"></div>
+            </div>
+
+            <div id="cat-IMMOBILE" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-home"></i> Immobiliare</div>
+                <div class="doc-list" id="list-IMMOBILE"></div>
+            </div>
+
+            <div id="cat-ALTRO" class="doc-category" style="display:none;">
+                <div class="cat-header"><i class="fas fa-ellipsis-h"></i> Altro / Extra</div>
+                <div class="doc-list" id="list-ALTRO"></div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-card" style="border-top: 5px solid #C99700;">
+                <h3><i class="fas fa-id-card"></i> Identikit Completo Pratica</h3>
+                <div id="identikitDinamico">
+                    <p style="text-align:center; padding:20px; font-size:12px; color:#999;">Caricamento dati scheda...</p>
+                </div>
+                <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> ESITO PRE-DELIBERA IA</button>
+                <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA TUTTO (.ZIP)</button>
+            </div>
+
+            <div class="sidebar-card">
+                <h3><i class="fas fa-plus-circle"></i> Richiedi Integrazione</h3>
+
+                <div class="filter-grid">
+                    <div class="filter-btn active" onclick="cambiaCategoria('ANAGRAFICA', this)"><i class="fas fa-user"></i>Anag</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('REDDITO', this)"><i class="fas fa-wallet"></i>Redd</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('BANCA', this)"><i class="fas fa-university"></i>Banc</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('IMMOBILE', this)"><i class="fas fa-home"></i>Casa</div>
+                    <div class="filter-btn" onclick="cambiaCategoria('ALTRO', this)"><i class="fas fa-list"></i>Extra</div>
+                </div>
+
+                <select id="selectIntegrazione" class="integration-select"></select>
+
+                <button class="btn-submit" style="background:#eee; color:#333; font-size:12px; margin-bottom:15px;" onclick="aggiungiChecklist()">
+                    <i class="fas fa-plus"></i> AGGIUNGI ALLA LISTA
+                </button>
+
+                <div class="checklist-box" id="listaCarrello"></div>
+
+                <textarea id="notaIntegrazione" class="nota-area" placeholder="Scrivi una nota per il cliente..."></textarea>
+
+                <button id="btnInvia" class="btn-submit btn-primary" onclick="inviaIntegrazione()" disabled style="opacity:0.5;">
+                    <i class="fas fa-paper-plane"></i> INVIA NOTIFICA AL CLIENTE
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="modalStatoEmail" class="status-email-modal">
+    <div class="status-email-card">
+        <div class="status-email-head">
+            <h3><i class="fas fa-envelope" style="color:#C99700;"></i> Aggiornamento pratica al cliente</h3>
+            <span onclick="chiudiModalStatoEmail()" style="cursor:pointer;font-size:26px;line-height:1;">&times;</span>
+        </div>
+
+        <div class="status-email-body">
+            <div class="status-email-info" id="statusEmailInfo">
+                Puoi modificare liberamente il testo prima dell'invio. L'aggiornamento dello stato è già stato salvato.
+            </div>
+
+            <label class="status-email-label" for="statusEmailTo">Destinatario</label>
+            <input id="statusEmailTo" class="status-email-input" type="email" readonly>
+
+            <label class="status-email-label" for="statusEmailSubject">Oggetto</label>
+            <input id="statusEmailSubject" class="status-email-input" type="text">
+
+            <label class="status-email-label" for="statusEmailText">Messaggio</label>
+            <textarea id="statusEmailText" class="status-email-textarea"></textarea>
+
+            <div class="status-email-actions">
+                <button type="button" class="status-email-btn secondary" onclick="chiudiModalStatoEmail()">
+                    NON INVIARE
+                </button>
+
+                <button type="button" id="btnInviaStatoEmail" class="status-email-btn primary" onclick="inviaEmailStatoPratica()">
+                    <i class="fas fa-paper-plane"></i> INVIA AGGIORNAMENTO
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalAI" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #C99700; padding-bottom:15px; margin-bottom:20px;">
+            <h2 style="margin:0; color:#002d72; font-size:20px;"><i class="fas fa-robot"></i> Report Analisi IA</h2>
+            <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:30px; color:#999;">&times;</span>
+        </div>
+        <div id="aiBody" style="font-size:14px; line-height:1.7;"></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+        authDomain: "consulenza-credipass.firebaseapp.com",
+        projectId: "consulenza-credipass",
+        storageBucket: "consulenza-credipass.firebasestorage.app"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    const functionsFirebase = firebase.app().functions("us-central1");
+    let sessioneConsulente = null;
+
+    const idCliente = new URLSearchParams(window.location.search).get('clienteId');
+
+    const STATO_PRATICA_CONFIG = {
+        da_istruire: { label: "Da istruire", color: "#6c757d", step: 0 },
+        istruttoria: { label: "Istruttoria", color: "#2f80ed", step: 1 },
+        integrazione_documenti: { label: "Integrazione documenti", color: "#d39e00", step: 1 },
+        caricato_banca: { label: "Caricato in banca", color: "#002d72", step: 2 },
+        valutazione_reddituale: { label: "Valutazione reddituale", color: "#7b61a8", step: 2 },
+        delibera_reddituale_ok: { label: "Delibera reddituale OK", color: "#28a745", step: 2 },
+        delibera_reddituale_ko: { label: "Delibera reddituale KO", color: "#dc3545", step: 2 },
+        attesa_perizia: { label: "Attesa perizia", color: "#f0ad4e", step: 3 },
+        perizia_in_corso: { label: "Perizia in corso", color: "#e67e22", step: 3 },
+        perizia_ok: { label: "Perizia OK", color: "#20a464", step: 3 },
+        perizia_ko: { label: "Perizia KO", color: "#c62828", step: 3 },
+        attesa_documentazione_notarile: { label: "Attesa documentazione notarile", color: "#9a6b35", step: 4 },
+        chiamata_atto: { label: "Chiamata d'atto", color: "#087f5b", step: 4 },
+        stipulato: { label: "Stipulato", color: "#198754", step: 5 },
+        sospesa: { label: "Sospesa", color: "#495057", step: 2 },
+        rinunciata: { label: "Rinunciata / KO", color: "#b02a37", step: 1 }
+    };
+
+    function getStatoPraticaConfig(stato) {
+        return STATO_PRATICA_CONFIG[stato] || STATO_PRATICA_CONFIG.da_istruire;
+    }
+
+    const STATO_PRATICA_CLIENTE_META = {
+        da_istruire: {
+            titolo: "Pratica presa in carico",
+            descrizione: "La pratica è stata registrata ed è pronta per l'istruttoria."
+        },
+        istruttoria: {
+            titolo: "Istruttoria avviata",
+            descrizione: "È iniziata la verifica della documentazione e dei dati della pratica."
+        },
+        integrazione_documenti: {
+            titolo: "Integrazione documentazione",
+            descrizione: "Sono necessari ulteriori documenti o chiarimenti per proseguire."
+        },
+        caricato_banca: {
+            titolo: "Pratica inviata in banca",
+            descrizione: "La documentazione è stata trasmessa all'istituto per la valutazione."
+        },
+        valutazione_reddituale: {
+            titolo: "Valutazione reddituale in corso",
+            descrizione: "L'istituto sta verificando la sostenibilità reddituale della pratica."
+        },
+        delibera_reddituale_ok: {
+            titolo: "Delibera reddituale positiva",
+            descrizione: "La valutazione reddituale ha avuto esito positivo."
+        },
+        delibera_reddituale_ko: {
+            titolo: "Esito reddituale non positivo",
+            descrizione: "La valutazione reddituale necessita di approfondimenti con il consulente."
+        },
+        attesa_perizia: {
+            titolo: "In attesa di perizia",
+            descrizione: "La pratica è nella fase di valutazione dell'immobile."
+        },
+        perizia_in_corso: {
+            titolo: "Perizia in corso",
+            descrizione: "La valutazione tecnica dell'immobile è in corso."
+        },
+        perizia_ok: {
+            titolo: "Perizia positiva",
+            descrizione: "La valutazione dell'immobile ha avuto esito positivo."
+        },
+        perizia_ko: {
+            titolo: "Perizia da approfondire",
+            descrizione: "La valutazione tecnica dell'immobile richiede un approfondimento."
+        },
+        attesa_documentazione_notarile: {
+            titolo: "Documentazione notarile",
+            descrizione: "Sono in corso le verifiche e la raccolta della documentazione per l'atto."
+        },
+        chiamata_atto: {
+            titolo: "Chiamata d'atto",
+            descrizione: "La pratica è pronta per l'organizzazione della stipula."
+        },
+        stipulato: {
+            titolo: "Mutuo stipulato",
+            descrizione: "La pratica è stata completata con la stipula del mutuo."
+        },
+        sospesa: {
+            titolo: "Pratica temporaneamente sospesa",
+            descrizione: "La lavorazione è temporaneamente sospesa in attesa di verifiche."
+        },
+        rinunciata: {
+            titolo: "Pratica chiusa",
+            descrizione: "La lavorazione della pratica è stata conclusa."
+        }
+    };
+
+    async function registraAttivitaCliente({
+        tipo = "nota",
+        titolo = "",
+        descrizione = "",
+        stato = null,
+        origine = "dashboard",
+        icona = "fa-circle-info"
+    } = {}) {
+        if (!idCliente || !titolo) return;
+
+        const evento = {
+            id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            tipo,
+            titolo,
+            descrizione: descrizione || "",
+            stato: stato || null,
+            origine,
+            icona,
+            visibile_cliente: true,
+            data_ms: Date.now()
+        };
+
+        await db.collection("pratiche_mutuo")
+            .doc(idCliente)
+            .set({
+                attivita_cliente_log:
+                    firebase.firestore.FieldValue.arrayUnion(evento)
+            }, { merge: true });
+    }
+
+
+    function costruisciEmailPortaleHtml({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        cta = "APRI IL PORTALE CLIENTE"
+    }) {
+        const portalUrl =
+            `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
+<tr>
+<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
+<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
+</td>
+</tr>
+<tr>
+<td style="padding:30px;">
+<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">Aggiornamento pratica</div>
+<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">${escapeHtml(titolo)}</h2>
+<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">${escapeHtml(messaggio)}</p>
+${dettaglio ? `
+<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
+${escapeHtml(dettaglio)}
+</div>` : ""}
+<div style="text-align:center;margin-top:26px;">
+<a href="${portalUrl}" style="display:inline-block;background:#C99700;color:#fff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:bold;font-size:13px;">${escapeHtml(cta)}</a>
+</div>
+<p style="margin:26px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
+Accedi al portale per consultare lo stato aggiornato, le attività e gli eventuali documenti richiesti.
+</p>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+    }
+
+    function emailAgenziaDaPratica(d = {}) {
+        return normalizeDisplay(
+            d.email_agenzia_immobiliare ||
+            d.campo_email_agenzia ||
+            d.email_agenzia ||
+            d.agenzia_email ||
+            d.emailAgenzia
+        );
+    }
+
+    async function recuperaEmailAgenziaPratica() {
+        try {
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .doc(idCliente)
+                    .get();
+
+            if (!snap.exists) return "";
+
+            return emailAgenziaDaPratica(
+                snap.data() || {}
+            );
+        } catch (error) {
+            console.warn(
+                "Impossibile recuperare email agenzia:",
+                error
+            );
+            return "";
+        }
+    }
+
+    function costruisciEmailAgenziaHtml({
+        titolo,
+        messaggio,
+        dettaglio = ""
+    }) {
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
+<tr>
+<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
+<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
+</td>
+</tr>
+<tr>
+<td style="padding:30px;">
+<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">
+Aggiornamento pratica mutuo
+</div>
+<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">
+${escapeHtml(titolo)}
+</h2>
+<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">
+${escapeHtml(messaggio)}
+</p>
+${dettaglio ? `
+<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
+${escapeHtml(dettaglio)}
+</div>` : ""}
+<p style="margin:24px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
+Comunicazione informativa destinata all'agenzia immobiliare collegata alla pratica.
+Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
+</p>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+    }
+
+    async function inviaAggiornamentoAgenzia({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        subject = ""
+    }) {
+        const emailAgenzia =
+            await recuperaEmailAgenziaPratica();
+
+        if (!emailAgenzia) {
+            return {
+                ok: true,
+                skipped: true,
+                motivo: "email_agenzia_assente"
+            };
+        }
+
+        try {
+            const response =
+                await fetch("/api/send-email", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        to: [emailAgenzia],
+                        subject:
+                            subject ||
+                            `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`,
+                        html: costruisciEmailAgenziaHtml({
+                            titolo,
+                            messaggio,
+                            dettaglio
+                        })
+                    })
+                });
+
+            if (!response.ok) {
+                throw new Error(
+                    `Invio email agenzia non riuscito (${response.status})`
+                );
+            }
+
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .set({
+                    ultima_notifica_agenzia_email:
+                        emailAgenzia,
+                    ultima_notifica_agenzia_titolo:
+                        titolo,
+                    ultima_notifica_agenzia_inviata_il:
+                        firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+            return {
+                ok: true,
+                skipped: false,
+                email: emailAgenzia
+            };
+
+        } catch (error) {
+            console.error(
+                "Errore notifica email agenzia:",
+                error
+            );
+
+            return {
+                ok: false,
+                skipped: false,
+                motivo: error.message
+            };
+        }
+    }
+
+
+    async function inviaEmailAggiornamentoPortale({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        subject = ""
+    }) {
+        try {
+            let email = normalizeDisplay(emailCliente);
+
+            if (!email) {
+                const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+                const d = snap.exists ? (snap.data() || {}) : {};
+                email = normalizeDisplay(d.cliente_email);
+            }
+
+            if (!email) {
+                console.warn("Notifica portale non inviata: email cliente assente.");
+                return { ok: false, motivo: "email_assente" };
+            }
+
+            const response = await fetch("/api/send-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    to: [email],
+                    subject: subject || `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`,
+                    html: costruisciEmailPortaleHtml({
+                        titolo,
+                        messaggio,
+                        dettaglio
+                    })
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Invio email non riuscito (${response.status})`);
+            }
+
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                ultima_notifica_portale_titolo: titolo,
+                ultima_notifica_portale_email: email,
+                ultima_notifica_portale_inviata_il:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo,
+                    messaggio,
+                    dettaglio,
+                    subject:
+                        subject ||
+                        `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`
+                });
+
+            return {
+                ok: true,
+                agenzia: esitoAgenzia
+            };
+        } catch (error) {
+            console.error("Errore notifica email portale:", error);
+            return { ok: false, motivo: error.message };
+        }
+    }
+
+
+    async function salvaMessaggioCliente() {
+        const titoloEl = document.getElementById("messaggioClienteTitolo");
+        const testoEl = document.getElementById("messaggioClienteTesto");
+
+        const titolo = (titoloEl?.value || "").trim() || "Aggiornamento pratica";
+        const testo = (testoEl?.value || "").trim();
+
+        if (!testo) {
+            alert("Scrivi il messaggio da pubblicare.");
+            return;
+        }
+
+        try {
+            const messaggio = {
+                id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                titolo,
+                testo,
+                visibile_cliente: true,
+                letto: false,
+                origine: "dashboard",
+                data_ms: Date.now()
+            };
+
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .set({
+                    messaggi_cliente_log:
+                        firebase.firestore.FieldValue.arrayUnion(messaggio)
+                }, { merge: true });
+
+            await registraAttivitaCliente({
+                tipo: "messaggio",
+                titolo: "Nuovo aggiornamento dal consulente",
+                descrizione: titolo,
+                origine: "dashboard_messaggio",
+                icona: "fa-message"
+            });
+
+            const esitoMail = await inviaEmailAggiornamentoPortale({
+                titolo,
+                messaggio: testo,
+                subject: `Nuovo messaggio sulla tua pratica - ${prettyClientLabel(idCliente)}`
+            });
+
+            if (titoloEl) titoloEl.value = "";
+            if (testoEl) testoEl.value = "";
+
+            alert(
+                esitoMail.ok
+                    ? "✅ Messaggio pubblicato nel portale e notifica email inviata."
+                    : "✅ Messaggio pubblicato nel portale. ⚠️ Email non inviata: verifica l'indirizzo cliente o il servizio email."
+            );
+        } catch (error) {
+            console.error("Errore pubblicazione messaggio cliente:", error);
+            alert("Errore durante la pubblicazione del messaggio.");
+        }
+    }
+
+    async function salvaAppuntamentoCliente() {
+        const tipo = (document.getElementById("appuntamentoClienteTipo")?.value || "Appuntamento").trim();
+        const data = (document.getElementById("appuntamentoClienteData")?.value || "").trim();
+        const ora = (document.getElementById("appuntamentoClienteOra")?.value || "").trim();
+        const luogo = (document.getElementById("appuntamentoClienteLuogo")?.value || "").trim();
+        const note = (document.getElementById("appuntamentoClienteNote")?.value || "").trim();
+
+        if (!data) {
+            alert("Inserisci la data dell'appuntamento.");
+            return;
+        }
+
+        try {
+            const dataOraIso = ora ? `${data}T${ora}:00` : `${data}T09:00:00`;
+            const dataOra = new Date(dataOraIso);
+
+            const appuntamento = {
+                id: `app_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                tipo,
+                data_ms: dataOra.getTime(),
+                luogo,
+                note,
+                stato: "programmato",
+                visibile_cliente: true,
+                creato_ms: Date.now()
+            };
+
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .set({
+                    appuntamenti_cliente_log:
+                        firebase.firestore.FieldValue.arrayUnion(appuntamento)
+                }, { merge: true });
+
+            const dataLabel = dataOra.toLocaleDateString("it-IT");
+            const oraLabel = ora ? ` alle ${ora}` : "";
+
+            await registraAttivitaCliente({
+                tipo: "appuntamento",
+                titolo: `${tipo} programmata`,
+                descrizione: `${dataLabel}${oraLabel}${luogo ? ` — ${luogo}` : ""}`,
+                origine: "dashboard_appuntamento",
+                icona: "fa-calendar-check"
+            });
+
+            const esitoMail = await inviaEmailAggiornamentoPortale({
+                titolo: `${tipo} programmata`,
+                messaggio: `È stato inserito un nuovo appuntamento relativo alla tua pratica.`,
+                dettaglio:
+                    `${dataLabel}${oraLabel}` +
+                    `${luogo ? ` — ${luogo}` : ""}` +
+                    `${note ? ` — ${note}` : ""}`,
+                subject: `${tipo} programmata - ${prettyClientLabel(idCliente)}`
+            });
+
+            document.getElementById("appuntamentoClienteData").value = "";
+            document.getElementById("appuntamentoClienteOra").value = "";
+            document.getElementById("appuntamentoClienteLuogo").value = "";
+            document.getElementById("appuntamentoClienteNote").value = "";
+
+            alert(
+                esitoMail.ok
+                    ? "✅ Appuntamento pubblicato nel portale e notifica email inviata."
+                    : "✅ Appuntamento pubblicato nel portale. ⚠️ Email non inviata."
+            );
+        } catch (error) {
+            console.error("Errore salvataggio appuntamento:", error);
+            alert("Errore durante il salvataggio dell'appuntamento.");
+        }
+    }
+
+    async function registraAttivitaManualeCliente() {
+        const titoloEl = document.getElementById("attivitaClienteTitolo");
+        const descrizioneEl = document.getElementById("attivitaClienteDescrizione");
+
+        const titolo = (titoloEl?.value || "").trim();
+        const descrizione = (descrizioneEl?.value || "").trim();
+
+        if (!titolo) {
+            alert("Inserisci un titolo per l'attività.");
+            return;
+        }
+
+        await registraAttivitaCliente({
+            tipo: "nota",
+            titolo,
+            descrizione,
+            origine: "dashboard_manuale",
+            icona: "fa-pen-to-square"
+        });
+
+        const esitoMail = await inviaEmailAggiornamentoPortale({
+            titolo,
+            messaggio: descrizione || "È disponibile un nuovo aggiornamento sulla tua pratica.",
+            subject: `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`
+        });
+
+        if (titoloEl) titoloEl.value = "";
+        if (descrizioneEl) descrizioneEl.value = "";
+
+        alert(
+            esitoMail.ok
+                ? "✅ Attività registrata nel portale e notifica email inviata."
+                : "✅ Attività registrata nel portale. ⚠️ Email non inviata."
+        );
+    }
+
+    function aggiornaVisualStatoPratica(stato, timestamp = null) {
+        const cfg = getStatoPraticaConfig(stato);
+        const select = document.getElementById("statoPraticaSelect");
+        const badge = document.getElementById("statoPraticaBadge");
+        const updated = document.getElementById("statoPraticaUpdated");
+
+        if (select) select.value = STATO_PRATICA_CONFIG[stato] ? stato : "da_istruire";
+
+        if (badge) {
+            badge.style.background = cfg.color;
+            badge.innerHTML = `<i class="fas fa-circle"></i> ${cfg.label}`;
+        }
+
+        document.querySelectorAll("#practiceProgress .progress-step").forEach(stepEl => {
+            const step = Number(stepEl.dataset.step);
+            stepEl.classList.remove("done", "current");
+
+            if (step < cfg.step) stepEl.classList.add("done");
+            if (step === cfg.step) stepEl.classList.add("current");
+        });
+
+        if (updated) {
+            if (timestamp && typeof timestamp.toDate === "function") {
+                const data = timestamp.toDate();
+                updated.innerText = `Ultimo aggiornamento stato: ${data.toLocaleString("it-IT")}`;
+            } else {
+                updated.innerText = "";
+            }
+        }
+    }
+
+
+    const STATI_NOTIFICA_AUTOMATICA = new Set([
+        "caricato_banca",
+        "delibera_reddituale_ok",
+        "delibera_reddituale_ko",
+        "attesa_perizia",
+        "perizia_ok",
+        "perizia_ko",
+        "chiamata_atto",
+        "stipulato"
+    ]);
+
+    let statoEmailCorrente = null;
+    let praticaEmailCorrente = null;
+
+    function primoNomeCliente(d = {}) {
+        const nome = normalizeDisplay(d.cliente_nome);
+        if (nome) return nome;
+
+        const completo = normalizeDisplay(d.cliente_nome_completo || d.nomeCliente);
+        if (!completo) return "Cliente";
+
+        return completo.split(/\s+/)[0] || "Cliente";
+    }
+
+    function creaTestoAggiornamentoStato(stato, d = {}) {
+        const nome = primoNomeCliente(d);
+        const banca = normalizeDisplay(d.banca || d.istituto_bancario || d.prodotto_bancario || d.prodotto);
+        const finalita = normalizeDisplay(d.finalita || d.mutuo_finalita);
+
+        const intro = `Gentile ${nome},`;
+
+        const templates = {
+            da_istruire: {
+                subject: "Aggiornamento pratica - Presa in carico",
+                body: `${intro}
+
+la tua pratica è stata presa in carico ed è pronta per l'avvio delle verifiche istruttorie.
+
+Ti aggiornerò non appena ci saranno nuovi sviluppi.
+
+Cordiali saluti`
+            },
+            istruttoria: {
+                subject: "Aggiornamento pratica - Istruttoria in corso",
+                body: `${intro}
+
+la tua pratica è attualmente in fase di istruttoria. Stiamo verificando la documentazione e i dati necessari per poter procedere con le fasi successive.
+
+Ti contatterò in caso di eventuali integrazioni o aggiornamenti.
+
+Cordiali saluti`
+            },
+            integrazione_documenti: {
+                subject: "Aggiornamento pratica - Integrazione documenti",
+                body: `${intro}
+
+per proseguire con la pratica è necessaria un'integrazione documentale.
+
+Riceverai, se prevista, una comunicazione separata con l'elenco dei documenti richiesti.
+
+Cordiali saluti`
+            },
+            caricato_banca: {
+                subject: "Aggiornamento pratica - Caricata in banca",
+                body: `${intro}
+
+la pratica è stata caricata${banca ? ` presso ${banca}` : " presso l'istituto bancario"} ed è ora in fase di valutazione.
+
+Al momento non è richiesta alcuna azione da parte tua. Ti aggiornerò non appena riceveremo nuove indicazioni.
+
+Cordiali saluti`
+            },
+            valutazione_reddituale: {
+                subject: "Aggiornamento pratica - Valutazione reddituale",
+                body: `${intro}
+
+la pratica è attualmente in fase di valutazione reddituale.
+
+Questa fase riguarda la verifica dei redditi, degli impegni e della sostenibilità dell'operazione${finalita ? ` relativa a ${finalita.toLowerCase()}` : ""}.
+
+Ti aggiornerò appena avremo un riscontro.
+
+Cordiali saluti`
+            },
+            delibera_reddituale_ok: {
+                subject: "Aggiornamento pratica - Valutazione reddituale positiva",
+                body: `${intro}
+
+abbiamo ricevuto un esito positivo della fase di valutazione reddituale della pratica.
+
+La pratica può quindi proseguire con le successive verifiche previste dall'iter, inclusi gli eventuali adempimenti tecnici e immobiliari.
+
+Ti terrò aggiornato sui prossimi passaggi.
+
+Cordiali saluti`
+            },
+            delibera_reddituale_ko: {
+                subject: "Aggiornamento pratica - Esito valutazione reddituale",
+                body: `${intro}
+
+abbiamo ricevuto un esito non positivo della fase di valutazione reddituale della pratica.
+
+Ti contatterò per approfondire le motivazioni disponibili e valutare insieme gli eventuali prossimi passi o possibili alternative.
+
+Cordiali saluti`
+            },
+            attesa_perizia: {
+                subject: "Aggiornamento pratica - Attesa perizia",
+                body: `${intro}
+
+la pratica è arrivata alla fase relativa alla perizia dell'immobile.
+
+Siamo in attesa dello svolgimento o dell'esito della valutazione tecnica. Ti aggiornerò non appena avremo nuove informazioni.
+
+Cordiali saluti`
+            },
+            perizia_in_corso: {
+                subject: "Aggiornamento pratica - Perizia in corso",
+                body: `${intro}
+
+la perizia dell'immobile risulta attualmente in corso.
+
+Attenderemo la conclusione della valutazione tecnica prima di procedere con i passaggi successivi della pratica.
+
+Cordiali saluti`
+            },
+            perizia_ok: {
+                subject: "Aggiornamento pratica - Perizia positiva",
+                body: `${intro}
+
+la perizia dell'immobile ha avuto esito positivo e la pratica può proseguire con le successive fasi previste.
+
+Ti aggiornerò appena avremo indicazioni sui prossimi adempimenti.
+
+Cordiali saluti`
+            },
+            perizia_ko: {
+                subject: "Aggiornamento pratica - Esito perizia",
+                body: `${intro}
+
+la perizia dell'immobile ha evidenziato un esito non positivo.
+
+Ti contatterò per illustrarti gli elementi disponibili e verificare quali passaggi o approfondimenti possano essere necessari.
+
+Cordiali saluti`
+            },
+            attesa_documentazione_notarile: {
+                subject: "Aggiornamento pratica - Documentazione notarile",
+                body: `${intro}
+
+la pratica è nella fase di raccolta e verifica della documentazione notarile necessaria per proseguire verso la stipula.
+
+Ti aggiornerò non appena la documentazione sarà completa.
+
+Cordiali saluti`
+            },
+            chiamata_atto: {
+                subject: "Aggiornamento pratica - Chiamata d'atto",
+                body: `${intro}
+
+la pratica ha raggiunto la fase di chiamata d'atto.
+
+A breve verranno definiti i passaggi necessari per concordare la stipula e la relativa data con le parti coinvolte.
+
+Ti terrò aggiornato sugli ultimi adempimenti.
+
+Cordiali saluti`
+            },
+            stipulato: {
+                subject: "Pratica conclusa - Stipula effettuata",
+                body: `${intro}
+
+la pratica risulta conclusa con la stipula.
+
+Grazie per la fiducia accordata durante tutto il percorso.
+
+Cordiali saluti`
+            },
+            sospesa: {
+                subject: "Aggiornamento pratica - Pratica sospesa",
+                body: `${intro}
+
+la pratica risulta temporaneamente sospesa in attesa di ulteriori verifiche o elementi necessari.
+
+Ti contatterò appena sarà possibile riprendere l'iter o se saranno necessarie integrazioni.
+
+Cordiali saluti`
+            },
+            rinunciata: {
+                subject: "Aggiornamento pratica - Pratica chiusa",
+                body: `${intro}
+
+la pratica risulta attualmente chiusa/rinunciata.
+
+Per eventuali chiarimenti o per valutare una nuova operazione resto a disposizione.
+
+Cordiali saluti`
+            }
+        };
+
+        return templates[stato] || templates.istruttoria;
+    }
+
+    function testoToHtmlEmail(texto) {
+        return String(texto || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\n/g, "<br>");
+    }
+
+    function costruisciEmailStatoHtml(testo, stato) {
+        const cfg = getStatoPraticaConfig(stato);
+
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#263238;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
+<tr>
+<td align="center" style="padding:32px 12px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:650px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e3e8ee;box-shadow:0 8px 30px rgba(0,45,114,.10);">
+<tr>
+<td align="center" bgcolor="#002d72" style="padding:28px 24px;border-bottom:4px solid #C99700;">
+<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="195" alt="Credipass" style="display:block;border:0;margin:0 auto;">
+</td>
+</tr>
+<tr>
+<td style="padding:30px 32px 12px;">
+<div style="font-size:11px;color:#C99700;font-weight:bold;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;">Aggiornamento pratica</div>
+<div style="font-size:22px;color:#002d72;font-weight:bold;line-height:1.3;">${cfg.label}</div>
+</td>
+</tr>
+<tr>
+<td style="padding:12px 32px 30px;font-size:14px;line-height:1.75;color:#4f5963;">
+${testoToHtmlEmail(testo)}
+</td>
+</tr>
+<tr>
+<td bgcolor="#001f4d" align="center" style="padding:16px 24px;color:#9cacc1;font-size:10px;line-height:1.5;">
+Comunicazione relativa allo stato di avanzamento della pratica.<br>
+Credipass
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+    }
+
+    async function apriModalStatoEmail(stato, datiPratica = null) {
+        try {
+            let d = datiPratica;
+
+            if (!d) {
+                const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+                d = snap.exists ? (snap.data() || {}) : {};
+            }
+
+            const email = normalizeDisplay(d.cliente_email) || normalizeDisplay(emailCliente);
+            if (!email) {
+                alert("Stato aggiornato, ma non è presente un'email cliente a cui inviare la notifica.");
+                return;
+            }
+
+            const template = creaTestoAggiornamentoStato(stato, d);
+
+            statoEmailCorrente = stato;
+            praticaEmailCorrente = d;
+
+            document.getElementById("statusEmailTo").value = email;
+            document.getElementById("statusEmailSubject").value = template.subject;
+            document.getElementById("statusEmailText").value = template.body;
+
+            const cfg = getStatoPraticaConfig(stato);
+            document.getElementById("statusEmailInfo").innerHTML =
+                `Lo stato è stato impostato su <strong>${cfg.label}</strong>. Il messaggio qui sotto è solo una bozza: puoi modificarlo oppure scegliere <strong>Non inviare</strong>.`;
+
+            document.getElementById("modalStatoEmail").style.display = "flex";
+        } catch (error) {
+            console.error("Errore preparazione notifica stato:", error);
+            alert("Stato salvato, ma non è stato possibile preparare la notifica email.");
+        }
+    }
+
+    async function apriNotificaStatoManuale() {
+        const select = document.getElementById("statoPraticaSelect");
+        const stato = select?.value || "da_istruire";
+        await apriModalStatoEmail(stato);
+    }
+
+    function chiudiModalStatoEmail() {
+        const modal = document.getElementById("modalStatoEmail");
+        if (modal) modal.style.display = "none";
+    }
+
+    async function inviaEmailStatoPratica() {
+        const to = document.getElementById("statusEmailTo").value.trim();
+        const subject = document.getElementById("statusEmailSubject").value.trim();
+        const text = document.getElementById("statusEmailText").value.trim();
+        const btn = document.getElementById("btnInviaStatoEmail");
+
+        if (!to || !subject || !text) {
+            alert("Compila destinatario, oggetto e messaggio.");
+            return;
+        }
+
+        btn.disabled = true;
+        const old = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
+
+        try {
+            const response = await fetch("/api/send-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    to: [to],
+                    subject,
+                    html: costruisciEmailStatoHtml(text, statoEmailCorrente || "istruttoria")
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Invio email non riuscito (${response.status})`);
+            }
+
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                ultima_notifica_stato: statoEmailCorrente || null,
+                ultima_notifica_stato_email: to,
+                ultima_notifica_stato_inviata_il: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo:
+                        getStatoPraticaConfig(
+                            statoEmailCorrente || "istruttoria"
+                        ).label,
+                    messaggio: text,
+                    subject
+                });
+
+            chiudiModalStatoEmail();
+
+            alert(
+                esitoAgenzia.ok && !esitoAgenzia.skipped
+                    ? "✅ Aggiornamento inviato al cliente e all'agenzia immobiliare."
+                    : esitoAgenzia.skipped
+                        ? "✅ Aggiornamento inviato al cliente. Nessuna email agenzia presente nella pratica."
+                        : "✅ Aggiornamento inviato al cliente. ⚠️ Invio all'agenzia non riuscito."
+            );
+        } catch (error) {
+            console.error("Errore invio email stato:", error);
+            alert("Errore durante l'invio dell'aggiornamento al cliente.");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = old;
+        }
+    }
+
+    async function caricaStatoPratica() {
+        if (!idCliente) return;
+
+        try {
+            const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            if (!snap.exists) return;
+
+            const d = snap.data() || {};
+            const stato = d.stato_pratica || "da_istruire";
+
+            aggiornaVisualStatoPratica(stato, d.stato_pratica_aggiornato_il || null);
+        } catch (error) {
+            console.error("Errore caricamento stato pratica:", error);
+        }
+    }
+
+    async function salvaStatoPratica(stato) {
+        if (!idCliente) return;
+
+        const cfg = getStatoPraticaConfig(stato);
+        const select = document.getElementById("statoPraticaSelect");
+
+        if (select) select.disabled = true;
+
+        try {
+            const refPratica = db.collection("pratiche_mutuo").doc(idCliente);
+            const prima = await refPratica.get();
+            const statoPrecedente = prima.exists
+                ? ((prima.data() || {}).stato_pratica || "da_istruire")
+                : "da_istruire";
+
+            await refPratica.set({
+                stato_pratica: STATO_PRATICA_CONFIG[stato] ? stato : "da_istruire",
+                stato_pratica_label: cfg.label,
+                stato_pratica_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            aggiornaVisualStatoPratica(stato);
+
+            const updated = document.getElementById("statoPraticaUpdated");
+            if (updated) {
+                updated.innerText = `Stato salvato: ${new Date().toLocaleString("it-IT")}`;
+            }
+
+            if (statoPrecedente !== stato) {
+                const meta = STATO_PRATICA_CLIENTE_META[stato] || {
+                    titolo: cfg.label,
+                    descrizione: "Lo stato della pratica è stato aggiornato."
+                };
+
+                await registraAttivitaCliente({
+                    tipo: "stato",
+                    titolo: meta.titolo,
+                    descrizione: meta.descrizione,
+                    stato,
+                    origine: "dashboard_stato",
+                    icona: "fa-flag"
+                });
+            }
+
+            if (STATI_NOTIFICA_AUTOMATICA.has(stato)) {
+                const snap = await refPratica.get();
+                const d = snap.exists ? (snap.data() || {}) : {};
+                await apriModalStatoEmail(stato, d);
+            }
+
+        } catch (error) {
+            console.error("Errore salvataggio stato pratica:", error);
+            alert("Errore durante il salvataggio dello stato pratica.");
+            await caricaStatoPratica();
+        } finally {
+            if (select) select.disabled = false;
+        }
+    }
+
+
+    const TRADUZIONI = {
+        'ci1': "Carta d'Identità R1",
+        'ci2': "Carta d'Identità R2",
+        'ts1': "Tessera Sanitaria R1",
+        'ts2': "Tessera Sanitaria R2",
+        'residenza1': "Certificato Cumulativo",
+        'matrimonio': "Atto Matrimonio",
+        'isee': "Attestazione ISEE",
+        'bustepaga1': "Ultime 2 Buste Paga R1",
+        'bustepaga2': "Ultime 2 Buste Paga R2",
+        'cud1': "Certificazione Unica R1",
+        'cud2': "Certificazione Unica R2",
+        'unici1': "Modello Redditi R1",
+        'unici2': "Modello Redditi R2",
+        'f241': "F24 R1",
+        'f242': "F24 R2",
+        'visura1': "Visura Camerale R1",
+        'visura2': "Visura Camerale R2",
+        'ec1': "Estratto Conto R1",
+        'ec2': "Estratto Conto R2",
+        'mov1': "Movimenti Bancari R1",
+        'mov2': "Movimenti Bancari R2",
+        'prestiti': "Contratti Prestiti",
+        'atto': "Atto di Provenienza",
+        'planimetria': "Planimetria Catastale",
+        'visuracat': "Visura Catastale",
+        'preliminare': "Preliminare / Proposta",
+        'mutuo_pre': "Atto Mutuo in Corso",
+        'preventivo': "Preventivo / Computo Metrico"
+    };
+
+    const DB_SELECT = {
+        'ANAGRAFICA': [
+            {id:'ci1', n:"Carta d'Identità R1"},
+            {id:'ci2', n:"Carta d'Identità R2"},
+            {id:'ts1', n:"Tessera Sanitaria R1"},
+            {id:'ts2', n:"Tessera Sanitaria R2"},
+            {id:'residenza1', n:"Certificato Cumulativo"},
+            {id:'isee', n:"ISEE"},
+            {id:'matrimonio', n:"Atto Matrimonio"}
+        ],
+        'REDDITO': [
+            {id:'bustepaga1', n:"Buste Paga R1"},
+            {id:'bustepaga2', n:"Buste Paga R2"},
+            {id:'cud1', n:"Certificazione Unica R1"},
+            {id:'cud2', n:"Certificazione Unica R2"},
+            {id:'unici1', n:"Modello Redditi R1"},
+            {id:'unici2', n:"Modello Redditi R2"},
+            {id:'f241', n:"F24 R1"},
+            {id:'f242', n:"F24 R2"},
+            {id:'contratto', n:"Contratto di Lavoro"},
+            {id:'visura1', n:"Visura Camerale R1"},
+            {id:'visura2', n:"Visura Camerale R2"}
+        ],
+        'BANCA': [
+            {id:'ec1', n:"Estratto Conto R1"},
+            {id:'ec2', n:"Estratto Conto R2"},
+            {id:'mov1', n:"Movimenti R1"},
+            {id:'mov2', n:"Movimenti R2"},
+            {id:'prestiti', n:"Contratti Prestiti"},
+            {id:'mutuo_pre', n:"Atto Mutuo in Corso"}
+        ],
+        'IMMOBILE': [
+            {id:'atto', n:"Atto Provenienza"},
+            {id:'planimetria', n:"Planimetria"},
+            {id:'visuracat', n:"Visura Catastale"},
+            {id:'preliminare', n:"Preliminare"},
+            {id:'preventivo', n:"Preventivo / Computo Metrico"}
+        ],
+        'ALTRO': [
+            {id:'integrazione1', n:"Richiesta Generica"},
+            {id:'extra1', n:"Documento Integrativo"},
+            {id:'extra2', n:"Chiarimento / Nota"}
+        ]
+    };
+
+    let carrello = [];
+    let emailCliente = "";
+
+    function formatCurrencyIT(value) {
+        if (value === null || value === undefined) return "";
+        let s = String(value).trim();
+        if (!s || s === "-" || s === "N/D" || s === " ") return "";
+
+        s = s.replace(/€/g, '').replace(/\s/g, '');
+
+        const parts = s.split(',');
+        const intPart = parts[0].replace(/\./g, '').replace(/[^\d-]/g, '');
+
+        if (intPart === "" || isNaN(Number(intPart))) return String(value).trim();
+
+        const formattedInt = Number(intPart).toLocaleString('it-IT');
+        return parts.length > 1 ? `${formattedInt},${parts[1]}` : formattedInt;
+    }
+
+    function formatEuro(value) {
+        const formatted = formatCurrencyIT(value);
+        return formatted ? `${formatted} €` : "";
+    }
+
+    function normalizeDisplay(value) {
+        if (value === null || value === undefined) return "";
+        const s = String(value).trim();
+        if (!s || s === "-" || s === "N/D" || s === " ") return "";
+        return s;
+    }
+
+    function formatBooleanItalian(value) {
+        const s = normalizeDisplay(value).toLowerCase();
+        if (!s) return "";
+        if (s === 'si' || s === 'sì' || s === 'true') return 'Sì';
+        if (s === 'no' || s === 'false') return 'No';
+        return value;
+    }
+
+    function prettyClientLabel(id) {
+        return String(id || '').replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+    }
+
+    window.onload = async () => {
+        try {
+            sessioneConsulente =
+                await CredipassAuth.guard();
+
+            if (idCliente) {
+                const accessSnap =
+                    await db.collection("pratiche_mutuo")
+                        .doc(idCliente)
+                        .get();
+
+                if (!accessSnap.exists) {
+                    alert("Pratica non trovata.");
+                    window.location.replace("ricerca-clienti.html");
+                    return;
+                }
+
+                const allowed =
+                    await CredipassAuth.practiceIsAccessible(
+                        accessSnap.data() || {}
+                    );
+
+                if (!allowed) {
+                    alert("Non hai i permessi per accedere a questa pratica.");
+                    window.location.replace("ricerca-clienti.html");
+                    return;
+                }
+            }
+
+        if (idCliente) {
+            document.getElementById('labelCliente').innerText = prettyClientLabel(idCliente);
+            caricaDocumenti();
+            caricaIdentikitCompleto();
+            cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
+        } else {
+            document.getElementById('documentiArea').innerHTML = '<div class="empty-state">Cliente non specificato nell’URL.</div>';
+            document.getElementById('identikitDinamico').innerHTML = '<div class="empty-state">Cliente non specificato.</div>';
+        }
+        } catch (error) {
+            console.error("Accesso dashboard negato:", error);
+        }
+    };
+
+    async function caricaIdentikitCompleto() {
+        const container = document.getElementById('identikitDinamico');
+
+        try {
+            const doc = await db.collection("pratiche_mutuo").doc(idCliente).get();
+
+            if (!doc.exists) {
+                container.innerHTML = "<p style='text-align:center; padding:20px; font-size:12px; color:#999;'>Dati pratica non trovati.</p>";
+                return;
+            }
+
+            const d = doc.data() || {};
+            emailCliente = d.cliente_email || "";
+
+            const firstAvailable = (...values) => {
+                for (const value of values) {
+                    const clean = normalizeDisplay(value);
+                    if (clean) return clean;
+                }
+                return "";
+            };
+
+            const row = (label, val) => {
+                const clean = normalizeDisplay(val);
+                if (!clean) return "";
+                return `
+                    <div class="data-row">
+                        <span class="data-label">${label}:</span>
+                        <span class="data-value">${clean}</span>
+                    </div>
+                `;
+            };
+
+            const rowEuro = (label, val) => {
+                const clean = formatEuro(val);
+                if (!clean) return "";
+                return `
+                    <div class="data-row">
+                        <span class="data-label">${label}:</span>
+                        <span class="data-value">${clean}</span>
+                    </div>
+                `;
+            };
+
+            let html = "";
+
+            let gMutuo = "";
+            gMutuo += row("Finalità", firstAvailable(d.finalita, d.mutuo_finalita));
+            gMutuo += rowEuro("Importo richiesto", firstAvailable(d.importo_richiesto, d.mutuo_importo));
+            gMutuo += rowEuro("Compravendita", firstAvailable(d.valore_compravendita, d.mutuo_compravendita));
+            gMutuo += rowEuro("Valore immobile", firstAvailable(d.valore_immobile, d.immobile_valore));
+            gMutuo += row("Prodotto", firstAvailable(d.prodotto, d.prodotto_bancario));
+            gMutuo += row("Tasso", d.tasso);
+            gMutuo += row("Durata", normalizeDisplay(d.durata_mutuo) ? `${d.durata_mutuo} anni` : "");
+
+            if (gMutuo) {
+                html += `<div class="data-group"><span class="data-group-title">Operazione Mutuo</span>${gMutuo}</div>`;
+            }
+
+            const nomeCompletoR1 = firstAvailable(
+                d.cliente_nome_completo,
+                [normalizeDisplay(d.cliente_nome), normalizeDisplay(d.cliente_cognome)].filter(Boolean).join(" ")
+            );
+
+            let gR1 = "";
+            gR1 += row("Nominativo", nomeCompletoR1);
+            gR1 += row("Codice Fiscale", d.cliente_cf);
+            gR1 += row("Data di nascita", d.cliente_data_nascita);
+            gR1 += row("Comune di nascita", firstAvailable(d.cliente_comune_nascita, d.cliente_luogo_nascita));
+            gR1 += row("Provincia nascita", d.cliente_provincia_nascita);
+            gR1 += row("Sesso", d.cliente_sesso);
+            gR1 += row("Cittadinanza", d.cliente_cittadinanza);
+            gR1 += row("Residenza", firstAvailable(d.cliente_residenza, d.cliente_indirizzo_residenza));
+            gR1 += row("Contratto", firstAvailable(d.lav1, d.contratto_richiedente_1));
+            gR1 += rowEuro("Reddito netto", firstAvailable(d.reddito_richiedente_1, d.cliente_reddito));
+            gR1 += row("Cellulare", d.cliente_cell);
+            gR1 += row("Email", d.cliente_email);
+
+            if (gR1) {
+                html += `<div class="data-group"><span class="data-group-title">1° Richiedente</span>${gR1}</div>`;
+            }
+
+            const esisteSecondo =
+                normalizeDisplay(d.cliente2_nome) ||
+                normalizeDisplay(d.cliente2_cognome) ||
+                normalizeDisplay(d.cliente2_cf) ||
+                normalizeDisplay(d.cliente2_email) ||
+                normalizeDisplay(d.cliente2_cell) ||
+                normalizeDisplay(d.reddito_richiedente_2) ||
+                normalizeDisplay(d.lav2);
+
+            if (esisteSecondo) {
+                const nomeCompletoR2 = firstAvailable(
+                    d.cliente2_nome_completo,
+                    [normalizeDisplay(d.cliente2_nome), normalizeDisplay(d.cliente2_cognome)].filter(Boolean).join(" ")
+                );
+
+                let gR2 = "";
+                gR2 += row("Nominativo", nomeCompletoR2);
+                gR2 += row("Codice Fiscale", d.cliente2_cf);
+                gR2 += row("Data di nascita", d.cliente2_data_nascita);
+                gR2 += row("Comune di nascita", firstAvailable(d.cliente2_comune_nascita, d.cliente2_luogo_nascita));
+                gR2 += row("Provincia nascita", d.cliente2_provincia_nascita);
+                gR2 += row("Sesso", d.cliente2_sesso);
+                gR2 += row("Cittadinanza", d.cliente2_cittadinanza);
+                gR2 += row("Residenza", firstAvailable(d.cliente2_residenza, d.cliente2_indirizzo_residenza));
+                gR2 += row("Contratto", firstAvailable(d.lav2, d.contratto_richiedente_2));
+                gR2 += rowEuro("Reddito netto", firstAvailable(d.reddito_richiedente_2, d.cliente2_reddito));
+                gR2 += row("Cellulare", d.cliente2_cell);
+                gR2 += row("Email", d.cliente2_email);
+
+                if (gR2) {
+                    html += `<div class="data-group"><span class="data-group-title">2° Richiedente</span>${gR2}</div>`;
+                }
+            }
+
+            let gFam = "";
+            gFam += row("Stato civile", firstAvailable(d.stato_civile, d.stato));
+            gFam += row("N. componenti", d.num_componenti);
+
+            const assegnoValue = formatBooleanItalian(d.assegno);
+            const assegnoImporto = formatEuro(d.assegno_importo);
+            if (assegnoValue || assegnoImporto) {
+                gFam += row("Assegno unico", `${assegnoValue || "Sì"}${assegnoImporto ? ` (${assegnoImporto})` : ""}`);
+            }
+
+            const etaFigli = [
+                d.eta_f1, d.eta_f2, d.eta_f3,
+                d.eta_f4, d.eta_f5
+            ].map(x => normalizeDisplay(x)).filter(Boolean);
+
+            if (etaFigli.length > 0) {
+                gFam += row("Numero figli", String(etaFigli.length));
+                gFam += row("Età figli", etaFigli.join(", "));
+            }
+
+            gFam += row("Situazione abitativa", d.sit_abitativa);
+
+            if ((normalizeDisplay(d.sit_abitativa)).toLowerCase() === "affitto") {
+                gFam += rowEuro("Canone affitto", d.canone_affitto);
+                gFam += row("Contratto registrato", formatBooleanItalian(d.contratto_reg));
+            }
+
+            if (gFam) {
+                html += `<div class="data-group"><span class="data-group-title">Famiglia e Casa</span>${gFam}</div>`;
+            }
+
+            let gCosti = "";
+
+            if (normalizeDisplay(d.gia_mutuo) || normalizeDisplay(d.rata_mutuo_pre)) {
+                gCosti += row(
+                    "Mutuo in corso",
+                    `${formatBooleanItalian(d.gia_mutuo) || "Sì"}${formatEuro(d.rata_mutuo_pre) ? ` (${formatEuro(d.rata_mutuo_pre)})` : ""}`
+                );
+            }
+
+            if (normalizeDisplay(d.fin_corso) || normalizeDisplay(d.rata_fin_pre) || normalizeDisplay(d.totale_rate_finanziamenti)) {
+                const totaleRate = firstAvailable(d.totale_rate_finanziamenti, d.rata_fin_pre);
+                gCosti += row(
+                    "Finanziamenti",
+                    `${formatBooleanItalian(d.fin_corso) || "Sì"}${formatEuro(totaleRate) ? ` (${formatEuro(totaleRate)})` : ""}`
+                );
+            }
+
+            gCosti += row("Polizza incendio", d.tipo_incendio);
+            gCosti += row("Importo polizza incendio", d.importo_incendio);
+            gCosti += row("Polizza personale", firstAvailable(d.tipo_Personale, d.tipo_personale));
+            gCosti += row("Importo polizza personale", firstAvailable(d.importo_Personale, d.importo_personale));
+            gCosti += rowEuro("Istruttoria banca", d.istr_banca);
+            gCosti += rowEuro("Perizia", d.perizia_costo);
+            gCosti += row("Imposta sostitutiva", d.imposta);
+            gCosti += row("Mediazione", d.mediazione);
+
+            if (gCosti) {
+                html += `<div class="data-group"><span class="data-group-title">Impegni e Costi Istruttoria</span>${gCosti}</div>`;
+            }
+
+            let gNote = "";
+            gNote += row("Luogo incontro", firstAvailable(d.luogo_incontro, d.campo_luogo));
+            gNote += row("Data consulenza", firstAvailable(d.data_consulenza, d.campo_data));
+            gNote += row("Referente", firstAvailable(d.referente, d.campo_referente));
+            gNote += row("Note", d.note_consulenza);
+
+            if (gNote) {
+                html += `<div class="data-group"><span class="data-group-title">Note e Riferimenti</span>${gNote}</div>`;
+            }
+
+            container.innerHTML = html || `<p style="text-align:center; padding:20px; font-size:12px; color:#999;">Nessun dato disponibile.</p>`;
+        } catch (e) {
+            console.error("Errore identikit:", e);
+            container.innerHTML = "<p style='text-align:center; padding:20px; font-size:12px; color:#c00;'>Errore nel caricamento dell'identikit.</p>";
+        }
+    }
+
+
+    function estraiCodiceDocumentoDaNomeFile(nomeFile) {
+        const originale = String(nomeFile || "");
+        const nome = originale
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "_");
+
+        const codici = Array.from(
+            new Set([
+                ...Object.keys(TRADUZIONI),
+                ...Object.values(DB_SELECT).flat().map(x => x.id)
+            ])
+        ).sort((a, b) => b.length - a.length);
+
+        // Nomi standard generati dal portale.
+        for (const code of codici) {
+            const c = String(code).toLowerCase();
+
+            if (
+                nome.startsWith(`doc_${c}_`) ||
+                nome.startsWith(`${c}_`) ||
+                nome.includes(`_${c}_`)
+            ) {
+                return c;
+            }
+        }
+
+        // Compatibilità con file legacy / rinominati manualmente.
+        const isR2 =
+            nome.includes("_r2_") ||
+            nome.includes("_richiedente_2_") ||
+            nome.includes("_secondo_richiedente_");
+
+        if (
+            nome.includes("carta_identita") ||
+            nome.includes("carta_di_identita") ||
+            nome.includes("carta_id") ||
+            nome.includes("documento_identita")
+        ) {
+            return isR2 ? "ci2" : "ci1";
+        }
+
+        if (
+            nome.includes("tessera_sanitaria") ||
+            nome.includes("codice_fiscale")
+        ) {
+            return isR2 ? "ts2" : "ts1";
+        }
+
+        if (
+            nome.includes("certificazione_unica") ||
+            nome.includes("_cud_") ||
+            nome.startsWith("cud_") ||
+            nome.includes("_cu_")
+        ) {
+            return isR2 ? "cud2" : "cud1";
+        }
+
+        if (nome.includes("busta_paga")) {
+            return isR2 ? "bustepaga2" : "bustepaga1";
+        }
+
+        if (
+            nome.includes("estratto_conto") ||
+            nome.includes("estrattoconto")
+        ) {
+            return isR2 ? "ec2" : "ec1";
+        }
+
+        if (
+            nome.includes("lista_movimenti") ||
+            nome.includes("movimenti_bancari") ||
+            nome.includes("movimenti")
+        ) {
+            return isR2 ? "mov2" : "mov1";
+        }
+
+        if (
+            nome.includes("cumulativo") ||
+            nome.includes("certificato_residenza") ||
+            nome.includes("residenza")
+        ) {
+            return "residenza1";
+        }
+
+        console.warn("Codice documento non riconosciuto:", originale);
+        return null;
+    }
+
+    function normalizzaCodiceDocumento(codice) {
+        return String(codice || "")
+            .trim()
+            .replace(/^doc_/, "")
+            .toLowerCase();
+    }
+
+    function trovaNomeDocumentoDaCodice(codice) {
+        const raw = normalizzaCodiceDocumento(codice);
+
+        for (const docs of Object.values(DB_SELECT)) {
+            const trovato = docs.find(x => x.id === raw);
+            if (trovato) return trovato.n;
+        }
+
+        return TRADUZIONI[raw] || raw || "Documento";
+    }
+
+    async function risolviCodiceDocumento(codice, nomeDocumento) {
+        let raw = normalizzaCodiceDocumento(codice);
+        if (raw) return raw;
+
+        const opzioni = Object.values(DB_SELECT)
+            .flat()
+            .map(x => `${x.id} = ${x.n}`)
+            .join("\n");
+
+        const inserito = prompt(
+            `Non riesco a riconoscere automaticamente il tipo di documento "${nomeDocumento}".\n\n` +
+            `Inserisci il codice corretto:\n\n${opzioni}`,
+            ""
+        );
+
+        return normalizzaCodiceDocumento(inserito);
+    }
+
+    async function richiediNuovaVersioneDocumento(codice, nomeDocumento) {
+        if (!idCliente) return;
+
+        const codiceFinale =
+            await risolviCodiceDocumento(codice, nomeDocumento);
+
+        if (!codiceFinale) {
+            alert("Impossibile determinare il tipo di documento.");
+            return;
+        }
+
+        const nomeFinale =
+            nomeDocumento || trovaNomeDocumentoDaCodice(codiceFinale);
+
+        const motivo = prompt(
+            `Perché richiedi una nuova versione di "${nomeFinale}"?\n\n` +
+            `Esempio: documento scaduto, documento illeggibile, periodo non aggiornato.`,
+            ""
+        );
+
+        if (motivo === null) return;
+
+        const motivoFinale =
+            motivo.trim() || "Nuova versione richiesta dal consulente";
+
+        try {
+            const ref =
+                db.collection("pratiche_mutuo").doc(idCliente);
+
+            await ref.set({
+                richiestaIntegrazioneAttiva: true,
+                elencoDocRichiesti:
+                    firebase.firestore.FieldValue.arrayUnion(codiceFinale),
+                documenti_versione_richiesta:
+                    firebase.firestore.FieldValue.arrayUnion(codiceFinale),
+                ultimoAggiornamentoIntegrazione:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            await ref.update({
+                [`documenti_versione_motivi.${codiceFinale}`]:
+                    motivoFinale
+            });
+
+            await registraAttivitaCliente({
+                tipo: "nuova_versione_documento",
+                titolo: `Nuova versione richiesta: ${nomeFinale}`,
+                descrizione: motivoFinale,
+                origine: "dashboard_versioning",
+                icona: "fa-rotate"
+            });
+
+            const esitoMail =
+                await inviaEmailAggiornamentoPortale({
+                    titolo: `Nuova versione richiesta: ${nomeFinale}`,
+                    messaggio:
+                        `Per proseguire con la pratica è necessario caricare una nuova versione del documento.`,
+                    dettaglio: motivoFinale,
+                    subject:
+                        `Documento da aggiornare - ${nomeFinale}`
+                });
+
+            alert(
+                esitoMail.ok
+                    ? `✅ Nuova versione richiesta e email inviata al cliente.\n\n${nomeFinale}`
+                    : `✅ Nuova versione richiesta.\n\n⚠️ La mail non è stata inviata.`
+            );
+
+            location.reload();
+
+        } catch (error) {
+            console.error("Errore richiesta nuova versione:", error);
+            alert("Errore durante la richiesta della nuova versione.");
+        }
+    }
+
+
+    async function eliminaDocumentoFascicolo(fullPath, codice, nomeDocumento) {
+        if (!fullPath || !idCliente) return;
+
+        const codiceFinale =
+            await risolviCodiceDocumento(codice, nomeDocumento);
+
+        const ok = confirm(
+            `Eliminare definitivamente questo file dal fascicolo?\n\n` +
+            `${nomeDocumento}\n\n` +
+            `Usa questa funzione solo per documenti errati o duplicati.`
+        );
+
+        if (!ok) return;
+
+        try {
+            const callable =
+                functionsFirebase.httpsCallable("deletePracticeDocument");
+
+            const result =
+                await callable({
+                    idCliente,
+                    fullPath,
+                    codiceDocumento: codiceFinale || "",
+                    nomeDocumento: nomeDocumento || "",});
+
+            const data = result?.data || {};
+
+            if (!data.ok) {
+                throw new Error(
+                    data.message ||
+                    "La funzione non ha confermato l'eliminazione."
+                );
+            }
+
+            // Registriamo anche lato dashboard, se la Function non lo ha già fatto.
+            // L'ID univoco evita duplicati visuali in caso di retry.
+            alert(
+                data.haAltreVersioni
+                    ? "✅ Versione eliminata. Nel fascicolo restano altre versioni dello stesso documento."
+                    : "✅ Documento eliminato dal fascicolo."
+            );
+
+            location.reload();
+
+        } catch (error) {
+            console.error("Errore eliminazione documento:", error);
+
+            const code =
+                error?.code ||
+                error?.details?.code ||
+                "";
+
+            if (
+                String(code).includes("permission-denied") ||
+                String(error?.message || "").toLowerCase().includes("pin")
+            ) {
+                alert(
+                    "Eliminazione non autorizzata per questo account."
+                );
+                return;
+            }
+
+            if (
+                String(code).includes("not-found") ||
+                String(error?.message || "").toLowerCase().includes("not found")
+            ) {
+                alert("Il file non risulta più presente nello Storage.");
+                return;
+            }
+
+            alert(
+                "Errore durante l'eliminazione tramite Cloud Function.\n\n" +
+                (error?.message || "Verifica il deploy della funzione deletePracticeDocument.")
+            );
+        }
+    }
+
+
+    async function caricaDocumenti() {
+        const loading = document.getElementById('loading');
+
+        let versioniRichieste = [];
+        try {
+            const praticaSnap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            const praticaDati = praticaSnap.exists ? (praticaSnap.data() || {}) : {};
+            versioniRichieste = Array.isArray(praticaDati.documenti_versione_richiesta)
+                ? praticaDati.documenti_versione_richiesta
+                : [];
+        } catch (e) {
+            console.warn("Impossibile leggere stato versioni documenti:", e);
+        }
+
+        const varianti = [
+            idCliente,
+            idCliente.replace(/_/g, ' '),
+            idCliente.replace(/_/g, '-')
+        ];
+
+        let files = [];
+
+        for (let v of varianti) {
+            try {
+                const res = await storage.ref(`Fascicoli/${v}`).listAll();
+                if (res.items.length > 0) {
+                    files = res.items;
+                    break;
+                }
+            } catch (e) {}
+        }
+
+        if (loading) loading.style.display = 'none';
+
+        if (files.length === 0) {
+            document.getElementById('documentiArea').innerHTML += '<p class="empty-state">Nessun documento caricato dal cliente.</p>';
+            return;
+        }
+
+        for (const item of files) {
+            try {
+                const url = await item.getDownloadURL();
+                const fn = item.name.toLowerCase();
+
+                let cat = 'ALTRO';
+                let nomeBello = item.name;
+
+                if (fn.includes('ci') || fn.includes('ts') || fn.includes('residenza') || fn.includes('isee') || fn.includes('matrimonio')) {
+                    cat = 'ANAGRAFICA';
+                } else if (fn.includes('busta') || fn.includes('cud') || fn.includes('unici') || fn.includes('iva') || fn.includes('f24') || fn.includes('visura1') || fn.includes('visura2') || fn.includes('contratto')) {
+                    cat = 'REDDITO';
+                } else if (fn.includes('ec1') || fn.includes('ec2') || fn.includes('mov') || fn.includes('conto') || fn.includes('prestiti') || fn.includes('mutuo_pre')) {
+                    cat = 'BANCA';
+                } else if (fn.includes('atto') || fn.includes('planimetria') || fn.includes('visura') || fn.includes('preliminare') || fn.includes('preventivo')) {
+                    cat = 'IMMOBILE';
+                }
+
+                for (const [key, val] of Object.entries(TRADUZIONI)) {
+                    if (fn.includes(key)) {
+                        nomeBello = val;
+                        break;
+                    }
+                }
+
+                const containerCat = document.getElementById(`cat-${cat}`);
+                const listCat = document.getElementById(`list-${cat}`);
+
+                if (containerCat && listCat) {
+                    containerCat.style.display = 'block';
+
+                    const codiceDocumento =
+                        estraiCodiceDocumentoDaNomeFile(item.name);
+
+                    const nuovaVersioneRichiesta =
+                        codiceDocumento &&
+                        versioniRichieste.includes(codiceDocumento);
+
+                    // IMPORTANTISSIMO:
+                    // Non usiamo più onclick inline con stringhe interpolate.
+                    // "Carta d'Identità" contiene un apostrofo e rompeva il JavaScript
+                    // dell'attributo onclick, rendendo i pulsanti del primo slot non cliccabili.
+                    const fullPathEncoded = encodeURIComponent(item.fullPath);
+                    const codiceEncoded = encodeURIComponent(codiceDocumento || "");
+                    const nomeEncoded = encodeURIComponent(nomeBello);
+
+                    listCat.innerHTML += `
+                        <div class="doc-item">
+                            <div>
+                                <span class="doc-name">${nomeBello}</span>
+                                <span class="doc-filename">${item.name}</span>
+                                ${nuovaVersioneRichiesta
+                                    ? `<span class="doc-version-badge"><i class="fas fa-rotate"></i> NUOVA VERSIONE RICHIESTA</span>`
+                                    : ""}
+                            </div>
+
+                            <div class="doc-actions-versioning">
+                                <a href="${url}" target="_blank" class="btn-view">VEDI</a>
+
+                                <button type="button"
+                                        class="btn-doc-version js-doc-version"
+                                        data-doc-code="${codiceEncoded}"
+                                        data-doc-name="${nomeEncoded}">
+                                    <i class="fas fa-rotate"></i> NUOVA VERSIONE
+                                </button>
+
+                                <button type="button"
+                                        class="btn-doc-delete js-doc-delete"
+                                        data-doc-path="${fullPathEncoded}"
+                                        data-doc-code="${codiceEncoded}"
+                                        data-doc-name="${nomeEncoded}">
+                                    <i class="fas fa-trash"></i> ELIMINA
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Errore file:", item.name, err);
+            }
+        }
+    }
+
+    function cambiaCategoria(cat, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        const select = document.getElementById('selectIntegrazione');
+        select.innerHTML = (DB_SELECT[cat] || []).map(d => `<option value="${d.id}">${d.n}</option>`).join('');
+    }
+
+    function aggiungiChecklist() {
+        const sel = document.getElementById('selectIntegrazione');
+        if (!sel || !sel.value) return;
+
+        const val = sel.value;
+        const txt = sel.options[sel.selectedIndex].text;
+
+        if (carrello.some(x => x.id === val)) return;
+
+        carrello.push({ id: val, testo: txt });
+        renderCarrello();
+    }
+
+    function removeFromCarrello(id) {
+        carrello = carrello.filter(x => x.id !== id);
+        renderCarrello();
+    }
+
+    function renderCarrello() {
+        const c = document.getElementById('listaCarrello');
+        const btnInvia = document.getElementById('btnInvia');
+
+        btnInvia.disabled = carrello.length === 0;
+        btnInvia.style.opacity = carrello.length === 0 ? 0.5 : 1;
+
+        if (carrello.length === 0) {
+            c.innerHTML = '<div style="font-size:11px; color:#999; text-align:center; padding:10px;">Nessun documento selezionato.</div>';
+            return;
+        }
+
+        c.innerHTML = carrello.map(item => `
+            <div class="checklist-item">
+                <span>${item.testo}</span>
+                <i class="fas fa-trash trash-btn" onclick="removeFromCarrello('${item.id}')"></i>
+            </div>
+        `).join('');
+    }
+
+    async function inviaIntegrazione() {
+        const nota = document.getElementById('notaIntegrazione').value.trim();
+        const btn = document.getElementById('btnInvia');
+
+        if (!emailCliente) {
+            alert("Attenzione: email cliente non trovata.");
+            return;
+        }
+
+        if (carrello.length === 0) {
+            alert("Aggiungi almeno un documento alla richiesta.");
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
+        btn.disabled = true;
+
+        const elencoHtml = carrello.map(i => `<li>${i.testo}</li>`).join('');
+
+        const uploadUrl = `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+
+        const emailHtml = `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background-color:#f4f7f6;font-family:Arial,sans-serif;">
+    <table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding:30px 10px;">
+        <tr>
+            <td align="center">
+                <table width="600" bgcolor="#ffffff" style="border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);border:1px solid #eee;">
+                    <tr>
+                        <td bgcolor="#002d72" align="center" style="padding:25px;border-bottom:5px solid #C99700;">
+                            <img src="https://consulenza-credipass.it/images/logo-credipass.png" width="200" alt="Credipass">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px;">
+                            <h2 style="color:#002d72;margin-top:0;">Integrazione Documenti</h2>
+                            <p style="color:#555;line-height:1.6;">
+                                Gentile Cliente, per procedere con la tua pratica abbiamo bisogno di integrare i seguenti documenti:
+                            </p>
+
+                            <div style="background:#f8f9fa;padding:15px;border-left:4px solid #002d72;margin:20px 0;">
+                                <ul style="margin:0;padding-left:20px;color:#002d72;font-weight:bold;">
+                                    ${elencoHtml}
+                                </ul>
+                            </div>
+
+                            ${nota ? `
+                            <p style="background:#fff9e6;padding:15px;border:1px dashed #C99700;border-radius:8px;font-style:italic; color:#444;">
+                                "${nota}"
+                            </p>
+                            ` : ''}
+
+                            <div align="center" style="margin-top:30px;">
+                                <a href="${uploadUrl}" style="background:#C99700;color:white;padding:16px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">
+                                    CARICA DOCUMENTI
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+        try {
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                richiestaIntegrazioneAttiva: true,
+                notaPerCliente: nota,
+                elencoDocRichiesti: carrello.map(x => x.id),
+                ultimoAggiornamentoIntegrazione: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            await registraAttivitaCliente({
+                tipo: "integrazione",
+                titolo: "Richiesta integrazione documentazione",
+                descrizione:
+                    `Documenti richiesti: ${carrello.map(x => x.testo).join(", ")}`
+                    + (nota ? ` — ${nota}` : ""),
+                stato: "integrazione_documenti",
+                origine: "dashboard_integrazione",
+                icona: "fa-file-circle-plus"
+            });
+
+            const response = await fetch('/api/send-email', {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify({
+                    to: [emailCliente],
+                    subject: `Integrazione Documenti - ${prettyClientLabel(idCliente)}`,
+                    html: emailHtml
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Invio email non riuscito");
+            }
+
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo: "Richiesta integrazione documentazione",
+                    messaggio:
+                        "È stata richiesta al cliente un'integrazione documentale per proseguire con la pratica.",
+                    dettaglio:
+                        carrello.map(x => x.testo).join(", ") +
+                        (nota ? ` — Nota: ${nota}` : ""),
+                    subject:
+                        `Integrazione documenti - ${prettyClientLabel(idCliente)}`
+                });
+
+            alert(
+                esitoAgenzia.ok && !esitoAgenzia.skipped
+                    ? "✅ Email inviata al cliente e aggiornamento inviato anche all'agenzia immobiliare."
+                    : esitoAgenzia.skipped
+                        ? "✅ Email inviata al cliente. Nessuna email agenzia presente nella pratica."
+                        : "✅ Email inviata al cliente. ⚠️ Aggiornamento agenzia non riuscito."
+            );
+
+            location.reload();
+        } catch (e) {
+            console.error("Errore invio integrazione:", e);
+            alert("Errore durante l'invio.");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> INVIA NOTIFICA AL CLIENTE';
+        }
+    }
+
+    async function scaricaTuttoZip() {
+        const btn = document.getElementById('btnZip');
+        const oldTxt = btn.innerHTML;
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creazione Archivio...';
+        btn.disabled = true;
+
+        const zip = new JSZip();
+
+        try {
+            const varianti = [
+                idCliente,
+                idCliente.replace(/_/g, ' '),
+                idCliente.replace(/_/g, '-')
+            ];
+
+            let items = [];
+
+            for (let v of varianti) {
+                try {
+                    const res = await storage.ref(`Fascicoli/${v}`).listAll();
+                    if (res.items.length > 0) {
+                        items = res.items;
+                        break;
+                    }
+                } catch (e) {}
+            }
+
+            if (items.length === 0) {
+                alert("Nessun file presente.");
+                btn.disabled = false;
+                btn.innerHTML = oldTxt;
+                return;
+            }
+
+            for (const item of items) {
+                const url = await item.getDownloadURL();
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                zip.file(item.name, blob);
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `Fascicolo_${idCliente}.zip`);
+
+            btn.innerHTML = oldTxt;
+            btn.disabled = false;
+        } catch (e) {
+            console.error("Errore ZIP:", e);
+            alert("Errore durante la creazione dello ZIP.");
+            btn.disabled = false;
+            btn.innerHTML = oldTxt;
+        }
+    }
+
+    function numberForAI(value) {
+        if (value === null || value === undefined || value === "") return null;
+        if (typeof value === "number") return Number.isFinite(value) ? value : null;
+
+        let s = String(value).trim()
+            .replace(/€/g, "")
+            .replace(/\s/g, "");
+
+        if (!s) return null;
+
+        if (s.includes(",") && s.includes(".")) {
+            s = s.replace(/\./g, "").replace(",", ".");
+        } else if (s.includes(",")) {
+            s = s.replace(",", ".");
+        }
+
+        const n = Number(s.replace(/[^\d.-]/g, ""));
+        return Number.isFinite(n) ? n : null;
+    }
+
+    function escapeHtmlAI(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function listaReportAI(titolo, items, tipo = "warning") {
+        if (!Array.isArray(items) || items.length === 0) return "";
+
+        const background = tipo === "danger" ? "#fff3f3" : tipo === "success" ? "#f2fbf5" : "#fff9e8";
+        const border = tipo === "danger" ? "#d9534f" : tipo === "success" ? "#28a745" : "#C99700";
+
+        return `
+            <div style="background:${background};border-left:4px solid ${border};padding:14px 16px;border-radius:8px;margin:14px 0;">
+                <div style="font-weight:800;color:#002d72;margin-bottom:8px;">${escapeHtmlAI(titolo)}</div>
+                <ul style="margin:0;padding-left:20px;">
+                    ${items.map(x => `<li style="margin:5px 0;">${escapeHtmlAI(x)}</li>`).join("")}
+                </ul>
+            </div>
+        `;
+    }
+
+    async function apriReportAI() {
+        document.getElementById('modalAI').style.display = 'flex';
+
+        const b = document.getElementById('aiBody');
+        b.innerHTML = `
+            <div style="text-align:center;padding:30px;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color:#C99700;"></i>
+                <div style="margin-top:12px;font-weight:700;color:#002d72;">Aggiornamento pre-delibera in corso...</div>
+                <div style="font-size:12px;color:#777;margin-top:6px;">Analisi dati pratica e documenti già elaborati.</div>
+            </div>
+        `;
+
+        try {
+            const praticaSnap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+
+            if (!praticaSnap.exists) {
+                b.innerHTML = "Dati pratica non trovati.";
+                return;
+            }
+
+            const d = praticaSnap.data() || {};
+
+            const importoMutuo = numberForAI(d.importo_richiesto ?? d.mutuo_importo);
+            const valoreImmobile = numberForAI(d.valore_immobile ?? d.immobile_valore);
+
+            // Usa una rata futura solo se presente nel dossier.
+            // Non confonde la rata del mutuo esistente (rata_mutuo_pre) con quella del nuovo mutuo.
+            const rataMutuoStimata = numberForAI(
+                d.rata_mutuo_stimata ??
+                d.rata_stimata ??
+                d.mutuo_rata ??
+                d.rata_nuovo_mutuo
+            );
+
+            const rateAltriFinanziamenti = numberForAI(
+                d.totale_rate_finanziamenti ??
+                d.rata_fin_pre
+            );
+
+            const finalitaMutuo =
+                normalizeDisplay(d.finalita) ||
+                normalizeDisplay(d.mutuo_finalita) ||
+                null;
+
+            const ricostruisciPratica =
+                functionsFirebase.httpsCallable("ricostruisciPraticaCompleta");
+
+            let callableResult;
+
+            try {
+                callableResult = await ricostruisciPratica({
+                    idCliente,
+                    importoMutuo,
+                    valoreImmobile,
+                    rataMutuoStimata,
+                    rateAltriFinanziamenti,
+                    finalitaMutuo
+                });
+            } catch (functionError) {
+                console.warn("Ricostruzione live non riuscita, provo il report già salvato:", functionError);
+            }
+
+            let analisiData = null;
+
+            const analisiSnap = await db.collection("analisi_deliberante").doc(idCliente).get();
+            if (analisiSnap.exists) {
+                analisiData = analisiSnap.data() || {};
+            }
+
+            const completa = analisiData?.praticaCompleta || {};
+            const summary =
+                callableResult?.data?.pratica ||
+                completa.practiceSummary ||
+                null;
+
+            if (!summary) {
+                const statoCallable = callableResult?.data?.stato;
+
+                if (statoCallable === "no_documents") {
+                    b.innerHTML = `
+                        <div style="background:#fff9e8;border-left:4px solid #C99700;padding:18px;border-radius:8px;">
+                            <strong style="color:#002d72;">Pre-delibera non ancora disponibile.</strong><br><br>
+                            Non risultano documenti analizzati per questa pratica. Carica almeno la documentazione necessaria e completa il trasferimento dal Fascicolo Cliente.
+                        </div>
+                    `;
+                } else {
+                    b.innerHTML = `
+                        <div style="background:#fff9e8;border-left:4px solid #C99700;padding:18px;border-radius:8px;">
+                            <strong style="color:#002d72;">Report non ancora disponibile.</strong><br><br>
+                            La pratica esiste, ma non è ancora presente una ricostruzione AI completa.
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            const anomalies = completa.anomalies || summary.anomalie || {};
+            const indicators = summary.indicatori || {};
+            const merged = completa.mergedFinancials || {};
+            const bankMatch = completa.bankMatch || {};
+
+            const criticita = Array.from(new Set([
+                ...(indicators.criticitaFinanziarie || []),
+                ...(merged.criticitaFinanziarie || []),
+                ...(anomalies.anomalieBloccanti || []),
+                ...(anomalies.anomalieWarning || [])
+            ].filter(Boolean)));
+
+            const puntiForza = Array.from(new Set([
+                ...(indicators.puntiForzaFinanziari || []),
+                ...(merged.puntiForzaFinanziari || [])
+            ].filter(Boolean)));
+
+            // Recupera gli alert bancari direttamente dalle ultime analisi documentali salvate,
+            // se presenti nel dossier aggregato.
+            const bankAlerts = [];
+            const documentiConsiderati = completa.documentiConsiderati || [];
+
+            if (Array.isArray(documentiConsiderati)) {
+                documentiConsiderati.forEach(doc => {
+                    if (doc?.reviewManuale && Array.isArray(doc.motiviReview)) {
+                        doc.motiviReview.forEach(m => {
+                            if (/scommess|gioco|contant|scopert|saldo negativo|finanziament|rata|riscoss|crypto|straordinari/i.test(String(m))) {
+                                bankAlerts.push(String(m));
+                            }
+                        });
+                    }
+                });
+            }
+
+            const reportTestuale = summary.reportTestuale || "Report testuale non disponibile.";
+
+            const decisionCode =
+                completa.decisionCode ||
+                callableResult?.data?.decisionCode ||
+                "N/D";
+
+            const esito = summary.esito || callableResult?.data?.stato || "N/D";
+
+            const scoreIncome = indicators.scoreIncome ?? merged.scoreIncome;
+            const scoreBank = indicators.scoreBank ?? merged.scoreBank;
+
+            b.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;">
+                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
+                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Esito tecnico</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${escapeHtmlAI(esito)}</div>
+                    </div>
+                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
+                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Decision code</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${escapeHtmlAI(decisionCode)}</div>
+                    </div>
+                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
+                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Score reddito</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${scoreIncome ?? "N/D"}</div>
+                    </div>
+                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
+                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Score bancario</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${scoreBank ?? "N/D"}</div>
+                    </div>
+                </div>
+
+                ${listaReportAI("Criticità / anomalie da verificare", criticita, criticita.length ? "danger" : "success")}
+                ${listaReportAI("Alert comportamento bancario", Array.from(new Set(bankAlerts)), "warning")}
+                ${listaReportAI("Punti di forza", puntiForza, "success")}
+
+                <div style="margin-top:16px;">
+                    <div style="font-weight:800;color:#002d72;margin-bottom:8px;">Report pratica</div>
+                    <pre style="white-space:pre-wrap;background:#f8f9fa;padding:15px;border-radius:10px;font-family:inherit;font-size:13px;color:#444;border:1px solid #ddd;">${escapeHtmlAI(reportTestuale)}</pre>
+                </div>
+
+                ${
+                    Array.isArray(bankMatch?.consigliate) && bankMatch.consigliate.length
+                    ? listaReportAI("Banche / policy potenzialmente compatibili", bankMatch.consigliate.map(x => typeof x === "string" ? x : (x.nome || x.banca || JSON.stringify(x))), "success")
+                    : ""
+                }
+
+                <div style="font-size:11px;color:#888;margin-top:18px;line-height:1.5;">
+                    La pre-delibera IA è uno strumento istruttorio di supporto e non costituisce delibera bancaria definitiva.
+                </div>
+            `;
+
+        } catch (e) {
+            console.error("Errore report AI:", e);
+
+            const message =
+                e?.message ||
+                e?.details ||
+                "Errore non specificato";
+
+            b.innerHTML = `
+                <div style="background:#fff3f3;border-left:4px solid #d9534f;padding:18px;border-radius:8px;">
+                    <strong style="color:#b52b27;">Errore durante la generazione della pre-delibera.</strong><br><br>
+                    <span style="font-size:12px;color:#666;">${escapeHtmlAI(message)}</span>
+                </div>
+            `;
+        }
+    }
+
+    document.getElementById('modalAI').addEventListener('click', (e) => {
+        if (e.target.id === 'modalAI') {
+            document.getElementById('modalAI').style.display = 'none';
+        }
+    });
+
+    /*
+     * ============================================================
+     * AZIONI DOCUMENTI DINAMICI
+     * ============================================================
+     *
+     * Usiamo un unico listener sul documento.
+     * Questo evita problemi con apostrofi, accenti o caratteri speciali
+     * nei nomi dei documenti (es. Carta d'Identità).
+     */
+    document.addEventListener("click", async (event) => {
+        const versionBtn = event.target.closest(".js-doc-version");
+
+        if (versionBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const codice = decodeURIComponent(
+                versionBtn.dataset.docCode || ""
+            );
+
+            const nomeDocumento = decodeURIComponent(
+                versionBtn.dataset.docName || ""
+            );
+
+            await richiediNuovaVersioneDocumento(
+                codice,
+                nomeDocumento
+            );
+
+            return;
+        }
+
+        const deleteBtn = event.target.closest(".js-doc-delete");
+
+        if (deleteBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const fullPath = decodeURIComponent(
+                deleteBtn.dataset.docPath || ""
+            );
+
+            const codice = decodeURIComponent(
+                deleteBtn.dataset.docCode || ""
+            );
+
+            const nomeDocumento = decodeURIComponent(
+                deleteBtn.dataset.docName || ""
+            );
+
+            await eliminaDocumentoFascicolo(
+                fullPath,
+                codice,
+                nomeDocumento
+            );
+        }
+    });
+
+
+</script>
+</body>
+</html>
