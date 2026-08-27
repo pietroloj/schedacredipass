@@ -20,56 +20,23 @@ function goLogin() {
 function injectBadge(session) {
     if (document.getElementById("credipass-auth-badge")) return;
 
+    const logoArea =
+        document.querySelector(".logo-area-stack");
+
     const headerActions =
         document.querySelector(".header-actions");
 
     const header =
         document.querySelector(".header");
 
-    const target =
-        headerActions ||
-        header ||
-        document.body;
+    /*
+     * OBIETTIVO:
+     * il menu utente deve stare SOPRA il logo Credipass,
+     * nella colonna destra dell'header, senza coprire i loghi.
+     */
 
     const wrapper = document.createElement("div");
     wrapper.id = "credipass-auth-badge";
-
-    if (headerActions) {
-        headerActions.style.display = "flex";
-        headerActions.style.alignItems = "center";
-        headerActions.style.gap = "10px";
-        headerActions.style.flexWrap = "wrap";
-    }
-
-    wrapper.style.cssText = [
-        "position:relative",
-        "display:flex",
-        "align-items:center",
-        "gap:8px",
-        "min-width:0",
-        "max-width:290px",
-        "padding:7px 9px",
-        "border-radius:10px",
-        "background:rgba(255,255,255,.10)",
-        "border:1px solid rgba(255,255,255,.18)",
-        "border-left:4px solid #C99700",
-        "box-shadow:0 4px 12px rgba(0,0,0,.10)",
-        "font-family:Poppins,Arial,sans-serif",
-        "z-index:30",
-        "flex:0 1 auto"
-    ].join(";");
-
-    if (!headerActions && header) {
-        wrapper.style.marginLeft = "auto";
-    }
-
-    if (!headerActions && !header) {
-        wrapper.style.position = "fixed";
-        wrapper.style.top = "12px";
-        wrapper.style.right = "20px";
-        wrapper.style.maxWidth = "calc(100vw - 40px)";
-        wrapper.style.background = "#002d72";
-    }
 
     const nomeCompleto =
         [
@@ -100,6 +67,44 @@ function injectBadge(session) {
             .charAt(0)
             .toUpperCase();
 
+    /*
+     * Se esiste .logo-area-stack, trasformiamo SOLO quella zona
+     * in una colonna verticale:
+     *
+     * [ menu utente ]
+     * [ logo Credipass ]
+     * [ logo 20 anni  ]
+     *
+     * Senza toccare il resto dell'header.
+     */
+    if (logoArea) {
+        logoArea.style.display = "flex";
+        logoArea.style.flexDirection = "column";
+        logoArea.style.alignItems = "center";
+        logoArea.style.justifyContent = "flex-start";
+        logoArea.style.gap = "8px";
+        logoArea.style.position = "relative";
+        logoArea.style.overflow = "visible";
+    }
+
+    wrapper.style.cssText = [
+        "position:relative",
+        "display:flex",
+        "align-items:center",
+        "gap:8px",
+        "width:245px",
+        "max-width:100%",
+        "padding:7px 9px",
+        "border-radius:10px",
+        "background:rgba(255,255,255,.08)",
+        "border:1px solid rgba(255,255,255,.22)",
+        "border-left:4px solid #C99700",
+        "box-shadow:0 4px 12px rgba(0,0,0,.12)",
+        "font-family:Poppins,Arial,sans-serif",
+        "z-index:100",
+        "flex-shrink:0"
+    ].join(";");
+
     wrapper.innerHTML = `
         <button
             id="credipass-user-menu-button"
@@ -123,8 +128,8 @@ function injectBadge(session) {
             "
         >
             <div style="
-                width:30px;
-                height:30px;
+                width:31px;
+                height:31px;
                 border-radius:50%;
                 background:#C99700;
                 color:#002d72;
@@ -141,7 +146,7 @@ function injectBadge(session) {
             <div style="
                 min-width:0;
                 flex:1;
-                line-height:1.2;
+                line-height:1.15;
             ">
                 <div style="
                     font-size:10px;
@@ -150,7 +155,6 @@ function injectBadge(session) {
                     white-space:nowrap;
                     overflow:hidden;
                     text-overflow:ellipsis;
-                    max-width:180px;
                 ">
                     ${displayName}
                 </div>
@@ -237,7 +241,8 @@ function injectBadge(session) {
                         border-bottom:1px solid #eef1f4;
                     "
                 >
-                    <i class="fas fa-users-cog" style="width:14px;text-align:center;"></i>
+                    <i class="fas fa-users-cog"
+                       style="width:14px;text-align:center;"></i>
                     Gestione consulenti
                 </a>
             ` : ""}
@@ -261,16 +266,43 @@ function injectBadge(session) {
                     text-align:left;
                 "
             >
-                <i class="fas fa-sign-out-alt" style="width:14px;text-align:center;"></i>
+                <i class="fas fa-sign-out-alt"
+                   style="width:14px;text-align:center;"></i>
                 Disconnetti
             </button>
         </div>
     `;
 
-    if (headerActions) {
+    /*
+     * Posizionamento principale:
+     * SOPRA ai loghi Credipass.
+     */
+    if (logoArea) {
+        logoArea.prepend(wrapper);
+
+    } else if (headerActions) {
+        /*
+         * Fallback per pagine diverse da index.html.
+         */
+        headerActions.style.display = "flex";
+        headerActions.style.alignItems = "center";
+        headerActions.style.gap = "10px";
         headerActions.prepend(wrapper);
+
+    } else if (header) {
+        header.style.position = "relative";
+        wrapper.style.marginLeft = "auto";
+        header.appendChild(wrapper);
+
     } else {
-        target.appendChild(wrapper);
+        /*
+         * Ultimo fallback, solo se la pagina non ha un header noto.
+         */
+        wrapper.style.position = "fixed";
+        wrapper.style.top = "12px";
+        wrapper.style.right = "20px";
+        wrapper.style.background = "#002d72";
+        document.body.appendChild(wrapper);
     }
 
     const menuButton =
@@ -301,7 +333,9 @@ function injectBadge(session) {
 
         if (chevron) {
             chevron.style.transform =
-                open ? "rotate(180deg)" : "rotate(0deg)";
+                open
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)";
         }
     }
 
