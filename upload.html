@@ -732,6 +732,240 @@ body {
     }
 }
 
+
+/* ===== PORTALE CLIENTE PRO V2 ===== */
+.client-phase-card {
+    background: #fff;
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 12px rgba(0,45,114,.04);
+}
+
+.client-phase-title {
+    color: #002d72;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 2px solid #C99700;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+}
+
+.client-stepper {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    align-items: start;
+}
+
+.client-step {
+    text-align: center;
+    position: relative;
+    min-width: 0;
+}
+
+.client-step-dot {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto 7px;
+    border-radius: 50%;
+    background: #e5e9ee;
+    color: #8a929a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #dde2e7;
+}
+
+.client-step.done .client-step-dot {
+    background: #28a745;
+    color: #fff;
+    box-shadow: 0 0 0 1px #28a745;
+}
+
+.client-step.current .client-step-dot {
+    background: #C99700;
+    color: #fff;
+    box-shadow: 0 0 0 1px #C99700;
+}
+
+.client-step-label {
+    font-size: 8px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #8a929a;
+    text-transform: uppercase;
+}
+
+.client-step.current .client-step-label {
+    color: #002d72;
+    font-weight: 800;
+}
+
+.phase-info-grid {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 9px;
+}
+
+.phase-info-mini {
+    background: #f7f9fc;
+    border-radius: 8px;
+    padding: 11px;
+}
+
+.phase-info-mini span {
+    display: block;
+    color: #8a929a;
+    font-size: 8px;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.phase-info-mini strong {
+    color: #002d72;
+    font-size: 10px;
+}
+
+.phase-explain-btn {
+    margin-top: 12px;
+    border: 0;
+    background: #eef4fb;
+    color: #002d72;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.client-list-card {
+    background: #fff;
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 3px 12px rgba(0,45,114,.04);
+}
+
+.client-message-item,
+.client-appointment-item,
+.client-doc-status-item {
+    border-bottom: 1px solid #f0f2f5;
+    padding: 10px 0;
+}
+
+.client-message-item:last-child,
+.client-appointment-item:last-child,
+.client-doc-status-item:last-child {
+    border-bottom: 0;
+}
+
+.client-message-date,
+.client-appointment-date {
+    color: #9aa1a9;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.client-message-title,
+.client-appointment-title {
+    color: #002d72;
+    font-size: 11px;
+    font-weight: 800;
+    margin-top: 2px;
+}
+
+.client-message-text,
+.client-appointment-meta {
+    color: #626c75;
+    font-size: 10px;
+    line-height: 1.55;
+    margin-top: 4px;
+}
+
+.client-doc-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.client-doc-status-name {
+    color: #2f363c;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.client-doc-chip {
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 8px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.client-doc-chip.ok {
+    background: #e9f7ed;
+    color: #1e7e34;
+}
+
+.client-doc-chip.wait {
+    background: #fff5d9;
+    color: #80620a;
+}
+
+.client-doc-chip.pending {
+    background: #eef2f6;
+    color: #68727c;
+}
+
+#phaseInfoModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    background: rgba(0,0,0,.72);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.phase-info-modal-card {
+    background: white;
+    max-width: 520px;
+    width: 100%;
+    border-radius: 14px;
+    padding: 24px;
+    border-top: 6px solid #C99700;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.phase-info-modal-card h3 {
+    color: #002d72;
+    margin-top: 0;
+}
+
+@media (max-width: 700px) {
+    .client-stepper {
+        grid-template-columns: repeat(7, minmax(82px, 1fr));
+        overflow-x: auto;
+        padding-bottom: 8px;
+    }
+
+    .phase-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 </style>
 </head>
 
@@ -808,6 +1042,70 @@ body {
             </div>
         </div>
 
+        <div class="client-phase-card">
+            <div class="client-phase-title">
+                <i class="fas fa-route"></i> Percorso della pratica
+            </div>
+
+            <div class="client-stepper" id="clienteStepper">
+                <div class="client-step" data-phase="0"><div class="client-step-dot">1</div><div class="client-step-label">Apertura</div></div>
+                <div class="client-step" data-phase="1"><div class="client-step-dot">2</div><div class="client-step-label">Documenti</div></div>
+                <div class="client-step" data-phase="2"><div class="client-step-dot">3</div><div class="client-step-label">Istruttoria</div></div>
+                <div class="client-step" data-phase="3"><div class="client-step-dot">4</div><div class="client-step-label">Banca</div></div>
+                <div class="client-step" data-phase="4"><div class="client-step-dot">5</div><div class="client-step-label">Perizia</div></div>
+                <div class="client-step" data-phase="5"><div class="client-step-dot">6</div><div class="client-step-label">Notaio</div></div>
+                <div class="client-step" data-phase="6"><div class="client-step-dot">7</div><div class="client-step-label">Stipula</div></div>
+            </div>
+
+            <div class="phase-info-grid">
+                <div class="phase-info-mini">
+                    <span>Fase attuale</span>
+                    <strong id="clienteFaseAttuale">Pratica aperta</strong>
+                </div>
+                <div class="phase-info-mini">
+                    <span>Responsabile fase</span>
+                    <strong id="clienteResponsabileFase">Consulente</strong>
+                </div>
+                <div class="phase-info-mini">
+                    <span>Tempo indicativo</span>
+                    <strong id="clienteTempoFase">Variabile</strong>
+                </div>
+            </div>
+
+            <button type="button" class="phase-explain-btn" onclick="apriSpiegazioneFase()">
+                <i class="fas fa-circle-question"></i> COSA SUCCEDE IN QUESTA FASE?
+            </button>
+        </div>
+
+        <div class="portal-grid">
+            <div class="client-list-card">
+                <div class="portal-card-title">
+                    <i class="fas fa-message"></i> Messaggi del consulente
+                </div>
+                <div id="clienteMessaggi">
+                    <div style="font-size:10px;color:#999;">Nessun messaggio disponibile.</div>
+                </div>
+            </div>
+
+            <div class="client-list-card">
+                <div class="portal-card-title">
+                    <i class="fas fa-calendar-days"></i> Appuntamenti
+                </div>
+                <div id="clienteAppuntamenti">
+                    <div style="font-size:10px;color:#999;">Nessun appuntamento programmato.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="client-list-card" style="margin-bottom:14px;">
+            <div class="portal-card-title">
+                <i class="fas fa-file-circle-check"></i> Stato documentazione
+            </div>
+            <div id="clienteStatoDocumenti">
+                <div style="font-size:10px;color:#999;">Verifica documentazione in corso...</div>
+            </div>
+        </div>
+
         <div class="portal-docs-heading">
             <i class="fas fa-folder-open"></i> Documentazione della pratica
         </div>
@@ -868,6 +1166,14 @@ body {
             La pagina si aggiornerà da sola qui sul PC non appena invierai i file dal telefono.
         </p>
         <button class="close-modal" onclick="document.getElementById('qrModal').style.display='none'">Chiudi</button>
+    </div>
+</div>
+
+<div id="phaseInfoModal">
+    <div class="phase-info-modal-card">
+        <button type="button" onclick="chiudiSpiegazioneFase()" style="float:right;border:0;background:#eef0f3;border-radius:50%;width:32px;height:32px;cursor:pointer;">&times;</button>
+        <h3 id="phaseInfoModalTitle">Informazioni sulla fase</h3>
+        <div id="phaseInfoModalBody" style="color:#5f6871;font-size:12px;line-height:1.7;"></div>
     </div>
 </div>
 
@@ -1076,6 +1382,263 @@ const CLIENT_STATUS = {
 
 let datiPraticaCliente = {};
 
+const CLIENT_PHASE_META = {
+    da_istruire: {
+        phase: 0,
+        responsabile: "Consulente",
+        tempo: "1-2 giorni lavorativi",
+        explain: "La pratica è stata aperta. Il consulente verifica i dati iniziali e prepara il fascicolo per l'istruttoria."
+    },
+    istruttoria: {
+        phase: 2,
+        responsabile: "Consulente",
+        tempo: "2-5 giorni lavorativi",
+        explain: "Vengono verificati documenti, redditi, impegni finanziari e coerenza generale della pratica."
+    },
+    integrazione_documenti: {
+        phase: 1,
+        responsabile: "Cliente + Consulente",
+        tempo: "Dipende dai documenti richiesti",
+        explain: "Sono necessari uno o più documenti o chiarimenti. Appena vengono caricati, il consulente può riprendere la lavorazione."
+    },
+    caricato_banca: {
+        phase: 3,
+        responsabile: "Banca",
+        tempo: "3-7 giorni lavorativi",
+        explain: "La pratica è stata trasmessa all'istituto di credito. La banca avvia le verifiche reddituali, creditizie e documentali."
+    },
+    valutazione_reddituale: {
+        phase: 3,
+        responsabile: "Banca",
+        tempo: "3-7 giorni lavorativi",
+        explain: "La banca sta verificando redditi, impegni e sostenibilità della rata. In questa fase normalmente non devi fare nulla, salvo nuove richieste."
+    },
+    delibera_reddituale_ok: {
+        phase: 3,
+        responsabile: "Banca",
+        tempo: "Fase completata",
+        explain: "La valutazione reddituale ha avuto esito positivo. La pratica può proseguire con gli adempimenti successivi."
+    },
+    delibera_reddituale_ko: {
+        phase: 3,
+        responsabile: "Consulente + Banca",
+        tempo: "Da definire",
+        explain: "La valutazione reddituale richiede approfondimenti. Il consulente valuterà eventuali integrazioni, modifiche o soluzioni alternative."
+    },
+    attesa_perizia: {
+        phase: 4,
+        responsabile: "Banca / Perito",
+        tempo: "3-7 giorni lavorativi",
+        explain: "La banca incarica un tecnico per valutare l'immobile e verificarne il valore e la conformità documentale."
+    },
+    perizia_in_corso: {
+        phase: 4,
+        responsabile: "Perito",
+        tempo: "2-5 giorni lavorativi",
+        explain: "Il tecnico sta eseguendo o completando la valutazione dell'immobile."
+    },
+    perizia_ok: {
+        phase: 4,
+        responsabile: "Banca",
+        tempo: "Fase completata",
+        explain: "La valutazione tecnica dell'immobile ha avuto esito positivo e la pratica può proseguire."
+    },
+    perizia_ko: {
+        phase: 4,
+        responsabile: "Consulente + Perito",
+        tempo: "Da definire",
+        explain: "Sono emersi elementi tecnici da approfondire. Il consulente ti aggiornerà sulle eventuali integrazioni necessarie."
+    },
+    attesa_documentazione_notarile: {
+        phase: 5,
+        responsabile: "Notaio + Consulente",
+        tempo: "3-10 giorni lavorativi",
+        explain: "Vengono raccolti e verificati i documenti necessari per predisporre l'atto di mutuo e, se previsto, la compravendita."
+    },
+    chiamata_atto: {
+        phase: 5,
+        responsabile: "Banca + Notaio",
+        tempo: "1-5 giorni lavorativi",
+        explain: "La pratica è pronta per organizzare la stipula. Verranno concordati data, orario e modalità dell'atto."
+    },
+    stipulato: {
+        phase: 6,
+        responsabile: "Pratica completata",
+        tempo: "Conclusa",
+        explain: "Il mutuo è stato stipulato. Nel portale resta disponibile lo storico della pratica."
+    },
+    sospesa: {
+        phase: 3,
+        responsabile: "Consulente",
+        tempo: "Da definire",
+        explain: "La lavorazione è temporaneamente sospesa in attesa di verifiche o informazioni. Il consulente ti aggiornerà alla ripresa."
+    },
+    rinunciata: {
+        phase: 6,
+        responsabile: "Pratica chiusa",
+        tempo: "Conclusa",
+        explain: "La pratica risulta conclusa. Per ulteriori dettagli puoi contattare il consulente."
+    }
+};
+
+let statoClienteCorrente = "da_istruire";
+
+function aggiornaStepperCliente(stato) {
+    const meta = CLIENT_PHASE_META[stato] || CLIENT_PHASE_META.da_istruire;
+    statoClienteCorrente = stato;
+
+    document.querySelectorAll("#clienteStepper .client-step").forEach(step => {
+        const phase = Number(step.dataset.phase);
+        step.classList.remove("done", "current");
+
+        if (phase < meta.phase) step.classList.add("done");
+        if (phase === meta.phase) step.classList.add("current");
+    });
+
+    const cfg = CLIENT_STATUS[stato] || CLIENT_STATUS.da_istruire;
+
+    const faseEl = document.getElementById("clienteFaseAttuale");
+    const respEl = document.getElementById("clienteResponsabileFase");
+    const tempoEl = document.getElementById("clienteTempoFase");
+
+    if (faseEl) faseEl.textContent = cfg.label;
+    if (respEl) respEl.textContent = meta.responsabile;
+    if (tempoEl) tempoEl.textContent = meta.tempo;
+}
+
+function apriSpiegazioneFase() {
+    const stato = statoClienteCorrente || "da_istruire";
+    const cfg = CLIENT_STATUS[stato] || CLIENT_STATUS.da_istruire;
+    const meta = CLIENT_PHASE_META[stato] || CLIENT_PHASE_META.da_istruire;
+
+    document.getElementById("phaseInfoModalTitle").textContent = cfg.label;
+    document.getElementById("phaseInfoModalBody").innerHTML = `
+        <p>${escapeHtml(meta.explain)}</p>
+        <p><strong>Responsabile della fase:</strong> ${escapeHtml(meta.responsabile)}</p>
+        <p><strong>Tempo indicativo:</strong> ${escapeHtml(meta.tempo)}</p>
+        <p style="font-size:10px;color:#8a929a;">Le tempistiche sono indicative e possono variare in base alla banca, alla documentazione e alle caratteristiche della pratica.</p>
+    `;
+
+    document.getElementById("phaseInfoModal").style.display = "flex";
+}
+
+function chiudiSpiegazioneFase() {
+    document.getElementById("phaseInfoModal").style.display = "none";
+}
+
+function renderStatoDocumentiCliente(d = {}) {
+    const target = document.getElementById("clienteStatoDocumenti");
+    if (!target) return;
+
+    const richiestiSet = new Set(
+        (Array.isArray(d.elencoDocRichiesti) ? d.elencoDocRichiesti : [])
+            .map(x => String(x).replace(/^doc_/, ""))
+    );
+
+    const items = [];
+
+    for (const gruppo of documenti) {
+        for (const doc of gruppo.docs) {
+            const fieldName = `doc_${doc.code}`;
+            const caricato = d[fieldName] === true;
+            const richiesto = richiestiSet.has(doc.code);
+
+            if (!caricato && !richiesto) continue;
+
+            const stato = caricato ? "ok" : (richiesto ? "wait" : "pending");
+            const label = caricato ? "Ricevuto" : (richiesto ? "Da caricare" : "In verifica");
+
+            items.push(`
+                <div class="client-doc-status-item">
+                    <span class="client-doc-status-name">${escapeHtml(doc.title)}</span>
+                    <span class="client-doc-chip ${stato}">${escapeHtml(label)}</span>
+                </div>
+            `);
+        }
+    }
+
+    target.innerHTML = items.length
+        ? items.join("")
+        : `<div style="font-size:10px;color:#999;">Nessun documento ancora registrato nel fascicolo.</div>`;
+}
+
+function avviaMessaggiCliente() {
+    db.collection("pratiche_mutuo")
+        .doc(clienteId)
+        .collection("messaggi_cliente")
+        .orderBy("data", "desc")
+        .limit(20)
+        .onSnapshot(snapshot => {
+            const target = document.getElementById("clienteMessaggi");
+            if (!target) return;
+
+            const rows = snapshot.docs
+                .map(doc => doc.data() || {})
+                .filter(x => x.visibile_cliente !== false);
+
+            if (!rows.length) {
+                target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun messaggio disponibile.</div>`;
+                return;
+            }
+
+            target.innerHTML = rows.map(m => `
+                <div class="client-message-item">
+                    <div class="client-message-date">${escapeHtml(formatTimestampCliente(m.data) || "Aggiornamento recente")}</div>
+                    <div class="client-message-title">${escapeHtml(m.titolo || "Aggiornamento")}</div>
+                    <div class="client-message-text">${escapeHtml(m.testo || "")}</div>
+                </div>
+            `).join("");
+        }, error => {
+            console.error("Errore messaggi cliente:", error);
+        });
+}
+
+function avviaAppuntamentiCliente() {
+    db.collection("pratiche_mutuo")
+        .doc(clienteId)
+        .collection("appuntamenti_cliente")
+        .orderBy("data", "asc")
+        .limit(20)
+        .onSnapshot(snapshot => {
+            const target = document.getElementById("clienteAppuntamenti");
+            if (!target) return;
+
+            const now = new Date();
+
+            const rows = snapshot.docs
+                .map(doc => doc.data() || {})
+                .filter(x => x.visibile_cliente !== false)
+                .filter(x => {
+                    if (!x.data) return true;
+                    try {
+                        const d = typeof x.data.toDate === "function" ? x.data.toDate() : new Date(x.data);
+                        return d >= new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    } catch (_) {
+                        return true;
+                    }
+                });
+
+            if (!rows.length) {
+                target.innerHTML = `<div style="font-size:10px;color:#999;">Nessun appuntamento programmato.</div>`;
+                return;
+            }
+
+            target.innerHTML = rows.map(a => `
+                <div class="client-appointment-item">
+                    <div class="client-appointment-date">${escapeHtml(formatTimestampCliente(a.data) || "")}</div>
+                    <div class="client-appointment-title">${escapeHtml(a.tipo || "Appuntamento")}</div>
+                    <div class="client-appointment-meta">
+                        ${a.luogo ? `<div><i class="fas fa-location-dot"></i> ${escapeHtml(a.luogo)}</div>` : ""}
+                        ${a.note ? `<div>${escapeHtml(a.note)}</div>` : ""}
+                    </div>
+                </div>
+            `).join("");
+        }, error => {
+            console.error("Errore appuntamenti cliente:", error);
+        });
+}
+
+
 function formatEuroCliente(value) {
     if (value === null || value === undefined || value === "") return "";
     const raw = String(value).replace(/[€\s]/g, "").replace(/\./g, "").replace(",", ".");
@@ -1125,6 +1688,8 @@ function aggiornaPortaleCliente(dati = {}) {
 
     renderOperazioneMutuoCliente(dati);
     renderAzioniRichiesteCliente(dati);
+    renderStatoDocumentiCliente(dati);
+    aggiornaStepperCliente(stato);
 }
 
 function renderOperazioneMutuoCliente(d = {}) {
@@ -1221,7 +1786,6 @@ function avviaTimelineCliente() {
     db.collection("pratiche_mutuo")
         .doc(clienteId)
         .collection("attivita_cliente")
-        .where("visibile_cliente", "==", true)
         .orderBy("data", "desc")
         .limit(50)
         .onSnapshot(snapshot => {
@@ -1240,8 +1804,23 @@ function avviaTimelineCliente() {
                 return;
             }
 
-            target.innerHTML = snapshot.docs.map(doc => {
-                const a = doc.data() || {};
+            const eventiVisibili = snapshot.docs
+                .map(doc => doc.data() || {})
+                .filter(a => a.visibile_cliente !== false);
+
+            if (!eventiVisibili.length) {
+                target.innerHTML = `
+                    <div class="timeline-item-client">
+                        <div class="timeline-dot-client"><i class="fas fa-folder-open"></i></div>
+                        <div class="timeline-date-client">Pratica in lavorazione</div>
+                        <div class="timeline-title-client">Fascicolo disponibile</div>
+                        <div class="timeline-desc-client">Qui compariranno gli aggiornamenti della pratica.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            target.innerHTML = eventiVisibili.map(a => {
                 return `
                     <div class="timeline-item-client">
                         <div class="timeline-dot-client">
@@ -1829,6 +2408,8 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 });
 
 avviaTimelineCliente();
+avviaMessaggiCliente();
+avviaAppuntamentiCliente();
 
 document.getElementById("uploadForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -2063,6 +2644,13 @@ window.addEventListener("click", function(e) {
         privacyModal.style.display = "none";
     }
 });
+
+document.getElementById("phaseInfoModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "phaseInfoModal") {
+        chiudiSpiegazioneFase();
+    }
+});
+
 </script>
 
 </body>
