@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -496,6 +497,241 @@ body {
         white-space: normal;
     }
 }
+
+/* ===== PORTALE CLIENTE / AVANZAMENTO PRATICA ===== */
+.portal-dashboard {
+    margin-bottom: 28px;
+}
+
+.portal-status-hero {
+    background: linear-gradient(135deg, #002d72 0%, #001b45 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.portal-status-eyebrow {
+    color: #C99700;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.portal-status-title {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.portal-status-subtitle {
+    margin-top: 7px;
+    font-size: 12px;
+    color: rgba(255,255,255,.78);
+    line-height: 1.5;
+}
+
+.portal-progress-track {
+    height: 8px;
+    background: rgba(255,255,255,.17);
+    border-radius: 99px;
+    margin-top: 18px;
+    overflow: hidden;
+}
+
+.portal-progress-fill {
+    height: 100%;
+    background: #C99700;
+    border-radius: 99px;
+    transition: width .4s ease;
+}
+
+.portal-progress-caption {
+    margin-top: 7px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: rgba(255,255,255,.70);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.portal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.portal-card {
+    background: #fff;
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 3px 12px rgba(0,45,114,.04);
+}
+
+.portal-card-title {
+    color: #002d72;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 2px solid #C99700;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.portal-data-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f2f4f7;
+    font-size: 11px;
+}
+
+.portal-data-row:last-child {
+    border-bottom: 0;
+}
+
+.portal-data-label {
+    color: #7b838c;
+}
+
+.portal-data-value {
+    color: #1e252b;
+    font-weight: 700;
+    text-align: right;
+}
+
+.portal-next-step {
+    background: #f7f9fc;
+    border-left: 4px solid #C99700;
+    border-radius: 8px;
+    padding: 13px 14px;
+    color: #505a64;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.portal-action-ok {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #1e7e34;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.portal-action-list {
+    display: grid;
+    gap: 7px;
+}
+
+.portal-action-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    background: #fff8e5;
+    border-radius: 7px;
+    color: #6e5712;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.portal-action-item.done {
+    background: #edf9f0;
+    color: #1e7e34;
+}
+
+.timeline-client {
+    position: relative;
+    padding-left: 24px;
+}
+
+.timeline-client::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 5px;
+    bottom: 5px;
+    width: 2px;
+    background: #e3e8ef;
+}
+
+.timeline-item-client {
+    position: relative;
+    padding: 0 0 18px 8px;
+}
+
+.timeline-item-client:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-dot-client {
+    position: absolute;
+    left: -23px;
+    top: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #002d72;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    box-shadow: 0 0 0 4px white;
+}
+
+.timeline-date-client {
+    color: #9aa1a9;
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.timeline-title-client {
+    color: #002d72;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.timeline-desc-client {
+    color: #666f78;
+    font-size: 10px;
+    line-height: 1.5;
+    margin-top: 3px;
+}
+
+.portal-docs-heading {
+    margin-top: 26px;
+    background: #002d72;
+    color: white;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+@media (max-width: 700px) {
+    .portal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-status-title {
+        font-size: 20px;
+    }
+}
+
 </style>
 </head>
 
@@ -509,6 +745,73 @@ body {
     </div>
 
     <div class="content">
+
+        <div class="portal-dashboard" id="portalDashboard">
+            <div class="portal-status-hero">
+                <div class="portal-status-eyebrow">Stato attuale della tua pratica</div>
+                <div id="clienteStatoTitolo" class="portal-status-title">Pratica in lavorazione</div>
+                <div id="clienteStatoSottotitolo" class="portal-status-subtitle">
+                    Qui puoi seguire in tempo reale l'avanzamento della tua pratica.
+                </div>
+
+                <div class="portal-progress-track">
+                    <div id="clienteProgressFill" class="portal-progress-fill" style="width:5%;"></div>
+                </div>
+
+                <div class="portal-progress-caption">
+                    <span id="clienteProgressLabel">Avanzamento 5%</span>
+                    <span id="clienteUltimoAggiornamento"></span>
+                </div>
+            </div>
+
+            <div class="portal-grid">
+                <div class="portal-card">
+                    <div class="portal-card-title">
+                        <i class="fas fa-house-chimney"></i> Operazione mutuo
+                    </div>
+                    <div id="clienteOperazioneMutuo">
+                        <div style="font-size:11px;color:#999;">Caricamento dati operazione...</div>
+                    </div>
+                </div>
+
+                <div class="portal-card">
+                    <div class="portal-card-title">
+                        <i class="fas fa-forward-step"></i> Prossimo passo
+                    </div>
+                    <div id="clienteProssimoPasso" class="portal-next-step">
+                        Verifica dello stato della pratica in corso.
+                    </div>
+                </div>
+            </div>
+
+            <div class="portal-grid">
+                <div class="portal-card">
+                    <div class="portal-card-title">
+                        <i class="fas fa-list-check"></i> Azioni richieste
+                    </div>
+                    <div id="clienteAzioniRichieste">
+                        <div class="portal-action-ok">
+                            <i class="fas fa-circle-check"></i>
+                            Nessuna azione richiesta al momento.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="portal-card">
+                    <div class="portal-card-title">
+                        <i class="fas fa-clock-rotate-left"></i> Attività della pratica
+                    </div>
+                    <div id="clienteTimeline" class="timeline-client">
+                        <div style="font-size:11px;color:#999;">Caricamento storico...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-docs-heading">
+            <i class="fas fa-folder-open"></i> Documentazione della pratica
+        </div>
+
         <div class="alert-box">
             <i class="fas fa-camera"></i>
             <div>Usa l'icona Fotocamera per scansionare i documenti, oppure clicca su Allega per caricare i file PDF.</div>
@@ -671,6 +974,319 @@ const clienteId =
 
 const emailRef = urlParams.get("emailRef") || "";
 const emailBO = urlParams.get("emailBO") || "";
+
+const CLIENT_STATUS = {
+    da_istruire: {
+        label: "Pratica presa in carico",
+        percent: 5,
+        subtitle: "La pratica è stata registrata ed è pronta per essere istruita.",
+        next: "Verificheremo la documentazione e i dati necessari per avviare l'istruttoria."
+    },
+    istruttoria: {
+        label: "In istruttoria",
+        percent: 20,
+        subtitle: "Stiamo verificando la documentazione e i dati della pratica.",
+        next: "Al termine della verifica la pratica potrà essere completata o trasmessa all'istituto."
+    },
+    integrazione_documenti: {
+        label: "Integrazione documenti",
+        percent: 25,
+        subtitle: "Per proseguire abbiamo bisogno di alcuni documenti o chiarimenti.",
+        next: "Consulta la sezione 'Azioni richieste' e carica la documentazione indicata."
+    },
+    caricato_banca: {
+        label: "Pratica inviata in banca",
+        percent: 40,
+        subtitle: "La documentazione è stata trasmessa all'istituto per la valutazione.",
+        next: "L'istituto procederà con la valutazione reddituale e creditizia."
+    },
+    valutazione_reddituale: {
+        label: "Valutazione reddituale",
+        percent: 50,
+        subtitle: "L'istituto sta valutando la sostenibilità reddituale della pratica.",
+        next: "Attendiamo l'esito della valutazione reddituale."
+    },
+    delibera_reddituale_ok: {
+        label: "Delibera reddituale positiva",
+        percent: 60,
+        subtitle: "La valutazione reddituale ha avuto esito positivo.",
+        next: "La pratica proseguirà con gli adempimenti tecnici e/o la perizia dell'immobile."
+    },
+    delibera_reddituale_ko: {
+        label: "Valutazione da approfondire",
+        percent: 50,
+        subtitle: "La valutazione reddituale richiede un approfondimento con il consulente.",
+        next: "Il consulente ti contatterà per valutare le possibili soluzioni."
+    },
+    attesa_perizia: {
+        label: "In attesa di perizia",
+        percent: 68,
+        subtitle: "Siamo nella fase di valutazione tecnica dell'immobile.",
+        next: "Il perito procederà con la valutazione dell'immobile."
+    },
+    perizia_in_corso: {
+        label: "Perizia in corso",
+        percent: 74,
+        subtitle: "La valutazione tecnica dell'immobile è in corso.",
+        next: "Attendiamo il completamento e l'esito della perizia."
+    },
+    perizia_ok: {
+        label: "Perizia positiva",
+        percent: 82,
+        subtitle: "La valutazione tecnica dell'immobile ha avuto esito positivo.",
+        next: "Procederemo con gli adempimenti notarili e la preparazione dell'atto."
+    },
+    perizia_ko: {
+        label: "Perizia da approfondire",
+        percent: 72,
+        subtitle: "La valutazione tecnica richiede un approfondimento.",
+        next: "Il consulente ti aggiornerà sugli approfondimenti necessari."
+    },
+    attesa_documentazione_notarile: {
+        label: "Documentazione notarile",
+        percent: 88,
+        subtitle: "Sono in corso le verifiche necessarie per la stipula.",
+        next: "Attendiamo il completamento della documentazione notarile."
+    },
+    chiamata_atto: {
+        label: "Chiamata d'atto",
+        percent: 95,
+        subtitle: "La pratica è pronta per l'organizzazione della stipula.",
+        next: "Verranno concordati data, orario e modalità della stipula."
+    },
+    stipulato: {
+        label: "Mutuo stipulato",
+        percent: 100,
+        subtitle: "La pratica è stata completata.",
+        next: "La pratica è conclusa. Conserva questa area per consultare lo storico della lavorazione."
+    },
+    sospesa: {
+        label: "Pratica temporaneamente sospesa",
+        percent: 45,
+        subtitle: "La lavorazione è temporaneamente sospesa in attesa di verifiche.",
+        next: "Il consulente ti aggiornerà appena sarà possibile riprendere la lavorazione."
+    },
+    rinunciata: {
+        label: "Pratica chiusa",
+        percent: 100,
+        subtitle: "La lavorazione della pratica è stata conclusa.",
+        next: "Per ulteriori informazioni puoi contattare il tuo consulente."
+    }
+};
+
+let datiPraticaCliente = {};
+
+function formatEuroCliente(value) {
+    if (value === null || value === undefined || value === "") return "";
+    const raw = String(value).replace(/[€\s]/g, "").replace(/\./g, "").replace(",", ".");
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return String(value);
+    return n.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
+}
+
+function formatTimestampCliente(ts) {
+    if (!ts) return "";
+    try {
+        const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
+        return d.toLocaleString("it-IT", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } catch (_) {
+        return "";
+    }
+}
+
+function aggiornaPortaleCliente(dati = {}) {
+    datiPraticaCliente = dati || {};
+
+    const stato = dati.stato_pratica || "da_istruire";
+    const cfg = CLIENT_STATUS[stato] || CLIENT_STATUS.da_istruire;
+
+    const titolo = document.getElementById("clienteStatoTitolo");
+    const sottotitolo = document.getElementById("clienteStatoSottotitolo");
+    const fill = document.getElementById("clienteProgressFill");
+    const progressLabel = document.getElementById("clienteProgressLabel");
+    const ultimo = document.getElementById("clienteUltimoAggiornamento");
+    const next = document.getElementById("clienteProssimoPasso");
+
+    if (titolo) titolo.textContent = cfg.label;
+    if (sottotitolo) sottotitolo.textContent = cfg.subtitle;
+    if (fill) fill.style.width = `${cfg.percent}%`;
+    if (progressLabel) progressLabel.textContent = `Avanzamento ${cfg.percent}%`;
+    if (ultimo) {
+        const formatted = formatTimestampCliente(dati.stato_pratica_aggiornato_il);
+        ultimo.textContent = formatted ? `Aggiornato ${formatted}` : "";
+    }
+    if (next) next.textContent = cfg.next;
+
+    renderOperazioneMutuoCliente(dati);
+    renderAzioniRichiesteCliente(dati);
+}
+
+function renderOperazioneMutuoCliente(d = {}) {
+    const target = document.getElementById("clienteOperazioneMutuo");
+    if (!target) return;
+
+    const rows = [];
+
+    function add(label, value) {
+        if (value === null || value === undefined) return;
+        const text = String(value).trim();
+        if (!text || text === "-" || text.toLowerCase() === "n/d") return;
+
+        rows.push(`
+            <div class="portal-data-row">
+                <span class="portal-data-label">${escapeHtml(label)}</span>
+                <span class="portal-data-value">${escapeHtml(text)}</span>
+            </div>
+        `);
+    }
+
+    add("Finalità", d.finalita || d.mutuo_finalita);
+
+    const importo = d.importo_richiesto || d.mutuo_importo;
+    if (importo) add("Importo richiesto", formatEuroCliente(importo));
+
+    const compravendita = d.valore_compravendita || d.mutuo_compravendita;
+    if (compravendita) add("Compravendita", formatEuroCliente(compravendita));
+
+    const valore = d.valore_immobile || d.immobile_valore;
+    if (valore) add("Valore immobile", formatEuroCliente(valore));
+
+    const durata = d.durata_mutuo || d.durataAnni || d.durata_anni;
+    if (durata) add("Durata", `${durata} anni`);
+
+    add("Prodotto", d.prodotto);
+    add("Tipo tasso", d.tipo_tasso || d.tasso);
+
+    const referente = d.referente || d.campo_referente;
+    if (referente) add("Consulente", referente);
+
+    target.innerHTML = rows.length
+        ? rows.join("")
+        : `<div style="font-size:11px;color:#999;">I dati dell'operazione saranno disponibili appena completata la configurazione della pratica.</div>`;
+}
+
+function titoloDocumentoDaCodice(codice) {
+    const raw = String(codice || "").replace(/^doc_/, "");
+    for (const gruppo of documenti) {
+        const trovato = gruppo.docs.find(x => x.code === raw);
+        if (trovato) return trovato.title;
+    }
+    return raw;
+}
+
+function renderAzioniRichiesteCliente(d = {}) {
+    const target = document.getElementById("clienteAzioniRichieste");
+    if (!target) return;
+
+    const richiesti = Array.isArray(d.elencoDocRichiesti)
+        ? d.elencoDocRichiesti
+        : [];
+
+    if (!d.richiestaIntegrazioneAttiva || richiesti.length === 0) {
+        target.innerHTML = `
+            <div class="portal-action-ok">
+                <i class="fas fa-circle-check"></i>
+                Nessuna azione richiesta al momento.
+            </div>
+        `;
+        return;
+    }
+
+    const html = richiesti.map(code => {
+        const fieldName = String(code).startsWith("doc_") ? String(code) : `doc_${code}`;
+        const done = d[fieldName] === true || d[code] === true;
+        return `
+            <div class="portal-action-item ${done ? "done" : ""}">
+                <i class="fas ${done ? "fa-circle-check" : "fa-circle-exclamation"}"></i>
+                <span>${escapeHtml(titoloDocumentoDaCodice(code))}</span>
+            </div>
+        `;
+    }).join("");
+
+    target.innerHTML = `
+        <div class="portal-action-list">${html}</div>
+        ${d.notaPerCliente
+            ? `<div style="margin-top:10px;font-size:10px;color:#666;line-height:1.5;">${escapeHtml(d.notaPerCliente)}</div>`
+            : ""}
+    `;
+}
+
+function avviaTimelineCliente() {
+    db.collection("pratiche_mutuo")
+        .doc(clienteId)
+        .collection("attivita_cliente")
+        .where("visibile_cliente", "==", true)
+        .orderBy("data", "desc")
+        .limit(50)
+        .onSnapshot(snapshot => {
+            const target = document.getElementById("clienteTimeline");
+            if (!target) return;
+
+            if (snapshot.empty) {
+                target.innerHTML = `
+                    <div class="timeline-item-client">
+                        <div class="timeline-dot-client"><i class="fas fa-folder-open"></i></div>
+                        <div class="timeline-date-client">Pratica in lavorazione</div>
+                        <div class="timeline-title-client">Fascicolo disponibile</div>
+                        <div class="timeline-desc-client">Qui compariranno gli aggiornamenti della pratica.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            target.innerHTML = snapshot.docs.map(doc => {
+                const a = doc.data() || {};
+                return `
+                    <div class="timeline-item-client">
+                        <div class="timeline-dot-client">
+                            <i class="fas ${escapeHtml(a.icona || "fa-circle-info")}"></i>
+                        </div>
+                        <div class="timeline-date-client">${escapeHtml(formatTimestampCliente(a.data) || "Aggiornamento recente")}</div>
+                        <div class="timeline-title-client">${escapeHtml(a.titolo || "Aggiornamento pratica")}</div>
+                        ${a.descrizione
+                            ? `<div class="timeline-desc-client">${escapeHtml(a.descrizione)}</div>`
+                            : ""}
+                    </div>
+                `;
+            }).join("");
+        }, error => {
+            console.error("Errore timeline cliente:", error);
+            const target = document.getElementById("clienteTimeline");
+            if (target) {
+                target.innerHTML = `<div style="font-size:10px;color:#999;">Storico temporaneamente non disponibile.</div>`;
+            }
+        });
+}
+
+async function registraAttivitaDaUpload({
+    tipo = "documenti",
+    titolo,
+    descrizione = "",
+    icona = "fa-file-arrow-up"
+}) {
+    try {
+        await db.collection("pratiche_mutuo")
+            .doc(clienteId)
+            .collection("attivita_cliente")
+            .add({
+                tipo,
+                titolo,
+                descrizione,
+                origine: "portale_cliente",
+                icona,
+                visibile_cliente: true,
+                data: firebase.firestore.FieldValue.serverTimestamp()
+            });
+    } catch (error) {
+        console.warn("Impossibile registrare attività portale:", error);
+    }
+}
 
 const docsStr = urlParams.get("docs") || "";
 const docsRichiesti = docsStr ? docsStr.split(",").map(x => x.trim()).filter(Boolean) : [];
@@ -1188,7 +1804,9 @@ checkPrivacy.addEventListener("change", aggiornaStatoBottonePrivacy);
 db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
     if (!docSnap.exists) return;
 
-    const dati = docSnap.data();
+    const dati = docSnap.data() || {};
+
+    aggiornaPortaleCliente(dati);
 
     for (const [nomeInput, caricato] of Object.entries(dati)) {
         if (caricato === true) {
@@ -1209,6 +1827,8 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
         }
     }
 });
+
+avviaTimelineCliente();
 
 document.getElementById("uploadForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -1313,6 +1933,53 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
         await db.collection("pratiche_mutuo").doc(clienteId).set(aggiornamentiDB, {
             merge: true
         });
+
+        const documentiCaricatiTitoli = filesDaCaricare.map(input => {
+            const code = String(input.name || "").replace(/^doc_/, "");
+            return titoloDocumentoDaCodice(code);
+        });
+
+        await registraAttivitaDaUpload({
+            tipo: "documenti",
+            titolo: "Documentazione caricata",
+            descrizione: documentiCaricatiTitoli.length
+                ? `Documenti forniti: ${documentiCaricatiTitoli.join(", ")}`
+                : "Nuova documentazione caricata nel fascicolo.",
+            icona: "fa-file-arrow-up"
+        });
+
+        try {
+            const praticaAggiornataSnap = await db.collection("pratiche_mutuo").doc(clienteId).get();
+            const praticaAggiornata = praticaAggiornataSnap.exists ? (praticaAggiornataSnap.data() || {}) : {};
+
+            const richiesti = Array.isArray(praticaAggiornata.elencoDocRichiesti)
+                ? praticaAggiornata.elencoDocRichiesti
+                : [];
+
+            const integrazioneCompleta =
+                praticaAggiornata.richiestaIntegrazioneAttiva === true &&
+                richiesti.length > 0 &&
+                richiesti.every(code => {
+                    const fieldName = String(code).startsWith("doc_") ? String(code) : `doc_${code}`;
+                    return praticaAggiornata[fieldName] === true || praticaAggiornata[code] === true;
+                });
+
+            if (integrazioneCompleta) {
+                await db.collection("pratiche_mutuo").doc(clienteId).set({
+                    richiestaIntegrazioneAttiva: false,
+                    integrazioneCompletataIl: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                await registraAttivitaDaUpload({
+                    tipo: "integrazione_completa",
+                    titolo: "Documentazione fornita completa",
+                    descrizione: "La documentazione richiesta in integrazione risulta caricata nel fascicolo.",
+                    icona: "fa-circle-check"
+                });
+            }
+        } catch (timelineError) {
+            console.warn("Errore verifica completamento integrazione:", timelineError);
+        }
 
         btn.innerHTML = `<i class="fas fa-cogs fa-spin"></i> Generazione Dossier e Anomalie...`;
 
