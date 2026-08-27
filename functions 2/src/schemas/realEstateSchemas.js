@@ -1,0 +1,53 @@
+const realEstateExtractionSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    valido: { type: "boolean" },
+    motivo_errore: { type: "string" },
+    tipo_documento_rilevato: { type: "string" },
+    dati_estratti: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        indirizzo_immobile: { type: "string" },
+        comune: { type: "string" },
+        foglio: { type: "string" },
+        particella: { type: "string" },
+        subalterno: { type: "string" },
+        categoria_catastale: { type: "string" },
+        classe: { type: "string" },
+        consistenza: { type: "string" },
+        rendita_catastale: { type: "string" },
+        intestatari: { type: "array", items: { type: "string" } },
+        quote: { type: "array", items: { type: "string" } },
+        tipo_provenienza: { type: "string" },
+        data_atto: { type: "string" },
+        notaio_o_tribunale: { type: "string" },
+        repertorio_o_rge: { type: "string" },
+        prezzo_compravendita: { type: "string" },
+        caparra: { type: "string" },
+        data_rogito_prevista: { type: "string" },
+        classe_energetica: { type: "string" },
+        ape_scadenza: { type: "string" },
+        importo_lavori: { type: "string" },
+        descrizione_lavori: { type: "string" },
+      },
+      required: [
+        "indirizzo_immobile", "comune", "foglio", "particella", "subalterno",
+        "categoria_catastale", "classe", "consistenza", "rendita_catastale",
+        "intestatari", "quote", "tipo_provenienza", "data_atto", "notaio_o_tribunale",
+        "repertorio_o_rge", "prezzo_compravendita", "caparra", "data_rogito_prevista",
+        "classe_energetica", "ape_scadenza", "importo_lavori", "descrizione_lavori",
+      ],
+    },
+    criticita_documentali: { type: "array", items: { type: "string" } },
+    punti_forza_documentali: { type: "array", items: { type: "string" } },
+    note_analista: { type: "string" },
+  },
+  required: [
+    "valido", "motivo_errore", "tipo_documento_rilevato", "dati_estratti",
+    "criticita_documentali", "punti_forza_documentali", "note_analista",
+  ],
+};
+
+module.exports = { realEstateExtractionSchema };
