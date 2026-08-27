@@ -1,0 +1,45 @@
+{
+  "patch": "PATCH-001-MULTICONSULENTE",
+  "files": [
+    {
+      "path": "index.html",
+      "status": "MODIFICATO"
+    },
+    {
+      "path": "main/ricerca-clienti.html",
+      "status": "MODIFICATO"
+    },
+    {
+      "path": "main/dashboard-consulente.html",
+      "status": "MODIFICATO"
+    },
+    {
+      "path": "functions/src/index.js",
+      "status": "MODIFICATO"
+    },
+    {
+      "path": "functions/src/services/deletePracticeDocument.js",
+      "status": "MODIFICATO"
+    },
+    {
+      "path": "functions/src/services/authConsultants.js",
+      "status": "NUOVO"
+    },
+    {
+      "path": "main/auth-guard.js",
+      "status": "NUOVO"
+    },
+    {
+      "path": "main/login-consulente.html",
+      "status": "NUOVO"
+    },
+    {
+      "path": "main/setup-admin.html",
+      "status": "NUOVO"
+    },
+    {
+      "path": "main/gestione-consulenti.html",
+      "status": "NUOVO"
+    }
+  ]
+}
