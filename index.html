@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -18,6 +19,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+<script src="/main/auth-guard.js"></script>
 
 <script>
 const firebaseConfig = {
@@ -32,6 +36,8 @@ if (!firebase.apps.length) {
 }
 
 const db = firebase.firestore();
+const functionsFirebase = firebase.app().functions("us-central1");
+const authReady = CredipassAuth.guard();
 </script>
 
 <style>
@@ -6586,6 +6592,7 @@ function handleShortWhatsAppLink() {
    ========================================================== */
 
 async function sincronizzaSchedaConDatabase() {
+    await authReady;
 
     const nome =
         nomeCompleto(1);
@@ -7029,6 +7036,21 @@ async function sincronizzaSchedaConDatabase() {
                 'campo_email_agenzia',
                 ''
             ),
+
+        consulente_uid:
+            firebase.auth().currentUser
+                ? firebase.auth().currentUser.uid
+                : "",
+
+        workspace_uid:
+            firebase.auth().currentUser
+                ? firebase.auth().currentUser.uid
+                : "",
+
+        consulente_email:
+            firebase.auth().currentUser
+                ? (firebase.auth().currentUser.email || "")
+                : "",
 
         ultimo_aggiornamento_scheda:
             firebase
