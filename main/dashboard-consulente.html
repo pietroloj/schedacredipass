@@ -898,6 +898,72 @@
         }
     }
 
+
+    /* ===== VERSIONING DOCUMENTI ===== */
+    .doc-actions-versioning {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .btn-doc-version,
+    .btn-doc-delete {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        cursor: pointer;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .btn-doc-version {
+        background: #fff4cc;
+        color: #765b00;
+        border: 1px solid #ead27b;
+    }
+
+    .btn-doc-version:hover {
+        background: #C99700;
+        color: white;
+    }
+
+    .btn-doc-delete {
+        background: #fff0f0;
+        color: #b42318;
+        border: 1px solid #f1c1be;
+    }
+
+    .btn-doc-delete:hover {
+        background: #b42318;
+        color: white;
+    }
+
+    .doc-version-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: #fff4cc;
+        color: #765b00;
+        font-size: 8px;
+        font-weight: 800;
+    }
+
+    @media (max-width: 700px) {
+        .doc-actions-versioning {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
 </style>
 </head>
 <body>
@@ -1294,23 +1360,24 @@
     } = {}) {
         if (!idCliente || !titolo) return;
 
-        try {
-            await db.collection("pratiche_mutuo")
-                .doc(idCliente)
-                .collection("attivita_cliente")
-                .add({
-                    tipo,
-                    titolo,
-                    descrizione: descrizione || "",
-                    stato: stato || null,
-                    origine,
-                    icona,
-                    visibile_cliente: true,
-                    data: firebase.firestore.FieldValue.serverTimestamp()
-                });
-        } catch (error) {
-            console.error("Errore registrazione attività cliente:", error);
-        }
+        const evento = {
+            id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            tipo,
+            titolo,
+            descrizione: descrizione || "",
+            stato: stato || null,
+            origine,
+            icona,
+            visibile_cliente: true,
+            data_ms: Date.now()
+        };
+
+        await db.collection("pratiche_mutuo")
+            .doc(idCliente)
+            .set({
+                attivita_cliente_log:
+                    firebase.firestore.FieldValue.arrayUnion(evento)
+            }, { merge: true });
     }
 
 
@@ -1327,17 +1394,22 @@
         }
 
         try {
+            const messaggio = {
+                id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                titolo,
+                testo,
+                visibile_cliente: true,
+                letto: false,
+                origine: "dashboard",
+                data_ms: Date.now()
+            };
+
             await db.collection("pratiche_mutuo")
                 .doc(idCliente)
-                .collection("messaggi_cliente")
-                .add({
-                    titolo,
-                    testo,
-                    visibile_cliente: true,
-                    letto: false,
-                    origine: "dashboard",
-                    data: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                .set({
+                    messaggi_cliente_log:
+                        firebase.firestore.FieldValue.arrayUnion(messaggio)
+                }, { merge: true });
 
             await registraAttivitaCliente({
                 tipo: "messaggio",
@@ -1373,18 +1445,23 @@
             const dataOraIso = ora ? `${data}T${ora}:00` : `${data}T09:00:00`;
             const dataOra = new Date(dataOraIso);
 
+            const appuntamento = {
+                id: `app_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                tipo,
+                data_ms: dataOra.getTime(),
+                luogo,
+                note,
+                stato: "programmato",
+                visibile_cliente: true,
+                creato_ms: Date.now()
+            };
+
             await db.collection("pratiche_mutuo")
                 .doc(idCliente)
-                .collection("appuntamenti_cliente")
-                .add({
-                    tipo,
-                    data: firebase.firestore.Timestamp.fromDate(dataOra),
-                    luogo,
-                    note,
-                    stato: "programmato",
-                    visibile_cliente: true,
-                    creato_il: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                .set({
+                    appuntamenti_cliente_log:
+                        firebase.firestore.FieldValue.arrayUnion(appuntamento)
+                }, { merge: true });
 
             const dataLabel = dataOra.toLocaleDateString("it-IT");
             const oraLabel = ora ? ` alle ${ora}` : "";
@@ -2213,8 +2290,159 @@ Credipass
         }
     }
 
+
+    function estraiCodiceDocumentoDaNomeFile(nomeFile) {
+        const nome = String(nomeFile || "").toLowerCase();
+
+        const codici = Array.from(
+            new Set([
+                ...Object.keys(TRADUZIONI),
+                ...Object.values(DB_SELECT).flat().map(x => x.id)
+            ])
+        ).sort((a, b) => b.length - a.length);
+
+        for (const code of codici) {
+            const c = String(code).toLowerCase();
+
+            if (
+                nome.startsWith(`doc_${c}_`) ||
+                nome.startsWith(`${c}_`) ||
+                nome.includes(`_${c}_`)
+            ) {
+                return c;
+            }
+        }
+
+        return null;
+    }
+
+    async function richiediNuovaVersioneDocumento(codice, nomeDocumento) {
+        if (!idCliente || !codice) return;
+
+        const motivo = prompt(
+            `Perché richiedi una nuova versione di "${nomeDocumento}"?\n\n` +
+            `Esempio: documento scaduto, documento illeggibile, periodo non aggiornato.`,
+            ""
+        );
+
+        if (motivo === null) return;
+
+        try {
+            const ref = db.collection("pratiche_mutuo").doc(idCliente);
+
+            await ref.set({
+                richiestaIntegrazioneAttiva: true,
+                elencoDocRichiesti:
+                    firebase.firestore.FieldValue.arrayUnion(codice),
+                documenti_versione_richiesta:
+                    firebase.firestore.FieldValue.arrayUnion(codice),
+                documenti_versione_motivi: {
+                    [codice]: motivo.trim() || "Nuova versione richiesta dal consulente"
+                },
+                ultimoAggiornamentoIntegrazione:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            await registraAttivitaCliente({
+                tipo: "nuova_versione_documento",
+                titolo: `Nuova versione richiesta: ${nomeDocumento}`,
+                descrizione:
+                    motivo.trim() || "È stata richiesta una versione aggiornata del documento.",
+                origine: "dashboard_versioning",
+                icona: "fa-rotate"
+            });
+
+            alert(
+                `✅ Nuova versione richiesta.\n\n` +
+                `Il cliente potrà caricare nuovamente "${nomeDocumento}" anche se il documento precedente è già presente.`
+            );
+        } catch (error) {
+            console.error("Errore richiesta nuova versione:", error);
+            alert("Errore durante la richiesta della nuova versione.");
+        }
+    }
+
+    async function eliminaDocumentoFascicolo(fullPath, codice, nomeDocumento) {
+        if (!fullPath) return;
+
+        const ok = confirm(
+            `Eliminare definitivamente questo file dal fascicolo?\n\n` +
+            `${nomeDocumento}\n\n` +
+            `Usa questa funzione solo per documenti errati o duplicati.`
+        );
+
+        if (!ok) return;
+
+        try {
+            const fileRef = storage.ref(fullPath);
+            await fileRef.delete();
+
+            const varianti = [
+                idCliente,
+                idCliente.replace(/_/g, ' '),
+                idCliente.replace(/_/g, '-')
+            ];
+
+            let rimanenti = [];
+
+            for (const v of varianti) {
+                try {
+                    const res = await storage.ref(`Fascicoli/${v}`).listAll();
+                    if (res.items.length > 0) {
+                        rimanenti = res.items;
+                        break;
+                    }
+                } catch (_) {}
+            }
+
+            const haAltreVersioni = codice
+                ? rimanenti.some(item =>
+                    estraiCodiceDocumentoDaNomeFile(item.name) === codice
+                )
+                : false;
+
+            if (codice) {
+                await db.collection("pratiche_mutuo").doc(idCliente).set({
+                    [`doc_${codice}`]: haAltreVersioni
+                }, { merge: true });
+            }
+
+            await registraAttivitaCliente({
+                tipo: "documento_eliminato",
+                titolo: `Documento rimosso: ${nomeDocumento}`,
+                descrizione: haAltreVersioni
+                    ? "È stata eliminata una versione del documento. Nel fascicolo restano altre versioni."
+                    : "Il documento è stato eliminato dal fascicolo.",
+                origine: "dashboard_versioning",
+                icona: "fa-trash"
+            });
+
+            alert("✅ Documento eliminato.");
+            location.reload();
+
+        } catch (error) {
+            console.error("Errore eliminazione documento:", error);
+            alert(
+                "Errore durante l'eliminazione del documento. " +
+                "Verifica che le regole Firebase Storage consentano la cancellazione."
+            );
+        }
+    }
+
     async function caricaDocumenti() {
         const loading = document.getElementById('loading');
+
+        let versioniRichieste = [];
+        try {
+            const praticaSnap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            const praticaDati = praticaSnap.exists ? (praticaSnap.data() || {}) : {};
+            versioniRichieste = Array.isArray(praticaDati.documenti_versione_richiesta)
+                ? praticaDati.documenti_versione_richiesta
+                : [];
+        } catch (e) {
+            console.warn("Impossibile leggere stato versioni documenti:", e);
+        }
+
         const varianti = [
             idCliente,
             idCliente.replace(/_/g, ' '),
@@ -2270,13 +2498,57 @@ Credipass
 
                 if (containerCat && listCat) {
                     containerCat.style.display = 'block';
+
+                    const codiceDocumento =
+                        estraiCodiceDocumentoDaNomeFile(item.name);
+
+                    const nuovaVersioneRichiesta =
+                        codiceDocumento &&
+                        versioniRichieste.includes(codiceDocumento);
+
+                    const fullPathEncoded =
+                        encodeURIComponent(item.fullPath);
+
+                    const codiceEncoded =
+                        encodeURIComponent(codiceDocumento || "");
+
+                    const nomeEncoded =
+                        encodeURIComponent(nomeBello);
+
                     listCat.innerHTML += `
                         <div class="doc-item">
                             <div>
                                 <span class="doc-name">${nomeBello}</span>
                                 <span class="doc-filename">${item.name}</span>
+                                ${nuovaVersioneRichiesta
+                                    ? `<span class="doc-version-badge"><i class="fas fa-rotate"></i> NUOVA VERSIONE RICHIESTA</span>`
+                                    : ""}
                             </div>
-                            <a href="${url}" target="_blank" class="btn-view">VEDI</a>
+
+                            <div class="doc-actions-versioning">
+                                <a href="${url}" target="_blank" class="btn-view">VEDI</a>
+
+                                ${codiceDocumento
+                                    ? `<button type="button"
+                                               class="btn-doc-version"
+                                               onclick="richiediNuovaVersioneDocumento(
+                                                   decodeURIComponent('${codiceEncoded}'),
+                                                   decodeURIComponent('${nomeEncoded}')
+                                               )">
+                                           <i class="fas fa-rotate"></i> NUOVA VERSIONE
+                                       </button>`
+                                    : ""}
+
+                                <button type="button"
+                                        class="btn-doc-delete"
+                                        onclick="eliminaDocumentoFascicolo(
+                                            decodeURIComponent('${fullPathEncoded}'),
+                                            decodeURIComponent('${codiceEncoded}'),
+                                            decodeURIComponent('${nomeEncoded}')
+                                        )">
+                                    <i class="fas fa-trash"></i> ELIMINA
+                                </button>
+                            </div>
                         </div>
                     `;
                 }
