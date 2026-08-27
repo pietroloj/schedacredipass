@@ -670,6 +670,13 @@ hr {
     .segnalatore-grid{grid-template-columns:1fr}
 }
 
+@media(max-width:700px){
+    #box_mant1_importo > div,
+    #box_mant2_importo > div{
+        grid-template-columns:1fr !important;
+    }
+}
+
 /* BOTTONI */
 
 .btn-aggiorna {
@@ -1984,13 +1991,33 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <div class="toggle-group blue">
 
-                            <input type="radio" id="mant1_si" name="mantenimento1" value="Sì">
-                            <label for="mant1_si">Sì</label>
+                            <input
+                                type="radio"
+                                id="mant1_pres_si"
+                                name="mantenimento1_presenza"
+                                value="Sì"
+                            >
+                            <label for="mant1_pres_si">Sì</label>
 
-                            <input type="radio" id="mant1_no" name="mantenimento1" value="No">
-                            <label for="mant1_no">No</label>
+                            <input
+                                type="radio"
+                                id="mant1_pres_no"
+                                name="mantenimento1_presenza"
+                                value="No"
+                                checked
+                            >
+                            <label for="mant1_pres_no">No</label>
 
                         </div>
+
+                        <input
+                            type="radio"
+                            id="mant1_no"
+                            name="mantenimento1"
+                            value="NESSUNO"
+                            checked
+                            style="display:none"
+                        >
 
                     </div>
 
@@ -1998,11 +2025,54 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                 <div class="form-group" id="box_mant1_importo" style="display:none">
 
-                    <label>Importo Mantenimento € / mese</label>
+                <label>Importo Mantenimento € / mese</label>
 
-                    <input type="text" id="mantenimento1_importo">
+                <div style="
+                    display:grid;
+                    grid-template-columns:minmax(0,1fr) 310px;
+                    gap:12px;
+                    align-items:end;
+                ">
+
+                    <input
+                        type="text"
+                        id="mantenimento1_importo"
+                        placeholder="Es. 600"
+                    >
+
+                    <div class="toggle-group blue">
+
+                        <input
+                            type="radio"
+                            id="mant1_attivo"
+                            name="mantenimento1"
+                            value="ATTIVO"
+                        >
+                        <label for="mant1_attivo">
+                            Attivo
+                            <span style="font-size:9px;font-weight:500">
+                                lo percepisce
+                            </span>
+                        </label>
+
+                        <input
+                            type="radio"
+                            id="mant1_passivo"
+                            name="mantenimento1"
+                            value="PASSIVO"
+                        >
+                        <label for="mant1_passivo">
+                            Passivo
+                            <span style="font-size:9px;font-weight:500">
+                                lo versa
+                            </span>
+                        </label>
+
+                    </div>
 
                 </div>
+
+            </div>
 
             </div>
 
@@ -2065,13 +2135,33 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                         <div class="toggle-group blue">
 
-                            <input type="radio" id="mant2_si" name="mantenimento2" value="Sì">
-                            <label for="mant2_si">Sì</label>
+                            <input
+                                type="radio"
+                                id="mant2_pres_si"
+                                name="mantenimento2_presenza"
+                                value="Sì"
+                            >
+                            <label for="mant2_pres_si">Sì</label>
 
-                            <input type="radio" id="mant2_no" name="mantenimento2" value="No">
-                            <label for="mant2_no">No</label>
+                            <input
+                                type="radio"
+                                id="mant2_pres_no"
+                                name="mantenimento2_presenza"
+                                value="No"
+                                checked
+                            >
+                            <label for="mant2_pres_no">No</label>
 
                         </div>
+
+                        <input
+                            type="radio"
+                            id="mant2_no"
+                            name="mantenimento2"
+                            value="NESSUNO"
+                            checked
+                            style="display:none"
+                        >
 
                     </div>
 
@@ -2079,11 +2169,54 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                 <div class="form-group" id="box_mant2_importo" style="display:none">
 
-                    <label>Importo Mantenimento € / mese</label>
+                <label>Importo Mantenimento € / mese</label>
 
-                    <input type="text" id="mantenimento2_importo">
+                <div style="
+                    display:grid;
+                    grid-template-columns:minmax(0,1fr) 310px;
+                    gap:12px;
+                    align-items:end;
+                ">
+
+                    <input
+                        type="text"
+                        id="mantenimento2_importo"
+                        placeholder="Es. 600"
+                    >
+
+                    <div class="toggle-group blue">
+
+                        <input
+                            type="radio"
+                            id="mant2_attivo"
+                            name="mantenimento2"
+                            value="ATTIVO"
+                        >
+                        <label for="mant2_attivo">
+                            Attivo
+                            <span style="font-size:9px;font-weight:500">
+                                lo percepisce
+                            </span>
+                        </label>
+
+                        <input
+                            type="radio"
+                            id="mant2_passivo"
+                            name="mantenimento2"
+                            value="PASSIVO"
+                        >
+                        <label for="mant2_passivo">
+                            Passivo
+                            <span style="font-size:9px;font-weight:500">
+                                lo versa
+                            </span>
+                        </label>
+
+                    </div>
 
                 </div>
+
+            </div>
 
             </div>
 
@@ -3409,18 +3542,40 @@ function formatEuro(value) {
 
 function parseEuro(value) {
 
-    if (!value) {
+    if (
+        value === null
+        ||
+        value === undefined
+        ||
+        value === ''
+    ) {
         return 0;
     }
 
     let s =
         String(value)
             .trim()
+            .replace(/\s/g,'')
             .replace(/[^\d.,-]/g,'');
 
+    if (!s) {
+        return 0;
+    }
+
+    const hasComma =
+        s.includes(',');
+
+    const hasDot =
+        s.includes('.');
+
+    /*
+     * Formato italiano completo:
+     * 1.234,56  -> 1234.56
+     */
     if (
-        s.includes(',') &&
-        s.includes('.')
+        hasComma
+        &&
+        hasDot
     ) {
 
         if (
@@ -3437,29 +3592,141 @@ function parseEuro(value) {
         }
         else {
 
+            /*
+             * Formato internazionale:
+             * 1,234.56 -> 1234.56
+             */
             s =
                 s.replace(/,/g,'');
 
         }
 
     }
-    else if (
-        s.includes(',')
-    ) {
+    else if (hasComma) {
 
-        s =
-            s.replace(',','.');
+        /*
+         * 1234,56 -> 1234.56
+         * 1,234 viene considerato decimale solo se
+         * dopo la virgola NON ci sono esattamente 3 cifre.
+         */
+        const parts =
+            s.split(',');
 
+        if (
+            parts.length > 2
+            ||
+            (
+                parts.length === 2
+                &&
+                parts[1].length === 3
+                &&
+                parts[0].length >= 1
+            )
+        ) {
+
+            s =
+                s.replace(/,/g,'');
+
+        }
+        else {
+
+            s =
+                s.replace(',','.');
+
+        }
+
+    }
+    else if (hasDot) {
+
+        /*
+         * QUESTO ERA IL BUG DELLA PATCH 12.
+         *
+         * I campi vengono formattati durante la digitazione:
+         * 1000   -> 1.000
+         * 4000   -> 4.000
+         * 100000 -> 100.000
+         *
+         * La vecchia parseEuro interpretava:
+         * 4.000   come 4
+         * 100.000 come 100
+         *
+         * Se ogni gruppo dopo il primo contiene 3 cifre,
+         * il punto è quindi un separatore delle migliaia.
+         */
+        const parts =
+            s.split('.');
+
+        const looksLikeItalianThousands =
+            parts.length > 1
+            &&
+            parts
+                .slice(1)
+                .every(
+                    part =>
+                        part.length === 3
+                );
+
+        if (looksLikeItalianThousands) {
+
+            s =
+                s.replace(/\./g,'');
+
+        }
+        /*
+         * Altrimenti lasciamo il punto come decimale:
+         * 1234.50 -> 1234.50
+         */
     }
 
     const n =
-        parseFloat(s);
+        Number(s);
 
-    return isNaN(n)
-        ? 0
-        : n;
+    return Number.isFinite(n)
+        ? n
+        : 0;
 
 }
+
+function testParseEuroCredipass() {
+
+    const tests = [
+        ['1.000', 1000],
+        ['4.000', 4000],
+        ['100.000', 100000],
+        ['1.234.567', 1234567],
+        ['1.234,56', 1234.56],
+        ['1234,56', 1234.56],
+        ['600', 600]
+    ];
+
+    const errors =
+        tests.filter(
+            ([input,expected]) =>
+                parseEuro(input)
+                !==
+                expected
+        );
+
+    if (errors.length) {
+
+        console.error(
+            'Credipass parseEuro: test NON superato',
+            errors
+        );
+
+    }
+    else {
+
+        console.info(
+            'Credipass parseEuro: test OK'
+        );
+
+    }
+
+}
+
+testParseEuroCredipass();
+
 
 function formatCurrency(value) {
 
@@ -4862,17 +5129,89 @@ function aggiornaStato(numero) {
 
 function aggiornaMantenimento(numero) {
 
-    document.getElementById(
-        `box_mant${numero}_importo`
-    ).style.display =
+    const presente =
         S(
-            `mantenimento${numero}`,
-            ''
-        )
-        ===
-        'Sì'
-            ? 'block'
-            : 'none';
+            `mantenimento${numero}_presenza`,
+            'No'
+        );
+
+    const box =
+        document.getElementById(
+            `box_mant${numero}_importo`
+        );
+
+    const nessuno =
+        document.getElementById(
+            `mant${numero}_no`
+        );
+
+    const attivo =
+        document.getElementById(
+            `mant${numero}_attivo`
+        );
+
+    const passivo =
+        document.getElementById(
+            `mant${numero}_passivo`
+        );
+
+    const importo =
+        document.getElementById(
+            `mantenimento${numero}_importo`
+        );
+
+    if (!box) {
+        return;
+    }
+
+    if (presente === 'Sì') {
+
+        box.style.display =
+            'block';
+
+        if (
+            !attivo?.checked
+            &&
+            !passivo?.checked
+        ) {
+            if (attivo) {
+                attivo.checked =
+                    true;
+            }
+        }
+
+        if (nessuno) {
+            nessuno.checked =
+                false;
+        }
+
+    }
+    else {
+
+        box.style.display =
+            'none';
+
+        if (nessuno) {
+            nessuno.checked =
+                true;
+        }
+
+        if (attivo) {
+            attivo.checked =
+                false;
+        }
+
+        if (passivo) {
+            passivo.checked =
+                false;
+        }
+
+        if (importo) {
+            importo.value =
+                '';
+        }
+
+    }
 
 }
 
@@ -4884,16 +5223,16 @@ function mantenimentoText(numero) {
         return '-';
     }
 
-    const answer =
+    const tipo =
         S(
             `mantenimento${numero}`,
-            '-'
+            'NESSUNO'
         );
 
     if (
-        answer !== 'Sì'
+        tipo === 'NESSUNO'
     ) {
-        return answer;
+        return 'Nessuno';
     }
 
     const importo =
@@ -4902,11 +5241,16 @@ function mantenimentoText(numero) {
             ''
         );
 
+    const descrizione =
+        tipo === 'ATTIVO'
+            ? 'ATTIVO - PERCEPITO'
+            : 'PASSIVO - VERSATO';
+
     return importo
         ?
-        `Sì - ${formatEuro(importo)}/mese`
+        `${descrizione} - ${formatEuro(importo)}/mese`
         :
-        'Sì';
+        descrizione;
 
 }
 
@@ -6576,7 +6920,11 @@ function buildChecklistFromSnapshot(
             if (
                 applicant.mantenimento
                 ===
-                'Sì'
+                'ATTIVO'
+                ||
+                applicant.mantenimento
+                ===
+                'PASSIVO'
             ) {
 
                 serveMantenimento =
@@ -7374,6 +7722,18 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        mantenimento_tipo_r1:
+            S(
+                'mantenimento1',
+                'NESSUNO'
+            ),
+
+        mantenimento_presenza_r1:
+            S(
+                'mantenimento1_presenza',
+                'No'
+            ),
+
         stato_civile_r2:
             S(
                 'stato2',
@@ -7396,6 +7756,18 @@ async function sincronizzaSchedaConDatabase() {
             V(
                 'mantenimento2_importo',
                 ''
+            ),
+
+        mantenimento_tipo_r2:
+            S(
+                'mantenimento2',
+                'NESSUNO'
+            ),
+
+        mantenimento_presenza_r2:
+            S(
+                'mantenimento2_presenza',
+                'No'
             ),
 
         lav1:
@@ -8144,7 +8516,7 @@ function boApplicant(numero) {
     const mantenimento =
         S(
             `mantenimento${numero}`,
-            'No'
+            'NESSUNO'
         );
 
     const mantenimentoImporto =
@@ -8294,21 +8666,47 @@ function boApplicant(numero) {
 
             ${boRow(
                 'Mantenimento',
-                mantenimento === 'Sì'
+                mantenimento === 'ATTIVO'
                     ?
                     (
-                        mantenimentoImporto
-                            ?
-                            formatEuro(
-                                mantenimentoImporto
-                            )
-                            +
-                            ' / mese'
-                            :
-                            'Sì'
+                        'ATTIVO - PERCEPITO'
+                        +
+                        (
+                            mantenimentoImporto
+                                ?
+                                ' · '
+                                +
+                                formatEuro(
+                                    mantenimentoImporto
+                                )
+                                +
+                                ' / mese'
+                                :
+                                ''
+                        )
                     )
                     :
-                    'No'
+                    mantenimento === 'PASSIVO'
+                        ?
+                        (
+                            'PASSIVO - VERSATO'
+                            +
+                            (
+                                mantenimentoImporto
+                                    ?
+                                    ' · '
+                                    +
+                                    formatEuro(
+                                        mantenimentoImporto
+                                    )
+                                    +
+                                    ' / mese'
+                                    :
+                                    ''
+                            )
+                        )
+                        :
+                        'Nessuno'
             )}
 
             ${
@@ -8741,6 +9139,42 @@ function boKpi() {
                 )
                 :
                 0
+        )
+        +
+        (
+            S(
+                'mantenimento1',
+                'NESSUNO'
+            )
+            ===
+            'ATTIVO'
+                ?
+                parseEuro(
+                    V(
+                        'mantenimento1_importo',
+                        ''
+                    )
+                )
+                :
+                0
+        )
+        +
+        (
+            S(
+                'mantenimento2',
+                'NESSUNO'
+            )
+            ===
+            'ATTIVO'
+                ?
+                parseEuro(
+                    V(
+                        'mantenimento2_importo',
+                        ''
+                    )
+                )
+                :
+                0
         );
 
     const rate =
@@ -8757,6 +9191,42 @@ function boKpi() {
                 parseEuro(
                     V(
                         'rata_mutuo_pre',
+                        ''
+                    )
+                )
+                :
+                0
+        )
+        +
+        (
+            S(
+                'mantenimento1',
+                'NESSUNO'
+            )
+            ===
+            'PASSIVO'
+                ?
+                parseEuro(
+                    V(
+                        'mantenimento1_importo',
+                        ''
+                    )
+                )
+                :
+                0
+        )
+        +
+        (
+            S(
+                'mantenimento2',
+                'NESSUNO'
+            )
+            ===
+            'PASSIVO'
+                ?
+                parseEuro(
+                    V(
+                        'mantenimento2_importo',
                         ''
                     )
                 )
@@ -9019,15 +9489,40 @@ ${
                     pdfUrl
                         ?
                         `
-                        <a href="${safeHtml(pdfUrl)}"
-                           style="display:block;background:#C99700;color:#ffffff;text-decoration:none;padding:15px 12px;border-radius:8px;font-size:12px;font-weight:bold;">
+                        <a
+                            href="${safeHtml(pdfUrl)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style="
+                                display:block;
+                                background:#C99700;
+                                color:#ffffff;
+                                text-decoration:none;
+                                padding:15px 12px;
+                                border-radius:8px;
+                                font-size:12px;
+                                font-weight:bold;
+                                cursor:pointer;
+                            "
+                        >
                             SCHEDA PDF
                         </a>
                         `
                         :
                         `
-                        <div style="display:block;background:#9aa4ad;color:#ffffff;padding:15px 12px;border-radius:8px;font-size:12px;font-weight:bold;">
-                            SCHEDA PDF
+                        <div
+                            title="PDF non salvato su Firebase Storage"
+                            style="
+                                display:block;
+                                background:#9aa4ad;
+                                color:#ffffff;
+                                padding:15px 12px;
+                                border-radius:8px;
+                                font-size:12px;
+                                font-weight:bold;
+                            "
+                        >
+                            SCHEDA PDF NON DISPONIBILE
                         </div>
                         `
                 }
@@ -12364,6 +12859,31 @@ window.addEventListener(
 'DOMContentLoaded',
 () => {
 
+    [1,2].forEach(numero => {
+
+        document
+            .querySelectorAll(
+                `input[name="mantenimento${numero}_presenza"]`
+            )
+            .forEach(
+                radio => {
+
+                    radio.addEventListener(
+                        'change',
+                        () => {
+
+                            aggiornaMantenimento(
+                                numero
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+    });
+
 
     initLiveMoneyFormatting();
 
@@ -13351,6 +13871,11 @@ window.addEventListener(
                             console.error(
                                 'Errore salvataggio PDF persistente:',
                                 storageError
+                            );
+
+                            console.error(
+                                'Firebase Storage error code:',
+                                storageError?.code || 'codice non disponibile'
                             );
 
                         }
