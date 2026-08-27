@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1381,6 +1382,104 @@
     }
 
 
+    function costruisciEmailPortaleHtml({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        cta = "APRI IL PORTALE CLIENTE"
+    }) {
+        const portalUrl =
+            `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
+<tr>
+<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
+<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
+</td>
+</tr>
+<tr>
+<td style="padding:30px;">
+<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">Aggiornamento pratica</div>
+<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">${escapeHtml(titolo)}</h2>
+<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">${escapeHtml(messaggio)}</p>
+${dettaglio ? `
+<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
+${escapeHtml(dettaglio)}
+</div>` : ""}
+<div style="text-align:center;margin-top:26px;">
+<a href="${portalUrl}" style="display:inline-block;background:#C99700;color:#fff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:bold;font-size:13px;">${escapeHtml(cta)}</a>
+</div>
+<p style="margin:26px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
+Accedi al portale per consultare lo stato aggiornato, le attività e gli eventuali documenti richiesti.
+</p>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+    }
+
+    async function inviaEmailAggiornamentoPortale({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        subject = ""
+    }) {
+        try {
+            let email = normalizeDisplay(emailCliente);
+
+            if (!email) {
+                const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+                const d = snap.exists ? (snap.data() || {}) : {};
+                email = normalizeDisplay(d.cliente_email);
+            }
+
+            if (!email) {
+                console.warn("Notifica portale non inviata: email cliente assente.");
+                return { ok: false, motivo: "email_assente" };
+            }
+
+            const response = await fetch("/api/send-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    to: [email],
+                    subject: subject || `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`,
+                    html: costruisciEmailPortaleHtml({
+                        titolo,
+                        messaggio,
+                        dettaglio
+                    })
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Invio email non riuscito (${response.status})`);
+            }
+
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                ultima_notifica_portale_titolo: titolo,
+                ultima_notifica_portale_email: email,
+                ultima_notifica_portale_inviata_il:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            return { ok: true };
+        } catch (error) {
+            console.error("Errore notifica email portale:", error);
+            return { ok: false, motivo: error.message };
+        }
+    }
+
+
     async function salvaMessaggioCliente() {
         const titoloEl = document.getElementById("messaggioClienteTitolo");
         const testoEl = document.getElementById("messaggioClienteTesto");
@@ -1419,10 +1518,20 @@
                 icona: "fa-message"
             });
 
+            const esitoMail = await inviaEmailAggiornamentoPortale({
+                titolo,
+                messaggio: testo,
+                subject: `Nuovo messaggio sulla tua pratica - ${prettyClientLabel(idCliente)}`
+            });
+
             if (titoloEl) titoloEl.value = "";
             if (testoEl) testoEl.value = "";
 
-            alert("✅ Messaggio pubblicato nel portale cliente.");
+            alert(
+                esitoMail.ok
+                    ? "✅ Messaggio pubblicato nel portale e notifica email inviata."
+                    : "✅ Messaggio pubblicato nel portale. ⚠️ Email non inviata: verifica l'indirizzo cliente o il servizio email."
+            );
         } catch (error) {
             console.error("Errore pubblicazione messaggio cliente:", error);
             alert("Errore durante la pubblicazione del messaggio.");
@@ -1474,12 +1583,26 @@
                 icona: "fa-calendar-check"
             });
 
+            const esitoMail = await inviaEmailAggiornamentoPortale({
+                titolo: `${tipo} programmata`,
+                messaggio: `È stato inserito un nuovo appuntamento relativo alla tua pratica.`,
+                dettaglio:
+                    `${dataLabel}${oraLabel}` +
+                    `${luogo ? ` — ${luogo}` : ""}` +
+                    `${note ? ` — ${note}` : ""}`,
+                subject: `${tipo} programmata - ${prettyClientLabel(idCliente)}`
+            });
+
             document.getElementById("appuntamentoClienteData").value = "";
             document.getElementById("appuntamentoClienteOra").value = "";
             document.getElementById("appuntamentoClienteLuogo").value = "";
             document.getElementById("appuntamentoClienteNote").value = "";
 
-            alert("✅ Appuntamento pubblicato nel portale cliente.");
+            alert(
+                esitoMail.ok
+                    ? "✅ Appuntamento pubblicato nel portale e notifica email inviata."
+                    : "✅ Appuntamento pubblicato nel portale. ⚠️ Email non inviata."
+            );
         } catch (error) {
             console.error("Errore salvataggio appuntamento:", error);
             alert("Errore durante il salvataggio dell'appuntamento.");
@@ -1506,10 +1629,20 @@
             icona: "fa-pen-to-square"
         });
 
+        const esitoMail = await inviaEmailAggiornamentoPortale({
+            titolo,
+            messaggio: descrizione || "È disponibile un nuovo aggiornamento sulla tua pratica.",
+            subject: `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`
+        });
+
         if (titoloEl) titoloEl.value = "";
         if (descrizioneEl) descrizioneEl.value = "";
 
-        alert("✅ Attività registrata nel portale cliente.");
+        alert(
+            esitoMail.ok
+                ? "✅ Attività registrata nel portale e notifica email inviata."
+                : "✅ Attività registrata nel portale. ⚠️ Email non inviata."
+        );
     }
 
     function aggiornaVisualStatoPratica(stato, timestamp = null) {
@@ -2292,7 +2425,12 @@ Credipass
 
 
     function estraiCodiceDocumentoDaNomeFile(nomeFile) {
-        const nome = String(nomeFile || "").toLowerCase();
+        const originale = String(nomeFile || "");
+        const nome = originale
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "_");
 
         const codici = Array.from(
             new Set([
@@ -2301,6 +2439,7 @@ Credipass
             ])
         ).sort((a, b) => b.length - a.length);
 
+        // Nomi standard generati dal portale.
         for (const code of codici) {
             const c = String(code).toLowerCase();
 
@@ -2313,57 +2452,186 @@ Credipass
             }
         }
 
+        // Compatibilità con file legacy / rinominati manualmente.
+        const isR2 =
+            nome.includes("_r2_") ||
+            nome.includes("_richiedente_2_") ||
+            nome.includes("_secondo_richiedente_");
+
+        if (
+            nome.includes("carta_identita") ||
+            nome.includes("carta_di_identita") ||
+            nome.includes("carta_id") ||
+            nome.includes("documento_identita")
+        ) {
+            return isR2 ? "ci2" : "ci1";
+        }
+
+        if (
+            nome.includes("tessera_sanitaria") ||
+            nome.includes("codice_fiscale")
+        ) {
+            return isR2 ? "ts2" : "ts1";
+        }
+
+        if (
+            nome.includes("certificazione_unica") ||
+            nome.includes("_cud_") ||
+            nome.startsWith("cud_") ||
+            nome.includes("_cu_")
+        ) {
+            return isR2 ? "cud2" : "cud1";
+        }
+
+        if (nome.includes("busta_paga")) {
+            return isR2 ? "bustepaga2" : "bustepaga1";
+        }
+
+        if (
+            nome.includes("estratto_conto") ||
+            nome.includes("estrattoconto")
+        ) {
+            return isR2 ? "ec2" : "ec1";
+        }
+
+        if (
+            nome.includes("lista_movimenti") ||
+            nome.includes("movimenti_bancari") ||
+            nome.includes("movimenti")
+        ) {
+            return isR2 ? "mov2" : "mov1";
+        }
+
+        if (
+            nome.includes("cumulativo") ||
+            nome.includes("certificato_residenza") ||
+            nome.includes("residenza")
+        ) {
+            return "residenza1";
+        }
+
+        console.warn("Codice documento non riconosciuto:", originale);
         return null;
     }
 
+    function normalizzaCodiceDocumento(codice) {
+        return String(codice || "")
+            .trim()
+            .replace(/^doc_/, "")
+            .toLowerCase();
+    }
+
+    function trovaNomeDocumentoDaCodice(codice) {
+        const raw = normalizzaCodiceDocumento(codice);
+
+        for (const docs of Object.values(DB_SELECT)) {
+            const trovato = docs.find(x => x.id === raw);
+            if (trovato) return trovato.n;
+        }
+
+        return TRADUZIONI[raw] || raw || "Documento";
+    }
+
+    async function risolviCodiceDocumento(codice, nomeDocumento) {
+        let raw = normalizzaCodiceDocumento(codice);
+        if (raw) return raw;
+
+        const opzioni = Object.values(DB_SELECT)
+            .flat()
+            .map(x => `${x.id} = ${x.n}`)
+            .join("\n");
+
+        const inserito = prompt(
+            `Non riesco a riconoscere automaticamente il tipo di documento "${nomeDocumento}".\n\n` +
+            `Inserisci il codice corretto:\n\n${opzioni}`,
+            ""
+        );
+
+        return normalizzaCodiceDocumento(inserito);
+    }
+
     async function richiediNuovaVersioneDocumento(codice, nomeDocumento) {
-        if (!idCliente || !codice) return;
+        if (!idCliente) return;
+
+        const codiceFinale =
+            await risolviCodiceDocumento(codice, nomeDocumento);
+
+        if (!codiceFinale) {
+            alert("Impossibile determinare il tipo di documento.");
+            return;
+        }
+
+        const nomeFinale =
+            nomeDocumento || trovaNomeDocumentoDaCodice(codiceFinale);
 
         const motivo = prompt(
-            `Perché richiedi una nuova versione di "${nomeDocumento}"?\n\n` +
+            `Perché richiedi una nuova versione di "${nomeFinale}"?\n\n` +
             `Esempio: documento scaduto, documento illeggibile, periodo non aggiornato.`,
             ""
         );
 
         if (motivo === null) return;
 
+        const motivoFinale =
+            motivo.trim() || "Nuova versione richiesta dal consulente";
+
         try {
-            const ref = db.collection("pratiche_mutuo").doc(idCliente);
+            const ref =
+                db.collection("pratiche_mutuo").doc(idCliente);
 
             await ref.set({
                 richiestaIntegrazioneAttiva: true,
                 elencoDocRichiesti:
-                    firebase.firestore.FieldValue.arrayUnion(codice),
+                    firebase.firestore.FieldValue.arrayUnion(codiceFinale),
                 documenti_versione_richiesta:
-                    firebase.firestore.FieldValue.arrayUnion(codice),
-                documenti_versione_motivi: {
-                    [codice]: motivo.trim() || "Nuova versione richiesta dal consulente"
-                },
+                    firebase.firestore.FieldValue.arrayUnion(codiceFinale),
                 ultimoAggiornamentoIntegrazione:
                     firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
+            await ref.update({
+                [`documenti_versione_motivi.${codiceFinale}`]:
+                    motivoFinale
+            });
+
             await registraAttivitaCliente({
                 tipo: "nuova_versione_documento",
-                titolo: `Nuova versione richiesta: ${nomeDocumento}`,
-                descrizione:
-                    motivo.trim() || "È stata richiesta una versione aggiornata del documento.",
+                titolo: `Nuova versione richiesta: ${nomeFinale}`,
+                descrizione: motivoFinale,
                 origine: "dashboard_versioning",
                 icona: "fa-rotate"
             });
 
+            const esitoMail =
+                await inviaEmailAggiornamentoPortale({
+                    titolo: `Nuova versione richiesta: ${nomeFinale}`,
+                    messaggio:
+                        `Per proseguire con la pratica è necessario caricare una nuova versione del documento.`,
+                    dettaglio: motivoFinale,
+                    subject:
+                        `Documento da aggiornare - ${nomeFinale}`
+                });
+
             alert(
-                `✅ Nuova versione richiesta.\n\n` +
-                `Il cliente potrà caricare nuovamente "${nomeDocumento}" anche se il documento precedente è già presente.`
+                esitoMail.ok
+                    ? `✅ Nuova versione richiesta e email inviata al cliente.\n\n${nomeFinale}`
+                    : `✅ Nuova versione richiesta.\n\n⚠️ La mail non è stata inviata.`
             );
+
+            location.reload();
+
         } catch (error) {
             console.error("Errore richiesta nuova versione:", error);
             alert("Errore durante la richiesta della nuova versione.");
         }
     }
 
+
     async function eliminaDocumentoFascicolo(fullPath, codice, nomeDocumento) {
-        if (!fullPath) return;
+        if (!fullPath || !idCliente) return;
+
+        const codiceFinale =
+            await risolviCodiceDocumento(codice, nomeDocumento);
 
         const ok = confirm(
             `Eliminare definitivamente questo file dal fascicolo?\n\n` +
@@ -2373,61 +2641,76 @@ Credipass
 
         if (!ok) return;
 
+        const deletePin = prompt(
+            "Inserisci il PIN amministrativo per confermare l'eliminazione del documento:",
+            ""
+        );
+
+        if (deletePin === null || !deletePin.trim()) return;
+
         try {
-            const fileRef = storage.ref(fullPath);
-            await fileRef.delete();
+            const callable =
+                functionsFirebase.httpsCallable("deletePracticeDocument");
 
-            const varianti = [
-                idCliente,
-                idCliente.replace(/_/g, ' '),
-                idCliente.replace(/_/g, '-')
-            ];
+            const result =
+                await callable({
+                    idCliente,
+                    fullPath,
+                    codiceDocumento: codiceFinale || "",
+                    nomeDocumento: nomeDocumento || "",
+                    deletePin: deletePin.trim()
+                });
 
-            let rimanenti = [];
+            const data = result?.data || {};
 
-            for (const v of varianti) {
-                try {
-                    const res = await storage.ref(`Fascicoli/${v}`).listAll();
-                    if (res.items.length > 0) {
-                        rimanenti = res.items;
-                        break;
-                    }
-                } catch (_) {}
+            if (!data.ok) {
+                throw new Error(
+                    data.message ||
+                    "La funzione non ha confermato l'eliminazione."
+                );
             }
 
-            const haAltreVersioni = codice
-                ? rimanenti.some(item =>
-                    estraiCodiceDocumentoDaNomeFile(item.name) === codice
-                )
-                : false;
+            // Registriamo anche lato dashboard, se la Function non lo ha già fatto.
+            // L'ID univoco evita duplicati visuali in caso di retry.
+            alert(
+                data.haAltreVersioni
+                    ? "✅ Versione eliminata. Nel fascicolo restano altre versioni dello stesso documento."
+                    : "✅ Documento eliminato dal fascicolo."
+            );
 
-            if (codice) {
-                await db.collection("pratiche_mutuo").doc(idCliente).set({
-                    [`doc_${codice}`]: haAltreVersioni
-                }, { merge: true });
-            }
-
-            await registraAttivitaCliente({
-                tipo: "documento_eliminato",
-                titolo: `Documento rimosso: ${nomeDocumento}`,
-                descrizione: haAltreVersioni
-                    ? "È stata eliminata una versione del documento. Nel fascicolo restano altre versioni."
-                    : "Il documento è stato eliminato dal fascicolo.",
-                origine: "dashboard_versioning",
-                icona: "fa-trash"
-            });
-
-            alert("✅ Documento eliminato.");
             location.reload();
 
         } catch (error) {
             console.error("Errore eliminazione documento:", error);
+
+            const code =
+                error?.code ||
+                error?.details?.code ||
+                "";
+
+            if (
+                String(code).includes("permission-denied") ||
+                String(error?.message || "").toLowerCase().includes("pin")
+            ) {
+                alert("PIN amministrativo errato oppure eliminazione non autorizzata.");
+                return;
+            }
+
+            if (
+                String(code).includes("not-found") ||
+                String(error?.message || "").toLowerCase().includes("not found")
+            ) {
+                alert("Il file non risulta più presente nello Storage.");
+                return;
+            }
+
             alert(
-                "Errore durante l'eliminazione del documento. " +
-                "Verifica che le regole Firebase Storage consentano la cancellazione."
+                "Errore durante l'eliminazione tramite Cloud Function.\n\n" +
+                (error?.message || "Verifica il deploy della funzione deletePracticeDocument.")
             );
         }
     }
+
 
     async function caricaDocumenti() {
         const loading = document.getElementById('loading');
@@ -2528,16 +2811,14 @@ Credipass
                             <div class="doc-actions-versioning">
                                 <a href="${url}" target="_blank" class="btn-view">VEDI</a>
 
-                                ${codiceDocumento
-                                    ? `<button type="button"
-                                               class="btn-doc-version"
-                                               onclick="richiediNuovaVersioneDocumento(
-                                                   decodeURIComponent('${codiceEncoded}'),
-                                                   decodeURIComponent('${nomeEncoded}')
-                                               )">
-                                           <i class="fas fa-rotate"></i> NUOVA VERSIONE
-                                       </button>`
-                                    : ""}
+                                <button type="button"
+                                        class="btn-doc-version"
+                                        onclick="richiediNuovaVersioneDocumento(
+                                            decodeURIComponent('${codiceEncoded}'),
+                                            decodeURIComponent('${nomeEncoded}')
+                                        )">
+                                    <i class="fas fa-rotate"></i> NUOVA VERSIONE
+                                </button>
 
                                 <button type="button"
                                         class="btn-doc-delete"
