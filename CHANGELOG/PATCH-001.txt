@@ -1,0 +1,85 @@
+PATCH 001 - MULTI-CONSULENTE
+================================
+
+OBIETTIVO
+---------
+Aggiunge il primo sistema multi-consulente senza dividere gli HTML in moduli JS.
+
+FILE MODIFICATI
+---------------
+- index.html
+  * aggiunge Firebase Authentication
+  * protegge la scheda consulenza
+  * salva automaticamente consulente_uid / workspace_uid / consulente_email
+
+- main/ricerca-clienti.html
+  * aggiunge autenticazione
+  * Admin vede tutte le pratiche
+  * Consulente vede solo le proprie pratiche
+
+- main/dashboard-consulente.html
+  * aggiunge autenticazione
+  * verifica l'accesso alla singola pratica
+  * mantiene il codice esistente della dashboard
+  * elimina la richiesta PIN dal flusso di eliminazione documenti
+
+- functions/src/index.js
+  * registra le nuove Cloud Functions del sistema consulenti
+
+- functions/src/services/deletePracticeDocument.js
+  * elimina il PIN
+  * richiede un utente Firebase autenticato
+  * consente all'Admin di gestire tutte le pratiche
+  * consente al consulente di gestire solo le proprie pratiche
+
+FILE NUOVI
+----------
+- functions/src/services/authConsultants.js
+- main/auth-guard.js
+- main/login-consulente.html
+- main/setup-admin.html
+- main/gestione-consulenti.html
+
+NON MODIFICATI
+--------------
+- upload.html
+- servizi AI
+- estrattori banca/reddito
+- income calculator
+- decision engine
+- IRS/Euribor
+- altri file JavaScript del progetto
+- layout del Portale Cliente
+
+PRIMO AVVIO
+-----------
+1. Sostituisci/aggiungi SOLO i file presenti in questa patch.
+2. Fai commit su GitHub.
+3. Lascia partire il normale deploy Firebase Functions.
+4. Apri:
+   /main/setup-admin.html
+5. Crea il primo amministratore.
+6. Vai su:
+   /main/login-consulente.html
+7. Al primo accesso Firebase invierà l'email di verifica.
+8. Conferma l'email e accedi nuovamente.
+
+PRATICHE VECCHIE
+----------------
+Le pratiche già presenti non vengono assegnate automaticamente.
+L'Admin continua a vederle tutte.
+I consulenti normali vedono solo pratiche con consulente_uid uguale al loro UID.
+
+Questa scelta evita assegnazioni errate.
+
+NOTA
+----
+Per ora NON sono state modificate Firestore Rules o Storage Rules,
+per non rischiare di bloccare il Portale Cliente esistente.
+La sicurezza server-side dell'eliminazione documenti è invece già legata
+all'utente autenticato.
+
+VERSIONE
+--------
+PATCH-001
+Data: 27/08/2026
