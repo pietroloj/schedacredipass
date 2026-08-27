@@ -20,21 +20,6 @@ function goLogin() {
 function injectBadge(session) {
     if (document.getElementById("credipass-auth-badge")) return;
 
-    const logoArea =
-        document.querySelector(".logo-area-stack");
-
-    const headerActions =
-        document.querySelector(".header-actions");
-
-    const header =
-        document.querySelector(".header");
-
-    /*
-     * OBIETTIVO:
-     * il menu utente deve stare SOPRA il logo Credipass,
-     * nella colonna destra dell'header, senza coprire i loghi.
-     */
-
     const wrapper = document.createElement("div");
     wrapper.id = "credipass-auth-badge";
 
@@ -66,26 +51,6 @@ function injectBadge(session) {
             .trim()
             .charAt(0)
             .toUpperCase();
-
-    /*
-     * Se esiste .logo-area-stack, trasformiamo SOLO quella zona
-     * in una colonna verticale:
-     *
-     * [ menu utente ]
-     * [ logo Credipass ]
-     * [ logo 20 anni  ]
-     *
-     * Senza toccare il resto dell'header.
-     */
-    if (logoArea) {
-        logoArea.style.display = "flex";
-        logoArea.style.flexDirection = "column";
-        logoArea.style.alignItems = "center";
-        logoArea.style.justifyContent = "flex-start";
-        logoArea.style.gap = "8px";
-        logoArea.style.position = "relative";
-        logoArea.style.overflow = "visible";
-    }
 
     wrapper.style.cssText = [
         "position:relative",
@@ -293,30 +258,73 @@ function injectBadge(session) {
     `;
 
     /*
-     * Posizionamento principale:
-     * SOPRA ai loghi Credipass.
+     * POSIZIONAMENTO:
+     *
+     * 1) Gestione Consulenti:
+     *    dentro .head, allineato a destra, senza uscire dal contenitore.
+     *
+     * 2) Scheda Consulenza:
+     *    sopra i loghi, dentro .logo-area-stack.
+     *
+     * 3) Altre pagine:
+     *    dentro .header-actions / .header.
      */
-    if (logoArea) {
+    const managementHead =
+        document.querySelector(".head");
+
+    const logoArea =
+        document.querySelector(".logo-area-stack");
+
+    const headerActions =
+        document.querySelector(".header-actions");
+
+    const header =
+        document.querySelector(".header");
+
+    if (
+        managementHead &&
+        document.querySelector(".container, .box")
+    ) {
+        managementHead.style.position = "relative";
+        managementHead.style.display = "flex";
+        managementHead.style.alignItems = "center";
+        managementHead.style.justifyContent = "space-between";
+        managementHead.style.gap = "14px";
+        managementHead.style.flexWrap = "nowrap";
+
+        wrapper.style.marginLeft = "auto";
+        wrapper.style.width = "250px";
+        wrapper.style.maxWidth = "250px";
+
+        managementHead.appendChild(wrapper);
+
+    } else if (logoArea) {
+        logoArea.style.display = "flex";
+        logoArea.style.flexDirection = "column";
+        logoArea.style.alignItems = "center";
+        logoArea.style.justifyContent = "flex-start";
+        logoArea.style.gap = "8px";
+        logoArea.style.position = "relative";
+        logoArea.style.overflow = "visible";
+
         logoArea.prepend(wrapper);
 
     } else if (headerActions) {
-        /*
-         * Fallback per pagine diverse da index.html.
-         */
         headerActions.style.display = "flex";
         headerActions.style.alignItems = "center";
         headerActions.style.gap = "10px";
+        headerActions.style.flexWrap = "wrap";
+
         headerActions.prepend(wrapper);
 
     } else if (header) {
         header.style.position = "relative";
+        header.style.display = "flex";
+        header.style.alignItems = "center";
         wrapper.style.marginLeft = "auto";
         header.appendChild(wrapper);
 
     } else {
-        /*
-         * Ultimo fallback, solo se la pagina non ha un header noto.
-         */
         wrapper.style.position = "fixed";
         wrapper.style.top = "12px";
         wrapper.style.right = "20px";
@@ -405,7 +413,79 @@ function injectBadge(session) {
             }
         }
     );
+
+    // Dopo aver creato il menu, sistemiamo eventuali badge ruolo presenti nella pagina.
+    styleRoleBadges();
 }
+
+
+function styleRoleBadges() {
+    const badges =
+        document.querySelectorAll(".badge");
+
+    badges.forEach(badge => {
+        const role =
+            String(badge.textContent || "")
+                .trim()
+                .toLowerCase();
+
+        badge.style.display = "inline-flex";
+        badge.style.alignItems = "center";
+        badge.style.justifyContent = "center";
+        badge.style.minWidth = "92px";
+        badge.style.height = "34px";
+        badge.style.padding = "0 14px";
+        badge.style.borderRadius = "999px";
+        badge.style.fontSize = "9px";
+        badge.style.fontWeight = "800";
+        badge.style.lineHeight = "1";
+        badge.style.textAlign = "center";
+        badge.style.whiteSpace = "nowrap";
+        badge.style.boxSizing = "border-box";
+        badge.style.letterSpacing = ".1px";
+
+        if (role.includes("admin")) {
+            badge.style.background = "#eaf1ff";
+            badge.style.color = "#002d72";
+            badge.style.border = "1px solid #c9d8f3";
+        } else if (role.includes("segreteria")) {
+            badge.style.background = "#f0e9fb";
+            badge.style.color = "#6d42b5";
+            badge.style.border = "1px solid #dccdf2";
+        } else {
+            badge.style.background = "#e8f6ee";
+            badge.style.color = "#087a4b";
+            badge.style.border = "1px solid #c8e8d7";
+        }
+    });
+}
+
+function observeRoleBadges() {
+    styleRoleBadges();
+
+    const observer =
+        new MutationObserver(() => {
+            styleRoleBadges();
+        });
+
+    observer.observe(
+        document.body,
+        {
+            childList: true,
+            subtree: true
+        }
+    );
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        observeRoleBadges
+    );
+} else {
+    observeRoleBadges();
+}
+
 
 async function ensureProfile(user) {
     const fn =
