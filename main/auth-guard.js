@@ -289,14 +289,78 @@ function injectBadge(session) {
         managementHead.style.display = "flex";
         managementHead.style.alignItems = "center";
         managementHead.style.justifyContent = "space-between";
-        managementHead.style.gap = "14px";
+        managementHead.style.gap = "18px";
         managementHead.style.flexWrap = "nowrap";
 
-        wrapper.style.marginLeft = "auto";
+        /*
+         * Nella pagina Gestione Consulenti il link
+         * "TORNA ALLA SCHEDA" era un figlio separato dell'header.
+         * Con justify-content:space-between i tre elementi:
+         *
+         * Titolo | Torna alla scheda | Menu utente
+         *
+         * venivano distribuiti su tutta la larghezza e il link
+         * finiva troppo vicino al titolo.
+         *
+         * Creiamo invece un unico gruppo a destra:
+         *
+         * Titolo                    [Torna alla scheda] [Utente]
+         */
+        let rightControls =
+            document.getElementById(
+                "credipass-management-right-controls"
+            );
+
+        if (!rightControls) {
+            rightControls =
+                document.createElement("div");
+
+            rightControls.id =
+                "credipass-management-right-controls";
+
+            rightControls.style.cssText = [
+                "margin-left:auto",
+                "display:flex",
+                "align-items:center",
+                "justify-content:flex-end",
+                "gap:14px",
+                "min-width:0",
+                "flex:0 1 auto"
+            ].join(";");
+
+            const returnLink =
+                Array.from(
+                    managementHead.querySelectorAll(":scope > a")
+                )
+                .find(link =>
+                    String(
+                        link.textContent || ""
+                    )
+                    .toLowerCase()
+                    .includes("torna alla scheda")
+                );
+
+            if (returnLink) {
+                returnLink.style.margin = "0";
+                returnLink.style.flexShrink = "0";
+                returnLink.style.whiteSpace = "nowrap";
+                rightControls.appendChild(
+                    returnLink
+                );
+            }
+
+            managementHead.appendChild(
+                rightControls
+            );
+        }
+
+        wrapper.style.marginLeft = "0";
         wrapper.style.width = "250px";
         wrapper.style.maxWidth = "250px";
 
-        managementHead.appendChild(wrapper);
+        rightControls.appendChild(
+            wrapper
+        );
 
     } else if (logoArea) {
         logoArea.style.display = "flex";
