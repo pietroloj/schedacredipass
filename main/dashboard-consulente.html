@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1427,6 +1428,157 @@ Accedi al portale per consultare lo stato aggiornato, le attività e gli eventua
 </html>`;
     }
 
+    function emailAgenziaDaPratica(d = {}) {
+        return normalizeDisplay(
+            d.email_agenzia_immobiliare ||
+            d.campo_email_agenzia ||
+            d.email_agenzia ||
+            d.agenzia_email ||
+            d.emailAgenzia
+        );
+    }
+
+    async function recuperaEmailAgenziaPratica() {
+        try {
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .doc(idCliente)
+                    .get();
+
+            if (!snap.exists) return "";
+
+            return emailAgenziaDaPratica(
+                snap.data() || {}
+            );
+        } catch (error) {
+            console.warn(
+                "Impossibile recuperare email agenzia:",
+                error
+            );
+            return "";
+        }
+    }
+
+    function costruisciEmailAgenziaHtml({
+        titolo,
+        messaggio,
+        dettaglio = ""
+    }) {
+        return `
+<!DOCTYPE html>
+<html lang="it">
+<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
+<tr>
+<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
+<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
+</td>
+</tr>
+<tr>
+<td style="padding:30px;">
+<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">
+Aggiornamento pratica mutuo
+</div>
+<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">
+${escapeHtml(titolo)}
+</h2>
+<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">
+${escapeHtml(messaggio)}
+</p>
+${dettaglio ? `
+<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
+${escapeHtml(dettaglio)}
+</div>` : ""}
+<p style="margin:24px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
+Comunicazione informativa destinata all'agenzia immobiliare collegata alla pratica.
+Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
+</p>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+    }
+
+    async function inviaAggiornamentoAgenzia({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        subject = ""
+    }) {
+        const emailAgenzia =
+            await recuperaEmailAgenziaPratica();
+
+        if (!emailAgenzia) {
+            return {
+                ok: true,
+                skipped: true,
+                motivo: "email_agenzia_assente"
+            };
+        }
+
+        try {
+            const response =
+                await fetch("/api/send-email", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        to: [emailAgenzia],
+                        subject:
+                            subject ||
+                            `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`,
+                        html: costruisciEmailAgenziaHtml({
+                            titolo,
+                            messaggio,
+                            dettaglio
+                        })
+                    })
+                });
+
+            if (!response.ok) {
+                throw new Error(
+                    `Invio email agenzia non riuscito (${response.status})`
+                );
+            }
+
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .set({
+                    ultima_notifica_agenzia_email:
+                        emailAgenzia,
+                    ultima_notifica_agenzia_titolo:
+                        titolo,
+                    ultima_notifica_agenzia_inviata_il:
+                        firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+            return {
+                ok: true,
+                skipped: false,
+                email: emailAgenzia
+            };
+
+        } catch (error) {
+            console.error(
+                "Errore notifica email agenzia:",
+                error
+            );
+
+            return {
+                ok: false,
+                skipped: false,
+                motivo: error.message
+            };
+        }
+    }
+
+
     async function inviaEmailAggiornamentoPortale({
         titolo,
         messaggio,
@@ -1472,7 +1624,20 @@ Accedi al portale per consultare lo stato aggiornato, le attività e gli eventua
                     firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
-            return { ok: true };
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo,
+                    messaggio,
+                    dettaglio,
+                    subject:
+                        subject ||
+                        `Aggiornamento pratica - ${prettyClientLabel(idCliente)}`
+                });
+
+            return {
+                ok: true,
+                agenzia: esitoAgenzia
+            };
         } catch (error) {
             console.error("Errore notifica email portale:", error);
             return { ok: false, motivo: error.message };
@@ -2011,8 +2176,25 @@ Credipass
                 ultima_notifica_stato_inviata_il: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo:
+                        getStatoPraticaConfig(
+                            statoEmailCorrente || "istruttoria"
+                        ).label,
+                    messaggio: text,
+                    subject
+                });
+
             chiudiModalStatoEmail();
-            alert("✅ Aggiornamento inviato al cliente.");
+
+            alert(
+                esitoAgenzia.ok && !esitoAgenzia.skipped
+                    ? "✅ Aggiornamento inviato al cliente e all'agenzia immobiliare."
+                    : esitoAgenzia.skipped
+                        ? "✅ Aggiornamento inviato al cliente. Nessuna email agenzia presente nella pratica."
+                        : "✅ Aggiornamento inviato al cliente. ⚠️ Invio all'agenzia non riuscito."
+            );
         } catch (error) {
             console.error("Errore invio email stato:", error);
             alert("Errore durante l'invio dell'aggiornamento al cliente.");
@@ -2641,12 +2823,26 @@ Credipass
 
         if (!ok) return;
 
-        const deletePin = prompt(
-            "Inserisci il PIN amministrativo per confermare l'eliminazione del documento:",
-            ""
-        );
+        // Il PIN viene richiesto solo alla prima eliminazione
+        // della sessione corrente del browser.
+        let deletePin =
+            sessionStorage.getItem("credipass_delete_document_pin") || "";
 
-        if (deletePin === null || !deletePin.trim()) return;
+        if (!deletePin) {
+            const inserito = prompt(
+                "Inserisci il PIN amministrativo per confermare l'eliminazione del documento:",
+                ""
+            );
+
+            if (inserito === null || !inserito.trim()) return;
+
+            deletePin = inserito.trim();
+
+            sessionStorage.setItem(
+                "credipass_delete_document_pin",
+                deletePin
+            );
+        }
 
         try {
             const callable =
@@ -2658,7 +2854,7 @@ Credipass
                     fullPath,
                     codiceDocumento: codiceFinale || "",
                     nomeDocumento: nomeDocumento || "",
-                    deletePin: deletePin.trim()
+                    deletePin
                 });
 
             const data = result?.data || {};
@@ -2692,7 +2888,14 @@ Credipass
                 String(code).includes("permission-denied") ||
                 String(error?.message || "").toLowerCase().includes("pin")
             ) {
-                alert("PIN amministrativo errato oppure eliminazione non autorizzata.");
+                sessionStorage.removeItem(
+                    "credipass_delete_document_pin"
+                );
+
+                alert(
+                    "PIN amministrativo errato oppure eliminazione non autorizzata. " +
+                    "Alla prossima eliminazione verrà richiesto nuovamente."
+                );
                 return;
             }
 
@@ -2789,14 +2992,13 @@ Credipass
                         codiceDocumento &&
                         versioniRichieste.includes(codiceDocumento);
 
-                    const fullPathEncoded =
-                        encodeURIComponent(item.fullPath);
-
-                    const codiceEncoded =
-                        encodeURIComponent(codiceDocumento || "");
-
-                    const nomeEncoded =
-                        encodeURIComponent(nomeBello);
+                    // IMPORTANTISSIMO:
+                    // Non usiamo più onclick inline con stringhe interpolate.
+                    // "Carta d'Identità" contiene un apostrofo e rompeva il JavaScript
+                    // dell'attributo onclick, rendendo i pulsanti del primo slot non cliccabili.
+                    const fullPathEncoded = encodeURIComponent(item.fullPath);
+                    const codiceEncoded = encodeURIComponent(codiceDocumento || "");
+                    const nomeEncoded = encodeURIComponent(nomeBello);
 
                     listCat.innerHTML += `
                         <div class="doc-item">
@@ -2812,21 +3014,17 @@ Credipass
                                 <a href="${url}" target="_blank" class="btn-view">VEDI</a>
 
                                 <button type="button"
-                                        class="btn-doc-version"
-                                        onclick="richiediNuovaVersioneDocumento(
-                                            decodeURIComponent('${codiceEncoded}'),
-                                            decodeURIComponent('${nomeEncoded}')
-                                        )">
+                                        class="btn-doc-version js-doc-version"
+                                        data-doc-code="${codiceEncoded}"
+                                        data-doc-name="${nomeEncoded}">
                                     <i class="fas fa-rotate"></i> NUOVA VERSIONE
                                 </button>
 
                                 <button type="button"
-                                        class="btn-doc-delete"
-                                        onclick="eliminaDocumentoFascicolo(
-                                            decodeURIComponent('${fullPathEncoded}'),
-                                            decodeURIComponent('${codiceEncoded}'),
-                                            decodeURIComponent('${nomeEncoded}')
-                                        )">
+                                        class="btn-doc-delete js-doc-delete"
+                                        data-doc-path="${fullPathEncoded}"
+                                        data-doc-code="${codiceEncoded}"
+                                        data-doc-name="${nomeEncoded}">
                                     <i class="fas fa-trash"></i> ELIMINA
                                 </button>
                             </div>
@@ -2985,7 +3183,26 @@ Credipass
                 throw new Error("Invio email non riuscito");
             }
 
-            alert("✅ Email inviata con successo!");
+            const esitoAgenzia =
+                await inviaAggiornamentoAgenzia({
+                    titolo: "Richiesta integrazione documentazione",
+                    messaggio:
+                        "È stata richiesta al cliente un'integrazione documentale per proseguire con la pratica.",
+                    dettaglio:
+                        carrello.map(x => x.testo).join(", ") +
+                        (nota ? ` — Nota: ${nota}` : ""),
+                    subject:
+                        `Integrazione documenti - ${prettyClientLabel(idCliente)}`
+                });
+
+            alert(
+                esitoAgenzia.ok && !esitoAgenzia.skipped
+                    ? "✅ Email inviata al cliente e aggiornamento inviato anche all'agenzia immobiliare."
+                    : esitoAgenzia.skipped
+                        ? "✅ Email inviata al cliente. Nessuna email agenzia presente nella pratica."
+                        : "✅ Email inviata al cliente. ⚠️ Aggiornamento agenzia non riuscito."
+            );
+
             location.reload();
         } catch (e) {
             console.error("Errore invio integrazione:", e);
@@ -3299,6 +3516,66 @@ Credipass
             document.getElementById('modalAI').style.display = 'none';
         }
     });
+
+    /*
+     * ============================================================
+     * AZIONI DOCUMENTI DINAMICI
+     * ============================================================
+     *
+     * Usiamo un unico listener sul documento.
+     * Questo evita problemi con apostrofi, accenti o caratteri speciali
+     * nei nomi dei documenti (es. Carta d'Identità).
+     */
+    document.addEventListener("click", async (event) => {
+        const versionBtn = event.target.closest(".js-doc-version");
+
+        if (versionBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const codice = decodeURIComponent(
+                versionBtn.dataset.docCode || ""
+            );
+
+            const nomeDocumento = decodeURIComponent(
+                versionBtn.dataset.docName || ""
+            );
+
+            await richiediNuovaVersioneDocumento(
+                codice,
+                nomeDocumento
+            );
+
+            return;
+        }
+
+        const deleteBtn = event.target.closest(".js-doc-delete");
+
+        if (deleteBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const fullPath = decodeURIComponent(
+                deleteBtn.dataset.docPath || ""
+            );
+
+            const codice = decodeURIComponent(
+                deleteBtn.dataset.docCode || ""
+            );
+
+            const nomeDocumento = decodeURIComponent(
+                deleteBtn.dataset.docName || ""
+            );
+
+            await eliminaDocumentoFascicolo(
+                fullPath,
+                codice,
+                nomeDocumento
+            );
+        }
+    });
+
+
 </script>
 </body>
 </html>
