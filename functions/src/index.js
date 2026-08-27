@@ -80,6 +80,12 @@ const {
 } = require("./services/deletePracticeDocument");
 
 const {
+  bootstrapFirstAdmin,
+  ensureConsultantProfile,
+  createConsultant,
+} = require("./services/authConsultants");
+
+const {
   getSummaryDoc,
   saveSummaryDoc,
   saveAuditEntry,
@@ -1420,6 +1426,17 @@ function buildPracticeSummary({
 exports.deletePracticeDocument =
   deletePracticeDocument;
 
+
+
+
+exports.bootstrapFirstAdmin =
+  bootstrapFirstAdmin;
+
+exports.ensureConsultantProfile =
+  ensureConsultantProfile;
+
+exports.createConsultant =
+  createConsultant;
 
 exports.analizzaDocumentoAI =
   onCall(
