@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -968,6 +969,81 @@ body {
 }
 
 
+
+/* ===== ACCESSO SEGNALATORE / SOLA CONSULTAZIONE ===== */
+
+body.viewer-segnalatore .alert-box,
+body.viewer-segnalatore #uploadForm > div[style*="background:#fff4f4"],
+body.viewer-segnalatore #submitBtn {
+    display: none !important;
+}
+
+body.viewer-segnalatore .portal-docs-heading {
+    margin-bottom: 14px;
+}
+
+body.viewer-segnalatore .doc-row {
+    cursor: default;
+}
+
+body.viewer-segnalatore .actions-wrapper {
+    min-width: 150px;
+    justify-content: flex-end;
+}
+
+.viewer-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 118px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .25px;
+    white-space: nowrap;
+}
+
+.viewer-status-badge.caricato {
+    background: #e9f7ed;
+    color: #1e7e34;
+    border: 1px solid #bfe4c8;
+}
+
+.viewer-status-badge.mancante {
+    background: #eef2f6;
+    color: #68727c;
+    border: 1px solid #d9e0e7;
+}
+
+.viewer-status-badge.attesa {
+    background: #fff5d9;
+    color: #80620a;
+    border: 1px solid #f0d88b;
+}
+
+.segnalatore-readonly-banner {
+    display: none;
+    background: #eef4fb;
+    border-left: 4px solid #002d72;
+    color: #33465f;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+body.viewer-segnalatore .segnalatore-readonly-banner {
+    display: block;
+}
+
+body.viewer-segnalatore .version-request-note {
+    display: none !important;
+}
+
 /* ===== NUOVA VERSIONE DOCUMENTO ===== */
 .doc-row.version-requested {
     background: #fffaf0;
@@ -1139,6 +1215,12 @@ body {
             <i class="fas fa-folder-open"></i> Documentazione della pratica
         </div>
 
+        <div class="segnalatore-readonly-banner" id="segnalatoreReadonlyBanner">
+            <strong>Accesso in sola consultazione.</strong><br>
+            Puoi verificare esclusivamente lo stato della documentazione.
+            Non è possibile allegare, sostituire, eliminare, aprire o scaricare file.
+        </div>
+
         <div class="alert-box">
             <i class="fas fa-camera"></i>
             <div>Usa l'icona Fotocamera per scansionare i documenti, oppure clicca su Allega per caricare i file PDF.</div>
@@ -1276,6 +1358,46 @@ const storage = firebase.storage();
 const functionsFirebase = firebase.app().functions("us-central1");
 
 const urlParams = new URLSearchParams(window.location.search);
+
+const viewerMode =
+    String(
+        urlParams.get("viewer")
+        ||
+        ""
+    )
+    .toLowerCase();
+
+const portalMode =
+    String(
+        urlParams.get("mode")
+        ||
+        ""
+    )
+    .toLowerCase();
+
+const isSegnalatore =
+    viewerMode === "segnalatore"
+    ||
+    portalMode === "status-only";
+
+const canModifyDocuments =
+    !isSegnalatore;
+
+if (isSegnalatore) {
+    document.body.classList.add("viewer-segnalatore");
+}
+
+function bloccaModificaSegnalatore() {
+
+    if (!canModifyDocuments) {
+        console.warn(
+            "Operazione bloccata: accesso segnalatore in sola consultazione."
+        );
+        return true;
+    }
+
+    return false;
+}
 
 const clienteRaw = urlParams.get("nome") || urlParams.get("cliente") || "Cliente";
 const cliente2Raw = urlParams.get("cliente2") || "";
@@ -1790,57 +1912,232 @@ function versioneRichiesta(d = {}, codice) {
 }
 
 function applicaStatoDocumentoRiga(d = {}, codice) {
-    const raw = String(codice || "").replace(/^doc_/, "");
-    const fieldName = `doc_${raw}`;
-    const row = document.getElementById(`row_${fieldName}`);
 
-    if (!row) return;
+    const raw =
+        String(
+            codice
+            ||
+            ""
+        )
+        .replace(
+            /^doc_/,
+            ""
+        );
 
-    const caricato = d[fieldName] === true || d[raw] === true;
-    const nuovaVersione = versioneRichiesta(d, raw);
+    const fieldName =
+        `doc_${raw}`;
 
+    const row =
+        document.getElementById(
+            `row_${fieldName}`
+        );
+
+    if (!row) {
+        return;
+    }
+
+    const caricato =
+        d[fieldName] === true
+        ||
+        d[raw] === true;
+
+    const nuovaVersione =
+        versioneRichiesta(
+            d,
+            raw
+        );
+
+    /*
+     * SEGNALATORE:
+     * non vengono mai mostrati controlli operativi.
+     * La riga mostra esclusivamente lo stato.
+     */
+    if (isSegnalatore) {
+
+        mostraDocumentoNelPortale(
+            raw
+        );
+
+        row.classList.toggle(
+            "caricato",
+            caricato
+            &&
+            !nuovaVersione
+        );
+
+        row.classList.toggle(
+            "version-requested",
+            nuovaVersione
+        );
+
+        const badge =
+            document.getElementById(
+                `viewer_status_${fieldName}`
+            );
+
+        if (!badge) {
+            return;
+        }
+
+        let classe =
+            "mancante";
+
+        let testo =
+            "Mancante";
+
+        let icona =
+            "fa-circle-minus";
+
+        if (nuovaVersione) {
+
+            classe =
+                "attesa";
+
+            testo =
+                "In attesa";
+
+            icona =
+                "fa-clock";
+
+        }
+        else if (caricato) {
+
+            classe =
+                "caricato";
+
+            testo =
+                "Caricato";
+
+            icona =
+                "fa-circle-check";
+
+        }
+
+        badge.className =
+            `viewer-status-badge ${classe}`;
+
+        badge.innerHTML =
+            `<i class="fas ${icona}"></i><span>${testo}</span>`;
+
+        return;
+    }
+
+    /*
+     * CLIENTE:
+     * comportamento originale invariato.
+     */
     if (nuovaVersione) {
-        mostraDocumentoNelPortale(raw);
 
-        row.classList.remove("caricato");
-        row.classList.add("version-requested");
+        mostraDocumentoNelPortale(
+            raw
+        );
 
-        const actions = row.querySelector(".actions-wrapper");
-        if (actions) actions.style.display = "flex";
+        row.classList.remove(
+            "caricato"
+        );
 
-        const badge = row.querySelector(".status-badge");
-        if (badge) badge.style.display = "none";
+        row.classList.add(
+            "version-requested"
+        );
 
-        const note = document.getElementById(`version_note_${fieldName}`);
-        const motivi = d.documenti_versione_motivi || {};
-        if (note && motivi[raw]) {
+        const actions =
+            row.querySelector(
+                ".actions-wrapper"
+            );
+
+        if (actions) {
+            actions.style.display =
+                "flex";
+        }
+
+        const badge =
+            row.querySelector(
+                ".status-badge"
+            );
+
+        if (badge) {
+            badge.style.display =
+                "none";
+        }
+
+        const note =
+            document.getElementById(
+                `version_note_${fieldName}`
+            );
+
+        const motivi =
+            d.documenti_versione_motivi
+            ||
+            {};
+
+        if (
+            note
+            &&
+            motivi[raw]
+        ) {
+
             note.innerHTML =
-                `<i class="fas fa-rotate"></i> ` +
-                `È richiesta una nuova versione. ` +
+                `<i class="fas fa-rotate"></i> `
+                +
+                `È richiesta una nuova versione. `
+                +
                 `<strong>Motivo:</strong> ${escapeHtml(motivi[raw])}`;
+
         }
 
         return;
     }
 
-    row.classList.remove("version-requested");
+    row.classList.remove(
+        "version-requested"
+    );
 
     if (caricato) {
-        row.classList.add("caricato");
 
-        const actions = row.querySelector(".actions-wrapper");
-        if (actions) actions.style.display = "none";
+        row.classList.add(
+            "caricato"
+        );
 
-        const badge = row.querySelector(".status-badge");
-        if (badge) badge.style.display = "inline-block";
+        const actions =
+            row.querySelector(
+                ".actions-wrapper"
+            );
 
-        const fname = document.getElementById(`filename_camera_${fieldName}`);
-        if (fname) fname.style.display = "none";
-    } else {
-        row.classList.remove("caricato");
+        if (actions) {
+            actions.style.display =
+                "none";
+        }
+
+        const badge =
+            row.querySelector(
+                ".status-badge"
+            );
+
+        if (badge) {
+            badge.style.display =
+                "inline-block";
+        }
+
+        const fname =
+            document.getElementById(
+                `filename_camera_${fieldName}`
+            );
+
+        if (fname) {
+            fname.style.display =
+                "none";
+        }
+
     }
-}
+    else {
 
+        row.classList.remove(
+            "caricato"
+        );
+
+    }
+
+}
 function renderAzioniRichiesteCliente(d = {}) {
     const target = document.getElementById("clienteAzioniRichieste");
     if (!target) return;
@@ -2020,69 +2317,171 @@ const documenti = [
 const mappaDocumentiAI = {};
 
 function renderDocumenti() {
+
     documenti.forEach(gruppo => {
-        const container = document.getElementById(gruppo.container);
+
+        const container =
+            document.getElementById(
+                gruppo.container
+            );
 
         gruppo.docs.forEach(doc => {
-            const fieldName = "doc_" + doc.code;
-            const rowId = "row_" + fieldName;
-            const cameraId = "camera_" + fieldName;
-            const filenameId = "filename_" + cameraId;
-            const infoId = "info_" + doc.code;
 
-            mappaDocumentiAI[fieldName] = doc.ai;
+            const fieldName =
+                "doc_" + doc.code;
 
-            const infoIcon = doc.info
-                ? `<i class="fas fa-info-circle info-icon" onclick="toggleInfo('${infoId}')"></i>`
-                : "";
+            const rowId =
+                "row_" + fieldName;
 
-            const infoBox = doc.info
-                ? `<div id="${infoId}" class="info-detail">${escapeHtml(doc.info)}</div>`
-                : "";
+            const cameraId =
+                "camera_" + fieldName;
 
-            const desc = doc.desc
-                ? `<span class="doc-desc">${escapeHtml(doc.desc)}</span>`
-                : "";
+            const filenameId =
+                "filename_" + cameraId;
 
-            container.insertAdjacentHTML("beforeend", `
-                <div class="doc-row" id="${rowId}" data-section="${gruppo.sectionId}">
-                    <div class="doc-info">
-                        <span class="doc-title">${escapeHtml(doc.title)} ${infoIcon}</span>
-                        ${desc}
-                        ${infoBox}
-                        <div class="version-request-note" id="version_note_${fieldName}">
-                            <i class="fas fa-rotate"></i>
-                            È richiesta una nuova versione di questo documento.
-                            Il documento precedente resta conservato nel fascicolo.
+            const infoId =
+                "info_" + doc.code;
+
+            mappaDocumentiAI[fieldName] =
+                doc.ai;
+
+            const infoIcon =
+                doc.info
+                    ?
+                    `<i class="fas fa-info-circle info-icon" onclick="toggleInfo('${infoId}')"></i>`
+                    :
+                    "";
+
+            const infoBox =
+                doc.info
+                    ?
+                    `<div id="${infoId}" class="info-detail">${escapeHtml(doc.info)}</div>`
+                    :
+                    "";
+
+            const desc =
+                doc.desc
+                    ?
+                    `<span class="doc-desc">${escapeHtml(doc.desc)}</span>`
+                    :
+                    "";
+
+            const actionsHtml =
+                isSegnalatore
+                    ?
+                    `
+                    <div class="actions-wrapper">
+                        <div
+                            class="viewer-status-badge mancante"
+                            id="viewer_status_${fieldName}"
+                        >
+                            <i class="fas fa-circle-minus"></i>
+                            <span>Mancante</span>
                         </div>
                     </div>
-
+                    `
+                    :
+                    `
                     <div class="actions-wrapper">
+
                         <div class="file-input-wrapper">
-                            <button type="button" class="btn-upload">
-                                <i class="fas fa-paperclip"></i> Allega
+                            <button
+                                type="button"
+                                class="btn-upload"
+                            >
+                                <i class="fas fa-paperclip"></i>
+                                Allega
                             </button>
-                            <input type="file" name="${fieldName}" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, '${cameraId}')">
+
+                            <input
+                                type="file"
+                                name="${fieldName}"
+                                accept=".pdf,image/*"
+                                multiple
+                                onchange="gestisciFileSelezionato(this, '${cameraId}')"
+                            >
                         </div>
 
-                        <button type="button" class="btn-camera" onclick="apriFotocamera('${cameraId}', '${doc.formato}')" title="Scansiona documento">
+                        <button
+                            type="button"
+                            class="btn-camera"
+                            onclick="apriFotocamera('${cameraId}', '${doc.formato}')"
+                            title="Scansiona documento"
+                        >
                             <i class="fas fa-camera"></i>
                         </button>
 
-                        <input type="file" id="${cameraId}" name="${fieldName}" accept=".pdf,image/*" multiple style="display:none">
+                        <input
+                            type="file"
+                            id="${cameraId}"
+                            name="${fieldName}"
+                            accept=".pdf,image/*"
+                            multiple
+                            style="display:none"
+                        >
 
                         <div class="status-badge">
-                            <i class="fas fa-check"></i> Acquisito
+                            <i class="fas fa-check"></i>
+                            Acquisito
                         </div>
+
                     </div>
 
-                    <div class="file-name" id="${filenameId}"></div>
-                </div>
-            `);
-        });
-    });
-}
+                    <div
+                        class="file-name"
+                        id="${filenameId}"
+                    ></div>
+                    `;
 
+            container.insertAdjacentHTML(
+                "beforeend",
+                `
+                <div
+                    class="doc-row"
+                    id="${rowId}"
+                    data-section="${gruppo.sectionId}"
+                >
+
+                    <div class="doc-info">
+
+                        <span class="doc-title">
+                            ${escapeHtml(doc.title)}
+                            ${infoIcon}
+                        </span>
+
+                        ${desc}
+                        ${infoBox}
+
+                        ${
+                            isSegnalatore
+                                ?
+                                ""
+                                :
+                                `
+                                <div
+                                    class="version-request-note"
+                                    id="version_note_${fieldName}"
+                                >
+                                    <i class="fas fa-rotate"></i>
+                                    È richiesta una nuova versione di questo documento.
+                                    Il documento precedente resta conservato nel fascicolo.
+                                </div>
+                                `
+                        }
+
+                    </div>
+
+                    ${actionsHtml}
+
+                </div>
+                `
+            );
+
+        });
+
+    });
+
+}
 renderDocumenti();
 
 if (docsRichiesti.length > 0) {
@@ -2198,6 +2597,11 @@ let currentFormato = "A4";
 let cropDimensions = { x: 0, y: 0, w: 0, h: 0 };
 
 function apriFotocamera(hiddenInputId, formato = "A4") {
+
+    if (bloccaModificaSegnalatore()) {
+        return;
+    }
+
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile) {
@@ -2336,6 +2740,11 @@ function scattaFotoMultipla() {
 }
 
 function salvaScattiEChiudi() {
+
+    if (bloccaModificaSegnalatore()) {
+        return;
+    }
+
     if (fotoTemporanee.length === 0) {
         chiudiScanner();
         return;
@@ -2391,6 +2800,11 @@ function chiudiScanner() {
 }
 
 function gestisciFileSelezionato(inputObj, hiddenInputIdTarget) {
+
+    if (bloccaModificaSegnalatore()) {
+        return;
+    }
+
     const masterInput = document.getElementById(hiddenInputIdTarget);
     let dt = new DataTransfer();
 
@@ -2410,6 +2824,11 @@ function gestisciFileSelezionato(inputObj, hiddenInputIdTarget) {
 }
 
 function eliminaFileDaInput(inputId, indexToRemove) {
+
+    if (bloccaModificaSegnalatore()) {
+        return;
+    }
+
     const input = document.getElementById(inputId);
 
     if (!input || !input.files) return;
@@ -2473,7 +2892,17 @@ function aggiornaStatoBottonePrivacy() {
     }
 }
 
-checkPrivacy.addEventListener("change", aggiornaStatoBottonePrivacy);
+if (canModifyDocuments) {
+    checkPrivacy.addEventListener(
+        "change",
+        aggiornaStatoBottonePrivacy
+    );
+}
+else {
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
+}
 
 db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
     if (!docSnap.exists) return;
@@ -2481,6 +2910,30 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
     const dati = docSnap.data() || {};
 
     aggiornaPortaleCliente(dati);
+
+    if (isSegnalatore) {
+
+        const welcome =
+            document.getElementById(
+                "welcome-text"
+            );
+
+        if (welcome) {
+            welcome.textContent =
+                "Monitoraggio documentazione - sola consultazione";
+        }
+
+        const heading =
+            document.querySelector(
+                ".portal-docs-heading"
+            );
+
+        if (heading) {
+            heading.innerHTML =
+                '<i class="fas fa-list-check"></i> Stato documentazione della pratica';
+        }
+
+    }
 
     const richiestiDB = Array.isArray(dati.elencoDocRichiesti)
         ? dati.elencoDocRichiesti
@@ -2507,6 +2960,10 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 
 document.getElementById("uploadForm").addEventListener("submit", async function(e) {
     e.preventDefault();
+
+    if (bloccaModificaSegnalatore()) {
+        return;
+    }
 
     const fileInputs = document.querySelectorAll('input[type="file"][id^="camera_"]');
     let filesDaCaricare = [];
