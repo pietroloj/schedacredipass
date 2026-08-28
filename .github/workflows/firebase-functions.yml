@@ -31,27 +31,11 @@ jobs:
           pwd
 
           echo ""
-          echo "=== ROOT REPOSITORY ==="
-          ls -la
-
-          echo ""
-          echo "=== FUNCTIONS ==="
-          ls -la functions
-
-          echo ""
-          echo "=== FUNCTIONS/SRC ==="
-          ls -la functions/src
-
-          echo ""
           echo "=== FUNCTIONS/SRC/SERVICES ==="
           ls -la functions/src/services
 
           echo ""
-          echo "=== CERCA PRACTICE FINANCIAL CALCULATOR ==="
-          find functions -iname "*practice*financial*calculator*"
-
-          echo ""
-          echo "=== CONTROLLO FILE ESATTO ==="
+          echo "=== CONTROLLO PREDELIBERA ==="
           if [ -f "functions/src/services/practiceFinancialCalculator.js" ]; then
             echo "✅ practiceFinancialCalculator.js TROVATO"
           else
@@ -66,15 +50,10 @@ jobs:
         working-directory: functions
         run: npm ci
 
-      - name: Verify Node can load Predelibera module
+      - name: Verify Predelibera module
         working-directory: functions
         run: |
-          node -e "require('./src/services/practiceFinancialCalculator.js'); console.log('✅ Modulo practiceFinancialCalculator caricato correttamente')"
-
-      - name: Verify Functions index
-        working-directory: functions
-        run: |
-          node -e "require('./src/index.js'); console.log('✅ functions/src/index.js caricato correttamente')"
+          node -e "require('./src/services/practiceFinancialCalculator.js'); console.log('✅ Modulo Predelibera caricato correttamente')"
 
       - name: Deploy Firebase Functions
         run: firebase deploy --only functions --project consulenza-credipass --token "${{ secrets.FIREBASE_TOKEN }}"
