@@ -1154,6 +1154,144 @@
     }
 
 
+
+    /* ===== MODIFICA OPERAZIONE MUTUO ===== */
+    .data-group-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .btn-edit-mutuo {
+        border: 1px solid #d9e0e7;
+        background: #ffffff;
+        color: #002d72;
+        border-radius: 7px;
+        padding: 6px 9px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-edit-mutuo:hover {
+        border-color: #C99700;
+        color: #8a6800;
+    }
+
+    #mutuoEditModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 16000;
+        background: rgba(0,0,0,.72);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .mutuo-edit-card {
+        width: 100%;
+        max-width: 620px;
+        background: #ffffff;
+        border-radius: 14px;
+        overflow: hidden;
+        border-top: 6px solid #C99700;
+        box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+
+    .mutuo-edit-head {
+        background: #002d72;
+        color: #ffffff;
+        padding: 18px 22px;
+    }
+
+    .mutuo-edit-head h3 {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .mutuo-edit-body {
+        padding: 20px 22px 22px;
+    }
+
+    .mutuo-edit-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .mutuo-edit-field.full {
+        grid-column: 1 / -1;
+    }
+
+    .mutuo-edit-label {
+        display: block;
+        color: #002d72;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .mutuo-edit-input,
+    .mutuo-edit-select {
+        width: 100%;
+        border: 1px solid #dfe5ec;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        outline: none;
+        background: #ffffff;
+    }
+
+    .mutuo-edit-input:focus,
+    .mutuo-edit-select:focus {
+        border-color: #C99700;
+        box-shadow: 0 0 0 3px rgba(201,151,0,.10);
+    }
+
+    .mutuo-edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+    }
+
+    .mutuo-edit-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .mutuo-edit-btn.secondary {
+        background: #edf0f3;
+        color: #495057;
+    }
+
+    .mutuo-edit-btn.primary {
+        background: #C99700;
+        color: #ffffff;
+    }
+
+    @media (max-width: 640px) {
+        .mutuo-edit-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .mutuo-edit-field.full {
+            grid-column: auto;
+        }
+    }
+
 </style>
 </head>
 <body>
@@ -2216,6 +2354,74 @@ Accesso in sola consultazione: non è possibile caricare, eliminare o scaricare 
                 >
                     <i class="fas fa-check"></i>
                     SALVA STATO E REMINDER
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="mutuoEditModal">
+    <div class="mutuo-edit-card">
+        <div class="mutuo-edit-head">
+            <h3>
+                <i class="fas fa-pen-to-square" style="color:#C99700;"></i>
+                Modifica operazione mutuo
+            </h3>
+        </div>
+
+        <div class="mutuo-edit-body">
+            <div class="mutuo-edit-grid">
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Finalità</label>
+                    <input id="editMutuoFinalita" class="mutuo-edit-input" type="text" placeholder="Es. Acquisto prima casa">
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Importo richiesto</label>
+                    <input id="editMutuoImporto" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 180.000">
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Compravendita</label>
+                    <input id="editMutuoCompravendita" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 220.000">
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Valore immobile</label>
+                    <input id="editMutuoValoreImmobile" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 230.000">
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Durata anni</label>
+                    <input id="editMutuoDurata" class="mutuo-edit-input" type="number" min="1" max="50" step="1" placeholder="Es. 30">
+                </div>
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Prodotto</label>
+                    <input id="editMutuoProdotto" class="mutuo-edit-input" type="text" placeholder="Es. Fisso rinegoziabile 5 anni">
+                </div>
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Tasso</label>
+                    <input id="editMutuoTasso" class="mutuo-edit-input" type="text" placeholder="Es. 3,10%">
+                </div>
+
+            </div>
+
+            <div style="margin-top:14px;background:#f7f9fc;border-left:4px solid #C99700;padding:11px 13px;border-radius:7px;font-size:10px;color:#59636c;line-height:1.5;">
+                Le modifiche aggiornano l'operazione della pratica e vengono registrate automaticamente nella timeline interna.
+            </div>
+
+            <div class="mutuo-edit-actions">
+                <button type="button" class="mutuo-edit-btn secondary" onclick="chiudiModificaOperazioneMutuo()">
+                    ANNULLA
+                </button>
+
+                <button type="button" class="mutuo-edit-btn primary" onclick="salvaModificaOperazioneMutuo()">
+                    <i class="fas fa-check"></i>
+                    SALVA MODIFICHE
                 </button>
             </div>
         </div>
@@ -4175,7 +4381,24 @@ Cordiali saluti`
             gMutuo += row("Durata", normalizeDisplay(d.durata_mutuo) ? `${d.durata_mutuo} anni` : "");
 
             if (gMutuo) {
-                html += `<div class="data-group"><span class="data-group-title">Operazione Mutuo</span>${gMutuo}</div>`;
+                html += `
+                    <div class="data-group">
+                        <div class="data-group-title-row">
+                            <span class="data-group-title" style="margin-bottom:0;">Operazione Mutuo</span>
+
+                            <button
+                                type="button"
+                                class="btn-edit-mutuo"
+                                onclick="apriModificaOperazioneMutuo()"
+                            >
+                                <i class="fas fa-pen"></i>
+                                MODIFICA
+                            </button>
+                        </div>
+
+                        ${gMutuo}
+                    </div>
+                `;
             }
 
             const nomeCompletoR1 = firstAvailable(
@@ -4310,6 +4533,354 @@ Cordiali saluti`
         } catch (e) {
             console.error("Errore identikit:", e);
             container.innerHTML = "<p style='text-align:center; padding:20px; font-size:12px; color:#c00;'>Errore nel caricamento dell'identikit.</p>";
+        }
+    }
+
+
+
+    function parseImportoPratica(value) {
+        if (
+            value === null
+            ||
+            value === undefined
+            ||
+            value === ""
+        ) {
+            return null;
+        }
+
+        if (
+            typeof value ===
+            "number"
+        ) {
+            return Number.isFinite(value)
+                ? value
+                : null;
+        }
+
+        let s =
+            String(value)
+                .trim()
+                .replace(/€/g, "")
+                .replace(/\s/g, "");
+
+        if (!s) {
+            return null;
+        }
+
+        if (
+            s.includes(".")
+            &&
+            s.includes(",")
+        ) {
+            s =
+                s.replace(/\./g, "")
+                    .replace(",", ".");
+        }
+        else if (
+            s.includes(".")
+            &&
+            /^\d{1,3}(\.\d{3})+$/.test(s)
+        ) {
+            s =
+                s.replace(/\./g, "");
+        }
+        else if (
+            s.includes(",")
+        ) {
+            s =
+                s.replace(",", ".");
+        }
+
+        const n =
+            Number(
+                s.replace(
+                    /[^\d.-]/g,
+                    ""
+                )
+            );
+
+        return Number.isFinite(n)
+            ? n
+            : null;
+    }
+
+    function formatoImportoInput(value) {
+        const n =
+            parseImportoPratica(
+                value
+            );
+
+        if (
+            n === null
+            ||
+            !Number.isFinite(n)
+        ) {
+            return "";
+        }
+
+        return new Intl.NumberFormat(
+            "it-IT",
+            {
+                maximumFractionDigits:
+                    2
+            }
+        ).format(n);
+    }
+
+    async function apriModificaOperazioneMutuo() {
+        try {
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .doc(idCliente)
+                    .get();
+
+            if (!snap.exists) {
+                alert(
+                    "Pratica non trovata."
+                );
+                return;
+            }
+
+            const d =
+                snap.data()
+                ||
+                {};
+
+            const first =
+                (...values) => {
+                    for (
+                        const value of
+                        values
+                    ) {
+                        const clean =
+                            normalizeDisplay(
+                                value
+                            );
+
+                        if (clean) {
+                            return clean;
+                        }
+                    }
+
+                    return "";
+                };
+
+            document.getElementById("editMutuoFinalita").value =
+                first(
+                    d.finalita,
+                    d.mutuo_finalita
+                );
+
+            document.getElementById("editMutuoImporto").value =
+                formatoImportoInput(
+                    first(
+                        d.importo_richiesto,
+                        d.mutuo_importo
+                    )
+                );
+
+            document.getElementById("editMutuoCompravendita").value =
+                formatoImportoInput(
+                    first(
+                        d.valore_compravendita,
+                        d.mutuo_compravendita
+                    )
+                );
+
+            document.getElementById("editMutuoValoreImmobile").value =
+                formatoImportoInput(
+                    first(
+                        d.valore_immobile,
+                        d.immobile_valore
+                    )
+                );
+
+            document.getElementById("editMutuoProdotto").value =
+                first(
+                    d.prodotto,
+                    d.prodotto_bancario
+                );
+
+            document.getElementById("editMutuoTasso").value =
+                normalizeDisplay(
+                    d.tasso
+                );
+
+            document.getElementById("editMutuoDurata").value =
+                normalizeDisplay(
+                    d.durata_mutuo
+                );
+
+            document.getElementById("mutuoEditModal").style.display =
+                "flex";
+        }
+        catch (error) {
+            console.error(
+                "Errore apertura modifica mutuo:",
+                error
+            );
+
+            alert(
+                "Errore durante il caricamento dei dati dell'operazione."
+            );
+        }
+    }
+
+    function chiudiModificaOperazioneMutuo() {
+        const modal =
+            document.getElementById(
+                "mutuoEditModal"
+            );
+
+        if (modal) {
+            modal.style.display =
+                "none";
+        }
+    }
+
+    async function salvaModificaOperazioneMutuo() {
+        const finalita =
+            String(
+                document.getElementById("editMutuoFinalita")?.value
+                ||
+                ""
+            ).trim();
+
+        const importo =
+            parseImportoPratica(
+                document.getElementById("editMutuoImporto")?.value
+            );
+
+        const compravendita =
+            parseImportoPratica(
+                document.getElementById("editMutuoCompravendita")?.value
+            );
+
+        const valoreImmobile =
+            parseImportoPratica(
+                document.getElementById("editMutuoValoreImmobile")?.value
+            );
+
+        const prodotto =
+            String(
+                document.getElementById("editMutuoProdotto")?.value
+                ||
+                ""
+            ).trim();
+
+        const tasso =
+            String(
+                document.getElementById("editMutuoTasso")?.value
+                ||
+                ""
+            ).trim();
+
+        const durataRaw =
+            Number(
+                document.getElementById("editMutuoDurata")?.value
+            );
+
+        const durata =
+            Number.isFinite(
+                durataRaw
+            )
+            &&
+            durataRaw > 0
+                ? durataRaw
+                : null;
+
+        try {
+            const ref =
+                db.collection("pratiche_mutuo")
+                    .doc(idCliente);
+
+            const prima =
+                await ref.get();
+
+            const old =
+                prima.exists
+                    ? (prima.data() || {})
+                    : {};
+
+            const update = {
+                finalita:
+                    finalita,
+
+                importo_richiesto:
+                    importo,
+
+                valore_compravendita:
+                    compravendita,
+
+                valore_immobile:
+                    valoreImmobile,
+
+                prodotto:
+                    prodotto,
+
+                tasso:
+                    tasso,
+
+                durata_mutuo:
+                    durata,
+
+                operazione_mutuo_aggiornata_il:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await ref.set(
+                update,
+                {
+                    merge:
+                        true
+                }
+            );
+
+            const descrizione =
+                [
+                    `Finalità: ${normalizeDisplay(old.finalita || old.mutuo_finalita) || "N/D"} → ${finalita || "N/D"}`,
+                    `Importo: ${formatEuro(old.importo_richiesto ?? old.mutuo_importo) || "N/D"} → ${formatEuro(importo) || "N/D"}`,
+                    `Compravendita: ${formatEuro(old.valore_compravendita ?? old.mutuo_compravendita) || "N/D"} → ${formatEuro(compravendita) || "N/D"}`,
+                    `Valore immobile: ${formatEuro(old.valore_immobile ?? old.immobile_valore) || "N/D"} → ${formatEuro(valoreImmobile) || "N/D"}`,
+                    `Prodotto: ${normalizeDisplay(old.prodotto || old.prodotto_bancario) || "N/D"} → ${prodotto || "N/D"}`,
+                    `Tasso: ${normalizeDisplay(old.tasso) || "N/D"} → ${tasso || "N/D"}`,
+                    `Durata: ${normalizeDisplay(old.durata_mutuo) || "N/D"} → ${durata || "N/D"} anni`
+                ]
+                .join("\n");
+
+            if (
+                typeof registraAttivitaInterna ===
+                "function"
+            ) {
+                await registraAttivitaInterna({
+                    tipo:
+                        "operazione_mutuo",
+
+                    titolo:
+                        "Operazione mutuo modificata",
+
+                    descrizione
+                });
+            }
+
+            chiudiModificaOperazioneMutuo();
+
+            await caricaIdentikitCompleto();
+
+            alert(
+                "✅ Operazione mutuo aggiornata."
+            );
+        }
+        catch (error) {
+            console.error(
+                "Errore modifica operazione mutuo:",
+                error
+            );
+
+            alert(
+                "Errore durante il salvataggio dell'operazione mutuo."
+            );
         }
     }
 
@@ -4926,58 +5497,340 @@ Cordiali saluti`
         }
     }
 
+    function normalizzaNomeExport(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "")
+            .replace(/_+/g, "_")
+            .toUpperCase();
+    }
+
+    const DOCUMENT_EXPORT_MAP = {
+        ci1: { folder: "ANAGRAFICA", name: "CARTA_DI_IDENTITA_R1" },
+        ci2: { folder: "ANAGRAFICA", name: "CARTA_DI_IDENTITA_R2" },
+        ts1: { folder: "ANAGRAFICA", name: "CODICE_FISCALE_R1" },
+        ts2: { folder: "ANAGRAFICA", name: "CODICE_FISCALE_R2" },
+        residenza1: { folder: "ANAGRAFICA", name: "CERTIFICATO_CUMULATIVO" },
+        matrimonio: { folder: "ANAGRAFICA", name: "ATTO_MATRIMONIO" },
+        isee: { folder: "ANAGRAFICA", name: "ATTESTAZIONE_ISEE" },
+
+        bustepaga1: { folder: "REDDITUALE", name: "BUSTA_PAGA_R1" },
+        bustepaga2: { folder: "REDDITUALE", name: "BUSTA_PAGA_R2" },
+        cud1: { folder: "REDDITUALE", name: "CERTIFICAZIONE_UNICA_R1" },
+        cud2: { folder: "REDDITUALE", name: "CERTIFICAZIONE_UNICA_R2" },
+        unici1: { folder: "REDDITUALE", name: "MODELLO_REDDITI_R1" },
+        unici2: { folder: "REDDITUALE", name: "MODELLO_REDDITI_R2" },
+        f241: { folder: "REDDITUALE", name: "F24_R1" },
+        f242: { folder: "REDDITUALE", name: "F24_R2" },
+        visura1: { folder: "REDDITUALE", name: "VISURA_CAMERALE_R1" },
+        visura2: { folder: "REDDITUALE", name: "VISURA_CAMERALE_R2" },
+        contratto: { folder: "REDDITUALE", name: "CONTRATTO_DI_LAVORO" },
+
+        ec1: { folder: "ESTRATTI", name: "ESTRATTO_CONTO_TRIMESTRALE_R1" },
+        ec2: { folder: "ESTRATTI", name: "ESTRATTO_CONTO_TRIMESTRALE_R2" },
+        mov1: { folder: "ESTRATTI", name: "LISTA_MOVIMENTI_R1" },
+        mov2: { folder: "ESTRATTI", name: "LISTA_MOVIMENTI_R2" },
+
+        atto: { folder: "IMMOBILIARE", name: "ATTO_DI_PROVENIENZA" },
+        planimetria: { folder: "IMMOBILIARE", name: "PLANIMETRIA_CATASTALE" },
+        visuracat: { folder: "IMMOBILIARE", name: "VISURA_CATASTALE" },
+        preliminare: { folder: "IMMOBILIARE", name: "PRELIMINARE_DI_COMPRAVENDITA" },
+        preventivo: { folder: "IMMOBILIARE", name: "PREVENTIVO_COMPUTO_METRICO" },
+
+        prestiti: { folder: "FINANZIAMENTI", name: "CONTRATTI_PRESTITI" },
+        mutuo_pre: { folder: "FINANZIAMENTI", name: "ATTO_MUTUO_IN_CORSO" },
+
+        integrazione1: { folder: "ANAGRAFICA", name: "DOCUMENTO_INTEGRATIVO" },
+        extra1: { folder: "ANAGRAFICA", name: "DOCUMENTO_INTEGRATIVO" },
+        extra2: { folder: "ANAGRAFICA", name: "CHIARIMENTO_NOTA" }
+    };
+
+    function estensioneFileStorage(nome) {
+        const match =
+            String(nome || "")
+                .match(
+                    /\.([a-zA-Z0-9]{1,8})$/
+                );
+
+        if (!match) {
+            return "";
+        }
+
+        return (
+            "."
+            +
+            String(match[1])
+                .toLowerCase()
+        );
+    }
+
+    function risolviExportDocumento(nomeFile) {
+        const codice =
+            estraiCodiceDocumentoDaNomeFile(
+                nomeFile
+            );
+
+        const cfg =
+            DOCUMENT_EXPORT_MAP[codice]
+            ||
+            null;
+
+        if (cfg) {
+            return {
+                codice,
+                folder:
+                    cfg.folder,
+
+                baseName:
+                    cfg.name
+            };
+        }
+
+        /*
+         * Se un vecchio file non è riconoscibile, lo manteniamo comunque
+         * nel fascicolo usando una delle cinque cartelle previste.
+         */
+        const stem =
+            String(nomeFile || "")
+                .replace(
+                    /\.[^.]+$/,
+                    ""
+                );
+
+        return {
+            codice:
+                null,
+
+            folder:
+                "ANAGRAFICA",
+
+            baseName:
+                normalizzaNomeExport(
+                    stem
+                )
+                ||
+                "DOCUMENTO"
+        };
+    }
+
     async function scaricaTuttoZip() {
-        const btn = document.getElementById('btnZip');
-        const oldTxt = btn.innerHTML;
+        const btn =
+            document.getElementById(
+                "btnZip"
+            );
 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creazione Archivio...';
-        btn.disabled = true;
+        const oldTxt =
+            btn.innerHTML;
 
-        const zip = new JSZip();
+        btn.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Creazione Archivio...';
+
+        btn.disabled =
+            true;
+
+        const zip =
+            new JSZip();
+
+        const folders = [
+            "ANAGRAFICA",
+            "REDDITUALE",
+            "ESTRATTI",
+            "IMMOBILIARE",
+            "FINANZIAMENTI"
+        ];
+
+        /*
+         * Creiamo sempre le cinque cartelle, anche quando una è vuota.
+         */
+        folders.forEach(
+            folder =>
+                zip.folder(
+                    folder
+                )
+        );
 
         try {
             const varianti = [
                 idCliente,
-                idCliente.replace(/_/g, ' '),
-                idCliente.replace(/_/g, '-')
+                idCliente.replace(/_/g, " "),
+                idCliente.replace(/_/g, "-")
             ];
 
             let items = [];
 
-            for (let v of varianti) {
+            for (
+                const v of
+                varianti
+            ) {
                 try {
-                    const res = await storage.ref(`Fascicoli/${v}`).listAll();
-                    if (res.items.length > 0) {
-                        items = res.items;
+                    const res =
+                        await storage.ref(
+                            `Fascicoli/${v}`
+                        )
+                        .listAll();
+
+                    if (
+                        res.items.length >
+                        0
+                    ) {
+                        items =
+                            res.items;
+
                         break;
                     }
-                } catch (e) {}
+                }
+                catch (error) {
+                    console.warn(
+                        "Percorso fascicolo non disponibile:",
+                        v,
+                        error
+                    );
+                }
             }
 
-            if (items.length === 0) {
-                alert("Nessun file presente.");
-                btn.disabled = false;
-                btn.innerHTML = oldTxt;
+            if (
+                items.length ===
+                0
+            ) {
+                alert(
+                    "Nessun file presente."
+                );
+
+                btn.disabled =
+                    false;
+
+                btn.innerHTML =
+                    oldTxt;
+
                 return;
             }
 
-            for (const item of items) {
-                const url = await item.getDownloadURL();
-                const resp = await fetch(url);
-                const blob = await resp.blob();
-                zip.file(item.name, blob);
+            /*
+             * Contatore per gestire più versioni dello stesso documento:
+             * BUSTA_PAGA_R1_01.pdf
+             * BUSTA_PAGA_R1_02.pdf
+             */
+            const counters =
+                {};
+
+            for (
+                const item of
+                items
+            ) {
+                const exportInfo =
+                    risolviExportDocumento(
+                        item.name
+                    );
+
+                const key =
+                    `${exportInfo.folder}/${exportInfo.baseName}`;
+
+                counters[key] =
+                    (
+                        counters[key]
+                        ||
+                        0
+                    )
+                    +
+                    1;
+
+                const progressivo =
+                    String(
+                        counters[key]
+                    )
+                    .padStart(
+                        2,
+                        "0"
+                    );
+
+                const estensione =
+                    estensioneFileStorage(
+                        item.name
+                    )
+                    ||
+                    ".pdf";
+
+                /*
+                 * Se esiste un solo file il nome rimane semplice.
+                 * Se ne esistono più versioni, il progressivo viene comunque
+                 * mantenuto per evitare sovrascritture nello ZIP.
+                 */
+                const nomeFinale =
+                    `${exportInfo.baseName}_${progressivo}${estensione}`;
+
+                const url =
+                    await item.getDownloadURL();
+
+                const resp =
+                    await fetch(
+                        url
+                    );
+
+                if (!resp.ok) {
+                    throw new Error(
+                        `Download non riuscito: ${item.name}`
+                    );
+                }
+
+                const blob =
+                    await resp.blob();
+
+                zip.folder(
+                    exportInfo.folder
+                )
+                .file(
+                    nomeFinale,
+                    blob
+                );
             }
 
-            const content = await zip.generateAsync({ type: "blob" });
-            saveAs(content, `Fascicolo_${idCliente}.zip`);
+            const content =
+                await zip.generateAsync({
+                    type:
+                        "blob"
+                });
 
-            btn.innerHTML = oldTxt;
-            btn.disabled = false;
-        } catch (e) {
-            console.error("Errore ZIP:", e);
-            alert("Errore durante la creazione dello ZIP.");
-            btn.disabled = false;
-            btn.innerHTML = oldTxt;
+            const nomeCliente =
+                normalizzaNomeExport(
+                    prettyClientLabel(
+                        idCliente
+                    )
+                )
+                ||
+                normalizzaNomeExport(
+                    idCliente
+                )
+                ||
+                "CLIENTE";
+
+            saveAs(
+                content,
+                `FASCICOLO_${nomeCliente}.zip`
+            );
+
+            btn.innerHTML =
+                oldTxt;
+
+            btn.disabled =
+                false;
+        }
+        catch (error) {
+            console.error(
+                "Errore ZIP categorizzato:",
+                error
+            );
+
+            alert(
+                "Errore durante la creazione dello ZIP."
+            );
+
+            btn.disabled =
+                false;
+
+            btn.innerHTML =
+                oldTxt;
         }
     }
 
