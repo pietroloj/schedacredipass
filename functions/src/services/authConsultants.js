@@ -1,6 +1,12 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
+const {
+  ROLE_DEFAULT_PERMISSIONS,
+  normalizeRole,
+  mergePermissions,
+} = require("../config/permissions");
+
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
@@ -44,7 +50,7 @@ async function resolveVisibleCollaborators(uids = []) {
 
     // La segreteria può essere associata solo a collaboratori operativi.
     if (
-      ruolo !== "consulente" ||
+      !["consulente", "collaboratore"].includes(ruolo) ||
       d.attivo === false
     ) {
       continue;
@@ -88,6 +94,11 @@ async function createWorkspaceProfile(uid, fields = {}) {
     attivo: fields.attivo !== false,
     creato_il: fields.creato_il || now,
     ultimo_accesso: now,
+    permessi: mergePermissions(
+      clean(fields.ruolo) || "consulente",
+      fields.permessi
+    ),
+    rete_uid: clean(fields.rete_uid),
   };
 
   /*
@@ -208,6 +219,8 @@ exports.ensureConsultantProfile = onCall(
     let attivo = true;
     let collaboratoriVisibili = [];
     let collaboratoriVisibiliDettagli = [];
+    let permessi = {};
+    let reteUid = "";
 
     if (existing.exists) {
       const d = existing.data() || {};
@@ -221,6 +234,8 @@ exports.ensureConsultantProfile = onCall(
         Array.isArray(d.collaboratori_visibili_dettagli)
           ? d.collaboratori_visibili_dettagli
           : [];
+      permessi = d.permessi || {};
+      reteUid = d.rete_uid || "";
     } else if (user.displayName) {
       const p = user.displayName.trim().split(/\s+/);
       nome = p.shift() || "";
@@ -241,6 +256,8 @@ exports.ensureConsultantProfile = onCall(
         collaboratoriVisibili,
       collaboratori_visibili_dettagli:
         collaboratoriVisibiliDettagli,
+      permessi,
+      rete_uid: reteUid,
     });
 
     return {
@@ -258,6 +275,11 @@ exports.ensureConsultantProfile = onCall(
           Array.isArray(profile.collaboratori_visibili_dettagli)
             ? profile.collaboratori_visibili_dettagli
             : [],
+        permessi: mergePermissions(
+          profile.ruolo || "consulente",
+          profile.permessi || {}
+        ),
+        rete_uid: profile.rete_uid || "",
       }
     };
   }
@@ -279,16 +301,26 @@ exports.createConsultant = onCall(
     const email = clean(d.email).toLowerCase();
     const password = String(d.password || "");
     const requestedRole = clean(d.ruolo).toLowerCase();
-    const ruolo = ["admin", "consulente", "segreteria"].includes(requestedRole)
+    const ruolo = ["admin", "responsabile", "consulente", "collaboratore", "segreteria", "segnalatore"].includes(requestedRole)
       ? requestedRole : "consulente";
 
     const requestedCollaborators =
-      ruolo === "segreteria"
+      ["segreteria", "responsabile"].includes(ruolo)
         ? cleanUidList(d.collaboratori_visibili)
         : [];
 
+    const customPermissions =
+      d.permessi && typeof d.permessi === "object"
+        ? d.permessi
+        : {};
+
+    const resolvedPermissions =
+      mergePermissions(ruolo, customPermissions);
+
+    const reteUid = clean(d.rete_uid);
+
     const visibility =
-      ruolo === "segreteria"
+      ["segreteria", "responsabile"].includes(ruolo)
         ? await resolveVisibleCollaborators(requestedCollaborators)
         : { uids: [], dettagli: [] };
 
@@ -322,6 +354,10 @@ exports.createConsultant = onCall(
         visibility.uids,
       collaboratori_visibili_dettagli:
         visibility.dettagli,
+      permessi:
+        resolvedPermissions,
+      rete_uid:
+        reteUid,
     });
 
     return {
@@ -425,3 +461,78 @@ exports.updateConsultantVisibility = onCall(
   }
 );
 
+
+
+/*
+|--------------------------------------------------------------------------
+| AGGIORNA RUOLO / PERMESSI / VISIBILITA
+|--------------------------------------------------------------------------
+*/
+
+exports.updateConsultantPermissions = onCall(
+  { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+  async request => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Accesso richiesto.");
+    }
+
+    if (!(await isAdmin(request.auth.uid))) {
+      throw new HttpsError(
+        "permission-denied",
+        "Funzione riservata all'amministratore."
+      );
+    }
+
+    const data = request.data || {};
+    const uid = clean(data.uid);
+
+    if (!uid) {
+      throw new HttpsError("invalid-argument", "UID utente mancante.");
+    }
+
+    const ref = db.collection("consulenti").doc(uid);
+    const snap = await ref.get();
+
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Utente non trovato.");
+    }
+
+    const current = snap.data() || {};
+    const ruolo = normalizeRole(data.ruolo || current.ruolo);
+    const permessi = mergePermissions(
+      ruolo,
+      data.permessi && typeof data.permessi === "object"
+        ? data.permessi
+        : current.permessi || {}
+    );
+
+    const requestedCollaborators =
+      ["segreteria", "responsabile"].includes(ruolo)
+        ? cleanUidList(data.collaboratori_visibili)
+        : [];
+
+    const visibility =
+      ["segreteria", "responsabile"].includes(ruolo)
+        ? await resolveVisibleCollaborators(requestedCollaborators)
+        : { uids: [], dettagli: [] };
+
+    await ref.set({
+      ruolo,
+      permessi,
+      collaboratori_visibili: visibility.uids,
+      collaboratori_visibili_dettagli: visibility.dettagli,
+      rete_uid: clean(data.rete_uid || current.rete_uid),
+      aggiornato_il: admin.firestore.FieldValue.serverTimestamp(),
+      aggiornato_da: request.auth.uid,
+    }, { merge: true });
+
+    return {
+      ok: true,
+      uid,
+      ruolo,
+      permessi,
+      collaboratori_visibili: visibility.uids,
+      collaboratori_visibili_dettagli: visibility.dettagli,
+    };
+  }
+);
