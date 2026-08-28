@@ -25,12 +25,56 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Debug repository
+        run: |
+          echo "=== DIRECTORY CORRENTE ==="
+          pwd
+
+          echo ""
+          echo "=== ROOT REPOSITORY ==="
+          ls -la
+
+          echo ""
+          echo "=== FUNCTIONS ==="
+          ls -la functions
+
+          echo ""
+          echo "=== FUNCTIONS/SRC ==="
+          ls -la functions/src
+
+          echo ""
+          echo "=== FUNCTIONS/SRC/SERVICES ==="
+          ls -la functions/src/services
+
+          echo ""
+          echo "=== CERCA PRACTICE FINANCIAL CALCULATOR ==="
+          find functions -iname "*practice*financial*calculator*"
+
+          echo ""
+          echo "=== CONTROLLO FILE ESATTO ==="
+          if [ -f "functions/src/services/practiceFinancialCalculator.js" ]; then
+            echo "✅ practiceFinancialCalculator.js TROVATO"
+          else
+            echo "❌ practiceFinancialCalculator.js NON TROVATO"
+            exit 1
+          fi
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Install Functions dependencies
         working-directory: functions
         run: npm ci
+
+      - name: Verify Node can load Predelibera module
+        working-directory: functions
+        run: |
+          node -e "require('./src/services/practiceFinancialCalculator.js'); console.log('✅ Modulo practiceFinancialCalculator caricato correttamente')"
+
+      - name: Verify Functions index
+        working-directory: functions
+        run: |
+          node -e "require('./src/index.js'); console.log('✅ functions/src/index.js caricato correttamente')"
 
       - name: Deploy Firebase Functions
         run: firebase deploy --only functions --project consulenza-credipass --token "${{ secrets.FIREBASE_TOKEN }}"
