@@ -9575,7 +9575,7 @@ function buildSegnalatoreEmailHtml() {
         .join(' · ');
 
     const portale =
-        buildUploadAreaUrl();
+        buildSegnalatorePortalUrl();
 
     return `
 <!DOCTYPE html>
@@ -9614,14 +9614,15 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
 
     <div style="color:#59636c;font-size:13px;line-height:1.7;">
         è disponibile l'Area Cliente relativa alla pratica indicata.
-        Dal portale è possibile verificare lo stato di avanzamento
-        e le comunicazioni pubblicate per il cliente.
+        L'accesso è in sola consultazione: potrai verificare lo stato
+        della documentazione e le comunicazioni pubblicate per il cliente,
+        senza possibilità di caricare, eliminare o scaricare documenti.
     </div>
 
     <div align="center" style="margin-top:25px;">
         <a href="${safeHtml(portale)}"
            style="display:inline-block;min-width:240px;background:#002d72;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:8px;font-size:12px;font-weight:bold;border-bottom:4px solid #C99700;">
-            APRI PORTALE CLIENTE
+            VERIFICA STATO DOCUMENTAZIONE
         </a>
     </div>
 </td>
@@ -10807,6 +10808,36 @@ function buildUploadAreaUrl() {
         +
         params.toString()
     );
+
+}
+
+function buildSegnalatorePortalUrl() {
+
+    const base =
+        new URL(
+            buildUploadAreaUrl()
+        );
+
+    /*
+     * Questi parametri identificano l'accesso del segnalatore.
+     * upload.html dovrà usare viewer=segnalatore per mostrare
+     * esclusivamente lo stato dei documenti e nascondere:
+     * - upload;
+     * - elimina;
+     * - nuova versione;
+     * - download documenti.
+     */
+    base.searchParams.set(
+        'viewer',
+        'segnalatore'
+    );
+
+    base.searchParams.set(
+        'mode',
+        'status-only'
+    );
+
+    return base.toString();
 
 }
 
@@ -13846,14 +13877,13 @@ window.addEventListener(
                                 'blob'
                             );
 
-                        const pdfBase64 =
-                            await blobToBase64(
-                                blob
-                            );
-
                         /*
-                         * Il PDF scaricato, quello salvato nel portale
-                         * e quello allegato alla mail sono lo stesso blob.
+                         * Il PDF viene:
+                         * - scaricato localmente;
+                         * - salvato in Firebase Storage;
+                         * - reso disponibile dal pulsante nella mail Backoffice.
+                         *
+                         * NON viene allegato alla mail.
                          */
                         let pdfUrl = '';
 
@@ -13946,12 +13976,7 @@ window.addEventListener(
                                                     V(
                                                         'campo_email',
                                                         ''
-                                                    ),
-
-                                                pdfBase64,
-
-                                                pdfFileName:
-                                                    fileName
+                                                    )
 
                                             })
 
