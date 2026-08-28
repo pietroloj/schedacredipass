@@ -4630,22 +4630,83 @@ Cordiali saluti`
 
     async function apriModificaOperazioneMutuo() {
         try {
-            const snap =
-                await db.collection("pratiche_mutuo")
-                    .doc(idCliente)
-                    .get();
+            /*
+             * Usiamo prima i dati della pratica già caricati dalla dashboard.
+             * In questo modo il pulsante MODIFICA non dipende da una nuova
+             * lettura Firestore ogni volta che viene premuto.
+             */
+            let d =
+                praticaEmailCorrente
+                &&
+                typeof praticaEmailCorrente ===
+                    "object"
+                    ?
+                    {
+                        ...praticaEmailCorrente
+                    }
+                    :
+                    null;
 
-            if (!snap.exists) {
-                alert(
-                    "Pratica non trovata."
-                );
-                return;
+            /*
+             * Se per qualsiasi motivo la pratica non è ancora in memoria,
+             * facciamo il fallback su Firestore.
+             */
+            if (!d) {
+                if (
+                    !idCliente
+                ) {
+                    throw new Error(
+                        "ID pratica non disponibile."
+                    );
+                }
+
+                const snap =
+                    await db.collection("pratiche_mutuo")
+                        .doc(idCliente)
+                        .get();
+
+                if (!snap.exists) {
+                    throw new Error(
+                        "Pratica non trovata in Firestore."
+                    );
+                }
+
+                d =
+                    snap.data()
+                    ||
+                    {};
             }
 
-            const d =
-                snap.data()
-                ||
-                {};
+            const field =
+                id =>
+                    document.getElementById(
+                        id
+                    );
+
+            const requiredFields = [
+                "editMutuoFinalita",
+                "editMutuoImporto",
+                "editMutuoCompravendita",
+                "editMutuoValoreImmobile",
+                "editMutuoProdotto",
+                "editMutuoTasso",
+                "editMutuoDurata",
+                "mutuoEditModal"
+            ];
+
+            const missingFields =
+                requiredFields.filter(
+                    id =>
+                        !field(id)
+                );
+
+            if (
+                missingFields.length
+            ) {
+                throw new Error(
+                    `Campi finestra non trovati: ${missingFields.join(", ")}`
+                );
+            }
 
             const first =
                 (...values) => {
@@ -4653,12 +4714,25 @@ Cordiali saluti`
                         const value of
                         values
                     ) {
-                        const clean =
-                            normalizeDisplay(
-                                value
-                            );
+                        if (
+                            value === null
+                            ||
+                            value === undefined
+                        ) {
+                            continue;
+                        }
 
-                        if (clean) {
+                        const clean =
+                            String(value)
+                                .trim();
+
+                        if (
+                            clean
+                            &&
+                            clean !== "-"
+                            &&
+                            clean !== "N/D"
+                        ) {
                             return clean;
                         }
                     }
@@ -4666,13 +4740,17 @@ Cordiali saluti`
                     return "";
                 };
 
-            document.getElementById("editMutuoFinalita").value =
+            field(
+                "editMutuoFinalita"
+            ).value =
                 first(
                     d.finalita,
                     d.mutuo_finalita
                 );
 
-            document.getElementById("editMutuoImporto").value =
+            field(
+                "editMutuoImporto"
+            ).value =
                 formatoImportoInput(
                     first(
                         d.importo_richiesto,
@@ -4680,7 +4758,9 @@ Cordiali saluti`
                     )
                 );
 
-            document.getElementById("editMutuoCompravendita").value =
+            field(
+                "editMutuoCompravendita"
+            ).value =
                 formatoImportoInput(
                     first(
                         d.valore_compravendita,
@@ -4688,7 +4768,9 @@ Cordiali saluti`
                     )
                 );
 
-            document.getElementById("editMutuoValoreImmobile").value =
+            field(
+                "editMutuoValoreImmobile"
+            ).value =
                 formatoImportoInput(
                     first(
                         d.valore_immobile,
@@ -4696,23 +4778,33 @@ Cordiali saluti`
                     )
                 );
 
-            document.getElementById("editMutuoProdotto").value =
+            field(
+                "editMutuoProdotto"
+            ).value =
                 first(
                     d.prodotto,
                     d.prodotto_bancario
                 );
 
-            document.getElementById("editMutuoTasso").value =
-                normalizeDisplay(
-                    d.tasso
+            field(
+                "editMutuoTasso"
+            ).value =
+                first(
+                    d.tasso,
+                    d.mutuo_tasso
                 );
 
-            document.getElementById("editMutuoDurata").value =
-                normalizeDisplay(
-                    d.durata_mutuo
+            field(
+                "editMutuoDurata"
+            ).value =
+                first(
+                    d.durata_mutuo,
+                    d.durata_anni
                 );
 
-            document.getElementById("mutuoEditModal").style.display =
+            field(
+                "mutuoEditModal"
+            ).style.display =
                 "flex";
         }
         catch (error) {
@@ -4722,7 +4814,13 @@ Cordiali saluti`
             );
 
             alert(
-                "Errore durante il caricamento dei dati dell'operazione."
+                "Errore durante il caricamento dei dati dell'operazione.\n\n"
+                +
+                (
+                    error?.message
+                    ||
+                    "Errore non specificato"
+                )
             );
         }
     }
@@ -4836,6 +4934,19 @@ Cordiali saluti`
                         true
                 }
             );
+
+            /*
+             * Manteniamo sincronizzata anche la copia della pratica
+             * già caricata dalla dashboard.
+             */
+            praticaEmailCorrente = {
+                ...(
+                    praticaEmailCorrente
+                    ||
+                    {}
+                ),
+                ...update
+            };
 
             const descrizione =
                 [
