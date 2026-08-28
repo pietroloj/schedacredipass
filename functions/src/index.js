@@ -110,7 +110,15 @@ const {
 |
 */
 
-const { normalizeNumber, formatNumberIT } = require("./utils/numbers");
+const {
+
+  normalizeNumber,
+
+  formatNumberIT,
+
+  round2,
+
+} = require("./utils/numbers");
 
 
 /*
