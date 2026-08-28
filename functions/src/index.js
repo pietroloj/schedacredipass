@@ -3216,3 +3216,32 @@ const {
 
 exports.importaPolicyBancarieDaFileVersionata =
   importaPolicyBancarieDaFileVersionata;
+
+/*
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| REMINDER AUTOMATICI PRATICA / DOCUMENTAZIONE
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+|
+| Gestisce:
+|
+| - reminder documentazione ogni 48 ore;
+| - reminder anche con documentazione parzialmente caricata;
+| - stop automatico quando la documentazione è completa;
+| - pausa dei reminder documentali con pratica "Sospesa";
+| - ripresa automatica quando la pratica esce da "Sospesa";
+| - escalation dopo 7 giorni se la documentazione è ancora incompleta;
+| - reminder interni per consulente e Backoffice;
+| - reminder con data personalizzata per "Sospesa" / "Attesa documenti".
+|
+*/
+
+const {
+  controllaReminderDocumenti,
+} = require("./document-reminders");
+
+
+exports.controllaReminderDocumenti =
+  controllaReminderDocumenti;
+
