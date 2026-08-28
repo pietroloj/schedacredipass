@@ -35,7 +35,15 @@
 <script src="/main/auth-guard.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js">
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+        verificaModaliDashboard();
+    }
+);
+
+</script>
 
 <style>
     * { box-sizing: border-box; }
@@ -4825,6 +4833,39 @@ Cordiali saluti`
         }
     }
 
+
+    function verificaModaliDashboard() {
+        const ids = [
+            "statusReminderModal",
+            "mutuoEditModal",
+            "editMutuoFinalita",
+            "editMutuoImporto",
+            "editMutuoCompravendita",
+            "editMutuoValoreImmobile",
+            "editMutuoProdotto",
+            "editMutuoTasso",
+            "editMutuoDurata"
+        ];
+
+        const mancanti =
+            ids.filter(
+                id =>
+                    !document.getElementById(id)
+            );
+
+        if (mancanti.length) {
+            console.error(
+                "Elementi modali mancanti nel DOM:",
+                mancanti
+            );
+        }
+        else {
+            console.log(
+                "Modali dashboard caricati correttamente."
+            );
+        }
+    }
+
     function chiudiModificaOperazioneMutuo() {
         const modal =
             document.getElementById(
@@ -6255,5 +6296,201 @@ Cordiali saluti`
 
 
 </script>
+
+
+<!-- ===== MODAL REALE DASHBOARD: STATO / REMINDER ===== -->
+<div id="statusReminderModal" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:15000;
+    background:rgba(0,0,0,.72);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+">
+    <div class="status-reminder-card">
+        <div class="status-reminder-head">
+            <h3>
+                <i class="fas fa-bell" style="color:#C99700;"></i>
+                Imposta motivo e promemoria
+            </h3>
+        </div>
+
+        <div class="status-reminder-body">
+            <div style="font-size:11px;color:#59636c;line-height:1.55;">
+                Per questo stato puoi indicare il motivo e una data in cui ricordare a te e al Backoffice di verificare la pratica.
+            </div>
+
+            <label class="status-reminder-label">Motivo</label>
+            <textarea
+                id="statusReminderReason"
+                class="status-reminder-textarea"
+                placeholder="Es. Attesa nuovo estratto conto trimestrale"
+            ></textarea>
+
+            <label class="status-reminder-label">Data reminder</label>
+            <input
+                id="statusReminderDate"
+                class="status-reminder-input"
+                type="datetime-local"
+            >
+
+            <div class="status-reminder-actions">
+                <button
+                    type="button"
+                    class="status-reminder-btn secondary"
+                    onclick="annullaStatusReminder()"
+                >ANNULLA</button>
+
+                <button
+                    type="button"
+                    class="status-reminder-btn primary"
+                    onclick="confermaStatusReminder()"
+                >
+                    <i class="fas fa-check"></i>
+                    SALVA STATO E REMINDER
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ===== MODAL REALE DASHBOARD: MODIFICA OPERAZIONE MUTUO ===== -->
+<div id="mutuoEditModal" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:16000;
+    background:rgba(0,0,0,.72);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+">
+    <div class="mutuo-edit-card">
+        <div class="mutuo-edit-head">
+            <h3>
+                <i class="fas fa-pen-to-square" style="color:#C99700;"></i>
+                Modifica operazione mutuo
+            </h3>
+        </div>
+
+        <div class="mutuo-edit-body">
+            <div class="mutuo-edit-grid">
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Finalità</label>
+                    <input
+                        id="editMutuoFinalita"
+                        class="mutuo-edit-input"
+                        type="text"
+                        placeholder="Es. Acquisto prima casa"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Importo richiesto</label>
+                    <input
+                        id="editMutuoImporto"
+                        class="mutuo-edit-input"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="Es. 180.000"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Compravendita</label>
+                    <input
+                        id="editMutuoCompravendita"
+                        class="mutuo-edit-input"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="Es. 220.000"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Valore immobile</label>
+                    <input
+                        id="editMutuoValoreImmobile"
+                        class="mutuo-edit-input"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="Es. 230.000"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label">Durata anni</label>
+                    <input
+                        id="editMutuoDurata"
+                        class="mutuo-edit-input"
+                        type="number"
+                        min="1"
+                        max="50"
+                        step="1"
+                        placeholder="Es. 30"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Prodotto</label>
+                    <input
+                        id="editMutuoProdotto"
+                        class="mutuo-edit-input"
+                        type="text"
+                        placeholder="Es. Fisso rinegoziabile 5 anni"
+                    >
+                </div>
+
+                <div class="mutuo-edit-field full">
+                    <label class="mutuo-edit-label">Tasso</label>
+                    <input
+                        id="editMutuoTasso"
+                        class="mutuo-edit-input"
+                        type="text"
+                        placeholder="Es. 3,10%"
+                    >
+                </div>
+
+            </div>
+
+            <div style="
+                margin-top:14px;
+                background:#f7f9fc;
+                border-left:4px solid #C99700;
+                padding:11px 13px;
+                border-radius:7px;
+                font-size:10px;
+                color:#59636c;
+                line-height:1.5;
+            ">
+                Le modifiche aggiornano l'operazione della pratica e vengono registrate automaticamente nella timeline interna.
+            </div>
+
+            <div class="mutuo-edit-actions">
+                <button
+                    type="button"
+                    class="mutuo-edit-btn secondary"
+                    onclick="chiudiModificaOperazioneMutuo()"
+                >
+                    ANNULLA
+                </button>
+
+                <button
+                    type="button"
+                    class="mutuo-edit-btn primary"
+                    onclick="salvaModificaOperazioneMutuo()"
+                >
+                    <i class="fas fa-check"></i>
+                    SALVA MODIFICHE
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
