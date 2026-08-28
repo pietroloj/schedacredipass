@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -968,6 +969,191 @@
         }
     }
 
+
+    /* ===== NOTE INTERNE / TIMELINE PRATICA ===== */
+    .internal-notes-box {
+        margin-top: 16px;
+        padding-top: 15px;
+        border-top: 1px solid #e7ebf0;
+    }
+
+    .internal-notes-title {
+        color: #002d72;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        margin-bottom: 9px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .internal-note-textarea {
+        width: 100%;
+        min-height: 76px;
+        border: 1px solid #dfe5ec;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        resize: vertical;
+        outline: none;
+        background: #fff;
+    }
+
+    .internal-note-textarea:focus {
+        border-color: #C99700;
+        box-shadow: 0 0 0 3px rgba(201,151,0,.10);
+    }
+
+    .internal-note-btn {
+        width: 100%;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-top: 8px;
+        background: #002d72;
+        color: #fff;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .internal-timeline {
+        margin-top: 14px;
+        max-height: 330px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .internal-timeline-item {
+        position: relative;
+        border-left: 3px solid #C99700;
+        background: #f8fafc;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 11px;
+        margin-bottom: 8px;
+    }
+
+    .internal-timeline-date {
+        color: #8a949e;
+        font-size: 8px;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+
+    .internal-timeline-title {
+        color: #002d72;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .internal-timeline-text {
+        color: #59636c;
+        font-size: 10px;
+        line-height: 1.5;
+        margin-top: 3px;
+        white-space: pre-wrap;
+    }
+
+    .internal-timeline-user {
+        color: #8a949e;
+        font-size: 8px;
+        margin-top: 5px;
+    }
+
+    /* ===== MODAL PROMEMORIA STATO ===== */
+    #statusReminderModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 15000;
+        background: rgba(0,0,0,.72);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .status-reminder-card {
+        width: 100%;
+        max-width: 520px;
+        background: #fff;
+        border-radius: 14px;
+        overflow: hidden;
+        border-top: 6px solid #C99700;
+        box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+
+    .status-reminder-head {
+        background: #002d72;
+        color: white;
+        padding: 18px 22px;
+    }
+
+    .status-reminder-head h3 {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .status-reminder-body {
+        padding: 20px 22px 22px;
+    }
+
+    .status-reminder-label {
+        display: block;
+        color: #002d72;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin: 11px 0 5px;
+    }
+
+    .status-reminder-input,
+    .status-reminder-textarea {
+        width: 100%;
+        border: 1px solid #dfe5ec;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px;
+        outline: none;
+    }
+
+    .status-reminder-textarea {
+        min-height: 90px;
+        resize: vertical;
+    }
+
+    .status-reminder-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .status-reminder-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .status-reminder-btn.secondary {
+        background: #edf0f3;
+        color: #495057;
+    }
+
+    .status-reminder-btn.primary {
+        background: #C99700;
+        color: #fff;
+    }
+
+
 </style>
 </head>
 <body>
@@ -990,6 +1176,7 @@
                     <option value="da_istruire">Da istruire</option>
                     <option value="istruttoria">Istruttoria</option>
                     <option value="integrazione_documenti">Integrazione documenti</option>
+                    <option value="attesa_documenti">Attesa documenti</option>
                     <option value="caricato_banca">Caricato in banca</option>
                     <option value="valutazione_reddituale">Valutazione reddituale</option>
                     <option value="delibera_reddituale_ok">Delibera reddituale OK</option>
@@ -1168,6 +1355,37 @@
                 <div id="identikitDinamico">
                     <p style="text-align:center; padding:20px; font-size:12px; color:#999;">Caricamento dati scheda...</p>
                 </div>
+
+                <div class="internal-notes-box">
+                    <div class="internal-notes-title">
+                        <i class="fas fa-note-sticky" style="color:#C99700;"></i>
+                        Note interne e timeline pratica
+                    </div>
+
+                    <textarea
+                        id="notaInternaPratica"
+                        class="internal-note-textarea"
+                        placeholder="Annota qui varie ed eventuali. Questa nota resta interna e non è visibile al cliente."
+                    ></textarea>
+
+                    <button
+                        type="button"
+                        class="internal-note-btn"
+                        onclick="salvaNotaInternaPratica()"
+                    >
+                        <i class="fas fa-plus"></i>
+                        AGGIUNGI NOTA ALLA TIMELINE
+                    </button>
+
+                    <div
+                        id="timelineInternaPratica"
+                        class="internal-timeline"
+                    >
+                        <div style="font-size:10px;color:#999;text-align:center;padding:10px;">
+                            Caricamento timeline...
+                        </div>
+                    </div>
+                </div>
                 <button class="btn-submit btn-ai" onclick="apriReportAI()"><i class="fas fa-robot"></i> ESITO PRE-DELIBERA IA</button>
                 <button class="btn-submit btn-zip" id="btnZip" onclick="scaricaTuttoZip()"><i class="fas fa-file-archive"></i> SCARICA TUTTO (.ZIP)</button>
             </div>
@@ -1269,6 +1487,7 @@
         da_istruire: { label: "Da istruire", color: "#6c757d", step: 0 },
         istruttoria: { label: "Istruttoria", color: "#2f80ed", step: 1 },
         integrazione_documenti: { label: "Integrazione documenti", color: "#d39e00", step: 1 },
+        attesa_documenti: { label: "Attesa documenti", color: "#b8860b", step: 1 },
         caricato_banca: { label: "Caricato in banca", color: "#002d72", step: 2 },
         valutazione_reddituale: { label: "Valutazione reddituale", color: "#7b61a8", step: 2 },
         delibera_reddituale_ok: { label: "Delibera reddituale OK", color: "#28a745", step: 2 },
@@ -1386,49 +1605,702 @@
     }
 
 
-    function costruisciEmailPortaleHtml({
-        titolo,
-        messaggio,
+
+    /* ==========================================================
+       EMAIL MASTER V2
+       Un unico design per tutte le variabili email.
+       ========================================================== */
+
+    const EMAIL_STATO_PERCENTUALE = {
+        da_istruire: 12,
+        istruttoria: 25,
+        integrazione_documenti: 30,
+        attesa_documenti: 30,
+        caricato_banca: 42,
+        valutazione_reddituale: 48,
+        delibera_reddituale_ok: 55,
+        delibera_reddituale_ko: 55,
+        attesa_perizia: 60,
+        perizia_in_corso: 67,
+        perizia_ok: 72,
+        perizia_ko: 67,
+        attesa_documentazione_notarile: 78,
+        chiamata_atto: 88,
+        stipulato: 100,
+        sospesa: 45,
+        rinunciata: 25
+    };
+
+    const EMAIL_PROSSIMO_PASSAGGIO = {
+        da_istruire: "Avvio istruttoria",
+        istruttoria: "Completamento istruttoria",
+        integrazione_documenti: "Ricezione e verifica documenti",
+        attesa_documenti: "Ricezione della documentazione attesa",
+        caricato_banca: "Valutazione reddituale",
+        valutazione_reddituale: "Esito della valutazione reddituale",
+        delibera_reddituale_ok: "Avvio fase tecnica / perizia",
+        delibera_reddituale_ko: "Analisi dell'esito e possibili alternative",
+        attesa_perizia: "Svolgimento della perizia",
+        perizia_in_corso: "Esito della perizia",
+        perizia_ok: "Documentazione notarile",
+        perizia_ko: "Analisi tecnica e prossimi passi",
+        attesa_documentazione_notarile: "Completamento documentazione notarile",
+        chiamata_atto: "Definizione della data di stipula",
+        stipulato: "Pratica conclusa",
+        sospesa: "Ripresa della lavorazione",
+        rinunciata: "Eventuale nuova valutazione"
+    };
+
+    function emailStatoNormalizzato(stato) {
+        return STATO_PRATICA_CONFIG[stato]
+            ? stato
+            : "da_istruire";
+    }
+
+    function emailPercentualeStato(stato) {
+        const s = emailStatoNormalizzato(stato);
+        return EMAIL_STATO_PERCENTUALE[s] ?? 12;
+    }
+
+    function emailProssimoPassaggio(stato) {
+        const s = emailStatoNormalizzato(stato);
+        return EMAIL_PROSSIMO_PASSAGGIO[s] || "Prossimo aggiornamento della pratica";
+    }
+
+    function emailNomePratica(d = {}) {
+        const nomi = [
+            normalizeDisplay(d.cliente_nome_completo || d.nomeCliente),
+            normalizeDisplay(d.cliente2_nome_completo || d.nomeCliente2)
+        ].filter(Boolean);
+
+        return nomi.length
+            ? nomi.join(" · ")
+            : prettyClientLabel(idCliente);
+    }
+
+    function emailUrlCliente() {
+        return `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+    }
+
+    function emailUrlMonitoraggio() {
+        return `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}&viewer=segnalatore&mode=status-only`;
+    }
+
+    function emailUrlDashboard() {
+        return `${window.location.origin}/main/dashboard-consulente.html?clienteId=${encodeURIComponent(idCliente)}`;
+    }
+
+    function emailFasiHtml(stato) {
+        const s = emailStatoNormalizzato(stato);
+        const current = getStatoPraticaConfig(s).step;
+        const labels = [
+            "Richiesta",
+            "Istruttoria",
+            "Banca / Delibera",
+            "Perizia",
+            "Notaio / Atto",
+            "Stipula"
+        ];
+
+        return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                ${labels.map((label, index) => {
+                    let bg = "#e3e8ee";
+                    let fg = "#7d8790";
+                    let textColor = "#8a949e";
+                    let value = String(index + 1);
+
+                    if (index < current) {
+                        bg = "#002d72";
+                        fg = "#ffffff";
+                        textColor = "#002d72";
+                        value = "✓";
+                    }
+                    else if (index === current) {
+                        bg = "#C99700";
+                        fg = "#ffffff";
+                        textColor = "#8a6800";
+                    }
+
+                    return `
+                    <td align="center" width="16.66%" valign="top">
+                        <div style="
+                            width:28px;
+                            height:28px;
+                            line-height:28px;
+                            border-radius:50%;
+                            background:${bg};
+                            color:${fg};
+                            font-size:11px;
+                            font-weight:bold;
+                            margin:0 auto;
+                        ">${value}</div>
+                        <div style="
+                            font-size:8px;
+                            line-height:1.2;
+                            color:${textColor};
+                            font-weight:bold;
+                            margin-top:6px;
+                            text-transform:uppercase;
+                        ">${escapeHtml(label)}</div>
+                    </td>`;
+                }).join("")}
+            </tr>
+        </table>`;
+    }
+
+    function emailDettagliHtml(items = [], dettaglio = "") {
+        const cleanItems =
+            (Array.isArray(items) ? items : [])
+                .map(x => String(x || "").trim())
+                .filter(Boolean);
+
+        if (!cleanItems.length && !dettaglio) {
+            return "";
+        }
+
+        if (!cleanItems.length) {
+            return `
+            <tr>
+                <td style="padding:0 32px 18px;">
+                    <div style="
+                        background:#fff9e8;
+                        border-left:4px solid #C99700;
+                        border-radius:8px;
+                        padding:14px 16px;
+                    ">
+                        <div style="font-size:9px;color:#8a6800;font-weight:bold;text-transform:uppercase;">
+                            Dettaglio
+                        </div>
+                        <div style="font-size:11px;color:#645b39;line-height:1.6;margin-top:6px;">
+                            ${escapeHtml(dettaglio)}
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+        }
+
+        return `
+        <tr>
+            <td style="padding:0 32px 18px;">
+                <div style="
+                    font-size:11px;
+                    color:#002d72;
+                    font-weight:bold;
+                    text-transform:uppercase;
+                    margin-bottom:10px;
+                ">Dettaglio comunicazione</div>
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                       style="border:1px solid #e4e9ef;border-radius:10px;overflow:hidden;">
+                    ${cleanItems.map(item => `
+                    <tr>
+                        <td style="
+                            padding:12px 14px;
+                            border-bottom:1px solid #edf1f4;
+                            font-size:11px;
+                            color:#002d72;
+                            font-weight:bold;
+                        ">${escapeHtml(item)}</td>
+                        <td align="right" style="
+                            padding:12px 14px;
+                            border-bottom:1px solid #edf1f4;
+                        ">
+                            <span style="
+                                background:#fff4cc;
+                                color:#765b00;
+                                padding:5px 8px;
+                                border-radius:999px;
+                                font-size:8px;
+                                font-weight:bold;
+                            ">DA GESTIRE</span>
+                        </td>
+                    </tr>`).join("")}
+                </table>
+
+                ${dettaglio ? `
+                <div style="
+                    margin-top:10px;
+                    background:#fff9e8;
+                    border-left:4px solid #C99700;
+                    border-radius:8px;
+                    padding:12px 14px;
+                    font-size:10px;
+                    color:#645b39;
+                    line-height:1.55;
+                ">
+                    <strong>Nota:</strong> ${escapeHtml(dettaglio)}
+                </div>` : ""}
+            </td>
+        </tr>`;
+    }
+
+    function costruisciEmailMasterHtml({
+        pratica = {},
+        audience = "Area Cliente · Aggiornamento pratica",
+        titolo = "Aggiornamento pratica",
+        messaggio = "",
         dettaglio = "",
-        cta = "APRI IL PORTALE CLIENTE"
-    }) {
-        const portalUrl =
-            `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+        items = [],
+        stato = "",
+        azioneTitolo = "Cosa devi fare tu",
+        azioneTesto = "Nessuna azione richiesta",
+        prossimoPassaggio = "",
+        ctaLabel = "APRI AREA CLIENTE",
+        ctaUrl = "",
+        readOnly = false
+    } = {}) {
+        const statoFinale =
+            emailStatoNormalizzato(
+                stato ||
+                pratica.stato_pratica ||
+                "da_istruire"
+            );
+
+        const cfg =
+            getStatoPraticaConfig(
+                statoFinale
+            );
+
+        const meta =
+            STATO_PRATICA_CLIENTE_META[statoFinale]
+            ||
+            STATO_PRATICA_CLIENTE_META.da_istruire;
+
+        const percentuale =
+            emailPercentualeStato(
+                statoFinale
+            );
+
+        const prossimo =
+            prossimoPassaggio
+            ||
+            emailProssimoPassaggio(
+                statoFinale
+            );
+
+        const nomePratica =
+            emailNomePratica(
+                pratica
+            );
+
+        const url =
+            ctaUrl
+            ||
+            (
+                readOnly
+                    ? emailUrlMonitoraggio()
+                    : emailUrlCliente()
+            );
 
         return `
 <!DOCTYPE html>
 <html lang="it">
-<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${escapeHtml(titolo)}</title>
+</head>
+
+<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
 <tr>
-<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
-<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
+<td align="center" style="padding:30px 12px;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="
+            max-width:720px;
+            background:#ffffff;
+            border-radius:16px;
+            overflow:hidden;
+            border:1px solid #e3e8ee;
+            box-shadow:0 10px 35px rgba(0,45,114,.10);
+       ">
+
+<tr>
+<td bgcolor="#002d72" style="padding:27px 32px 24px;border-bottom:5px solid #C99700;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td>
+                <img
+                    src="https://consulenza-credipass.it/images/logo-credipass.png"
+                    width="175"
+                    alt="Credipass"
+                    style="display:block;border:0;"
+                >
+            </td>
+
+            <td align="right" style="color:#d6e0ee;font-size:11px;">
+                Pratica<br>
+                <strong style="color:#ffffff;">
+                    ${escapeHtml(nomePratica)}
+                </strong>
+            </td>
+        </tr>
+    </table>
+
+    <div style="
+        margin-top:21px;
+        font-size:10px;
+        color:#C99700;
+        font-weight:bold;
+        text-transform:uppercase;
+        letter-spacing:.8px;
+    ">${escapeHtml(audience)}</div>
+
+    <div style="
+        margin-top:7px;
+        color:#ffffff;
+        font-size:24px;
+        font-weight:bold;
+        line-height:1.25;
+    ">${escapeHtml(titolo)}</div>
+
+    <div style="
+        margin-top:7px;
+        color:#cbd7e6;
+        font-size:12px;
+        line-height:1.55;
+    ">${escapeHtml(messaggio || meta.descrizione)}</div>
+
 </td>
 </tr>
+
 <tr>
-<td style="padding:30px;">
-<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">Aggiornamento pratica</div>
-<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">${escapeHtml(titolo)}</h2>
-<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">${escapeHtml(messaggio)}</p>
-${dettaglio ? `
-<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
-${escapeHtml(dettaglio)}
-</div>` : ""}
-<div style="text-align:center;margin-top:26px;">
-<a href="${portalUrl}" style="display:inline-block;background:#C99700;color:#fff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:bold;font-size:13px;">${escapeHtml(cta)}</a>
+<td style="padding:23px 32px 18px;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="
+                background:#f7f9fc;
+                border:1px solid #e3e8ee;
+                border-radius:12px;
+           ">
+        <tr>
+            <td style="padding:17px 19px;">
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td>
+                            <div style="
+                                font-size:10px;
+                                color:#7a858f;
+                                font-weight:bold;
+                                text-transform:uppercase;
+                            ">Avanzamento pratica</div>
+
+                            <div style="
+                                font-size:13px;
+                                color:#002d72;
+                                font-weight:bold;
+                                margin-top:5px;
+                            ">${escapeHtml(cfg.label)}</div>
+                        </td>
+
+                        <td align="right" style="
+                            font-size:21px;
+                            color:#002d72;
+                            font-weight:bold;
+                        ">${percentuale}%</td>
+                    </tr>
+                </table>
+
+                <div style="
+                    height:9px;
+                    background:#e4e9ef;
+                    border-radius:999px;
+                    overflow:hidden;
+                    margin-top:10px;
+                ">
+                    <div style="
+                        width:${percentuale}%;
+                        height:9px;
+                        background:#C99700;
+                    "></div>
+                </div>
+
+                <div style="margin-top:14px;">
+                    ${emailFasiHtml(statoFinale)}
+                </div>
+
+            </td>
+        </tr>
+    </table>
+
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 32px 18px;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+
+            <td width="50%" valign="top" style="padding-right:7px;">
+                <div style="
+                    background:#eef5ff;
+                    border:1px solid #d6e2f1;
+                    border-radius:11px;
+                    padding:15px;
+                ">
+                    <div style="
+                        font-size:9px;
+                        color:#6d7e93;
+                        font-weight:bold;
+                        text-transform:uppercase;
+                    ">Cosa sta succedendo</div>
+
+                    <div style="
+                        font-size:12px;
+                        color:#002d72;
+                        font-weight:bold;
+                        margin-top:6px;
+                    ">${escapeHtml(meta.titolo || cfg.label)}</div>
+
+                    <div style="
+                        font-size:10px;
+                        color:#61707f;
+                        line-height:1.55;
+                        margin-top:6px;
+                    ">${escapeHtml(meta.descrizione || messaggio)}</div>
+                </div>
+            </td>
+
+            <td width="50%" valign="top" style="padding-left:7px;">
+                <div style="
+                    background:#fff9e8;
+                    border:1px solid #f0d88b;
+                    border-radius:11px;
+                    padding:15px;
+                ">
+                    <div style="
+                        font-size:9px;
+                        color:#8a6800;
+                        font-weight:bold;
+                        text-transform:uppercase;
+                    ">${escapeHtml(azioneTitolo)}</div>
+
+                    <div style="
+                        font-size:12px;
+                        color:#775a00;
+                        font-weight:bold;
+                        margin-top:6px;
+                    ">${escapeHtml(azioneTesto)}</div>
+                </div>
+            </td>
+
+        </tr>
+    </table>
+
+</td>
+</tr>
+
+${emailDettagliHtml(items, dettaglio)}
+
+<tr>
+<td style="padding:0 32px 18px;">
+    <div style="
+        background:#f7f9fc;
+        border:1px solid #e5eaf0;
+        border-radius:10px;
+        padding:14px 15px;
+    ">
+        <div style="
+            font-size:9px;
+            color:#7a858f;
+            font-weight:bold;
+            text-transform:uppercase;
+        ">Prossimo passaggio</div>
+
+        <div style="
+            font-size:12px;
+            color:#002d72;
+            font-weight:bold;
+            margin-top:6px;
+        ">${escapeHtml(prossimo)}</div>
+    </div>
+</td>
+</tr>
+
+${readOnly ? `
+<tr>
+<td style="
+    padding:0 32px 16px;
+    color:#8a949e;
+    font-size:10px;
+    line-height:1.5;
+">
+Accesso in sola consultazione: non è possibile caricare, eliminare o scaricare documenti.
+</td>
+</tr>` : ""}
+
+<tr>
+<td align="center" style="padding:2px 32px 31px;">
+    <a
+        href="${url}"
+        style="
+            display:inline-block;
+            background:#002d72;
+            color:#ffffff;
+            text-decoration:none;
+            padding:15px 28px;
+            border-radius:8px;
+            font-size:12px;
+            font-weight:bold;
+            border-bottom:4px solid #C99700;
+        "
+    >${escapeHtml(ctaLabel)}</a>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="#001f4d" style="
+    padding:16px 32px;
+    color:#9eafc4;
+    font-size:10px;
+    line-height:1.5;
+">
+    <strong style="color:#C99700;">Credipass S.p.A.</strong><br>
+    Comunicazione relativa alla pratica ${escapeHtml(nomePratica)}.
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+
+<div id="statusReminderModal">
+    <div class="status-reminder-card">
+        <div class="status-reminder-head">
+            <h3>
+                <i class="fas fa-bell" style="color:#C99700;"></i>
+                Imposta motivo e promemoria
+            </h3>
+        </div>
+
+        <div class="status-reminder-body">
+            <div style="font-size:11px;color:#59636c;line-height:1.55;">
+                Per questo stato puoi indicare il motivo e una data in cui ricordare a te e al Backoffice di verificare la pratica.
+            </div>
+
+            <label class="status-reminder-label">Motivo</label>
+            <textarea
+                id="statusReminderReason"
+                class="status-reminder-textarea"
+                placeholder="Es. Attesa nuovo estratto conto trimestrale"
+            ></textarea>
+
+            <label class="status-reminder-label">Data reminder</label>
+            <input
+                id="statusReminderDate"
+                class="status-reminder-input"
+                type="datetime-local"
+            >
+
+            <div class="status-reminder-actions">
+                <button
+                    type="button"
+                    class="status-reminder-btn secondary"
+                    onclick="annullaStatusReminder()"
+                >ANNULLA</button>
+
+                <button
+                    type="button"
+                    class="status-reminder-btn primary"
+                    onclick="confermaStatusReminder()"
+                >
+                    <i class="fas fa-check"></i>
+                    SALVA STATO E REMINDER
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
-<p style="margin:26px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
-Accedi al portale per consultare lo stato aggiornato, le attività e gli eventuali documenti richiesti.
-</p>
-</td>
-</tr>
-</table>
-</td></tr>
-</table>
+
 </body>
 </html>`;
+    }
+
+    function emailAzionePerEvento(titolo = "", stato = "") {
+        const t = String(titolo || "").toLowerCase();
+
+        if (t.includes("integrazione")) {
+            return {
+                titolo: "Cosa devi fare tu",
+                testo: "Caricare i documenti richiesti",
+                prossimo: "Ricezione e verifica documenti"
+            };
+        }
+
+        if (t.includes("nuova versione")) {
+            return {
+                titolo: "Cosa devi fare tu",
+                testo: "Caricare la nuova versione del documento",
+                prossimo: "Verifica del documento aggiornato"
+            };
+        }
+
+        if (t.includes("appuntamento") || t.includes("perizia")) {
+            return {
+                titolo: "Cosa devi fare tu",
+                testo: "Verificare data, ora e indicazioni ricevute",
+                prossimo: "Svolgimento dell'appuntamento"
+            };
+        }
+
+        return {
+            titolo: "Cosa devi fare tu",
+            testo: "Consultare l'aggiornamento",
+            prossimo: emailProssimoPassaggio(stato || "istruttoria")
+        };
+    }
+
+    function costruisciEmailPortaleHtml({
+        titolo,
+        messaggio,
+        dettaglio = "",
+        cta = "APRI AREA CLIENTE",
+        items = [],
+        pratica = {}
+    }) {
+        const stato =
+            emailStatoNormalizzato(
+                pratica.stato_pratica ||
+                praticaEmailCorrente?.stato_pratica ||
+                "istruttoria"
+            );
+
+        const action =
+            emailAzionePerEvento(
+                titolo,
+                stato
+            );
+
+        return costruisciEmailMasterHtml({
+            pratica,
+            audience:
+                "Area Cliente · Aggiornamento pratica",
+            titolo,
+            messaggio,
+            dettaglio,
+            items,
+            stato,
+            azioneTitolo:
+                action.titolo,
+            azioneTesto:
+                action.testo,
+            prossimoPassaggio:
+                action.prossimo,
+            ctaLabel:
+                cta || "APRI AREA CLIENTE",
+            ctaUrl:
+                emailUrlCliente()
+        });
     }
 
     function emailAgenziaDaPratica(d = {}) {
@@ -1465,46 +2337,39 @@ Accedi al portale per consultare lo stato aggiornato, le attività e gli eventua
     function costruisciEmailAgenziaHtml({
         titolo,
         messaggio,
-        dettaglio = ""
+        dettaglio = "",
+        items = [],
+        pratica = {}
     }) {
-        return `
-<!DOCTYPE html>
-<html lang="it">
-<body style="margin:0;padding:0;background:#f2f5f8;font-family:Arial,Helvetica,sans-serif;color:#263238;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 12px;background:#f2f5f8;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e8ed;">
-<tr>
-<td style="background:#002d72;padding:24px;text-align:center;border-bottom:5px solid #C99700;">
-<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="190" alt="Credipass">
-</td>
-</tr>
-<tr>
-<td style="padding:30px;">
-<div style="font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#C99700;margin-bottom:8px;">
-Aggiornamento pratica mutuo
-</div>
-<h2 style="margin:0 0 14px;color:#002d72;font-size:22px;">
-${escapeHtml(titolo)}
-</h2>
-<p style="margin:0;color:#4d5963;font-size:14px;line-height:1.7;">
-${escapeHtml(messaggio)}
-</p>
-${dettaglio ? `
-<div style="margin-top:18px;background:#f7f9fc;border-left:4px solid #C99700;padding:14px;border-radius:7px;color:#4d5963;font-size:13px;line-height:1.6;">
-${escapeHtml(dettaglio)}
-</div>` : ""}
-<p style="margin:24px 0 0;color:#8a949e;font-size:11px;line-height:1.5;">
-Comunicazione informativa destinata all'agenzia immobiliare collegata alla pratica.
-Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
-</p>
-</td>
-</tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+        const stato =
+            emailStatoNormalizzato(
+                pratica.stato_pratica ||
+                praticaEmailCorrente?.stato_pratica ||
+                "istruttoria"
+            );
+
+        return costruisciEmailMasterHtml({
+            pratica,
+            audience:
+                "Monitoraggio pratica · Sola consultazione",
+            titolo,
+            messaggio,
+            dettaglio,
+            items,
+            stato,
+            azioneTitolo:
+                "Stato operativo",
+            azioneTesto:
+                "Consultare l'avanzamento della pratica",
+            prossimoPassaggio:
+                emailProssimoPassaggio(stato),
+            ctaLabel:
+                "VERIFICA STATO PRATICA",
+            ctaUrl:
+                emailUrlMonitoraggio(),
+            readOnly:
+                true
+        });
     }
 
     async function inviaAggiornamentoAgenzia({
@@ -1515,6 +2380,16 @@ Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
     }) {
         const emailAgenzia =
             await recuperaEmailAgenziaPratica();
+
+        const praticaSnapEmailAgenzia =
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .get();
+
+        const praticaEmailAgenzia =
+            praticaSnapEmailAgenzia.exists
+                ? (praticaSnapEmailAgenzia.data() || {})
+                : {};
 
         if (!emailAgenzia) {
             return {
@@ -1539,7 +2414,9 @@ Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
                         html: costruisciEmailAgenziaHtml({
                             titolo,
                             messaggio,
-                            dettaglio
+                            dettaglio,
+                            pratica:
+                                praticaEmailAgenzia
                         })
                     })
                 });
@@ -1589,13 +2466,20 @@ Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
         subject = ""
     }) {
         try {
-            let email = normalizeDisplay(emailCliente);
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .doc(idCliente)
+                    .get();
 
-            if (!email) {
-                const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
-                const d = snap.exists ? (snap.data() || {}) : {};
-                email = normalizeDisplay(d.cliente_email);
-            }
+            const d =
+                snap.exists
+                    ? (snap.data() || {})
+                    : {};
+
+            let email =
+                normalizeDisplay(emailCliente)
+                ||
+                normalizeDisplay(d.cliente_email);
 
             if (!email) {
                 console.warn("Notifica portale non inviata: email cliente assente.");
@@ -1611,7 +2495,8 @@ Per motivi di riservatezza, l'accesso al Portale Cliente non viene condiviso.
                     html: costruisciEmailPortaleHtml({
                         titolo,
                         messaggio,
-                        dettaglio
+                        dettaglio,
+                        pratica: d
                     })
                 })
             });
@@ -1907,6 +2792,16 @@ Riceverai, se prevista, una comunicazione separata con l'elenco dei documenti ri
 
 Cordiali saluti`
             },
+            attesa_documenti: {
+                subject: "Aggiornamento pratica - Attesa documenti",
+                body: `${intro}
+
+la pratica è temporaneamente in attesa della documentazione necessaria per proseguire.
+
+Ti aggiornerò non appena sarà possibile riprendere la lavorazione.
+
+Cordiali saluti`
+            },
             caricato_banca: {
                 subject: "Aggiornamento pratica - Caricata in banca",
                 body: `${intro}
@@ -2057,44 +2952,55 @@ Cordiali saluti`
     }
 
     function costruisciEmailStatoHtml(testo, stato) {
-        const cfg = getStatoPraticaConfig(stato);
+        const s =
+            emailStatoNormalizzato(
+                stato
+            );
 
-        return `
-<!DOCTYPE html>
-<html lang="it">
-<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#263238;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
-<tr>
-<td align="center" style="padding:32px 12px;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:650px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e3e8ee;box-shadow:0 8px 30px rgba(0,45,114,.10);">
-<tr>
-<td align="center" bgcolor="#002d72" style="padding:28px 24px;border-bottom:4px solid #C99700;">
-<img src="https://consulenza-credipass.it/images/logo-credipass.png" width="195" alt="Credipass" style="display:block;border:0;margin:0 auto;">
-</td>
-</tr>
-<tr>
-<td style="padding:30px 32px 12px;">
-<div style="font-size:11px;color:#C99700;font-weight:bold;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;">Aggiornamento pratica</div>
-<div style="font-size:22px;color:#002d72;font-weight:bold;line-height:1.3;">${cfg.label}</div>
-</td>
-</tr>
-<tr>
-<td style="padding:12px 32px 30px;font-size:14px;line-height:1.75;color:#4f5963;">
-${testoToHtmlEmail(testo)}
-</td>
-</tr>
-<tr>
-<td bgcolor="#001f4d" align="center" style="padding:16px 24px;color:#9cacc1;font-size:10px;line-height:1.5;">
-Comunicazione relativa allo stato di avanzamento della pratica.<br>
-Credipass
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</body>
-</html>`;
+        const cfg =
+            getStatoPraticaConfig(
+                s
+            );
+
+        const actionByState = {
+            integrazione_documenti:
+                "Caricare i documenti richiesti",
+            delibera_reddituale_ko:
+                "Attendere il contatto del consulente",
+            perizia_ko:
+                "Attendere il contatto del consulente",
+            sospesa:
+                "Attendere nuove indicazioni",
+            rinunciata:
+                "Nessuna azione richiesta"
+        };
+
+        return costruisciEmailMasterHtml({
+            pratica:
+                praticaEmailCorrente || {},
+            audience:
+                "Area Cliente · Aggiornamento stato",
+            titolo:
+                cfg.label,
+            messaggio:
+                String(testo || "")
+                    .replace(/\s+/g, " ")
+                    .trim(),
+            stato:
+                s,
+            azioneTitolo:
+                "Cosa devi fare tu",
+            azioneTesto:
+                actionByState[s]
+                ||
+                "Nessuna azione richiesta",
+            prossimoPassaggio:
+                emailProssimoPassaggio(s),
+            ctaLabel:
+                "APRI LA TUA AREA CLIENTE",
+            ctaUrl:
+                emailUrlCliente()
+        });
     }
 
     async function apriModalStatoEmail(stato, datiPratica = null) {
@@ -2224,62 +3130,782 @@ Credipass
     }
 
     async function salvaStatoPratica(stato) {
-        if (!idCliente) return;
+        if (!idCliente) {
+            return;
+        }
 
-        const cfg = getStatoPraticaConfig(stato);
-        const select = document.getElementById("statoPraticaSelect");
+        const ref =
+            db.collection("pratiche_mutuo")
+                .doc(idCliente);
 
-        if (select) select.disabled = true;
+        const snap =
+            await ref.get();
+
+        const d =
+            snap.exists
+                ? (snap.data() || {})
+                : {};
+
+        const statoPrecedente =
+            d.stato_pratica
+            ||
+            "da_istruire";
+
+        if (
+            statoRichiedeReminderInterno(
+                stato
+            )
+        ) {
+            apriStatusReminder(
+                stato,
+                statoPrecedente
+            );
+
+            return;
+        }
+
+        await salvaStatoPraticaEffettivo(
+            stato,
+            {
+                statoPrecedente
+            }
+        );
+    }
+
+    async function salvaStatoPraticaEffettivo(
+        stato,
+        {
+            motivo = "",
+            reminderDate = null,
+            statoPrecedente = null
+        } = {}
+    ) {
+        if (!idCliente) {
+            return;
+        }
+
+        const cfg =
+            getStatoPraticaConfig(
+                stato
+            );
+
+        const select =
+            document.getElementById(
+                "statoPraticaSelect"
+            );
+
+        if (select) {
+            select.disabled =
+                true;
+        }
 
         try {
-            const refPratica = db.collection("pratiche_mutuo").doc(idCliente);
-            const prima = await refPratica.get();
-            const statoPrecedente = prima.exists
-                ? ((prima.data() || {}).stato_pratica || "da_istruire")
-                : "da_istruire";
+            const refPratica =
+                db.collection("pratiche_mutuo")
+                    .doc(idCliente);
 
-            await refPratica.set({
-                stato_pratica: STATO_PRATICA_CONFIG[stato] ? stato : "da_istruire",
-                stato_pratica_label: cfg.label,
-                stato_pratica_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+            const prima =
+                await refPratica.get();
 
-            aggiornaVisualStatoPratica(stato);
+            const dPrima =
+                prima.exists
+                    ? (prima.data() || {})
+                    : {};
 
-            const updated = document.getElementById("statoPraticaUpdated");
-            if (updated) {
-                updated.innerText = `Stato salvato: ${new Date().toLocaleString("it-IT")}`;
+            const precedente =
+                statoPrecedente
+                ||
+                dPrima.stato_pratica
+                ||
+                "da_istruire";
+
+            const update = {
+                stato_pratica:
+                    STATO_PRATICA_CONFIG[stato]
+                        ? stato
+                        : "da_istruire",
+
+                stato_pratica_label:
+                    cfg.label,
+
+                stato_pratica_aggiornato_il:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            /*
+             * Se esco da uno stato con reminder interno,
+             * il reminder precedente viene disattivato.
+             */
+            if (
+                !statoRichiedeReminderInterno(
+                    stato
+                )
+            ) {
+                update.stato_reminder_attivo =
+                    false;
+
+                update.stato_reminder_inviato =
+                    false;
             }
 
-            if (statoPrecedente !== stato) {
-                const meta = STATO_PRATICA_CLIENTE_META[stato] || {
-                    titolo: cfg.label,
-                    descrizione: "Lo stato della pratica è stato aggiornato."
-                };
+            if (
+                statoRichiedeReminderInterno(
+                    stato
+                )
+            ) {
+                update.stato_motivo =
+                    motivo;
+
+                update.stato_reminder_data =
+                    firebase.firestore.Timestamp.fromDate(
+                        reminderDate
+                    );
+
+                update.stato_reminder_stato =
+                    stato;
+
+                update.stato_reminder_attivo =
+                    true;
+
+                update.stato_reminder_inviato =
+                    false;
+
+                update.stato_reminder_creato_il =
+                    firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            /*
+             * I reminder documentali si fermano SOLO se la pratica è sospesa.
+             * Quando la pratica riparte, se esistono documenti mancanti,
+             * la Cloud Function riprenderà il ciclo.
+             */
+            if (
+                stato === "sospesa"
+            ) {
+                update.documentReminderPausa =
+                    true;
+
+                update.documentReminderPausaIl =
+                    firebase.firestore.FieldValue.serverTimestamp();
+            }
+            else if (
+                precedente === "sospesa"
+            ) {
+                update.documentReminderPausa =
+                    false;
+
+                update.documentReminderUltimoInvioIl =
+                    firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            await refPratica.set(
+                update,
+                {
+                    merge:
+                        true
+                }
+            );
+
+            aggiornaVisualStatoPratica(
+                stato
+            );
+
+            const updated =
+                document.getElementById(
+                    "statoPraticaUpdated"
+                );
+
+            if (updated) {
+                updated.innerText =
+                    `Stato salvato: ${new Date().toLocaleString("it-IT")}`;
+            }
+
+            if (
+                precedente !== stato
+            ) {
+                const meta =
+                    STATO_PRATICA_CLIENTE_META[stato]
+                    ||
+                    {
+                        titolo:
+                            cfg.label,
+
+                        descrizione:
+                            "Lo stato della pratica è stato aggiornato."
+                    };
 
                 await registraAttivitaCliente({
-                    tipo: "stato",
-                    titolo: meta.titolo,
-                    descrizione: meta.descrizione,
+                    tipo:
+                        "stato",
+
+                    titolo:
+                        meta.titolo,
+
+                    descrizione:
+                        meta.descrizione,
+
                     stato,
-                    origine: "dashboard_stato",
-                    icona: "fa-flag"
+
+                    origine:
+                        "dashboard_stato",
+
+                    icona:
+                        "fa-flag"
+                });
+
+                await registraAttivitaInterna({
+                    tipo:
+                        "stato",
+
+                    titolo:
+                        `Stato pratica: ${cfg.label}`,
+
+                    descrizione:
+                        motivo
+                        ||
+                        `Stato modificato da ${getStatoPraticaConfig(precedente).label} a ${cfg.label}.`,
+
+                    stato,
+
+                    meta:
+                        reminderDate
+                            ?
+                            {
+                                reminder_data:
+                                    reminderDate.toISOString()
+                            }
+                            :
+                            {}
                 });
             }
 
-            if (STATI_NOTIFICA_AUTOMATICA.has(stato)) {
-                const snap = await refPratica.get();
-                const d = snap.exists ? (snap.data() || {}) : {};
-                await apriModalStatoEmail(stato, d);
+            if (
+                statoRichiedeReminderInterno(
+                    stato
+                )
+                &&
+                reminderDate
+            ) {
+                await registraAttivitaInterna({
+                    tipo:
+                        "reminder",
+
+                    titolo:
+                        "Promemoria interno programmato",
+
+                    descrizione:
+                        `${motivo} — reminder: ${reminderDate.toLocaleString("it-IT")}`,
+
+                    stato,
+
+                    meta: {
+                        reminder_data:
+                            reminderDate.toISOString()
+                    }
+                });
             }
 
-        } catch (error) {
-            console.error("Errore salvataggio stato pratica:", error);
-            alert("Errore durante il salvataggio dello stato pratica.");
-            await caricaStatoPratica();
-        } finally {
-            if (select) select.disabled = false;
+            if (
+                STATI_NOTIFICA_AUTOMATICA.has(
+                    stato
+                )
+            ) {
+                const snap =
+                    await refPratica.get();
+
+                const d =
+                    snap.exists
+                        ? (snap.data() || {})
+                        : {};
+
+                await apriModalStatoEmail(
+                    stato,
+                    d
+                );
+            }
         }
+        catch (error) {
+            console.error(
+                "Errore salvataggio stato pratica:",
+                error
+            );
+
+            alert(
+                "Errore durante il salvataggio dello stato pratica."
+            );
+
+            await caricaStatoPratica();
+        }
+        finally {
+            if (select) {
+                select.disabled =
+                    false;
+            }
+        }
+    }
+
+
+
+    /* ==========================================================
+       NOTE INTERNE / TIMELINE / PROMEMORIA STATO
+       ========================================================== */
+
+    let statoReminderPending =
+        null;
+
+    let statoReminderPrecedente =
+        null;
+
+    function autoreAttivitaInterna() {
+        return (
+            sessioneConsulente?.nome
+            ||
+            sessioneConsulente?.displayName
+            ||
+            sessioneConsulente?.email
+            ||
+            "Consulente"
+        );
+    }
+
+    function normalizzaAttivitaInterne(value) {
+        return Array.isArray(value)
+            ? value
+            : [];
+    }
+
+    async function registraAttivitaInterna({
+        tipo = "nota",
+        titolo = "Nota interna",
+        descrizione = "",
+        stato = "",
+        meta = {}
+    } = {}) {
+        if (!idCliente) {
+            return;
+        }
+
+        const ref =
+            db.collection("pratiche_mutuo")
+                .doc(idCliente);
+
+        const entry = {
+            id:
+                `int_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+
+            tipo,
+            titolo,
+            descrizione,
+            stato,
+            meta,
+
+            autore:
+                autoreAttivitaInterna(),
+
+            creato_il:
+                new Date().toISOString()
+        };
+
+        await db.runTransaction(
+            async transaction => {
+                const snap =
+                    await transaction.get(
+                        ref
+                    );
+
+                const d =
+                    snap.exists
+                        ? (snap.data() || {})
+                        : {};
+
+                const current =
+                    normalizzaAttivitaInterne(
+                        d.attivita_interne
+                    );
+
+                transaction.set(
+                    ref,
+                    {
+                        attivita_interne:
+                            [
+                                entry,
+                                ...current
+                            ].slice(0, 250),
+
+                        attivita_interna_aggiornata_il:
+                            firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    {
+                        merge:
+                            true
+                    }
+                );
+            }
+        );
+
+        await caricaTimelineInternaPratica();
+    }
+
+    async function salvaNotaInternaPratica() {
+        const textarea =
+            document.getElementById(
+                "notaInternaPratica"
+            );
+
+        const text =
+            String(
+                textarea?.value
+                ||
+                ""
+            ).trim();
+
+        if (!text) {
+            alert(
+                "Scrivi una nota prima di salvarla."
+            );
+            return;
+        }
+
+        try {
+            await registraAttivitaInterna({
+                tipo:
+                    "nota",
+                titolo:
+                    "Nota interna",
+                descrizione:
+                    text
+            });
+
+            textarea.value =
+                "";
+        }
+        catch (error) {
+            console.error(
+                "Errore salvataggio nota interna:",
+                error
+            );
+
+            alert(
+                "Errore durante il salvataggio della nota interna."
+            );
+        }
+    }
+
+    function formatDataTimelineInterna(value) {
+        if (!value) {
+            return "";
+        }
+
+        let d = null;
+
+        if (
+            typeof value.toDate ===
+            "function"
+        ) {
+            d =
+                value.toDate();
+        }
+        else {
+            d =
+                new Date(
+                    value
+                );
+        }
+
+        if (
+            !d
+            ||
+            Number.isNaN(
+                d.getTime()
+            )
+        ) {
+            return "";
+        }
+
+        return d.toLocaleString(
+            "it-IT"
+        );
+    }
+
+    async function caricaTimelineInternaPratica() {
+        const box =
+            document.getElementById(
+                "timelineInternaPratica"
+            );
+
+        if (
+            !box
+            ||
+            !idCliente
+        ) {
+            return;
+        }
+
+        try {
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .doc(idCliente)
+                    .get();
+
+            const d =
+                snap.exists
+                    ? (snap.data() || {})
+                    : {};
+
+            const entries =
+                normalizzaAttivitaInterne(
+                    d.attivita_interne
+                )
+                .slice()
+                .sort(
+                    (a,b) =>
+                        new Date(b.creato_il || 0)
+                        -
+                        new Date(a.creato_il || 0)
+                );
+
+            if (!entries.length) {
+                box.innerHTML =
+                    `<div style="font-size:10px;color:#999;text-align:center;padding:10px;">
+                        Nessuna attività interna registrata.
+                    </div>`;
+
+                return;
+            }
+
+            box.innerHTML =
+                entries.map(
+                    item => `
+                    <div class="internal-timeline-item">
+                        <div class="internal-timeline-date">
+                            ${escapeHtml(
+                                formatDataTimelineInterna(
+                                    item.creato_il
+                                )
+                            )}
+                        </div>
+
+                        <div class="internal-timeline-title">
+                            ${escapeHtml(
+                                item.titolo
+                                ||
+                                "Attività"
+                            )}
+                        </div>
+
+                        ${
+                            item.descrizione
+                                ?
+                                `<div class="internal-timeline-text">${escapeHtml(item.descrizione)}</div>`
+                                :
+                                ""
+                        }
+
+                        <div class="internal-timeline-user">
+                            ${escapeHtml(
+                                item.autore
+                                ||
+                                ""
+                            )}
+                        </div>
+                    </div>`
+                )
+                .join("");
+        }
+        catch (error) {
+            console.error(
+                "Errore caricamento timeline interna:",
+                error
+            );
+
+            box.innerHTML =
+                `<div style="font-size:10px;color:#b42318;text-align:center;padding:10px;">
+                    Errore caricamento timeline.
+                </div>`;
+        }
+    }
+
+    function statoRichiedeReminderInterno(stato) {
+        return (
+            stato === "sospesa"
+            ||
+            stato === "attesa_documenti"
+        );
+    }
+
+    function apriStatusReminder(
+        stato,
+        statoPrecedente
+    ) {
+        statoReminderPending =
+            stato;
+
+        statoReminderPrecedente =
+            statoPrecedente;
+
+        const modal =
+            document.getElementById(
+                "statusReminderModal"
+            );
+
+        const reason =
+            document.getElementById(
+                "statusReminderReason"
+            );
+
+        const date =
+            document.getElementById(
+                "statusReminderDate"
+            );
+
+        if (reason) {
+            reason.value =
+                "";
+        }
+
+        if (date) {
+            const tomorrow =
+                new Date(
+                    Date.now()
+                    +
+                    24 * 60 * 60 * 1000
+                );
+
+            const local =
+                new Date(
+                    tomorrow.getTime()
+                    -
+                    tomorrow.getTimezoneOffset()
+                    *
+                    60000
+                )
+                .toISOString()
+                .slice(
+                    0,
+                    16
+                );
+
+            date.value =
+                local;
+        }
+
+        if (modal) {
+            modal.style.display =
+                "flex";
+        }
+    }
+
+    function chiudiStatusReminderModal() {
+        const modal =
+            document.getElementById(
+                "statusReminderModal"
+            );
+
+        if (modal) {
+            modal.style.display =
+                "none";
+        }
+    }
+
+    async function annullaStatusReminder() {
+        const select =
+            document.getElementById(
+                "statoPraticaSelect"
+            );
+
+        if (
+            select
+            &&
+            statoReminderPrecedente
+        ) {
+            select.value =
+                statoReminderPrecedente;
+        }
+
+        statoReminderPending =
+            null;
+
+        statoReminderPrecedente =
+            null;
+
+        chiudiStatusReminderModal();
+    }
+
+    async function confermaStatusReminder() {
+        const reason =
+            String(
+                document.getElementById(
+                    "statusReminderReason"
+                )?.value
+                ||
+                ""
+            ).trim();
+
+        const dateValue =
+            String(
+                document.getElementById(
+                    "statusReminderDate"
+                )?.value
+                ||
+                ""
+            ).trim();
+
+        if (!reason) {
+            alert(
+                "Inserisci il motivo."
+            );
+            return;
+        }
+
+        if (!dateValue) {
+            alert(
+                "Inserisci la data del reminder."
+            );
+            return;
+        }
+
+        const reminderDate =
+            new Date(
+                dateValue
+            );
+
+        if (
+            Number.isNaN(
+                reminderDate.getTime()
+            )
+        ) {
+            alert(
+                "Data reminder non valida."
+            );
+            return;
+        }
+
+        const stato =
+            statoReminderPending;
+
+        const precedente =
+            statoReminderPrecedente;
+
+        chiudiStatusReminderModal();
+
+        statoReminderPending =
+            null;
+
+        statoReminderPrecedente =
+            null;
+
+        await salvaStatoPraticaEffettivo(
+            stato,
+            {
+                motivo:
+                    reason,
+
+                reminderDate,
+
+                statoPrecedente:
+                    precedente
+            }
+        );
     }
 
 
@@ -2435,6 +4061,7 @@ Credipass
             document.getElementById('labelCliente').innerText = prettyClientLabel(idCliente);
             caricaDocumenti();
             caricaIdentikitCompleto();
+            caricaTimelineInternaPratica();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
         } else {
             document.getElementById('documentiArea').innerHTML = '<div class="empty-state">Cliente non specificato nell’URL.</div>';
@@ -3106,63 +4733,97 @@ Credipass
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INVIO...';
         btn.disabled = true;
 
-        const elencoHtml = carrello.map(i => `<li>${i.testo}</li>`).join('');
+        const documentiRichiestiEmail =
+            carrello.map(
+                item =>
+                    item.testo
+            );
 
-        const uploadUrl = `${window.location.origin}/upload.html?id=${encodeURIComponent(idCliente)}`;
+        const praticaEmailIntegrazioneSnap =
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .get();
 
-        const emailHtml = `
-<!DOCTYPE html>
-<html lang="it">
-<body style="margin:0;padding:0;background-color:#f4f7f6;font-family:Arial,sans-serif;">
-    <table width="100%" bgcolor="#f4f7f6" cellpadding="0" cellspacing="0" border="0" style="padding:30px 10px;">
-        <tr>
-            <td align="center">
-                <table width="600" bgcolor="#ffffff" style="border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);border:1px solid #eee;">
-                    <tr>
-                        <td bgcolor="#002d72" align="center" style="padding:25px;border-bottom:5px solid #C99700;">
-                            <img src="https://consulenza-credipass.it/images/logo-credipass.png" width="200" alt="Credipass">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:30px;">
-                            <h2 style="color:#002d72;margin-top:0;">Integrazione Documenti</h2>
-                            <p style="color:#555;line-height:1.6;">
-                                Gentile Cliente, per procedere con la tua pratica abbiamo bisogno di integrare i seguenti documenti:
-                            </p>
+        const praticaEmailIntegrazione =
+            praticaEmailIntegrazioneSnap.exists
+                ? (praticaEmailIntegrazioneSnap.data() || {})
+                : {};
 
-                            <div style="background:#f8f9fa;padding:15px;border-left:4px solid #002d72;margin:20px 0;">
-                                <ul style="margin:0;padding-left:20px;color:#002d72;font-weight:bold;">
-                                    ${elencoHtml}
-                                </ul>
-                            </div>
+        praticaEmailIntegrazione.stato_pratica =
+            "integrazione_documenti";
 
-                            ${nota ? `
-                            <p style="background:#fff9e6;padding:15px;border:1px dashed #C99700;border-radius:8px;font-style:italic; color:#444;">
-                                "${nota}"
-                            </p>
-                            ` : ''}
-
-                            <div align="center" style="margin-top:30px;">
-                                <a href="${uploadUrl}" style="background:#C99700;color:white;padding:16px 30px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">
-                                    CARICA DOCUMENTI
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>`;
+        const emailHtml =
+            costruisciEmailPortaleHtml({
+                titolo:
+                    "Integrazione documenti",
+                messaggio:
+                    `Per proseguire con la pratica abbiamo bisogno di integrare ${documentiRichiestiEmail.length} documento/i.`,
+                dettaglio:
+                    nota,
+                items:
+                    documentiRichiestiEmail,
+                pratica:
+                    praticaEmailIntegrazione,
+                cta:
+                    "VAI ALL'AREA CLIENTE"
+            });
 
         try {
             await db.collection("pratiche_mutuo").doc(idCliente).set({
                 richiestaIntegrazioneAttiva: true,
                 notaPerCliente: nota,
                 elencoDocRichiesti: carrello.map(x => x.id),
-                ultimoAggiornamentoIntegrazione: firebase.firestore.FieldValue.serverTimestamp()
+                ultimoAggiornamentoIntegrazione:
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                documentReminderRichiestoIl:
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                documentReminderPrimoUploadIl:
+                    firebase.firestore.FieldValue.delete(),
+
+                documentReminderUltimoInvioIl:
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                documentReminderHelpInviatoIl:
+                    firebase.firestore.FieldValue.delete(),
+
+                documentReminderHelpInviato:
+                    false,
+
+                documentReminderAttivo:
+                    true,
+
+                documentReminderPausa:
+                    false
             }, { merge: true });
+
+            await registraAttivitaInterna({
+                tipo:
+                    "integrazione",
+
+                titolo:
+                    "Richiesta integrazione documenti",
+
+                descrizione:
+                    `${carrello.length} documento/i richiesti`
+                    +
+                    (
+                        nota
+                            ? ` — ${nota}`
+                            : ""
+                    ),
+
+                stato:
+                    "integrazione_documenti",
+
+                meta: {
+                    documenti:
+                        carrello.map(
+                            x => x.id
+                        )
+                }
+            });
 
             await registraAttivitaCliente({
                 tipo: "integrazione",
