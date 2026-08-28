@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -14817,5 +14818,47 @@ window.addEventListener(
 
 </script>
 
+
+<script>
+async function applyRolePermissionsIndex(){
+    try{
+        const session=await authReady;
+        if(!session)return;
+
+        const canCreate = window.CredipassAuth?.canCreatePractice
+            ? CredipassAuth.canCreatePractice()
+            : true;
+
+        const canView = window.CredipassAuth?.canViewConsultation
+            ? CredipassAuth.canViewConsultation()
+            : true;
+
+        if(!canView){
+            document.querySelectorAll(".content,.main-title").forEach(el=>{
+                el.style.display="none";
+            });
+
+            const box=document.createElement("div");
+            box.style.cssText="max-width:760px;margin:50px auto;background:#fff;padding:30px;border-radius:12px;border-left:5px solid #C99700;font-family:Poppins,sans-serif;";
+            box.innerHTML="<h2 style='color:#002d72'>Accesso limitato</h2><p>Il tuo profilo non è autorizzato a visualizzare la Scheda di Consulenza.</p><a href='/main/ricerca-clienti.html' style='color:#002d72;font-weight:800'>Vai all'Archivio Pratiche</a>";
+            document.body.appendChild(box);
+            return;
+        }
+
+        if(!canCreate){
+            document.querySelectorAll("button").forEach(btn=>{
+                const t=(btn.textContent||"").toLowerCase();
+                if(t.includes("crea")||t.includes("salva")||t.includes("genera")){
+                    btn.disabled=true;
+                    btn.title="Funzione non consentita per il tuo ruolo";
+                }
+            });
+        }
+    }catch(e){
+        console.error("Permessi index:",e);
+    }
+}
+document.addEventListener("DOMContentLoaded",applyRolePermissionsIndex);
+</script>
 </body>
 </html>
