@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -2958,6 +2959,279 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 
 
 
+
+function emailUploadStatoMeta(stato) {
+    const map = {
+        da_istruire: { step: 0, pct: 12, label: "Da istruire" },
+        istruttoria: { step: 1, pct: 25, label: "Istruttoria" },
+        integrazione_documenti: { step: 1, pct: 30, label: "Integrazione documenti" },
+        attesa_documenti: { step: 1, pct: 30, label: "Attesa documenti" },
+        caricato_banca: { step: 2, pct: 42, label: "Caricato in banca" },
+        valutazione_reddituale: { step: 2, pct: 48, label: "Valutazione reddituale" },
+        delibera_reddituale_ok: { step: 2, pct: 55, label: "Delibera reddituale OK" },
+        delibera_reddituale_ko: { step: 2, pct: 55, label: "Delibera reddituale KO" },
+        attesa_perizia: { step: 3, pct: 60, label: "Attesa perizia" },
+        perizia_in_corso: { step: 3, pct: 67, label: "Perizia in corso" },
+        perizia_ok: { step: 3, pct: 72, label: "Perizia OK" },
+        perizia_ko: { step: 3, pct: 67, label: "Perizia KO" },
+        attesa_documentazione_notarile: { step: 4, pct: 78, label: "Documentazione notarile" },
+        chiamata_atto: { step: 4, pct: 88, label: "Chiamata d'atto" },
+        stipulato: { step: 5, pct: 100, label: "Stipulato" },
+        sospesa: { step: 2, pct: 45, label: "Sospesa" },
+        rinunciata: { step: 1, pct: 25, label: "Rinunciata / KO" }
+    };
+
+    return map[stato] || map.istruttoria;
+}
+
+function emailUploadFasiHtml(stato) {
+    const meta = emailUploadStatoMeta(stato);
+    const labels = [
+        "Richiesta",
+        "Istruttoria",
+        "Banca / Delibera",
+        "Perizia",
+        "Notaio / Atto",
+        "Stipula"
+    ];
+
+    return `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+        ${labels.map((label, index) => {
+            let bg = "#e3e8ee";
+            let fg = "#7d8790";
+            let tc = "#8a949e";
+            let value = String(index + 1);
+
+            if (index < meta.step) {
+                bg = "#002d72";
+                fg = "#ffffff";
+                tc = "#002d72";
+                value = "✓";
+            }
+            else if (index === meta.step) {
+                bg = "#C99700";
+                fg = "#ffffff";
+                tc = "#8a6800";
+            }
+
+            return `
+            <td align="center" width="16.66%" valign="top">
+                <div style="
+                    width:28px;height:28px;line-height:28px;border-radius:50%;
+                    background:${bg};color:${fg};font-size:11px;font-weight:bold;margin:auto;
+                ">${value}</div>
+                <div style="
+                    font-size:8px;color:${tc};font-weight:bold;margin-top:6px;line-height:1.2;
+                ">${escapeHtml(label.toUpperCase())}</div>
+            </td>`;
+        }).join("")}
+        </tr>
+    </table>`;
+}
+
+function costruisciEmailUploadBackofficeHtml({
+    pratica = {},
+    documenti = []
+} = {}) {
+    const stato =
+        pratica.stato_pratica
+        ||
+        "istruttoria";
+
+    const meta =
+        emailUploadStatoMeta(
+            stato
+        );
+
+    const dashboardUrl =
+        `${window.location.origin}/main/dashboard-consulente.html?clienteId=${encodeURIComponent(clienteId)}`;
+
+    return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Nuovi documenti caricati</title>
+</head>
+
+<body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
+<tr>
+<td align="center" style="padding:30px 12px;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:720px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e3e8ee;">
+
+<tr>
+<td bgcolor="#002d72" style="padding:27px 32px 24px;border-bottom:5px solid #C99700;">
+    <img src="https://consulenza-credipass.it/images/logo-credipass.png" width="175" alt="Credipass">
+
+    <div style="
+        margin-top:21px;
+        font-size:10px;
+        color:#C99700;
+        font-weight:bold;
+        text-transform:uppercase;
+        letter-spacing:.8px;
+    ">Backoffice · Documentazione cliente</div>
+
+    <div style="
+        margin-top:7px;
+        color:#ffffff;
+        font-size:24px;
+        font-weight:bold;
+    ">Nuovi documenti caricati</div>
+
+    <div style="
+        margin-top:7px;
+        color:#cbd7e6;
+        font-size:12px;
+        line-height:1.55;
+    ">
+        Il cliente ${escapeHtml(clienteRaw)} ha caricato nuova documentazione nell'Area Cliente.
+    </div>
+</td>
+</tr>
+
+<tr>
+<td style="padding:23px 32px 18px;">
+    <div style="
+        background:#f7f9fc;
+        border:1px solid #e3e8ee;
+        border-radius:12px;
+        padding:17px 19px;
+    ">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td>
+                    <div style="font-size:10px;color:#7a858f;font-weight:bold;text-transform:uppercase;">
+                        Avanzamento pratica
+                    </div>
+                    <div style="font-size:13px;color:#002d72;font-weight:bold;margin-top:5px;">
+                        ${escapeHtml(meta.label)}
+                    </div>
+                </td>
+
+                <td align="right" style="font-size:21px;color:#002d72;font-weight:bold;">
+                    ${meta.pct}%
+                </td>
+            </tr>
+        </table>
+
+        <div style="
+            height:9px;background:#e4e9ef;border-radius:999px;overflow:hidden;margin-top:10px;
+        ">
+            <div style="width:${meta.pct}%;height:9px;background:#C99700;"></div>
+        </div>
+
+        <div style="margin-top:14px;">
+            ${emailUploadFasiHtml(stato)}
+        </div>
+    </div>
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 32px 18px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td width="50%" valign="top" style="padding-right:7px;">
+                <div style="background:#eef5ff;border:1px solid #d6e2f1;border-radius:11px;padding:15px;">
+                    <div style="font-size:9px;color:#6d7e93;font-weight:bold;text-transform:uppercase;">
+                        Cosa è successo
+                    </div>
+                    <div style="font-size:12px;color:#002d72;font-weight:bold;margin-top:6px;">
+                        Nuova documentazione ricevuta
+                    </div>
+                </div>
+            </td>
+
+            <td width="50%" valign="top" style="padding-left:7px;">
+                <div style="background:#fff9e8;border:1px solid #f0d88b;border-radius:11px;padding:15px;">
+                    <div style="font-size:9px;color:#8a6800;font-weight:bold;text-transform:uppercase;">
+                        Azione Backoffice
+                    </div>
+                    <div style="font-size:12px;color:#775a00;font-weight:bold;margin-top:6px;">
+                        Verificare i nuovi file
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</td>
+</tr>
+
+${documenti.length ? `
+<tr>
+<td style="padding:0 32px 18px;">
+    <div style="font-size:11px;color:#002d72;font-weight:bold;text-transform:uppercase;margin-bottom:10px;">
+        Documenti caricati
+    </div>
+
+    <div style="
+        border:1px solid #e4e9ef;
+        border-radius:10px;
+        padding:13px 15px;
+        color:#53606b;
+        font-size:11px;
+        line-height:1.7;
+    ">
+        ${documenti.map(x => `• ${escapeHtml(x)}`).join("<br>")}
+    </div>
+</td>
+</tr>` : ""}
+
+<tr>
+<td style="padding:0 32px 18px;">
+    <div style="
+        background:#f7f9fc;
+        border:1px solid #e5eaf0;
+        border-radius:10px;
+        padding:14px 15px;
+    ">
+        <div style="font-size:9px;color:#7a858f;font-weight:bold;text-transform:uppercase;">
+            Prossimo passaggio
+        </div>
+        <div style="font-size:12px;color:#002d72;font-weight:bold;margin-top:6px;">
+            Controllo della documentazione e aggiornamento della pratica
+        </div>
+    </div>
+</td>
+</tr>
+
+<tr>
+<td align="center" style="padding:2px 32px 31px;">
+    <a
+        href="${dashboardUrl}"
+        style="
+            display:inline-block;
+            background:#002d72;
+            color:#ffffff;
+            text-decoration:none;
+            padding:15px 28px;
+            border-radius:8px;
+            font-size:12px;
+            font-weight:bold;
+            border-bottom:4px solid #C99700;
+        "
+    >APRI DASHBOARD PRATICA</a>
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>`;
+}
+
 document.getElementById("uploadForm").addEventListener("submit", async function(e) {
     e.preventDefault();
 
@@ -3075,6 +3349,25 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
             merge: true
         });
 
+        /*
+         * REMINDER DOCUMENTAZIONE
+         * Il timer parte dalla richiesta di integrazione.
+         * Ogni upload aggiorna soltanto l'ultima attività del cliente.
+         */
+        try {
+            await praticaRef.set({
+                documentReminderUltimaAttivitaClienteIl:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+        catch (reminderActivityError) {
+            console.warn(
+                "Impossibile aggiornare attività reminder:",
+                reminderActivityError
+            );
+        }
+
+
         for (const codice of codiciVersioneCaricati) {
             await praticaRef.update({
                 documenti_versione_richiesta:
@@ -3132,8 +3425,17 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
             if (integrazioneCompleta) {
                 await db.collection("pratiche_mutuo").doc(clienteId).set({
-                    richiestaIntegrazioneAttiva: false,
-                    integrazioneCompletataIl: firebase.firestore.FieldValue.serverTimestamp()
+                    richiestaIntegrazioneAttiva:
+                        false,
+
+                    integrazioneCompletataIl:
+                        firebase.firestore.FieldValue.serverTimestamp(),
+
+                    documentReminderAttivo:
+                        false,
+
+                    documentReminderCompletatoIl:
+                        firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
                 await registraAttivitaDaUpload({
@@ -3162,8 +3464,15 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
             if (emailRef) destinatari.push(emailRef);
             if (emailBO) destinatari.push(emailBO);
 
-            const dbConsoleLink =
-                `https://console.firebase.google.com/project/consulenza-credipass/storage/consulenza-credipass.appspot.com/files/~2FFascicoli~2F${clienteId}`;
+            const praticaNotificaSnap =
+                await db.collection("pratiche_mutuo")
+                    .doc(clienteId)
+                    .get();
+
+            const praticaNotifica =
+                praticaNotificaSnap.exists
+                    ? (praticaNotificaSnap.data() || {})
+                    : {};
 
             fetch("/api/send-email", {
                 method: "POST",
@@ -3173,31 +3482,25 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
                 body: JSON.stringify({
                     to: destinatari,
                     bcc: [],
-                    subject: `Aggiornamento Documenti: Pratica ${clienteRaw}`,
-                    html: `
-                        <div style="font-family:Arial,sans-serif;padding:20px;background:#f4f7f6;border-radius:8px;">
-                            <h2 style="color:#002d72;border-bottom:2px solid #C99700;padding-bottom:10px;">
-                                Nuovi documenti caricati
-                            </h2>
-
-                            <p style="color:#333;">
-                                Il cliente <strong>${escapeHtml(clienteRaw)}</strong> ha caricato nuova documentazione nell'Area Clienti.
-                            </p>
-
-                            <br>
-
-                            <a href="${dbConsoleLink}" style="background-color:#C99700;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">
-                                Apri Fascicolo Cliente
-                            </a>
-
-                            <p style="margin-top:20px;font-size:12px;color:#666;">
-                                Potrai visionare e scaricare i file PDF direttamente dal Cloud di archiviazione.
-                            </p>
-                        </div>
-                    `,
-                    replyTo: emailRef
+                    subject:
+                        `Aggiornamento Documenti: Pratica ${clienteRaw}`,
+                    html:
+                        costruisciEmailUploadBackofficeHtml({
+                            pratica:
+                                praticaNotifica,
+                            documenti:
+                                documentiCaricatiTitoli
+                        }),
+                    replyTo:
+                        emailRef
                 })
-            }).catch(e => console.log("Notifica silenziata", e));
+            }).catch(
+                e =>
+                    console.log(
+                        "Notifica silenziata",
+                        e
+                    )
+            );
         }
 
         btn.innerHTML = '<i class="fas fa-check"></i> Trasferimento Completato';
