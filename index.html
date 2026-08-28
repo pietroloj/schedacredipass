@@ -2,8 +2,6 @@
 
 
 
-
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1233,6 +1231,19 @@ hr {
                         Mediazione
                         <strong id="p_mediazione"></strong>
                     </div>
+
+                </div>
+
+                <div class="p-side-block">
+
+                    <div class="p-side-title">
+                        NOTE
+                    </div>
+
+                    <div
+                        class="p-notes"
+                        id="p_note"
+                    ></div>
 
                 </div>
 
@@ -5739,47 +5750,6 @@ function aggiornaTotaleFinanziamenti() {
 
 }
 
-function calcolaTotaliFinanziamentiPerGestione() {
-
-    const dettaglio =
-        getFinanziamentiDettaglio();
-
-    let mantenere = 0;
-    let estinguere = 0;
-
-    dettaglio.forEach(fin => {
-
-        const rata =
-            parseEuro(
-                fin.rata
-            );
-
-        if (
-            String(
-                fin.gestione ||
-                "MANTENERE"
-            ).toUpperCase() ===
-            "ESTINGUERE"
-        ) {
-            estinguere += rata;
-        }
-        else {
-            mantenere += rata;
-        }
-
-    });
-
-    return {
-        totale:
-            mantenere +
-            estinguere,
-
-        mantenere,
-        estinguere
-    };
-}
-
-
 function getFinanziamentiDettaglio() {
 
     const finanziamenti = [];
@@ -8046,14 +8016,6 @@ async function sincronizzaSchedaConDatabase() {
         totale_rate_finanziamenti:
             aggiornaTotaleFinanziamenti(),
 
-        totale_rate_finanziamenti_mantenere:
-            calcolaTotaliFinanziamentiPerGestione()
-                .mantenere,
-
-        totale_rate_finanziamenti_estinguere:
-            calcolaTotaliFinanziamentiPerGestione()
-                .estinguere,
-
         tipo_incendio:
             V(
                 'tipo_incendio',
@@ -9595,6 +9557,198 @@ ${
    Solo Portale Cliente
    ========================================================== */
 
+
+function segnalatoreDocumentLabel(codice) {
+
+    const labels = {
+        ci1: "Carta d'Identità R1 fronte/retro",
+        ci2: "Carta d'Identità R2 fronte/retro",
+        ts1: "Tessera Sanitaria / Codice Fiscale R1 fronte/retro",
+        ts2: "Tessera Sanitaria / Codice Fiscale R2 fronte/retro",
+        residenza1: "Certificato Cumulativo / Contestuale",
+        matrimonio: "Atto / Estratto di matrimonio con regime patrimoniale",
+        separazione: "Provvedimento / Omologa di separazione",
+        divorzio: "Sentenza di divorzio",
+        mantenimento: "Documentazione assegno di mantenimento",
+
+        bustepaga1: "Ultime 2 Buste Paga R1",
+        bustepaga2: "Ultime 2 Buste Paga R2",
+        cud1: "Ultima Certificazione Unica R1",
+        cud2: "Ultima Certificazione Unica R2",
+        contratto1: "Contratto di Lavoro R1",
+        contratto2: "Contratto di Lavoro R2",
+        contratto: "Contratto di Lavoro",
+        ec1: "Estratto Conto R1",
+        ec2: "Estratto Conto R2",
+        mov1: "Lista Movimenti aggiornata R1",
+        mov2: "Lista Movimenti aggiornata R2",
+
+        unici1: "Ultimo Modello Redditi R1",
+        unici2: "Ultimo Modello Redditi R2",
+        ricevute1: "Ricevuta presentazione dichiarazione R1",
+        ricevute2: "Ricevuta presentazione dichiarazione R2",
+        f241: "F24 R1",
+        f242: "F24 R2",
+        visura1: "Visura Camerale R1",
+        visura2: "Visura Camerale R2",
+
+        locazioni: "Contratti di locazione registrati",
+        redditi_locazione: "Dichiarazione redditi con redditi da locazione",
+        accrediti_locazione: "Evidenza accrediti dei canoni",
+
+        atto: "Atto di provenienza",
+        planimetria: "Planimetria catastale",
+        visura_catastale: "Visura catastale aggiornata",
+        visuracat: "Visura catastale aggiornata",
+        titoli_edilizi: "Titoli edilizi disponibili",
+        agibilita: "Agibilità, se disponibile",
+        preliminare: "Preliminare / proposta d'acquisto accettata",
+        computo_metrico: "Computo metrico estimativo",
+
+        mutuo_pre: "Documentazione mutuo in essere",
+        prestiti: "Contratti dei finanziamenti in corso",
+        conteggi_estintivi: "Conteggi estintivi aggiornati",
+        ctc: "CTC online"
+    };
+
+    return (
+        labels[codice]
+        ||
+        String(codice || "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase())
+    );
+
+}
+
+
+function getSegnalatoreDocumentiRichiesti() {
+
+    /*
+     * IMPORTANTISSIMO:
+     * usiamo la STESSA funzione che genera gli slot dell'Area Cliente.
+     * Quindi la mail non mostra documenti "potenzialmente elaborabili":
+     * mostra solo quelli realmente richiesti dalla pratica corrente.
+     *
+     * Esempio: se R2 non esiste, getUploadDocumentCodes() NON genera
+     * ci2 / ts2 / buste paga R2 / CU R2 / estratti R2.
+     */
+    return getUploadDocumentCodes()
+        .map(codice => ({
+            codice,
+            label:
+                segnalatoreDocumentLabel(
+                    codice
+                )
+        }));
+
+}
+
+
+function segnalatoreDocumentiHtml() {
+
+    const documenti =
+        getSegnalatoreDocumentiRichiesti();
+
+    if (!documenti.length) {
+        return `
+            <div style="
+                padding:14px 16px;
+                background:#f7f9fc;
+                border:1px solid #e3e8ee;
+                border-radius:10px;
+                color:#66727d;
+                font-size:12px;
+            ">
+                Nessun documento richiesto al momento.
+            </div>
+        `;
+    }
+
+    return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="border-collapse:separate;border-spacing:0 7px;">
+            ${documenti.map(doc => `
+                <tr>
+                    <td width="26" valign="top" style="
+                        padding:10px 0 10px 12px;
+                        background:#f7f9fc;
+                        border-top:1px solid #e3e8ee;
+                        border-bottom:1px solid #e3e8ee;
+                        border-left:1px solid #e3e8ee;
+                        border-radius:8px 0 0 8px;
+                        color:#C99700;
+                        font-size:13px;
+                        font-weight:bold;
+                    ">✓</td>
+
+                    <td style="
+                        padding:10px 12px 10px 7px;
+                        background:#f7f9fc;
+                        border-top:1px solid #e3e8ee;
+                        border-bottom:1px solid #e3e8ee;
+                        border-right:1px solid #e3e8ee;
+                        border-radius:0 8px 8px 0;
+                        color:#303a43;
+                        font-size:12px;
+                        line-height:1.45;
+                    ">
+                        ${safeHtml(doc.label)}
+                    </td>
+                </tr>
+            `).join("")}
+        </table>
+    `;
+
+}
+
+
+function buildSegnalatoreStatusUrl() {
+
+    try {
+
+        const url =
+            new URL(
+                buildUploadAreaUrl(),
+                window.location.origin
+            );
+
+        url.searchParams.set(
+            "viewer",
+            "segnalatore"
+        );
+
+        url.searchParams.set(
+            "mode",
+            "status-only"
+        );
+
+        return url.toString();
+
+    }
+    catch (error) {
+
+        const base =
+            buildUploadAreaUrl();
+
+        const joiner =
+            base.includes("?")
+                ? "&"
+                : "?";
+
+        return (
+            base
+            +
+            joiner
+            +
+            "viewer=segnalatore&mode=status-only"
+        );
+
+    }
+
+}
+
+
 function buildSegnalatoreEmailHtml() {
 
     const segnalatore =
@@ -9612,7 +9766,10 @@ function buildSegnalatoreEmailHtml() {
         .join(' · ');
 
     const portale =
-        buildSegnalatorePortalUrl();
+        buildSegnalatoreStatusUrl();
+
+    const documentiHtml =
+        segnalatoreDocumentiHtml();
 
     return `
 <!DOCTYPE html>
@@ -9620,7 +9777,7 @@ function buildSegnalatoreEmailHtml() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Aggiornamento pratica</title>
+<title>Documentazione richiesta</title>
 </head>
 
 <body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
@@ -9634,33 +9791,77 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
 
 <tr>
 <td bgcolor="#002d72" style="padding:28px 30px 24px;border-bottom:5px solid #C99700;">
-    <div style="color:#ffffff;font-size:25px;font-weight:bold;">
-        Scheda di Consulenza
+    <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+        Documentazione richiesta
     </div>
-    <div style="margin-top:7px;color:#C99700;font-size:18px;font-weight:bold;">
+    <div style="margin-top:7px;color:#C99700;font-size:17px;font-weight:bold;">
         ${safeHtml(nomi)}
     </div>
 </td>
 </tr>
 
 <tr>
-<td style="padding:28px 30px;">
+<td style="padding:26px 30px 10px;">
     <div style="color:#002d72;font-size:16px;font-weight:bold;margin-bottom:10px;">
         ${segnalatore ? 'Gentile ' + safeHtml(segnalatore) + ',' : 'Buongiorno,'}
     </div>
 
-    <div style="color:#59636c;font-size:13px;line-height:1.7;">
-        è disponibile la vista di monitoraggio relativa alla pratica indicata.
-        L'accesso è esclusivamente in sola consultazione: potrai verificare
-        se i documenti risultano caricati, mancanti o in attesa.
-        Non è possibile allegare, sostituire, eliminare o scaricare documenti.
+    <div style="color:#59636c;font-size:13px;line-height:1.65;">
+        di seguito trovi esclusivamente i documenti richiesti al cliente
+        per la pratica indicata.
+    </div>
+</td>
+</tr>
+
+<tr>
+<td style="padding:8px 30px 18px;">
+    <div style="
+        color:#002d72;
+        font-size:12px;
+        font-weight:bold;
+        text-transform:uppercase;
+        letter-spacing:.4px;
+        margin-bottom:7px;
+    ">
+        Documenti da caricare
     </div>
 
-    <div align="center" style="margin-top:25px;">
+    ${documentiHtml}
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 30px 25px;">
+    <div style="
+        background:#fff9e8;
+        border-left:4px solid #C99700;
+        border-radius:8px;
+        padding:12px 14px;
+        color:#655b37;
+        font-size:11px;
+        line-height:1.55;
+    ">
+        La lista è generata sulla configurazione reale della pratica.
+        I documenti relativi a un eventuale secondo richiedente compaiono
+        solo quando il secondo richiedente è effettivamente presente.
+    </div>
+
+    <div align="center" style="margin-top:22px;">
         <a href="${safeHtml(portale)}"
-           style="display:inline-block;min-width:240px;background:#002d72;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:8px;font-size:12px;font-weight:bold;border-bottom:4px solid #C99700;">
-            VERIFICA STATO DOCUMENTAZIONE
+           style="display:inline-block;min-width:230px;background:#002d72;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:8px;font-size:12px;font-weight:bold;border-bottom:4px solid #C99700;">
+            VERIFICA STATO DOCUMENTI
         </a>
+    </div>
+
+    <div style="
+        margin-top:12px;
+        text-align:center;
+        color:#8b949d;
+        font-size:10px;
+        line-height:1.5;
+    ">
+        Accesso in sola consultazione: il referente non può caricare,
+        modificare o eliminare documenti.
     </div>
 </td>
 </tr>
@@ -9668,7 +9869,7 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
 <tr>
 <td bgcolor="#002d72" style="padding:18px 30px;color:#ffffff;font-size:11px;line-height:1.6;">
     <strong style="color:#C99700;">Credipass S.p.A.</strong><br>
-    Referente: ${safeHtml(V('campo_referente','-'))}
+    Referente pratica: ${safeHtml(V('campo_referente','-'))}
 </td>
 </tr>
 
@@ -9683,7 +9884,6 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
     `;
 
 }
-
 
 /* ==========================================================
    PDF
@@ -10117,6 +10317,11 @@ function compilaPDF() {
             'note_consulenza',
             'Nessuna nota aggiuntiva.'
         );
+
+    setPrint(
+        'p_note',
+        note
+    );
 
     setPrint(
         'p_note_box_text',
@@ -10840,36 +11045,6 @@ function buildUploadAreaUrl() {
         +
         params.toString()
     );
-
-}
-
-function buildSegnalatorePortalUrl() {
-
-    const base =
-        new URL(
-            buildUploadAreaUrl()
-        );
-
-    /*
-     * Questi parametri identificano l'accesso del segnalatore.
-     * upload.html dovrà usare viewer=segnalatore per mostrare
-     * esclusivamente lo stato dei documenti e nascondere:
-     * - upload;
-     * - elimina;
-     * - nuova versione;
-     * - download documenti.
-     */
-    base.searchParams.set(
-        'viewer',
-        'segnalatore'
-    );
-
-    base.searchParams.set(
-        'mode',
-        'status-only'
-    );
-
-    return base.toString();
 
 }
 
@@ -13909,13 +14084,14 @@ window.addEventListener(
                                 'blob'
                             );
 
+                        const pdfBase64 =
+                            await blobToBase64(
+                                blob
+                            );
+
                         /*
-                         * Il PDF viene:
-                         * - scaricato localmente;
-                         * - salvato in Firebase Storage;
-                         * - reso disponibile dal pulsante nella mail Backoffice.
-                         *
-                         * NON viene allegato alla mail.
+                         * Il PDF scaricato, quello salvato nel portale
+                         * e quello allegato alla mail sono lo stesso blob.
                          */
                         let pdfUrl = '';
 
@@ -14008,7 +14184,12 @@ window.addEventListener(
                                                     V(
                                                         'campo_email',
                                                         ''
-                                                    )
+                                                    ),
+
+                                                pdfBase64,
+
+                                                pdfFileName:
+                                                    fileName
 
                                             })
 
@@ -14867,47 +15048,5 @@ window.addEventListener(
 
 </script>
 
-
-<script>
-async function applyRolePermissionsIndex(){
-    try{
-        const session=await authReady;
-        if(!session)return;
-
-        const canCreate = window.CredipassAuth?.canCreatePractice
-            ? CredipassAuth.canCreatePractice()
-            : true;
-
-        const canView = window.CredipassAuth?.canViewConsultation
-            ? CredipassAuth.canViewConsultation()
-            : true;
-
-        if(!canView){
-            document.querySelectorAll(".content,.main-title").forEach(el=>{
-                el.style.display="none";
-            });
-
-            const box=document.createElement("div");
-            box.style.cssText="max-width:760px;margin:50px auto;background:#fff;padding:30px;border-radius:12px;border-left:5px solid #C99700;font-family:Poppins,sans-serif;";
-            box.innerHTML="<h2 style='color:#002d72'>Accesso limitato</h2><p>Il tuo profilo non è autorizzato a visualizzare la Scheda di Consulenza.</p><a href='/main/ricerca-clienti.html' style='color:#002d72;font-weight:800'>Vai all'Archivio Pratiche</a>";
-            document.body.appendChild(box);
-            return;
-        }
-
-        if(!canCreate){
-            document.querySelectorAll("button").forEach(btn=>{
-                const t=(btn.textContent||"").toLowerCase();
-                if(t.includes("crea")||t.includes("salva")||t.includes("genera")){
-                    btn.disabled=true;
-                    btn.title="Funzione non consentita per il tuo ruolo";
-                }
-            });
-        }
-    }catch(e){
-        console.error("Permessi index:",e);
-    }
-}
-document.addEventListener("DOMContentLoaded",applyRolePermissionsIndex);
-</script>
 </body>
 </html>
