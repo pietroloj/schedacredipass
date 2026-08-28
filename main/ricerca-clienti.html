@@ -113,6 +113,47 @@
         font-weight: 600;
     }
 
+
+    .collaborator-filter {
+        padding: 14px 40px;
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+        display: none;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .collaborator-filter.visible {
+        display: flex;
+    }
+
+    .collaborator-filter label {
+        color: #002d72;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .collaborator-filter select {
+        flex: 1;
+        max-width: 320px;
+        padding: 8px 10px;
+        border: 1px solid #dfe5eb;
+        border-radius: 7px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        color: #263238;
+        background: #fff;
+    }
+
+    .practice-owner {
+        margin-top: 4px;
+        color: #002d72;
+        font-size: 9px;
+        font-weight: 700;
+    }
+
     @media (max-width: 700px) {
         .header {
             padding: 22px 20px;
@@ -163,6 +204,17 @@
         </div>
     </div>
 
+    <div id="collaboratorFilter" class="collaborator-filter">
+        <label for="collaboratorSelect">
+            <i class="fas fa-users"></i>
+            Collaboratore
+        </label>
+
+        <select id="collaboratorSelect" onchange="filtraClienti()">
+            <option value="">Tutti i collaboratori</option>
+        </select>
+    </div>
+
     <div class="client-list">
         <div id="loadingIndicator" class="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Caricamento archivio in corso...</p></div>
         <div id="noResults" class="no-results">Nessun cliente trovato.</div>
@@ -209,40 +261,249 @@
     }
 
 
+
+    function roleSession() {
+        return String(
+            sessioneConsulente?.profile?.ruolo ||
+            "consulente"
+        ).toLowerCase();
+    }
+
+    function secretaryCollaborators() {
+        const ids =
+            Array.isArray(
+                sessioneConsulente?.profile?.collaboratori_visibili
+            )
+                ? sessioneConsulente.profile.collaboratori_visibili
+                : [];
+
+        return Array.from(
+            new Set(
+                ids
+                    .map(x => String(x || "").trim())
+                    .filter(Boolean)
+            )
+        );
+    }
+
+    function collaboratorNameMap() {
+        const details =
+            Array.isArray(
+                sessioneConsulente?.profile?.collaboratori_visibili_dettagli
+            )
+                ? sessioneConsulente.profile.collaboratori_visibili_dettagli
+                : [];
+
+        const map = {};
+
+        details.forEach(item => {
+            const uid =
+                String(
+                    item?.uid || ""
+                ).trim();
+
+            if (!uid) return;
+
+            map[uid] =
+                `${item?.nome || ""} ${item?.cognome || ""}`
+                    .trim()
+                ||
+                item?.email
+                ||
+                uid;
+        });
+
+        return map;
+    }
+
+    function setupCollaboratorFilter() {
+        const wrapper =
+            document.getElementById(
+                "collaboratorFilter"
+            );
+
+        const select =
+            document.getElementById(
+                "collaboratorSelect"
+            );
+
+        if (
+            !wrapper ||
+            !select ||
+            !["segreteria","responsabile"].includes(roleSession())
+        ) {
+            return;
+        }
+
+        const ids =
+            secretaryCollaborators();
+
+        const names =
+            collaboratorNameMap();
+
+        wrapper.classList.add(
+            "visible"
+        );
+
+        select.innerHTML =
+            `<option value="">Tutti i collaboratori</option>`
+            +
+            ids.map(uid =>
+                `<option value="${uid}">${
+                    String(names[uid] || uid)
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                }</option>`
+            ).join("");
+    }
+
+    async function loadPracticeDocsByOwners(ownerUids) {
+        const ids =
+            Array.from(
+                new Set(
+                    (ownerUids || [])
+                        .map(x => String(x || "").trim())
+                        .filter(Boolean)
+                )
+            );
+
+        if (!ids.length) {
+            return [];
+        }
+
+        const result =
+            new Map();
+
+        /*
+         * Firestore consente un numero limitato di valori per la query "in".
+         * Usiamo blocchi prudenti da 30 per supportare reti più ampie.
+         */
+        for (
+            let i = 0;
+            i < ids.length;
+            i += 30
+        ) {
+            const chunk =
+                ids.slice(
+                    i,
+                    i + 30
+                );
+
+            const snap =
+                await db.collection("pratiche_mutuo")
+                    .where(
+                        "consulente_uid",
+                        "in",
+                        chunk
+                    )
+                    .get();
+
+            snap.forEach(doc =>
+                result.set(
+                    doc.id,
+                    doc
+                )
+            );
+        }
+
+        return Array.from(
+            result.values()
+        );
+    }
+
+
     async function caricaClientiDaDB() {
         document.getElementById('loadingIndicator').style.display = 'block';
-        tuttiIClienti = []; // Resetta l'array per ricaricarlo pulito
-        
+        tuttiIClienti = [];
+
         try {
             sessioneConsulente =
                 sessioneConsulente ||
                 await CredipassAuth.guard();
 
-            let queryRef =
-                db.collection("pratiche_mutuo");
+            const role =
+                roleSession();
 
-            if (!sessioneConsulente.isAdmin) {
-                queryRef = queryRef.where(
-                    "consulente_uid",
-                    "==",
+            let docs = [];
+
+            if (
+                sessioneConsulente.isAdmin
+            ) {
+                const snap =
+                    await db.collection("pratiche_mutuo")
+                        .get();
+
+                snap.forEach(doc =>
+                    docs.push(doc)
+                );
+            }
+            else if (
+                ["segreteria","responsabile"].includes(role)
+            ) {
+                const owners =
+                    secretaryCollaborators();
+
+                /*
+                 * Manteniamo anche l'UID della Segreteria, così eventuali
+                 * pratiche create direttamente da questo account restano visibili.
+                 */
+                owners.push(
                     sessioneConsulente.user.uid
+                );
+
+                docs =
+                    await loadPracticeDocsByOwners(
+                        owners
+                    );
+
+                setupCollaboratorFilter();
+            }
+            else {
+                const snap =
+                    await db.collection("pratiche_mutuo")
+                        .where(
+                            "consulente_uid",
+                            "==",
+                            sessioneConsulente.user.uid
+                        )
+                        .get();
+
+                snap.forEach(doc =>
+                    docs.push(doc)
                 );
             }
 
-            const querySnapshot =
-                await queryRef.get();
-            
-            querySnapshot.forEach((doc) => {
-                const idDocumento = doc.id;
-                const datiDoc = doc.data();
-                
-                let nomeReale = datiDoc.nomeCliente || idDocumento.replace(/_/g, ' ');
-                const nomeFormattato = nomeReale.toUpperCase();
-                
+            docs.forEach(doc => {
+                const idDocumento =
+                    doc.id;
+
+                const datiDoc =
+                    doc.data() || {};
+
+                let nomeReale =
+                    datiDoc.nomeCliente ||
+                    idDocumento.replace(/_/g, ' ');
+
+                const nomeFormattato =
+                    String(nomeReale || "")
+                        .toUpperCase();
+
                 tuttiIClienti.push({
-                    idOriginale: idDocumento,
-                    nomeRicerca: nomeFormattato,
-                    dati: datiDoc
+                    idOriginale:
+                        idDocumento,
+
+                    nomeRicerca:
+                        nomeFormattato,
+
+                    ownerUid:
+                        datiDoc.consulente_uid ||
+                        datiDoc.workspace_uid ||
+                        datiDoc.owner_uid ||
+                        "",
+
+                    dati:
+                        datiDoc
                 });
             });
 
@@ -251,7 +512,14 @@
 
         } catch (error) {
             console.error(error);
-            alert("Errore di connessione a Firebase.");
+            alert(
+                "Errore di connessione a Firebase.\n\n"
+                +
+                (
+                    error?.message ||
+                    ""
+                )
+            );
             document.getElementById('loadingIndicator').style.display = 'none';
         }
     }
@@ -283,6 +551,20 @@
             } else if (fileRichiesti > 0) {
                 statoDocumenti = `0/${fileRichiesti} documenti acquisiti`;
             }
+
+
+            const ownerNames =
+                collaboratorNameMap();
+
+            const ownerLabel =
+                ownerNames[cliente.ownerUid]
+                ||
+                (
+                    cliente.ownerUid ===
+                    sessioneConsulente?.user?.uid
+                        ? "Pratica propria"
+                        : ""
+                );
 
             const statoPratica = cliente.dati.stato_pratica || "da_istruire";
             const statoCfg = getStatoPraticaConfig(statoPratica);
@@ -318,9 +600,40 @@
     }
 
     function filtraClienti() {
-        const termine = document.getElementById('searchInput').value.toUpperCase();
-        const filtrati = tuttiIClienti.filter(c => c.nomeRicerca.includes(termine));
-        mostraClienti(filtrati);
+        const filtro =
+            String(
+                document.getElementById('searchInput')?.value ||
+                ""
+            )
+            .toUpperCase();
+
+        const ownerFilter =
+            String(
+                document.getElementById("collaboratorSelect")?.value ||
+                ""
+            );
+
+        const filtrati =
+            tuttiIClienti.filter(cliente => {
+                const matchesName =
+                    cliente.nomeRicerca.includes(
+                        filtro
+                    );
+
+                const matchesOwner =
+                    !ownerFilter ||
+                    cliente.ownerUid ===
+                        ownerFilter;
+
+                return (
+                    matchesName &&
+                    matchesOwner
+                );
+            });
+
+        mostraClienti(
+            filtrati
+        );
     }
 
     // --- FUNZIONE DI ELIMINAZIONE DEFINITIVA ---

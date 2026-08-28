@@ -6492,5 +6492,70 @@ Cordiali saluti`
     </div>
 </div>
 
+
+<script>
+async function applyRolePermissionsDashboard(){
+    try{
+        const session=await CredipassAuth.guard();
+
+        const can=(p)=>CredipassAuth.can ? CredipassAuth.can(p,session) : true;
+
+        const hideByText=(texts)=>{
+            document.querySelectorAll("button,a").forEach(el=>{
+                const t=String(el.textContent||"").trim().toLowerCase();
+                if(texts.some(x=>t.includes(x))){
+                    el.style.display="none";
+                }
+            });
+        };
+
+        if(!can("vede_scheda_consulenza")){
+            const identikit=document.querySelector("#identikitDinamico")?.closest(".sidebar-card");
+            if(identikit) identikit.style.display="none";
+        }
+
+        if(!can("modifica_operazione_mutuo")){
+            hideByText(["modifica"]);
+        }
+
+        if(!can("elimina_documenti")){
+            document.querySelectorAll(".btn-delete,[onclick*='elimina'],[onclick*='delete']").forEach(el=>el.style.display="none");
+        }
+
+        if(!can("usa_ai")){
+            hideByText(["analisi ai","analizza con ai","ai completa","ricostruisci pratica"]);
+        }
+
+        if(!can("vede_ai")){
+            document.querySelectorAll("[id*='ai'],[class*='ai-']").forEach(el=>{
+                if(el.closest(".sidebar-card,.card,.doc-category")) el.style.display="none";
+            });
+        }
+
+        if(!can("cambia_stato")){
+            const s=document.getElementById("statoPraticaSelect");
+            if(s) s.disabled=true;
+        }
+
+        if(!can("gestisce_reminder")){
+            hideByText(["reminder","promemoria"]);
+        }
+
+        if(!can("invia_email")){
+            hideByText(["invia email","email backoffice","email"]);
+        }
+
+        if(!can("modifica_timeline")){
+            const t=document.getElementById("notaInternaPratica");
+            if(t) t.disabled=true;
+            const b=document.querySelector("[onclick='salvaNotaInternaPratica()']");
+            if(b) b.style.display="none";
+        }
+    }catch(e){
+        console.error("Permessi dashboard:",e);
+    }
+}
+document.addEventListener("DOMContentLoaded",()=>setTimeout(applyRolePermissionsDashboard,250));
+</script>
 </body>
 </html>
