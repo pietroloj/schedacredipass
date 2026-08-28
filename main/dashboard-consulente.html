@@ -1602,8 +1602,34 @@ document.addEventListener(
 
 <div id="modalAI" class="modal">
     <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #C99700; padding-bottom:15px; margin-bottom:20px;">
-            <h2 style="margin:0; color:#002d72; font-size:20px;"><i class="fas fa-robot"></i> Report Analisi IA</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; border-bottom:2px solid #C99700; padding-bottom:15px; margin-bottom:20px;">
+            <h2 style="margin:0; color:#002d72; font-size:20px; flex:1;"><i class="fas fa-robot"></i> Report Analisi IA</h2>
+
+            <button
+                type="button"
+                id="btnRianalizzaDocumentiAI"
+                onclick="rianalizzaDocumentiEsistenti()"
+                style="
+                    border:0;
+                    border-radius:8px;
+                    padding:10px 14px;
+                    background:#002d72;
+                    color:#fff;
+                    font-family:'Poppins',sans-serif;
+                    font-size:10px;
+                    font-weight:800;
+                    cursor:pointer;
+                    white-space:nowrap;
+                    display:flex;
+                    align-items:center;
+                    gap:7px;
+                "
+                title="Rielabora con l'AI i documenti già presenti nel fascicolo"
+            >
+                <i class="fas fa-rotate"></i>
+                RIANALIZZA DOCUMENTI
+            </button>
+
             <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:30px; color:#999;">&times;</span>
         </div>
         <div id="aiBody" style="font-size:14px; line-height:1.7;"></div>
@@ -2318,123 +2344,6 @@ Accesso in sola consultazione: non è possibile caricare, eliminare o scaricare 
 </td>
 </tr>
 </table>
-
-
-<div id="statusReminderModal">
-    <div class="status-reminder-card">
-        <div class="status-reminder-head">
-            <h3>
-                <i class="fas fa-bell" style="color:#C99700;"></i>
-                Imposta motivo e promemoria
-            </h3>
-        </div>
-
-        <div class="status-reminder-body">
-            <div style="font-size:11px;color:#59636c;line-height:1.55;">
-                Per questo stato puoi indicare il motivo e una data in cui ricordare a te e al Backoffice di verificare la pratica.
-            </div>
-
-            <label class="status-reminder-label">Motivo</label>
-            <textarea
-                id="statusReminderReason"
-                class="status-reminder-textarea"
-                placeholder="Es. Attesa nuovo estratto conto trimestrale"
-            ></textarea>
-
-            <label class="status-reminder-label">Data reminder</label>
-            <input
-                id="statusReminderDate"
-                class="status-reminder-input"
-                type="datetime-local"
-            >
-
-            <div class="status-reminder-actions">
-                <button
-                    type="button"
-                    class="status-reminder-btn secondary"
-                    onclick="annullaStatusReminder()"
-                >ANNULLA</button>
-
-                <button
-                    type="button"
-                    class="status-reminder-btn primary"
-                    onclick="confermaStatusReminder()"
-                >
-                    <i class="fas fa-check"></i>
-                    SALVA STATO E REMINDER
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-<div id="mutuoEditModal">
-    <div class="mutuo-edit-card">
-        <div class="mutuo-edit-head">
-            <h3>
-                <i class="fas fa-pen-to-square" style="color:#C99700;"></i>
-                Modifica operazione mutuo
-            </h3>
-        </div>
-
-        <div class="mutuo-edit-body">
-            <div class="mutuo-edit-grid">
-
-                <div class="mutuo-edit-field full">
-                    <label class="mutuo-edit-label">Finalità</label>
-                    <input id="editMutuoFinalita" class="mutuo-edit-input" type="text" placeholder="Es. Acquisto prima casa">
-                </div>
-
-                <div class="mutuo-edit-field">
-                    <label class="mutuo-edit-label">Importo richiesto</label>
-                    <input id="editMutuoImporto" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 180.000">
-                </div>
-
-                <div class="mutuo-edit-field">
-                    <label class="mutuo-edit-label">Compravendita</label>
-                    <input id="editMutuoCompravendita" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 220.000">
-                </div>
-
-                <div class="mutuo-edit-field">
-                    <label class="mutuo-edit-label">Valore immobile</label>
-                    <input id="editMutuoValoreImmobile" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 230.000">
-                </div>
-
-                <div class="mutuo-edit-field">
-                    <label class="mutuo-edit-label">Durata anni</label>
-                    <input id="editMutuoDurata" class="mutuo-edit-input" type="number" min="1" max="50" step="1" placeholder="Es. 30">
-                </div>
-
-                <div class="mutuo-edit-field full">
-                    <label class="mutuo-edit-label">Prodotto</label>
-                    <input id="editMutuoProdotto" class="mutuo-edit-input" type="text" placeholder="Es. Fisso rinegoziabile 5 anni">
-                </div>
-
-                <div class="mutuo-edit-field full">
-                    <label class="mutuo-edit-label">Tasso</label>
-                    <input id="editMutuoTasso" class="mutuo-edit-input" type="text" placeholder="Es. 3,10%">
-                </div>
-
-            </div>
-
-            <div style="margin-top:14px;background:#f7f9fc;border-left:4px solid #C99700;padding:11px 13px;border-radius:7px;font-size:10px;color:#59636c;line-height:1.5;">
-                Le modifiche aggiornano l'operazione della pratica e vengono registrate automaticamente nella timeline interna.
-            </div>
-
-            <div class="mutuo-edit-actions">
-                <button type="button" class="mutuo-edit-btn secondary" onclick="chiudiModificaOperazioneMutuo()">
-                    ANNULLA
-                </button>
-
-                <button type="button" class="mutuo-edit-btn primary" onclick="salvaModificaOperazioneMutuo()">
-                    <i class="fas fa-check"></i>
-                    SALVA MODIFICHE
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 </body>
 </html>`;
@@ -5365,20 +5274,109 @@ Cordiali saluti`
                 let cat = 'ALTRO';
                 let nomeBello = item.name;
 
-                if (fn.includes('ci') || fn.includes('ts') || fn.includes('residenza') || fn.includes('isee') || fn.includes('matrimonio')) {
+                /*
+                 * La categoria viene determinata PRIMA dal codice documento.
+                 * In questo modo Buste Paga / CU / Redditi non finiscono più
+                 * in Altro/Extra quando il nome file è legacy o rinominato.
+                 */
+                const codiceCategoria =
+                    estraiCodiceDocumentoDaNomeFile(item.name);
+
+                const codiciAnagrafica = new Set([
+                    'ci1','ci2','ts1','ts2','residenza1',
+                    'isee','matrimonio','separazione','divorzio','mantenimento'
+                ]);
+
+                const codiciReddito = new Set([
+                    'bustepaga1','bustepaga2',
+                    'cud1','cud2',
+                    'unici1','unici2',
+                    'f241','f242',
+                    'contratto','contratto1','contratto2',
+                    'visura1','visura2',
+                    'ricevute1','ricevute2'
+                ]);
+
+                const codiciBanca = new Set([
+                    'ec1','ec2','mov1','mov2',
+                    'prestiti','mutuo_pre','conteggi_estintivi'
+                ]);
+
+                const codiciImmobile = new Set([
+                    'atto','planimetria','visuracat','visura_catastale',
+                    'preliminare','preventivo','computo_metrico',
+                    'titoli_edilizi','agibilita'
+                ]);
+
+                if (codiceCategoria && codiciAnagrafica.has(codiceCategoria)) {
                     cat = 'ANAGRAFICA';
-                } else if (fn.includes('busta') || fn.includes('cud') || fn.includes('unici') || fn.includes('iva') || fn.includes('f24') || fn.includes('visura1') || fn.includes('visura2') || fn.includes('contratto')) {
+                }
+                else if (codiceCategoria && codiciReddito.has(codiceCategoria)) {
                     cat = 'REDDITO';
-                } else if (fn.includes('ec1') || fn.includes('ec2') || fn.includes('mov') || fn.includes('conto') || fn.includes('prestiti') || fn.includes('mutuo_pre')) {
+                }
+                else if (codiceCategoria && codiciBanca.has(codiceCategoria)) {
                     cat = 'BANCA';
-                } else if (fn.includes('atto') || fn.includes('planimetria') || fn.includes('visura') || fn.includes('preliminare') || fn.includes('preventivo')) {
+                }
+                else if (codiceCategoria && codiciImmobile.has(codiceCategoria)) {
+                    cat = 'IMMOBILE';
+                }
+                else if (
+                    fn.includes('busta') ||
+                    fn.includes('bustepaga') ||
+                    fn.includes('cedolino') ||
+                    fn.includes('cud') ||
+                    fn.includes('certificazione_unica') ||
+                    fn.includes('unici') ||
+                    fn.includes('modello_redditi') ||
+                    fn.includes('f24') ||
+                    fn.includes('contratto_lavoro')
+                ) {
+                    cat = 'REDDITO';
+                }
+                else if (
+                    fn.includes('ci') ||
+                    fn.includes('ts') ||
+                    fn.includes('residenza') ||
+                    fn.includes('isee') ||
+                    fn.includes('matrimonio')
+                ) {
+                    cat = 'ANAGRAFICA';
+                }
+                else if (
+                    fn.includes('ec1') ||
+                    fn.includes('ec2') ||
+                    fn.includes('estratto_conto') ||
+                    fn.includes('mov') ||
+                    fn.includes('conto') ||
+                    fn.includes('prestiti') ||
+                    fn.includes('mutuo_pre')
+                ) {
+                    cat = 'BANCA';
+                }
+                else if (
+                    fn.includes('atto') ||
+                    fn.includes('planimetria') ||
+                    fn.includes('visura_catastale') ||
+                    fn.includes('preliminare') ||
+                    fn.includes('preventivo')
+                ) {
                     cat = 'IMMOBILE';
                 }
 
-                for (const [key, val] of Object.entries(TRADUZIONI)) {
-                    if (fn.includes(key)) {
-                        nomeBello = val;
-                        break;
+                if (codiceCategoria) {
+                    nomeBello =
+                        TRADUZIONI[codiceCategoria]
+                        ||
+                        trovaNomeDocumentoDaCodice(codiceCategoria)
+                        ||
+                        item.name;
+                }
+                else {
+                    for (const [key, val] of Object.entries(TRADUZIONI)) {
+                        if (fn.includes(key)) {
+                            nomeBello = val;
+                            break;
+                        }
                     }
                 }
 
@@ -6031,6 +6029,637 @@ Cordiali saluti`
         `;
     }
 
+
+    function blobToDataUrlAI(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = () =>
+                resolve(
+                    String(
+                        reader.result ||
+                        ""
+                    )
+                );
+
+            reader.onerror = () =>
+                reject(
+                    reader.error ||
+                    new Error(
+                        "Impossibile leggere il documento."
+                    )
+                );
+
+            reader.readAsDataURL(
+                blob
+            );
+        });
+    }
+
+
+    async function listaDocumentiFascicoloPerAI() {
+        const varianti = Array.from(
+            new Set([
+                idCliente,
+                String(idCliente || "").replace(/_/g, " "),
+                String(idCliente || "").replace(/_/g, "-")
+            ].filter(Boolean))
+        );
+
+        for (const variante of varianti) {
+            try {
+                const result =
+                    await storage.ref(
+                        `Fascicoli/${variante}`
+                    ).listAll();
+
+                if (
+                    result.items &&
+                    result.items.length
+                ) {
+                    return {
+                        variante,
+                        items:
+                            result.items
+                    };
+                }
+            }
+            catch (error) {
+                console.warn(
+                    "Fascicolo non leggibile per rianalisi:",
+                    variante,
+                    error
+                );
+            }
+        }
+
+        return {
+            variante:
+                idCliente,
+
+            items: []
+        };
+    }
+
+
+    async function preparaElencoRianalisiAI(items) {
+        const elenco = [];
+
+        for (const item of items) {
+            const codice =
+                estraiCodiceDocumentoDaNomeFile(
+                    item.name
+                );
+
+            if (!codice) {
+                elenco.push({
+                    item,
+                    codice: null,
+                    descrizione:
+                        item.name,
+                    metadata: null,
+                    skipped: true
+                });
+
+                continue;
+            }
+
+            let metadata = null;
+
+            try {
+                metadata =
+                    await item.getMetadata();
+            }
+            catch (error) {
+                console.warn(
+                    "Metadata Storage non disponibili:",
+                    item.name,
+                    error
+                );
+            }
+
+            elenco.push({
+                item,
+                codice,
+                descrizione:
+                    trovaNomeDocumentoDaCodice(
+                        codice
+                    ),
+                metadata,
+                skipped: false
+            });
+        }
+
+        /*
+         * Analizziamo dal più vecchio al più recente.
+         * Se esistono più versioni dello stesso codice, l'audit più recente
+         * resterà quello valido per ricostruisciPraticaCompleta().
+         */
+        elenco.sort(
+            (a, b) => {
+                const aTime =
+                    Date.parse(
+                        a.metadata?.timeCreated ||
+                        a.metadata?.updated ||
+                        ""
+                    )
+                    ||
+                    0;
+
+                const bTime =
+                    Date.parse(
+                        b.metadata?.timeCreated ||
+                        b.metadata?.updated ||
+                        ""
+                    )
+                    ||
+                    0;
+
+                return (
+                    aTime -
+                    bTime
+                );
+            }
+        );
+
+        return elenco;
+    }
+
+
+    function renderProgressoRianalisiAI({
+        corrente,
+        totale,
+        nomeDocumento,
+        completati,
+        errori,
+        saltati
+    }) {
+        const body =
+            document.getElementById(
+                "aiBody"
+            );
+
+        if (!body) {
+            return;
+        }
+
+        const pct =
+            totale > 0
+                ? Math.round(
+                    (
+                        corrente /
+                        totale
+                    )
+                    *
+                    100
+                )
+                : 0;
+
+        body.innerHTML = `
+            <div style="padding:12px 4px 24px;">
+                <div style="
+                    background:#f6f8fb;
+                    border:1px solid #e2e7ed;
+                    border-radius:12px;
+                    padding:22px;
+                ">
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                        color:#002d72;
+                        font-size:16px;
+                        font-weight:800;
+                    ">
+                        <i class="fas fa-robot"></i>
+                        Rianalisi documenti esistenti
+                    </div>
+
+                    <div style="
+                        margin-top:8px;
+                        color:#68737e;
+                        font-size:11px;
+                        line-height:1.55;
+                    ">
+                        Il sistema sta rileggendo con la pipeline AI i file già presenti nel fascicolo.
+                        I documenti non vengono modificati o ricaricati.
+                    </div>
+
+                    <div style="
+                        height:10px;
+                        background:#e7ebf0;
+                        border-radius:99px;
+                        overflow:hidden;
+                        margin-top:18px;
+                    ">
+                        <div style="
+                            width:${pct}%;
+                            height:100%;
+                            background:#C99700;
+                            transition:width .2s ease;
+                        "></div>
+                    </div>
+
+                    <div style="
+                        margin-top:9px;
+                        font-size:11px;
+                        color:#002d72;
+                        font-weight:700;
+                    ">
+                        ${corrente} / ${totale} · ${pct}%
+                    </div>
+
+                    <div style="
+                        margin-top:13px;
+                        padding:10px 12px;
+                        border-radius:8px;
+                        background:#fff;
+                        border:1px solid #e6e9ed;
+                        font-size:11px;
+                        color:#30363b;
+                    ">
+                        ${escapeHtmlAI(nomeDocumento || "Preparazione...")}
+                    </div>
+
+                    <div style="
+                        display:flex;
+                        gap:16px;
+                        flex-wrap:wrap;
+                        margin-top:12px;
+                        font-size:10px;
+                        color:#6d7780;
+                    ">
+                        <span><strong style="color:#176536;">${completati}</strong> analizzati</span>
+                        <span><strong style="color:#b52b27;">${errori}</strong> errori</span>
+                        <span><strong style="color:#8a6800;">${saltati}</strong> non riconosciuti</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+
+    async function rianalizzaDocumentiEsistenti() {
+        const btn =
+            document.getElementById(
+                "btnRianalizzaDocumentiAI"
+            );
+
+        if (
+            !idCliente
+        ) {
+            alert(
+                "ID pratica non disponibile."
+            );
+
+            return;
+        }
+
+        const conferma =
+            confirm(
+                "Rianalizzare con l'AI tutti i documenti già presenti nel fascicolo?\n\n" +
+                "Questa funzione è pensata soprattutto per le vecchie pratiche: " +
+                "i file restano invariati, ma verranno create nuove analisi AI e la predelibera sarà ricalcolata."
+            );
+
+        if (
+            !conferma
+        ) {
+            return;
+        }
+
+        const originalHtml =
+            btn
+                ? btn.innerHTML
+                : "";
+
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = ".65";
+            btn.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> RIANALISI...';
+        }
+
+        document.getElementById(
+            "modalAI"
+        ).style.display =
+            "flex";
+
+        let completati = 0;
+        let errori = 0;
+        let saltati = 0;
+        const dettagliErrori = [];
+
+        try {
+            renderProgressoRianalisiAI({
+                corrente: 0,
+                totale: 0,
+                nomeDocumento:
+                    "Ricerca documenti nel fascicolo...",
+                completati,
+                errori,
+                saltati
+            });
+
+            const fascicolo =
+                await listaDocumentiFascicoloPerAI();
+
+            if (
+                !fascicolo.items.length
+            ) {
+                throw new Error(
+                    "Nessun documento trovato nella cartella Fascicoli della pratica."
+                );
+            }
+
+            const elenco =
+                await preparaElencoRianalisiAI(
+                    fascicolo.items
+                );
+
+            const riconosciuti =
+                elenco.filter(
+                    x =>
+                        !x.skipped
+                );
+
+            saltati =
+                elenco.length -
+                riconosciuti.length;
+
+            if (
+                riconosciuti.length ===
+                0
+            ) {
+                throw new Error(
+                    "I file esistono, ma il sistema non è riuscito a riconoscere il tipo di nessun documento dai nomi presenti nello Storage."
+                );
+            }
+
+            const analizzaDocumento =
+                functionsFirebase.httpsCallable(
+                    "analizzaDocumentoAI"
+                );
+
+            for (
+                let index = 0;
+                index < riconosciuti.length;
+                index++
+            ) {
+                const voce =
+                    riconosciuti[index];
+
+                renderProgressoRianalisiAI({
+                    corrente:
+                        index,
+                    totale:
+                        riconosciuti.length,
+                    nomeDocumento:
+                        `Analisi: ${voce.descrizione}`,
+                    completati,
+                    errori,
+                    saltati
+                });
+
+                try {
+                    const url =
+                        await voce.item
+                            .getDownloadURL();
+
+                    const response =
+                        await fetch(
+                            url
+                        );
+
+                    if (
+                        !response.ok
+                    ) {
+                        throw new Error(
+                            `Download non riuscito (${response.status})`
+                        );
+                    }
+
+                    const blob =
+                        await response.blob();
+
+                    const dataUrl =
+                        await blobToDataUrlAI(
+                            blob
+                        );
+
+                    const result =
+                        await analizzaDocumento({
+                            urlFileBase64Front:
+                                dataUrl,
+
+                            tipoDocumentoAtteso:
+                                voce.descrizione,
+
+                            codiceDocumento:
+                                voce.codice,
+
+                            nomeFile:
+                                voce.item.name,
+
+                            idCliente
+                        });
+
+                    const risposta =
+                        result?.data ||
+                        {};
+
+                    if (
+                        risposta.valido ===
+                        false
+                    ) {
+                        throw new Error(
+                            risposta
+                                .motivo_errore
+                            ||
+                            risposta
+                                .spiegazione_rifiuto
+                            ||
+                            "Documento non accettato dall'analisi AI."
+                        );
+                    }
+
+                    completati++;
+                }
+                catch (error) {
+                    errori++;
+
+                    dettagliErrori.push(
+                        `${voce.descrizione}: ${
+                            error?.message ||
+                            "errore non specificato"
+                        }`
+                    );
+
+                    console.error(
+                        "Errore rianalisi documento:",
+                        voce.item.name,
+                        error
+                    );
+                }
+
+                renderProgressoRianalisiAI({
+                    corrente:
+                        index + 1,
+                    totale:
+                        riconosciuti.length,
+                    nomeDocumento:
+                        voce.descrizione,
+                    completati,
+                    errori,
+                    saltati
+                });
+            }
+
+            /*
+             * Dopo aver rigenerato gli audit dei documenti,
+             * ricostruiamo l'intero dossier utilizzando le nuove estrazioni.
+             */
+            const ricostruisciPratica =
+                functionsFirebase.httpsCallable(
+                    "ricostruisciPraticaCompleta"
+                );
+
+            await ricostruisciPratica({
+                idCliente
+            });
+
+            const body =
+                document.getElementById(
+                    "aiBody"
+                );
+
+            body.innerHTML = `
+                <div style="
+                    background:#f1faf4;
+                    border-left:5px solid #28a745;
+                    border-radius:10px;
+                    padding:20px;
+                ">
+                    <div style="
+                        color:#176536;
+                        font-size:16px;
+                        font-weight:800;
+                    ">
+                        <i class="fas fa-check-circle"></i>
+                        Rianalisi completata
+                    </div>
+
+                    <div style="
+                        margin-top:10px;
+                        color:#39443d;
+                        font-size:11px;
+                        line-height:1.6;
+                    ">
+                        <strong>${completati}</strong> documento/i analizzato/i con successo.<br>
+                        <strong>${errori}</strong> documento/i con errore.<br>
+                        <strong>${saltati}</strong> file non riconosciuto/i dal nome.
+                    </div>
+
+                    ${
+                        dettagliErrori.length
+                            ? `
+                                <div style="
+                                    margin-top:14px;
+                                    background:#fff;
+                                    border:1px solid #f0d6d6;
+                                    border-radius:8px;
+                                    padding:12px;
+                                    color:#8d3333;
+                                    font-size:10px;
+                                    line-height:1.55;
+                                ">
+                                    <strong>Da verificare:</strong><br>
+                                    ${dettagliErrori
+                                        .slice(0, 8)
+                                        .map(x => escapeHtmlAI(x))
+                                        .join("<br>")}
+                                </div>
+                              `
+                            : ""
+                    }
+
+                    <div style="
+                        margin-top:14px;
+                        color:#68737e;
+                        font-size:10px;
+                    ">
+                        Aggiorno ora il Report Analisi IA con i nuovi dati documentali...
+                    </div>
+                </div>
+            `;
+
+            /*
+             * Piccolo intervallo per rendere visibile l'esito della rianalisi,
+             * poi mostriamo automaticamente la predelibera aggiornata.
+             */
+            await new Promise(
+                resolve =>
+                    setTimeout(
+                        resolve,
+                        900
+                    )
+            );
+
+            await apriReportAI();
+        }
+        catch (error) {
+            console.error(
+                "Errore rianalisi documenti esistenti:",
+                error
+            );
+
+            const body =
+                document.getElementById(
+                    "aiBody"
+                );
+
+            if (body) {
+                body.innerHTML = `
+                    <div style="
+                        background:#fff3f3;
+                        border-left:5px solid #d9534f;
+                        border-radius:10px;
+                        padding:20px;
+                    ">
+                        <div style="
+                            color:#b52b27;
+                            font-weight:800;
+                            font-size:15px;
+                        ">
+                            Rianalisi non completata
+                        </div>
+
+                        <div style="
+                            margin-top:10px;
+                            color:#555;
+                            font-size:11px;
+                            line-height:1.6;
+                        ">
+                            ${escapeHtmlAI(
+                                error?.message ||
+                                "Errore non specificato"
+                            )}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.innerHTML =
+                    originalHtml;
+            }
+        }
+    }
+
+
     async function apriReportAI() {
         document.getElementById('modalAI').style.display = 'flex';
 
@@ -6193,29 +6822,6 @@ Cordiali saluti`
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:18px;">
-                    <div style="background:#eef5ff;border:1px solid #d6e2f1;border-radius:9px;padding:12px;">
-                        <div style="font-size:9px;color:#6d7e93;text-transform:uppercase;">DTI pre</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${merged.dtiPre != null ? `${merged.dtiPre}%` : "N/D"}</div>
-                    </div>
-                    <div style="background:#eef5ff;border:1px solid #d6e2f1;border-radius:9px;padding:12px;">
-                        <div style="font-size:9px;color:#6d7e93;text-transform:uppercase;">DTI post</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${merged.dtiPost != null ? `${merged.dtiPost}%` : "N/D"}</div>
-                    </div>
-                    <div style="background:#fff9e8;border:1px solid #f0d88b;border-radius:9px;padding:12px;">
-                        <div style="font-size:9px;color:#8a6800;text-transform:uppercase;">Impegni fin. post</div>
-                        <div style="font-weight:800;color:#775a00;margin-top:4px;">${merged.impegniFinanziariPost != null ? `€ ${Number(merged.impegniFinanziariPost).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
-                    </div>
-                    <div style="background:#fff9e8;border:1px solid #f0d88b;border-radius:9px;padding:12px;">
-                        <div style="font-size:9px;color:#8a6800;text-transform:uppercase;">Impegni non finanziari</div>
-                        <div style="font-weight:800;color:#775a00;margin-top:4px;">${merged.impegniNonFinanziari != null ? `€ ${Number(merged.impegniNonFinanziari).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
-                    </div>
-                    <div style="background:#eef9f2;border:1px solid #cfe8d8;border-radius:9px;padding:12px;">
-                        <div style="font-size:9px;color:#427352;text-transform:uppercase;">Reddito residuo post</div>
-                        <div style="font-weight:800;color:#176536;margin-top:4px;">${merged.redditoResiduoPost != null ? `€ ${Number(merged.redditoResiduoPost).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
-                    </div>
-                </div>
-
                 ${listaReportAI("Criticità / anomalie da verificare", criticita, criticita.length ? "danger" : "success")}
                 ${listaReportAI("Alert comportamento bancario", Array.from(new Set(bankAlerts)), "warning")}
                 ${listaReportAI("Punti di forza", puntiForza, "success")}
@@ -6226,58 +6832,8 @@ Cordiali saluti`
                 </div>
 
                 ${
-                    Array.isArray(bankMatch?.compatibili) && bankMatch.compatibili.length
-                    ? listaReportAI(
-                        "Banche / policy compatibili",
-                        bankMatch.compatibili.map(x => {
-                            const nome = x.bancaNome || x.bancaKey || "Banca";
-                            const prodotto = x.prodottoNome ? ` - ${x.prodottoNome}` : "";
-                            return `🟢 ${nome}${prodotto} · score ${x.score ?? "N/D"}`;
-                        }),
-                        "success"
-                    )
-                    : ""
-                }
-
-                ${
-                    Array.isArray(bankMatch?.compatibiliConCondizioni) && bankMatch.compatibiliConCondizioni.length
-                    ? listaReportAI(
-                        "Compatibili con condizioni",
-                        bankMatch.compatibiliConCondizioni.map(x => {
-                            const nome = x.bancaNome || x.bancaKey || "Banca";
-                            const why = [...(x.warnings || []), ...(x.insufficientReasons || [])].join(" · ");
-                            return `🟡 ${nome}${why ? ` — ${why}` : ""}`;
-                        }),
-                        "warning"
-                    )
-                    : ""
-                }
-
-                ${
-                    Array.isArray(bankMatch?.datiInsufficienti) && bankMatch.datiInsufficienti.length
-                    ? listaReportAI(
-                        "Policy non ancora valutabili: dati/documenti insufficienti",
-                        bankMatch.datiInsufficienti.map(x => {
-                            const nome = x.bancaNome || x.bancaKey || "Banca";
-                            const why = (x.insufficientReasons || []).join(" · ");
-                            return `🟠 ${nome}${why ? ` — ${why}` : ""}`;
-                        }),
-                        "warning"
-                    )
-                    : ""
-                }
-
-                ${
-                    Array.isArray(bankMatch?.nonCompatibili) && bankMatch.nonCompatibili.length
-                    ? listaReportAI(
-                        "Policy non compatibili",
-                        bankMatch.nonCompatibili.map(x => {
-                            const nome = x.bancaNome || x.bancaKey || "Banca";
-                            const why = (x.blockingReasons || []).join(" · ");
-                            return `🔴 ${nome}${why ? ` — ${why}` : ""}`;
-                        }),
-                        "danger"
-                    )
+                    Array.isArray(bankMatch?.consigliate) && bankMatch.consigliate.length
+                    ? listaReportAI("Banche / policy potenzialmente compatibili", bankMatch.consigliate.map(x => typeof x === "string" ? x : (x.nome || x.banca || JSON.stringify(x))), "success")
                     : ""
                 }
 
@@ -6565,70 +7121,5 @@ Cordiali saluti`
     </div>
 </div>
 
-
-<script>
-async function applyRolePermissionsDashboard(){
-    try{
-        const session=await CredipassAuth.guard();
-
-        const can=(p)=>CredipassAuth.can ? CredipassAuth.can(p,session) : true;
-
-        const hideByText=(texts)=>{
-            document.querySelectorAll("button,a").forEach(el=>{
-                const t=String(el.textContent||"").trim().toLowerCase();
-                if(texts.some(x=>t.includes(x))){
-                    el.style.display="none";
-                }
-            });
-        };
-
-        if(!can("vede_scheda_consulenza")){
-            const identikit=document.querySelector("#identikitDinamico")?.closest(".sidebar-card");
-            if(identikit) identikit.style.display="none";
-        }
-
-        if(!can("modifica_operazione_mutuo")){
-            hideByText(["modifica"]);
-        }
-
-        if(!can("elimina_documenti")){
-            document.querySelectorAll(".btn-delete,[onclick*='elimina'],[onclick*='delete']").forEach(el=>el.style.display="none");
-        }
-
-        if(!can("usa_ai")){
-            hideByText(["analisi ai","analizza con ai","ai completa","ricostruisci pratica"]);
-        }
-
-        if(!can("vede_ai")){
-            document.querySelectorAll("[id*='ai'],[class*='ai-']").forEach(el=>{
-                if(el.closest(".sidebar-card,.card,.doc-category")) el.style.display="none";
-            });
-        }
-
-        if(!can("cambia_stato")){
-            const s=document.getElementById("statoPraticaSelect");
-            if(s) s.disabled=true;
-        }
-
-        if(!can("gestisce_reminder")){
-            hideByText(["reminder","promemoria"]);
-        }
-
-        if(!can("invia_email")){
-            hideByText(["invia email","email backoffice","email"]);
-        }
-
-        if(!can("modifica_timeline")){
-            const t=document.getElementById("notaInternaPratica");
-            if(t) t.disabled=true;
-            const b=document.querySelector("[onclick='salvaNotaInternaPratica()']");
-            if(b) b.style.display="none";
-        }
-    }catch(e){
-        console.error("Permessi dashboard:",e);
-    }
-}
-document.addEventListener("DOMContentLoaded",()=>setTimeout(applyRolePermissionsDashboard,250));
-</script>
 </body>
 </html>
