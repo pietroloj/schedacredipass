@@ -3658,10 +3658,40 @@ Cordiali saluti`
                 )
                 .slice()
                 .sort(
-                    (a,b) =>
-                        new Date(b.creato_il || 0)
-                        -
-                        new Date(a.creato_il || 0)
+                    (a, b) => {
+                        const toMillis = value => {
+                            if (!value) return 0;
+
+                            if (
+                                typeof value.toMillis ===
+                                "function"
+                            ) {
+                                return value.toMillis();
+                            }
+
+                            if (
+                                typeof value.toDate ===
+                                "function"
+                            ) {
+                                return value.toDate().getTime();
+                            }
+
+                            const d =
+                                new Date(value);
+
+                            return Number.isNaN(
+                                d.getTime()
+                            )
+                                ? 0
+                                : d.getTime();
+                        };
+
+                        return (
+                            toMillis(b.creato_il)
+                            -
+                            toMillis(a.creato_il)
+                        );
+                    }
                 );
 
             if (!entries.length) {
@@ -3721,6 +3751,9 @@ Cordiali saluti`
             box.innerHTML =
                 `<div style="font-size:10px;color:#b42318;text-align:center;padding:10px;">
                     Errore caricamento timeline.
+                    <div style="margin-top:4px;font-size:8px;color:#8a949e;">
+                        ${escapeHtml(error?.message || "Errore non specificato")}
+                    </div>
                 </div>`;
         }
     }
@@ -4007,6 +4040,20 @@ Cordiali saluti`
     function formatEuro(value) {
         const formatted = formatCurrencyIT(value);
         return formatted ? `${formatted} €` : "";
+    }
+
+
+    /*
+     * Escape HTML generico.
+     * Necessario per timeline interna e template email Master.
+     */
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     function normalizeDisplay(value) {
