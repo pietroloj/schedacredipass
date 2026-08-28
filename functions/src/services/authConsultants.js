@@ -6,6 +6,65 @@ const db = admin.firestore();
 
 const clean = v => String(v || "").trim();
 
+
+const cleanUidList = value => {
+  const input = Array.isArray(value) ? value : [];
+  return Array.from(
+    new Set(
+      input
+        .map(v => clean(v))
+        .filter(Boolean)
+    )
+  ).slice(0, 200);
+};
+
+async function resolveVisibleCollaborators(uids = []) {
+  const ids = cleanUidList(uids);
+
+  if (!ids.length) {
+    return {
+      uids: [],
+      dettagli: [],
+    };
+  }
+
+  const refs = ids.map(uid =>
+    db.collection("consulenti").doc(uid)
+  );
+
+  const snaps = await db.getAll(...refs);
+
+  const dettagli = [];
+
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+
+    const d = snap.data() || {};
+    const ruolo = clean(d.ruolo).toLowerCase();
+
+    // La segreteria può essere associata solo a collaboratori operativi.
+    if (
+      ruolo !== "consulente" ||
+      d.attivo === false
+    ) {
+      continue;
+    }
+
+    dettagli.push({
+      uid: snap.id,
+      nome: clean(d.nome),
+      cognome: clean(d.cognome),
+      email: clean(d.email).toLowerCase(),
+    });
+  }
+
+  return {
+    uids: dettagli.map(x => x.uid),
+    dettagli,
+  };
+}
+
+
 async function isAdmin(uid) {
   if (!uid) return false;
   const snap = await db.collection("consulenti").doc(uid).get();
@@ -20,7 +79,7 @@ async function createWorkspaceProfile(uid, fields = {}) {
   const profileRef = db.collection("consulenti").doc(uid);
   const workspaceRef = db.collection("workspaces").doc(uid);
 
-  await profileRef.set({
+  const profilePayload = {
     uid,
     nome: clean(fields.nome),
     cognome: clean(fields.cognome),
@@ -29,7 +88,27 @@ async function createWorkspaceProfile(uid, fields = {}) {
     attivo: fields.attivo !== false,
     creato_il: fields.creato_il || now,
     ultimo_accesso: now,
-  }, { merge: true });
+  };
+
+  /*
+   * Non sovrascriviamo la visibilità se il chiamante non la passa.
+   * Questo è fondamentale quando ensureConsultantProfile aggiorna
+   * l'ultimo accesso di una segreteria già configurata.
+   */
+  if (Array.isArray(fields.collaboratori_visibili)) {
+    profilePayload.collaboratori_visibili =
+      cleanUidList(fields.collaboratori_visibili);
+  }
+
+  if (Array.isArray(fields.collaboratori_visibili_dettagli)) {
+    profilePayload.collaboratori_visibili_dettagli =
+      fields.collaboratori_visibili_dettagli;
+  }
+
+  await profileRef.set(
+    profilePayload,
+    { merge: true }
+  );
 
   await workspaceRef.set({
     uid,
@@ -127,6 +206,8 @@ exports.ensureConsultantProfile = onCall(
     let cognome = "";
     let ruolo = "consulente";
     let attivo = true;
+    let collaboratoriVisibili = [];
+    let collaboratoriVisibiliDettagli = [];
 
     if (existing.exists) {
       const d = existing.data() || {};
@@ -134,6 +215,12 @@ exports.ensureConsultantProfile = onCall(
       cognome = d.cognome || "";
       ruolo = d.ruolo || "consulente";
       attivo = d.attivo !== false;
+      collaboratoriVisibili =
+        cleanUidList(d.collaboratori_visibili);
+      collaboratoriVisibiliDettagli =
+        Array.isArray(d.collaboratori_visibili_dettagli)
+          ? d.collaboratori_visibili_dettagli
+          : [];
     } else if (user.displayName) {
       const p = user.displayName.trim().split(/\s+/);
       nome = p.shift() || "";
@@ -150,6 +237,10 @@ exports.ensureConsultantProfile = onCall(
       email: user.email || "",
       ruolo,
       attivo,
+      collaboratori_visibili:
+        collaboratoriVisibili,
+      collaboratori_visibili_dettagli:
+        collaboratoriVisibiliDettagli,
     });
 
     return {
@@ -161,6 +252,12 @@ exports.ensureConsultantProfile = onCall(
         email: profile.email || user.email || "",
         ruolo: profile.ruolo || "consulente",
         attivo: profile.attivo !== false,
+        collaboratori_visibili:
+          cleanUidList(profile.collaboratori_visibili),
+        collaboratori_visibili_dettagli:
+          Array.isArray(profile.collaboratori_visibili_dettagli)
+            ? profile.collaboratori_visibili_dettagli
+            : [],
       }
     };
   }
@@ -185,6 +282,16 @@ exports.createConsultant = onCall(
     const ruolo = ["admin", "consulente", "segreteria"].includes(requestedRole)
       ? requestedRole : "consulente";
 
+    const requestedCollaborators =
+      ruolo === "segreteria"
+        ? cleanUidList(d.collaboratori_visibili)
+        : [];
+
+    const visibility =
+      ruolo === "segreteria"
+        ? await resolveVisibleCollaborators(requestedCollaborators)
+        : { uids: [], dettagli: [] };
+
     if (!nome || !cognome || !email || password.length < 8) {
       throw new HttpsError("invalid-argument", "Dati incompleti o password troppo corta.");
     }
@@ -206,9 +313,115 @@ exports.createConsultant = onCall(
     }
 
     await createWorkspaceProfile(user.uid, {
-      nome, cognome, email, ruolo, attivo: true
+      nome,
+      cognome,
+      email,
+      ruolo,
+      attivo: true,
+      collaboratori_visibili:
+        visibility.uids,
+      collaboratori_visibili_dettagli:
+        visibility.dettagli,
     });
 
-    return { ok: true, uid: user.uid, email, ruolo };
+    return {
+      ok: true,
+      uid: user.uid,
+      email,
+      ruolo,
+      collaboratori_visibili:
+        visibility.uids,
+    };
   }
 );
+
+/*
+|--------------------------------------------------------------------------
+| AGGIORNA VISIBILITA SEGRETERIA
+|--------------------------------------------------------------------------
+|
+| Solo Admin.
+| Permette di scegliere quali consulenti può vedere una specifica segreteria.
+|
+*/
+
+exports.updateConsultantVisibility = onCall(
+  { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+  async request => {
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Accesso richiesto."
+      );
+    }
+
+    if (!(await isAdmin(request.auth.uid))) {
+      throw new HttpsError(
+        "permission-denied",
+        "Funzione riservata all'amministratore."
+      );
+    }
+
+    const data = request.data || {};
+    const targetUid = clean(data.uid);
+
+    if (!targetUid) {
+      throw new HttpsError(
+        "invalid-argument",
+        "UID segreteria mancante."
+      );
+    }
+
+    const targetRef =
+      db.collection("consulenti").doc(targetUid);
+
+    const targetSnap =
+      await targetRef.get();
+
+    if (!targetSnap.exists) {
+      throw new HttpsError(
+        "not-found",
+        "Utente non trovato."
+      );
+    }
+
+    const target =
+      targetSnap.data() || {};
+
+    if (
+      clean(target.ruolo).toLowerCase() !==
+      "segreteria"
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "La visibilità collaboratori può essere configurata solo per un utente Segreteria."
+      );
+    }
+
+    const visibility =
+      await resolveVisibleCollaborators(
+        data.collaboratori_visibili
+      );
+
+    await targetRef.set({
+      collaboratori_visibili:
+        visibility.uids,
+      collaboratori_visibili_dettagli:
+        visibility.dettagli,
+      visibilita_aggiornata_il:
+        admin.firestore.FieldValue.serverTimestamp(),
+      visibilita_aggiornata_da:
+        request.auth.uid,
+    }, { merge: true });
+
+    return {
+      ok: true,
+      uid: targetUid,
+      collaboratori_visibili:
+        visibility.uids,
+      collaboratori_visibili_dettagli:
+        visibility.dettagli,
+    };
+  }
+);
+
