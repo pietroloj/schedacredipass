@@ -5739,6 +5739,47 @@ function aggiornaTotaleFinanziamenti() {
 
 }
 
+function calcolaTotaliFinanziamentiPerGestione() {
+
+    const dettaglio =
+        getFinanziamentiDettaglio();
+
+    let mantenere = 0;
+    let estinguere = 0;
+
+    dettaglio.forEach(fin => {
+
+        const rata =
+            parseEuro(
+                fin.rata
+            );
+
+        if (
+            String(
+                fin.gestione ||
+                "MANTENERE"
+            ).toUpperCase() ===
+            "ESTINGUERE"
+        ) {
+            estinguere += rata;
+        }
+        else {
+            mantenere += rata;
+        }
+
+    });
+
+    return {
+        totale:
+            mantenere +
+            estinguere,
+
+        mantenere,
+        estinguere
+    };
+}
+
+
 function getFinanziamentiDettaglio() {
 
     const finanziamenti = [];
@@ -8004,6 +8045,14 @@ async function sincronizzaSchedaConDatabase() {
 
         totale_rate_finanziamenti:
             aggiornaTotaleFinanziamenti(),
+
+        totale_rate_finanziamenti_mantenere:
+            calcolaTotaliFinanziamentiPerGestione()
+                .mantenere,
+
+        totale_rate_finanziamenti_estinguere:
+            calcolaTotaliFinanziamentiPerGestione()
+                .estinguere,
 
         tipo_incendio:
             V(
