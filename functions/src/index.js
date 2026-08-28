@@ -74,6 +74,11 @@ const {
   calculatePracticeIncome,
 } = require("./services/practiceIncomeCalculator");
 
+const {
+  calculateFinancialCommitments,
+  calculatePracticeRatios,
+} = require("./services/practiceFinancialCalculator");
+
 
 const {
   deletePracticeDocument,
@@ -860,6 +865,27 @@ function mergePracticeFinancials({
       practiceData
     );
 
+  const impegni =
+    calculateFinancialCommitments(
+      practiceData,
+      {
+        fallbackOtherRates:
+          rateAltriFinanziamenti,
+      }
+    );
+
+  const ratios =
+    calculatePracticeRatios({
+      redditoMensile:
+        practiceIncome
+          .redditoNettoMensile,
+
+      rataNuovoMutuo:
+        rataMutuoStimata,
+
+      impegni,
+    });
+
   const merged = {
     redditoBancarioMensile:
       practiceIncome
@@ -874,11 +900,46 @@ function mergePracticeFinancials({
         .redditiPerRichiedente ||
       {},
 
+    /*
+     * dti rimane alias del DTI POST-operazione per retrocompatibilità.
+     */
     dti:
-      null,
+      ratios.dtiPost,
+
+    dtiPre:
+      ratios.dtiPre,
+
+    dtiPost:
+      ratios.dtiPost,
 
     ltv:
       null,
+
+    impegni,
+
+    impegniFinanziariPre:
+      impegni
+        .impegniFinanziariPre,
+
+    impegniFinanziariPost:
+      impegni
+        .impegniFinanziariPost,
+
+    impegniNonFinanziari:
+      impegni
+        .impegniNonFinanziari,
+
+    redditoResiduoPre:
+      ratios
+        .redditoResiduoPre,
+
+    redditoResiduoPost:
+      ratios
+        .redditoResiduoPost,
+
+    disponibilitaPostNuovaRata:
+      ratios
+        .disponibilitaPostNuovaRata,
 
     scoreIncome:
       practiceIncome
@@ -890,14 +951,13 @@ function mergePracticeFinancials({
     bankDataAvailable:
       false,
 
-    criticitaFinanziarie:
-      [
-        ...(
-          practiceIncome
-            .criticita ||
-          []
-        ),
-      ],
+    criticitaFinanziarie: [
+      ...(
+        practiceIncome
+          .criticita ||
+        []
+      ),
+    ],
 
     puntiForzaFinanziari:
       [],
@@ -906,8 +966,7 @@ function mergePracticeFinancials({
       scommesse: [],
       contanti: [],
       rate: [],
-      entrateStraordinarie:
-        [],
+      entrateStraordinarie: [],
       riscossione: [],
       crypto: [],
       accrediti: [],
@@ -916,10 +975,7 @@ function mergePracticeFinancials({
     },
   };
 
-
-  const bankScores =
-    [];
-
+  const bankScores = [];
 
   for (
     const doc of
@@ -933,7 +989,8 @@ function mergePracticeFinancials({
     if (
       dec
         .scoreComportamentoBancario !==
-        undefined &&
+        undefined
+      &&
       dec
         .scoreComportamentoBancario !==
         null
@@ -1064,69 +1121,58 @@ function mergePracticeFinancials({
     }
   }
 
-
   if (
     bankScores.length
   ) {
     const total =
       bankScores.reduce(
         (sum, value) =>
-          sum +
+          sum
+          +
           (
             normalizeNumber(
               value
-            ) ||
+            )
+            ||
             0
           ),
         0
       );
 
-    merged
-      .scoreBank =
-      total /
-      bankScores.length;
+    merged.scoreBank =
+      round2(
+        total /
+        bankScores.length
+      );
   }
 
-
-  merged
-    .dti =
-    calcolaDTI(
-      merged
-        .redditoBancarioMensile,
-      rataMutuoStimata,
-      rateAltriFinanziamenti
-    );
-
-
-  merged
-    .ltv =
+  merged.ltv =
     calcolaLTV(
       importoMutuo,
       valoreImmobile
     );
 
-
-  merged
-    .criticitaFinanziarie =
+  merged.criticitaFinanziarie =
     Array.from(
       new Set(
         merged
           .criticitaFinanziarie
-          .filter(Boolean)
+          .filter(
+            Boolean
+          )
       )
     );
 
-
-  merged
-    .puntiForzaFinanziari =
+  merged.puntiForzaFinanziari =
     Array.from(
       new Set(
         merged
           .puntiForzaFinanziari
-          .filter(Boolean)
+          .filter(
+            Boolean
+          )
       )
     );
-
 
   for (
     const key of [
@@ -1140,24 +1186,20 @@ function mergePracticeFinancials({
     ]
   ) {
     merged
-      .alertBancari[
-        key
-      ] =
+      .alertBancari[key] =
       Array.from(
         new Set(
           merged
-            .alertBancari[
-              key
-            ]
-            .filter(Boolean)
+            .alertBancari[key]
+            .filter(
+              Boolean
+            )
         )
       );
   }
 
-
   return merged;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1242,10 +1284,34 @@ function buildPracticeSummary({
       : "Reddito mensile considerato: N/D",
 
     mergedFinancials
-      .dti !==
+      .dtiPre !==
     null
-      ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%`
-      : "DTI: N/D",
+      ? `DTI pre-operazione: ${formatNumberIT(mergedFinancials.dtiPre)}%`
+      : "DTI pre-operazione: N/D",
+
+    mergedFinancials
+      .dtiPost !==
+    null
+      ? `DTI post-operazione: ${formatNumberIT(mergedFinancials.dtiPost)}%`
+      : "DTI post-operazione: N/D",
+
+    `Impegni finanziari pre-operazione: € ${formatNumberIT(
+      mergedFinancials.impegniFinanziariPre || 0
+    )}`,
+
+    `Impegni finanziari post-operazione: € ${formatNumberIT(
+      mergedFinancials.impegniFinanziariPost || 0
+    )}`,
+
+    `Impegni non finanziari: € ${formatNumberIT(
+      mergedFinancials.impegniNonFinanziari || 0
+    )}`,
+
+    mergedFinancials
+      .redditoResiduoPost !==
+    null
+      ? `Reddito residuo post-operazione: € ${formatNumberIT(mergedFinancials.redditoResiduoPost)}`
+      : "Reddito residuo post-operazione: N/D",
 
     mergedFinancials
       .ltv !==
@@ -1357,7 +1423,31 @@ function buildPracticeSummary({
 
         dti:
           mergedFinancials
-            .dti,
+            .dtiPost,
+
+        dtiPre:
+          mergedFinancials
+            .dtiPre,
+
+        dtiPost:
+          mergedFinancials
+            .dtiPost,
+
+        impegniFinanziariPre:
+          mergedFinancials
+            .impegniFinanziariPre,
+
+        impegniFinanziariPost:
+          mergedFinancials
+            .impegniFinanziariPost,
+
+        impegniNonFinanziari:
+          mergedFinancials
+            .impegniNonFinanziari,
+
+        redditoResiduoPost:
+          mergedFinancials
+            .redditoResiduoPost,
 
         ltv:
           mergedFinancials
@@ -2731,6 +2821,13 @@ exports.ricostruisciPraticaCompleta =
     },
 
     async (request) => {
+      if (!request.auth?.uid) {
+        throw new HttpsError(
+          "unauthenticated",
+          "Accesso richiesto per la pre-delibera completa."
+        );
+      }
+
       const data =
         request.data || {};
 
@@ -2894,7 +2991,7 @@ exports.ricostruisciPraticaCompleta =
         if (
           mergedFinancials
             .fonteReddito ===
-          "scheda_consulenza_non_verificato"
+          "parzialmente_o_totalmente_non_verificato"
         ) {
           extraReviewReasons.push(
             "Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale"
