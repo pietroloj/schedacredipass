@@ -1,692 +1,418 @@
 
-
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ricerca Clienti - Credipass</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Consulenti - Credipass</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script src="/main/auth-guard.js"></script>
 
 <style>
-    body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .search-container { background-color: #ffffff; width: 100%; max-width: 800px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; border-top: 6px solid #002d72; }
-    
-    .header { background-color: #f8f9fa; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e9ecef; }
-    .header h1 { color: #002d72; margin: 0; font-size: 24px; font-weight: 800; }
-
-    .search-box { padding: 20px 40px; background: #002d72; }
-    .search-input-wrapper { position: relative; width: 100%; }
-    .search-input-wrapper i { position: absolute; left: 15px; top: 15px; color: #777; }
-    .search-input { width: 100%; padding: 15px 15px 15px 45px; border-radius: 8px; border: none; font-size: 16px; font-family: 'Poppins', sans-serif; box-sizing: border-box; outline: none; }
-    .search-input:focus { box-shadow: 0 0 0 3px rgba(201, 151, 0, 0.5); }
-
-    .client-list { padding: 20px 40px; min-height: 300px; }
-    
-    .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; background: #fff; }
-    .client-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-    
-    .status-completo { border-left-color: #28a745; background-color: #f8fff9; }
-    .status-incompleto { border-left-color: #ffc107; background-color: #fffdf5; }
-    .status-vuoto { border-left-color: #dc3545; background-color: #fff; }
-
-    .client-info-container { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 15px; }
-    
-    .client-data { flex-grow: 1; cursor: pointer; }
-    .client-data h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; display: flex; align-items: center; gap: 8px; }
-    .client-data p { margin: 0; font-size: 12px; color: #777; }
-    
-    .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
-    .badge-verde { background: #28a745; }
-    .badge-giallo { background: #ffc107; color: #856404; }
-    .badge-rosso { background: #dc3545; }
-    
-    .client-actions { display: flex; align-items: center; gap: 15px; }
-    .btn-fascicolo { color: #002d72; font-weight: bold; font-size: 13px; text-decoration: none; padding: 8px 12px; background: #eef2f7; border-radius: 6px; transition: 0.2s; cursor: pointer; }
-    .btn-fascicolo:hover { background: #002d72; color: white; }
-    
-    .btn-delete { color: #dc3545; background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px; transition: 0.2s; border-radius: 4px; }
-    .btn-delete:hover { background: #fee; transform: scale(1.1); }
-    
-    .loading { text-align: center; padding: 30px; color: #002d72; display: none; }
-    .no-results { text-align: center; padding: 30px; color: #777; display: none; }
-
-    .header-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .header-title-wrap {
-        flex: 1 1 auto;
-        text-align: left;
-    }
-
-    .btn-return-consulenza {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #002d72;
-        color: #fff;
-        text-decoration: none;
-        padding: 11px 15px;
-        border-radius: 8px;
-        font-size: 11px;
-        font-weight: 800;
-        transition: .2s;
-        white-space: nowrap;
-    }
-
-    .btn-return-consulenza:hover {
-        background: #C99700;
-        color: #002d72;
-    }
-
-    .badge-practice-state {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        font-size: 9px;
-        font-weight: 800;
-        color: white;
-        vertical-align: middle;
-        white-space: nowrap;
-    }
-
-    .client-progress-info {
-        margin-top: 4px;
-        font-size: 10px;
-        color: #66717c;
-        font-weight: 600;
-    }
-
-
-    .collaborator-filter {
-        padding: 14px 40px;
-        background: #fff;
-        border-bottom: 1px solid #e9ecef;
-        display: none;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .collaborator-filter.visible {
-        display: flex;
-    }
-
-    .collaborator-filter label {
-        color: #002d72;
-        font-size: 9px;
-        font-weight: 800;
-        text-transform: uppercase;
-        white-space: nowrap;
-    }
-
-    .collaborator-filter select {
-        flex: 1;
-        max-width: 320px;
-        padding: 8px 10px;
-        border: 1px solid #dfe5eb;
-        border-radius: 7px;
-        font-family: 'Poppins', sans-serif;
-        font-size: 10px;
-        color: #263238;
-        background: #fff;
-    }
-
-    .practice-owner {
-        margin-top: 4px;
-        color: #002d72;
-        font-size: 9px;
-        font-weight: 700;
-    }
-
-    @media (max-width: 700px) {
-        .header {
-            padding: 22px 20px;
-        }
-
-        .header-title-wrap {
-            text-align: center;
-            width: 100%;
-        }
-
-        .btn-return-consulenza {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .client-info-container {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .client-actions {
-            justify-content: flex-end;
-        }
-    }
-
+*{box-sizing:border-box}
+body{margin:0;background:#eef2f6;font-family:Poppins,sans-serif;padding:24px;color:#263238}
+.box{max-width:1180px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 12px 35px rgba(0,0,0,.12)}
+.head{padding:22px 26px;background:#002d72;color:#fff;border-bottom:5px solid #C99700;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.head h1{font-size:19px;margin:0}
+.head a{color:#fff;text-decoration:none;font-size:10px;font-weight:800}
+.body{padding:24px}
+.grid{display:grid;grid-template-columns:minmax(320px,.8fr) minmax(420px,1.2fr);gap:18px}
+.card{border:1px solid #e1e6eb;border-radius:10px;padding:17px;background:#fff}
+h2{font-size:13px;color:#002d72;margin:0 0 13px}
+label{display:block;font-size:8px;font-weight:800;text-transform:uppercase;margin:8px 0 4px;color:#68737e}
+input,select{width:100%;padding:9px;border:1px solid #dce3ea;border-radius:7px;font-family:inherit;font-size:10px}
+button{border:0;border-radius:7px;background:#002d72;color:#fff;padding:10px 13px;font-family:inherit;font-size:9px;font-weight:800;cursor:pointer}
+#create{width:100%;margin-top:12px}
+.user{padding:11px 0;border-bottom:1px solid #edf0f3;font-size:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.user-main{min-width:0}
+.user-email{color:#7b858f;overflow:hidden;text-overflow:ellipsis}
+.user-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.badge{font-size:8px;font-weight:800;color:#002d72;background:#eef3f8;border-radius:999px;padding:4px 7px}
+.manage-btn{padding:6px 8px;background:#fff;color:#002d72;border:1px solid #d9e0e7}
+.manage-btn:hover{border-color:#C99700;color:#8a6800}
+.visibility-box{display:none;margin-top:12px;padding:12px;border:1px solid #ead79b;background:#fffaf0;border-radius:9px}
+.visibility-box.visible{display:block}
+.visibility-title{font-size:9px;font-weight:800;color:#765b00;text-transform:uppercase;margin-bottom:7px}
+.visibility-help{font-size:9px;color:#6f6753;line-height:1.5;margin-bottom:9px}
+.collab-list{max-height:210px;overflow:auto;border:1px solid #e4e8ed;border-radius:8px;background:#fff}
+.collab-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-bottom:1px solid #eef1f4;font-size:10px}
+.collab-row:last-child{border-bottom:0}
+.collab-row input{width:auto;margin:0}
+.collab-meta{min-width:0}
+.collab-name{font-weight:700;color:#002d72}
+.collab-email{font-size:8px;color:#89939d}
+#editVisibilityModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:50000;align-items:center;justify-content:center;padding:20px}
+.modal-card{width:100%;max-width:600px;background:#fff;border-radius:13px;overflow:hidden;border-top:6px solid #C99700;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+.modal-head{background:#002d72;color:#fff;padding:18px 20px}
+.modal-head h3{margin:0;font-size:15px}
+.modal-body{padding:18px 20px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+.secondary{background:#edf0f3;color:#495057}
+.primary{background:#C99700;color:#fff}
+.summary{font-size:8px;color:#7c8791;margin-top:4px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
-<body>
 
-<div class="search-container">
-    <div class="header">
-        <div class="header-top">
-            <div class="header-title-wrap">
-                <h1>Archivio Pratiche</h1>
-                <p style="color: #C99700; margin-top:5px; margin-bottom:0; font-weight:600;">Gestione e Ricerca Clienti</p>
+<body>
+<div class="box">
+    <div class="head">
+        <h1><i class="fas fa-users-cog"></i> Gestione Consulenti</h1>
+        <a href="/">TORNA ALLA SCHEDA</a>
+    </div>
+
+    <div class="body">
+        <div class="grid">
+
+            <div class="card">
+                <h2>Crea nuovo utente</h2>
+
+                <label>Nome</label>
+                <input id="nome">
+
+                <label>Cognome</label>
+                <input id="cognome">
+
+                <label>Email</label>
+                <input id="email" type="email">
+
+                <label>Password temporanea</label>
+                <input id="password" type="password">
+
+                <label>Ruolo</label>
+                <select id="ruolo">
+                    <option value="consulente">Consulente</option>
+                    <option value="segreteria">Segreteria</option>
+                    <option value="admin">Admin</option>
+                </select>
+
+                <div id="newVisibilityBox" class="visibility-box">
+                    <div class="visibility-title">
+                        <i class="fas fa-eye"></i>
+                        Collaboratori visibili
+                    </div>
+
+                    <div class="visibility-help">
+                        Seleziona i consulenti di cui questa Segreteria potrà vedere e lavorare automaticamente tutte le pratiche presenti e future.
+                    </div>
+
+                    <div id="newCollaborators" class="collab-list"></div>
+                </div>
+
+                <button id="create">
+                    CREA ACCOUNT + WORKSPACE
+                </button>
+
+                <div id="msg" style="font-size:9px;margin-top:8px"></div>
             </div>
 
-            <a href="../index.html" class="btn-return-consulenza">
-                <i class="fas fa-arrow-left"></i> TORNA ALLA SCHEDA CONSULENZA
-            </a>
+            <div class="card">
+                <h2>Utenti registrati</h2>
+                <div id="users">Caricamento...</div>
+            </div>
+
         </div>
     </div>
+</div>
 
-    <div class="search-box">
-        <div class="search-input-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Cerca per nome o cognome..." onkeyup="filtraClienti()">
+<div id="editVisibilityModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>
+                <i class="fas fa-network-wired" style="color:#C99700"></i>
+                Collaboratori visibili
+            </h3>
         </div>
-    </div>
 
-    <div id="collaboratorFilter" class="collaborator-filter">
-        <label for="collaboratorSelect">
-            <i class="fas fa-users"></i>
-            Collaboratore
-        </label>
+        <div class="modal-body">
+            <div id="editVisibilityUser" style="font-size:11px;color:#002d72;font-weight:800"></div>
+            <div style="font-size:9px;color:#6f7983;margin:5px 0 12px">
+                Le modifiche valgono immediatamente al prossimo caricamento della sessione della Segreteria.
+            </div>
 
-        <select id="collaboratorSelect" onchange="filtraClienti()">
-            <option value="">Tutti i collaboratori</option>
-        </select>
-    </div>
+            <div id="editCollaborators" class="collab-list"></div>
 
-    <div class="client-list">
-        <div id="loadingIndicator" class="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Caricamento archivio in corso...</p></div>
-        <div id="noResults" class="no-results">Nessun cliente trovato.</div>
-        <div id="clientiContainer"></div>
+            <div class="modal-actions">
+                <button class="secondary" type="button" onclick="closeVisibilityModal()">
+                    ANNULLA
+                </button>
+                <button class="primary" type="button" onclick="saveVisibility()">
+                    <i class="fas fa-check"></i>
+                    SALVA VISIBILITÀ
+                </button>
+            </div>
+
+            <div id="editMsg" style="font-size:9px;margin-top:9px"></div>
+        </div>
     </div>
 </div>
 
 <script>
-    var firebaseConfig = {
-        apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
-        authDomain: "consulenza-credipass.firebaseapp.com",
-        projectId: "consulenza-credipass",
-        storageBucket: "consulenza-credipass.firebasestorage.app"
-    };
+const firebaseConfig={
+    apiKey:"AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
+    authDomain:"consulenza-credipass.firebaseapp.com",
+    projectId:"consulenza-credipass",
+    storageBucket:"consulenza-credipass.firebasestorage.app"
+};
 
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-    var db = firebase.firestore();
-    var storage = firebase.storage();
-    var functionsFirebase = firebase.app().functions("us-central1");
-    var tuttiIClienti = [];
-    var sessioneConsulente = null;
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 
-    const STATO_PRATICA_CONFIG = {
-        da_istruire: { label: "Da istruire", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
-        istruttoria: { label: "Istruttoria", border: "#2f80ed", bg: "#f2f7ff", badge: "#2f80ed" },
-        integrazione_documenti: { label: "Integrazione documenti", border: "#d39e00", bg: "#fffaf0", badge: "#b8860b" },
-        caricato_banca: { label: "Caricato in banca", border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
-        valutazione_reddituale: { label: "Valutazione reddituale", border: "#7b61a8", bg: "#f7f4fb", badge: "#7b61a8" },
-        delibera_reddituale_ok: { label: "Delibera reddituale OK", border: "#28a745", bg: "#f2fbf5", badge: "#28a745" },
-        delibera_reddituale_ko: { label: "Delibera reddituale KO", border: "#dc3545", bg: "#fff4f5", badge: "#dc3545" },
-        attesa_perizia: { label: "Attesa perizia", border: "#f0ad4e", bg: "#fff8ed", badge: "#d88a1d" },
-        perizia_in_corso: { label: "Perizia in corso", border: "#e67e22", bg: "#fff5ec", badge: "#e67e22" },
-        perizia_ok: { label: "Perizia OK", border: "#20a464", bg: "#f1fbf6", badge: "#20a464" },
-        perizia_ko: { label: "Perizia KO", border: "#c62828", bg: "#fff2f2", badge: "#c62828" },
-        attesa_documentazione_notarile: { label: "Attesa documentazione notarile", border: "#9a6b35", bg: "#fbf7f1", badge: "#9a6b35" },
-        chiamata_atto: { label: "Chiamata d'atto", border: "#087f5b", bg: "#effaf6", badge: "#087f5b" },
-        stipulato: { label: "Stipulato", border: "#198754", bg: "#effaf3", badge: "#198754" },
-        sospesa: { label: "Sospesa", border: "#495057", bg: "#f1f3f5", badge: "#495057" },
-        rinunciata: { label: "Rinunciata / KO", border: "#b02a37", bg: "#fff2f3", badge: "#b02a37" }
-    };
+const db=firebase.firestore();
+const fns=firebase.app().functions("us-central1");
 
-    function getStatoPraticaConfig(stato) {
-        return STATO_PRATICA_CONFIG[stato] || STATO_PRATICA_CONFIG.da_istruire;
+let allUsers=[];
+let consultants=[];
+let editingSecretaryUid=null;
+
+function esc(value){
+    return String(value??"")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+}
+
+function roleOf(d){
+    return String(d?.ruolo||"consulente").toLowerCase();
+}
+
+function collaboratorCheckboxes(containerId, selected=[]){
+    const box=document.getElementById(containerId);
+    const selectedSet=new Set(Array.isArray(selected)?selected:[]);
+
+    if(!consultants.length){
+        box.innerHTML='<div style="padding:12px;font-size:9px;color:#87919a">Nessun consulente attivo disponibile.</div>';
+        return;
     }
 
+    box.innerHTML=consultants.map(c=>`
+        <label class="collab-row">
+            <input
+                type="checkbox"
+                value="${esc(c.uid)}"
+                ${selectedSet.has(c.uid)?"checked":""}
+            >
+            <span class="collab-meta">
+                <span class="collab-name">${esc(`${c.nome||""} ${c.cognome||""}`.trim()||c.email||c.uid)}</span><br>
+                <span class="collab-email">${esc(c.email||"")}</span>
+            </span>
+        </label>
+    `).join("");
+}
 
+function checkedUids(containerId){
+    return Array.from(
+        document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)
+    ).map(el=>el.value).filter(Boolean);
+}
 
-    function roleSession() {
-        return String(
-            sessioneConsulente?.profile?.ruolo ||
-            "consulente"
-        ).toLowerCase();
+function updateCreationVisibility(){
+    const isSecretary=document.getElementById("ruolo").value==="segreteria";
+    document.getElementById("newVisibilityBox").classList.toggle("visible",isSecretary);
+
+    if(isSecretary){
+        collaboratorCheckboxes("newCollaborators",[]);
+    }
+}
+
+async function listUsers(){
+    const box=document.getElementById("users");
+    const snap=await db.collection("consulenti").get();
+
+    allUsers=[];
+    snap.forEach(doc=>{
+        allUsers.push({
+            uid:doc.id,
+            ...(doc.data()||{})
+        });
+    });
+
+    allUsers.sort((a,b)=>
+        String(a.email||"").localeCompare(String(b.email||""))
+    );
+
+    consultants=allUsers.filter(d=>
+        roleOf(d)==="consulente" &&
+        d.attivo!==false
+    );
+
+    box.innerHTML="";
+
+    if(!allUsers.length){
+        box.textContent="Nessun utente.";
+        return;
     }
 
-    function secretaryCollaborators() {
-        const ids =
-            Array.isArray(
-                sessioneConsulente?.profile?.collaboratori_visibili
-            )
-                ? sessioneConsulente.profile.collaboratori_visibili
-                : [];
+    allUsers.forEach(d=>{
+        const role=roleOf(d);
+        const visible=Array.isArray(d.collaboratori_visibili)
+            ? d.collaboratori_visibili
+            : [];
 
-        return Array.from(
-            new Set(
-                ids
-                    .map(x => String(x || "").trim())
-                    .filter(Boolean)
-            )
-        );
+        const el=document.createElement("div");
+        el.className="user";
+
+        el.innerHTML=`
+            <div class="user-main">
+                <strong>${esc(`${d.nome||""} ${d.cognome||""}`.trim())}</strong><br>
+                <span class="user-email">${esc(d.email||"")}</span>
+                ${role==="segreteria"
+                    ? `<div class="summary">${visible.length} collaboratore/i visibile/i</div>`
+                    : ""}
+            </div>
+
+            <div class="user-actions">
+                <span class="badge">${esc(role.toUpperCase())}</span>
+
+                ${role==="segreteria"
+                    ? `<button class="manage-btn" type="button" data-uid="${esc(d.uid)}">
+                        <i class="fas fa-network-wired"></i>
+                        VISIBILITÀ
+                       </button>`
+                    : ""}
+            </div>
+        `;
+
+        const manageBtn=el.querySelector(".manage-btn");
+        if(manageBtn){
+            manageBtn.addEventListener("click",()=>openVisibilityModal(d.uid));
+        }
+
+        box.appendChild(el);
+    });
+
+    if(document.getElementById("ruolo").value==="segreteria"){
+        collaboratorCheckboxes("newCollaborators",[]);
     }
 
-    function collaboratorNameMap() {
-        const details =
-            Array.isArray(
-                sessioneConsulente?.profile?.collaboratori_visibili_dettagli
-            )
-                ? sessioneConsulente.profile.collaboratori_visibili_dettagli
-                : [];
+    if(window.CredipassAuth){
+        setTimeout(()=>{
+            document.querySelectorAll(".badge").forEach(()=>{});
+        },0);
+    }
+}
 
-        const map = {};
+function openVisibilityModal(uid){
+    const user=allUsers.find(x=>x.uid===uid);
 
-        details.forEach(item => {
-            const uid =
-                String(
-                    item?.uid || ""
-                ).trim();
+    if(!user || roleOf(user)!=="segreteria"){
+        return;
+    }
 
-            if (!uid) return;
+    editingSecretaryUid=uid;
 
-            map[uid] =
-                `${item?.nome || ""} ${item?.cognome || ""}`
-                    .trim()
-                ||
-                item?.email
-                ||
-                uid;
+    document.getElementById("editVisibilityUser").textContent=
+        `${user.nome||""} ${user.cognome||""}`.trim() ||
+        user.email ||
+        uid;
+
+    document.getElementById("editMsg").textContent="";
+
+    collaboratorCheckboxes(
+        "editCollaborators",
+        Array.isArray(user.collaboratori_visibili)
+            ? user.collaboratori_visibili
+            : []
+    );
+
+    document.getElementById("editVisibilityModal").style.display="flex";
+}
+
+function closeVisibilityModal(){
+    editingSecretaryUid=null;
+    document.getElementById("editVisibilityModal").style.display="none";
+}
+
+async function saveVisibility(){
+    if(!editingSecretaryUid)return;
+
+    const msg=document.getElementById("editMsg");
+    const uids=checkedUids("editCollaborators");
+
+    msg.style.color="#68737e";
+    msg.textContent="Salvataggio...";
+
+    try{
+        await fns.httpsCallable("updateConsultantVisibility")({
+            uid:editingSecretaryUid,
+            collaboratori_visibili:uids
         });
 
-        return map;
+        msg.style.color="#23723c";
+        msg.textContent="✅ Visibilità aggiornata.";
+
+        await listUsers();
+
+        setTimeout(closeVisibilityModal,500);
+    }catch(e){
+        console.error(e);
+        msg.style.color="#b42318";
+        msg.textContent=e?.message||"Errore aggiornamento visibilità.";
     }
+}
 
-    function setupCollaboratorFilter() {
-        const wrapper =
-            document.getElementById(
-                "collaboratorFilter"
-            );
+document.getElementById("ruolo").addEventListener(
+    "change",
+    updateCreationVisibility
+);
 
-        const select =
-            document.getElementById(
-                "collaboratorSelect"
-            );
-
-        if (
-            !wrapper ||
-            !select ||
-            roleSession() !== "segreteria"
-        ) {
-            return;
-        }
-
-        const ids =
-            secretaryCollaborators();
-
-        const names =
-            collaboratorNameMap();
-
-        wrapper.classList.add(
-            "visible"
-        );
-
-        select.innerHTML =
-            `<option value="">Tutti i collaboratori</option>`
-            +
-            ids.map(uid =>
-                `<option value="${uid}">${
-                    String(names[uid] || uid)
-                        .replace(/&/g, "&amp;")
-                        .replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;")
-                }</option>`
-            ).join("");
-    }
-
-    async function loadPracticeDocsByOwners(ownerUids) {
-        const ids =
-            Array.from(
-                new Set(
-                    (ownerUids || [])
-                        .map(x => String(x || "").trim())
-                        .filter(Boolean)
-                )
-            );
-
-        if (!ids.length) {
-            return [];
-        }
-
-        const result =
-            new Map();
-
-        /*
-         * Firestore consente un numero limitato di valori per la query "in".
-         * Usiamo blocchi prudenti da 30 per supportare reti più ampie.
-         */
-        for (
-            let i = 0;
-            i < ids.length;
-            i += 30
-        ) {
-            const chunk =
-                ids.slice(
-                    i,
-                    i + 30
-                );
-
-            const snap =
-                await db.collection("pratiche_mutuo")
-                    .where(
-                        "consulente_uid",
-                        "in",
-                        chunk
-                    )
-                    .get();
-
-            snap.forEach(doc =>
-                result.set(
-                    doc.id,
-                    doc
-                )
-            );
-        }
-
-        return Array.from(
-            result.values()
-        );
-    }
-
-
-    async function caricaClientiDaDB() {
-        document.getElementById('loadingIndicator').style.display = 'block';
-        tuttiIClienti = [];
-
-        try {
-            sessioneConsulente =
-                sessioneConsulente ||
-                await CredipassAuth.guard();
-
-            const role =
-                roleSession();
-
-            let docs = [];
-
-            if (
-                sessioneConsulente.isAdmin
-            ) {
-                const snap =
-                    await db.collection("pratiche_mutuo")
-                        .get();
-
-                snap.forEach(doc =>
-                    docs.push(doc)
-                );
-            }
-            else if (
-                role === "segreteria"
-            ) {
-                const owners =
-                    secretaryCollaborators();
-
-                /*
-                 * Manteniamo anche l'UID della Segreteria, così eventuali
-                 * pratiche create direttamente da questo account restano visibili.
-                 */
-                owners.push(
-                    sessioneConsulente.user.uid
-                );
-
-                docs =
-                    await loadPracticeDocsByOwners(
-                        owners
-                    );
-
-                setupCollaboratorFilter();
-            }
-            else {
-                const snap =
-                    await db.collection("pratiche_mutuo")
-                        .where(
-                            "consulente_uid",
-                            "==",
-                            sessioneConsulente.user.uid
-                        )
-                        .get();
-
-                snap.forEach(doc =>
-                    docs.push(doc)
-                );
-            }
-
-            docs.forEach(doc => {
-                const idDocumento =
-                    doc.id;
-
-                const datiDoc =
-                    doc.data() || {};
-
-                let nomeReale =
-                    datiDoc.nomeCliente ||
-                    idDocumento.replace(/_/g, ' ');
-
-                const nomeFormattato =
-                    String(nomeReale || "")
-                        .toUpperCase();
-
-                tuttiIClienti.push({
-                    idOriginale:
-                        idDocumento,
-
-                    nomeRicerca:
-                        nomeFormattato,
-
-                    ownerUid:
-                        datiDoc.consulente_uid ||
-                        datiDoc.workspace_uid ||
-                        datiDoc.owner_uid ||
-                        "",
-
-                    dati:
-                        datiDoc
-                });
-            });
-
-            document.getElementById('loadingIndicator').style.display = 'none';
-            mostraClienti(tuttiIClienti);
-
-        } catch (error) {
-            console.error(error);
-            alert(
-                "Errore di connessione a Firebase.\n\n"
-                +
-                (
-                    error?.message ||
-                    ""
-                )
-            );
-            document.getElementById('loadingIndicator').style.display = 'none';
-        }
-    }
-
-    function mostraClienti(lista) {
-        const container = document.getElementById('clientiContainer');
-        const noResults = document.getElementById('noResults');
-        container.innerHTML = '';
-
-        if (lista.length === 0) {
-            noResults.style.display = 'block'; return;
-        } else {
-            noResults.style.display = 'none';
-        }
-
-        lista.forEach(cliente => {
-            const card = document.createElement('div');
-            
-            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente' && k !== 'richiestaIntegrazioneAttiva' && k !== 'notaPerCliente' && k !== 'elencoDocRichiesti' && k !== 'ultimoInvioNotifica' && k !== 'ultimo_aggiornamento_scheda' && k !== 'importo_richiesto' && k !== 'valore_immobile' && k !== 'reddito_richiedente_1' && k !== 'reddito_richiedente_2' && k !== 'durata_mutuo' && k !== 'finalita' && k !== 'prodotto' && k !== 'tasso' && k !== 'cliente_email' && k !== 'cliente_cell' && k !== 'stato_pratica' && k !== 'stato_pratica_label' && k !== 'stato_pratica_aggiornato_il');
-            const fileCaricati = chiaviCaricate.length;
-            const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
-            
-            let statoDocumenti = "Pratica inserita";
-
-            if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
-                statoDocumenti = "Documenti acquisiti";
-            } else if (fileCaricati > 0) {
-                statoDocumenti = `${fileCaricati} documenti caricati`;
-            } else if (fileRichiesti > 0) {
-                statoDocumenti = `0/${fileRichiesti} documenti acquisiti`;
-            }
-
-
-            const ownerNames =
-                collaboratorNameMap();
-
-            const ownerLabel =
-                ownerNames[cliente.ownerUid]
-                ||
-                (
-                    cliente.ownerUid ===
-                    sessioneConsulente?.user?.uid
-                        ? "Pratica propria"
-                        : ""
-                );
-
-            const statoPratica = cliente.dati.stato_pratica || "da_istruire";
-            const statoCfg = getStatoPraticaConfig(statoPratica);
-
-            const badgeHtml = `
-                <span class="badge-practice-state" style="background:${statoCfg.badge};">
-                    <i class="fas fa-circle"></i> ${statoCfg.label}
-                </span>
-            `;
-
-            card.className = "client-card";
-            card.style.borderLeftColor = statoCfg.border;
-            card.style.backgroundColor = statoCfg.bg;
-            card.innerHTML = `
-                <div class="client-info-container">
-                    <div class="client-data" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
-                        <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
-                        <p>ID: ${cliente.idOriginale}</p>
-                        <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
-                    </div>
-                    <div class="client-actions">
-                        <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                        <div class="btn-fascicolo" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
-                            Apri <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    function filtraClienti() {
-        const filtro =
-            String(
-                document.getElementById('searchInput')?.value ||
-                ""
-            )
-            .toUpperCase();
-
-        const ownerFilter =
-            String(
-                document.getElementById("collaboratorSelect")?.value ||
-                ""
-            );
-
-        const filtrati =
-            tuttiIClienti.filter(cliente => {
-                const matchesName =
-                    cliente.nomeRicerca.includes(
-                        filtro
-                    );
-
-                const matchesOwner =
-                    !ownerFilter ||
-                    cliente.ownerUid ===
-                        ownerFilter;
-
-                return (
-                    matchesName &&
-                    matchesOwner
-                );
-            });
-
-        mostraClienti(
-            filtrati
-        );
-    }
-
-    // --- FUNZIONE DI ELIMINAZIONE DEFINITIVA ---
-    async function eliminaPratica(idPratica, nomeCliente) {
-        const conferma = confirm(`ATTENZIONE!\n\nSei sicuro di voler eliminare definitivamente la pratica di: ${nomeCliente}?\n\nQuesta azione cancellerà tutti i dati e i documenti dal Cloud in modo irreversibile.`);
-        
-        if (!conferma) return; // Se l'utente clicca Annulla, si ferma qui
-
-        document.getElementById('loadingIndicator').innerHTML = '<i class="fas fa-trash-alt fa-bounce fa-2x" style="color:#dc3545;"></i><p>Eliminazione pratica in corso...</p>';
-        document.getElementById('loadingIndicator').style.display = 'block';
-        document.getElementById('clientiContainer').innerHTML = ''; // Nasconde la lista durante l'operazione
-
-        try {
-            // 1. ELIMINA LA CARTELLA DEI FILE DALLO STORAGE (Se esiste)
-            const listRef = storage.ref(`Fascicoli/${idPratica}`);
-            try {
-                const res = await listRef.listAll();
-                // Cancella tutti i file uno per uno (Firebase non fa cancellare le cartelle piene in un colpo solo)
-                const deletePromises = res.items.map((itemRef) => itemRef.delete());
-                await Promise.all(deletePromises);
-                console.log(`Cartella Storage per ${idPratica} svuotata.`);
-            } catch (e) {
-                console.log(`Nessun file trovato nello Storage per ${idPratica}, o cartella inesistente.`);
-            }
-
-            // 2. ELIMINA IL DOCUMENTO DAL DATABASE (FIRESTORE)
-            await db.collection("pratiche_mutuo").doc(idPratica).delete();
-            console.log(`Dati Firestore per ${idPratica} eliminati.`);
-
-            alert(`✅ Pratica di ${nomeCliente} eliminata con successo dal Database e dallo Spazio di Archiviazione.`);
-            
-            // Ricarica la lista pulita
-            document.getElementById('searchInput').value = ""; // Resetta la barra di ricerca
-            await caricaClientiDaDB();
-
-        } catch (error) {
-            console.error("Errore durante l'eliminazione:", error);
-            alert("❌ Errore durante l'eliminazione della pratica. Riprova.");
-            document.getElementById('loadingIndicator').style.display = 'none';
-            caricaClientiDaDB(); // Ricarica la pagina in caso di errore per sicurezza
-        }
-    }
-
-    window.onload = async () => {
-        try {
-            sessioneConsulente =
-                await CredipassAuth.guard();
-            await caricaClientiDaDB();
-        } catch (error) {
-            console.error("Accesso archivio negato:", error);
-        }
+document.getElementById("create").addEventListener("click",async()=>{
+    const d={
+        nome:document.getElementById("nome").value.trim(),
+        cognome:document.getElementById("cognome").value.trim(),
+        email:document.getElementById("email").value.trim(),
+        password:document.getElementById("password").value,
+        ruolo:document.getElementById("ruolo").value,
+        collaboratori_visibili:
+            document.getElementById("ruolo").value==="segreteria"
+                ? checkedUids("newCollaborators")
+                : []
     };
+
+    const m=document.getElementById("msg");
+
+    if(!d.nome||!d.cognome||!d.email||d.password.length<8){
+        m.style.color="#b42318";
+        m.textContent="Completa i campi. Password minimo 8 caratteri.";
+        return;
+    }
+
+    try{
+        m.style.color="#68737e";
+        m.textContent="Creazione account...";
+
+        await fns.httpsCallable("createConsultant")(d);
+
+        m.style.color="#23723c";
+        m.textContent="✅ Account e workspace creati.";
+
+        document.getElementById("nome").value="";
+        document.getElementById("cognome").value="";
+        document.getElementById("email").value="";
+        document.getElementById("password").value="";
+        document.getElementById("ruolo").value="consulente";
+        updateCreationVisibility();
+
+        await listUsers();
+    }catch(e){
+        console.error(e);
+        m.style.color="#b42318";
+        m.textContent=e?.message||"Errore creazione.";
+    }
+});
+
+(async()=>{
+    await CredipassAuth.guard({adminOnly:true});
+    await listUsers();
+    updateCreationVisibility();
+})();
 </script>
 </body>
 </html>
