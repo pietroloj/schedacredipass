@@ -6193,6 +6193,29 @@ Cordiali saluti`
                     </div>
                 </div>
 
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:18px;">
+                    <div style="background:#eef5ff;border:1px solid #d6e2f1;border-radius:9px;padding:12px;">
+                        <div style="font-size:9px;color:#6d7e93;text-transform:uppercase;">DTI pre</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${merged.dtiPre != null ? `${merged.dtiPre}%` : "N/D"}</div>
+                    </div>
+                    <div style="background:#eef5ff;border:1px solid #d6e2f1;border-radius:9px;padding:12px;">
+                        <div style="font-size:9px;color:#6d7e93;text-transform:uppercase;">DTI post</div>
+                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${merged.dtiPost != null ? `${merged.dtiPost}%` : "N/D"}</div>
+                    </div>
+                    <div style="background:#fff9e8;border:1px solid #f0d88b;border-radius:9px;padding:12px;">
+                        <div style="font-size:9px;color:#8a6800;text-transform:uppercase;">Impegni fin. post</div>
+                        <div style="font-weight:800;color:#775a00;margin-top:4px;">${merged.impegniFinanziariPost != null ? `€ ${Number(merged.impegniFinanziariPost).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
+                    </div>
+                    <div style="background:#fff9e8;border:1px solid #f0d88b;border-radius:9px;padding:12px;">
+                        <div style="font-size:9px;color:#8a6800;text-transform:uppercase;">Impegni non finanziari</div>
+                        <div style="font-weight:800;color:#775a00;margin-top:4px;">${merged.impegniNonFinanziari != null ? `€ ${Number(merged.impegniNonFinanziari).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
+                    </div>
+                    <div style="background:#eef9f2;border:1px solid #cfe8d8;border-radius:9px;padding:12px;">
+                        <div style="font-size:9px;color:#427352;text-transform:uppercase;">Reddito residuo post</div>
+                        <div style="font-weight:800;color:#176536;margin-top:4px;">${merged.redditoResiduoPost != null ? `€ ${Number(merged.redditoResiduoPost).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "N/D"}</div>
+                    </div>
+                </div>
+
                 ${listaReportAI("Criticità / anomalie da verificare", criticita, criticita.length ? "danger" : "success")}
                 ${listaReportAI("Alert comportamento bancario", Array.from(new Set(bankAlerts)), "warning")}
                 ${listaReportAI("Punti di forza", puntiForza, "success")}
@@ -6203,8 +6226,58 @@ Cordiali saluti`
                 </div>
 
                 ${
-                    Array.isArray(bankMatch?.consigliate) && bankMatch.consigliate.length
-                    ? listaReportAI("Banche / policy potenzialmente compatibili", bankMatch.consigliate.map(x => typeof x === "string" ? x : (x.nome || x.banca || JSON.stringify(x))), "success")
+                    Array.isArray(bankMatch?.compatibili) && bankMatch.compatibili.length
+                    ? listaReportAI(
+                        "Banche / policy compatibili",
+                        bankMatch.compatibili.map(x => {
+                            const nome = x.bancaNome || x.bancaKey || "Banca";
+                            const prodotto = x.prodottoNome ? ` - ${x.prodottoNome}` : "";
+                            return `🟢 ${nome}${prodotto} · score ${x.score ?? "N/D"}`;
+                        }),
+                        "success"
+                    )
+                    : ""
+                }
+
+                ${
+                    Array.isArray(bankMatch?.compatibiliConCondizioni) && bankMatch.compatibiliConCondizioni.length
+                    ? listaReportAI(
+                        "Compatibili con condizioni",
+                        bankMatch.compatibiliConCondizioni.map(x => {
+                            const nome = x.bancaNome || x.bancaKey || "Banca";
+                            const why = [...(x.warnings || []), ...(x.insufficientReasons || [])].join(" · ");
+                            return `🟡 ${nome}${why ? ` — ${why}` : ""}`;
+                        }),
+                        "warning"
+                    )
+                    : ""
+                }
+
+                ${
+                    Array.isArray(bankMatch?.datiInsufficienti) && bankMatch.datiInsufficienti.length
+                    ? listaReportAI(
+                        "Policy non ancora valutabili: dati/documenti insufficienti",
+                        bankMatch.datiInsufficienti.map(x => {
+                            const nome = x.bancaNome || x.bancaKey || "Banca";
+                            const why = (x.insufficientReasons || []).join(" · ");
+                            return `🟠 ${nome}${why ? ` — ${why}` : ""}`;
+                        }),
+                        "warning"
+                    )
+                    : ""
+                }
+
+                ${
+                    Array.isArray(bankMatch?.nonCompatibili) && bankMatch.nonCompatibili.length
+                    ? listaReportAI(
+                        "Policy non compatibili",
+                        bankMatch.nonCompatibili.map(x => {
+                            const nome = x.bancaNome || x.bancaKey || "Banca";
+                            const why = (x.blockingReasons || []).join(" · ");
+                            return `🔴 ${nome}${why ? ` — ${why}` : ""}`;
+                        }),
+                        "danger"
+                    )
                     : ""
                 }
 
