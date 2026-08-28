@@ -1128,12 +1128,19 @@ async function ensureProfile(user) {
         result?.data?.profile ||
         {};
 
+    const ruolo =
+        roleOf(profile);
+
     return {
         user,
         profile,
+        ruolo,
         isAdmin:
-            roleOf(profile) ===
-            "admin"
+            ruolo === "admin",
+        isSegreteria:
+            ruolo === "segreteria",
+        isConsulente:
+            ruolo === "consulente"
     };
 }
 
@@ -1282,15 +1289,46 @@ async function practiceIsAccessible(
     }
 
     const owner =
-        data.consulente_uid ||
-        data.workspace_uid ||
-        data.owner_uid ||
-        "";
+        String(
+            data.consulente_uid ||
+            data.workspace_uid ||
+            data.owner_uid ||
+            ""
+        ).trim();
 
-    return (
-        owner ===
-        session.user.uid
-    );
+    /*
+     * Il consulente continua a vedere le proprie pratiche.
+     * Anche una segreteria può sempre vedere una eventuale pratica
+     * di cui fosse direttamente proprietaria.
+     */
+    if (
+        owner &&
+        owner === session.user.uid
+    ) {
+        return true;
+    }
+
+    /*
+     * La Segreteria vede le pratiche appartenenti esclusivamente
+     * ai consulenti scelti dall'Admin in Gestione Consulenti.
+     */
+    if (
+        session.isSegreteria
+    ) {
+        const allowed =
+            Array.isArray(
+                session.profile?.collaboratori_visibili
+            )
+                ? session.profile.collaboratori_visibili
+                : [];
+
+        return (
+            owner &&
+            allowed.includes(owner)
+        );
+    }
+
+    return false;
 }
 
 
