@@ -83,6 +83,7 @@ const {
   bootstrapFirstAdmin,
   ensureConsultantProfile,
   createConsultant,
+  updateConsultantVisibility,
 } = require("./services/authConsultants");
 
 const {
@@ -1437,6 +1438,9 @@ exports.ensureConsultantProfile =
 
 exports.createConsultant =
   createConsultant;
+
+exports.updateConsultantVisibility =
+  updateConsultantVisibility;
 
 exports.analizzaDocumentoAI =
   onCall(
