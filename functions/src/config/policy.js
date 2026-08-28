@@ -1,7 +1,7 @@
 const POLICY = {
-  pipelineVersion: "v5.0.0",
-  classificationConfidenceReject: 74,
-  classificationConfidenceReview: 80,
+  pipelineVersion: "v6.0.0-predelibera2",
+  classificationConfidenceReject: 0.74,
+  classificationConfidenceReview: 0.80,
   maxCriticitaPenalty: 24,
   dtiWarning: 35,
   dtiCritical: 45,
