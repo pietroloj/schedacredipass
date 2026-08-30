@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Functions dependencies
         working-directory: functions
-        run: npm ci
+        run: npm install
 
       - name: Verify Predelibera module
         working-directory: functions
