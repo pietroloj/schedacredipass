@@ -1,0 +1,66 @@
+name: Quality Check
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - "functions/**"
+      - "firestore.rules"
+      - "firebase.json"
+      - "scripts/health/**"
+      - ".github/workflows/**"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Verify JavaScript syntax
+        working-directory: functions
+        run: |
+          node --check src/index.js
+
+          if [ -f src/gmail-oauth.js ]; then
+            node --check src/gmail-oauth.js
+          fi
+
+          if [ -f src/gmail-api-engine.js ]; then
+            node --check src/gmail-api-engine.js
+          fi
+
+          if [ -f src/mail-matcher.js ]; then
+            node --check src/mail-matcher.js
+          fi
+
+          if [ -f src/document-reminders.js ]; then
+            node --check src/document-reminders.js
+          fi
+
+          echo "✅ Syntax check completato"
+
+      - name: Run mail matcher tests
+        run: |
+          if [ -f scripts/health/test-mail-matcher.js ]; then
+            node scripts/health/test-mail-matcher.js
+          fi
+
+      - name: Verify AI structure
+        run: |
+          if [ -f scripts/health/test-ai-source.js ]; then
+            node scripts/health/test-ai-source.js
+          fi

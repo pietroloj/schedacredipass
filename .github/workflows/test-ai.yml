@@ -1,0 +1,41 @@
+name: Test AI Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "functions/src/services/**"
+      - "functions/src/index.js"
+      - "scripts/health/test-ai-source.js"
+
+jobs:
+  test-ai:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Verify AI source files
+        run: node scripts/health/test-ai-source.js
+
+      - name: Verify Functions syntax
+        working-directory: functions
+        run: |
+          node --check src/index.js
+          node --check src/services/openaiClient.js
+          node --check src/services/classifiers.js
+          node --check src/services/practiceIncomeCalculator.js
+          node --check src/services/practiceFinancialCalculator.js
+          echo "✅ Backend AI sintatticamente valido"

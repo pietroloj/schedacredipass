@@ -1,0 +1,31 @@
+name: Nightly Health Check
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # 03:00 Europe/Rome circa:
+    # GitHub Actions usa UTC. In estate 01:00 UTC = 03:00 CEST.
+    # In inverno sarà 02:00 locale. Se vuoi ora locale precisa tutto l'anno,
+    # va gestita diversamente.
+    - cron: "0 1 * * *"
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Run health check
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: node scripts/health/nightly-health.js

@@ -1,0 +1,31 @@
+name: Test Mail Matcher
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "functions/src/mail-matcher.js"
+      - "functions/src/mail-bank-domains.seed.js"
+      - "scripts/health/test-mail-matcher.js"
+
+jobs:
+  test-mail-matcher:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Run mail matcher tests
+        run: node scripts/health/test-mail-matcher.js

@@ -1,0 +1,67 @@
+name: All Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  all-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Verify required GitHub secrets
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          test -n "$CLIENT_ID" || (echo "❌ CLIENT_ID mancante" && exit 1)
+          test -n "$CLIENT_SECRET" || (echo "❌ CLIENT_SECRET mancante" && exit 1)
+          test -n "$FIREBASE_TOKEN" || (echo "❌ FIREBASE_TOKEN mancante" && exit 1)
+          echo "✅ Secrets principali presenti"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Test Gmail OAuth source
+        working-directory: functions
+        run: |
+          node --check src/gmail-oauth.js
+          node --check src/gmail-api-engine.js
+          node --check src/mail-admin-actions.js
+          node --check src/mail-matcher.js
+          node --check src/index.js
+          echo "✅ Gmail OAuth OK"
+
+      - name: Test Mail Matcher
+        run: node scripts/health/test-mail-matcher.js
+
+      - name: Test AI backend structure
+        run: node scripts/health/test-ai-source.js
+
+      - name: Test Firestore files
+        run: |
+          test -f firestore.rules || (echo "❌ firestore.rules mancante" && exit 1)
+          test -f firebase.json || (echo "❌ firebase.json mancante" && exit 1)
+          echo "✅ Firestore files presenti"
+
+      - name: Run general health check
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: node scripts/health/nightly-health.js
+
+      - name: Final result
+        run: |
+          echo "========================================"
+          echo "🎉 TUTTI I TEST SONO STATI SUPERATI"
+          echo "========================================"

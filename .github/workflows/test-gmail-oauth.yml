@@ -1,0 +1,46 @@
+name: Test Gmail OAuth
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-gmail-oauth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Verify OAuth secrets
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          test -n "$CLIENT_ID" || (echo "❌ CLIENT_ID mancante" && exit 1)
+          test -n "$CLIENT_SECRET" || (echo "❌ CLIENT_SECRET mancante" && exit 1)
+          echo "✅ CLIENT_ID presente"
+          echo "✅ CLIENT_SECRET presente"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Verify Gmail OAuth source
+        working-directory: functions
+        run: |
+          node --check src/gmail-oauth.js
+          node --check src/gmail-api-engine.js
+          node --check src/mail-admin-actions.js
+          node --check src/mail-matcher.js
+          node --check src/index.js
+          echo "✅ Codice Gmail OAuth valido"
+
+      - name: Required OAuth redirect
+        run: |
+          echo "Redirect URI attesa:"
+          echo "https://us-central1-consulenza-credipass.cloudfunctions.net/gmailOAuthCallback"
