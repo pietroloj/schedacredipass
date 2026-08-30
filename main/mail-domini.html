@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Domini banca - Mail Engine</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#eef2f6;margin:0;padding:25px;color:#26323c}
+.wrap{max-width:1050px;margin:auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+h1{color:#002d72;margin-top:0}
+.card{border:1px solid #e3e8ee;border-left:5px solid #C99700;border-radius:9px;padding:14px;margin:10px 0}
+input{padding:9px;border:1px solid #ced4da;border-radius:7px;min-width:220px}
+button{border:0;border-radius:7px;padding:10px 13px;background:#002d72;color:#fff;font-weight:bold;cursor:pointer}
+.small{font-size:12px;color:#64717c}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Domini banca da verificare</h1>
+<p class="small">Quando il Mail Engine incontra un dominio non censito ma una mail sembra appartenere a una pratica, lo propone qui. La conferma viene salvata per sempre nel catalogo condiviso.</p>
+<div id="list">Caricamento...</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCg4lKxQmhhrEwzAhXkT3jkequB8vbBJ4",
+  authDomain: "consulenza-credipass.firebaseapp.com",
+  projectId: "consulenza-credipass",
+  storageBucket: "consulenza-credipass.firebasestorage.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const fn = firebase.app().functions("us-central1");
+
+function esc(v){
+  return String(v||"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+async function load(){
+  const box=document.getElementById("list");
+  const snap=await db.collection("mail_domini_da_verificare")
+    .where("stato","==","pending")
+    .get();
+
+  if(snap.empty){
+    box.innerHTML="<div class='small'>Nessun dominio da verificare.</div>";
+    return;
+  }
+
+  box.innerHTML=snap.docs.map(doc=>{
+    const d=doc.data()||{};
+    return `<div class="card">
+      <div><strong>${esc(d.dominio)}</strong></div>
+      <div class="small" style="margin-top:4px">Ultimo oggetto: ${esc(d.ultimoOggetto||"-")}</div>
+      <div class="small">Pratica suggerita: ${esc(d.praticaSuggerita||"-")}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <input id="key_${doc.id}" placeholder="bancaKey es. mediobanca_premier">
+        <input id="name_${doc.id}" placeholder="Nome banca">
+        <button onclick="approve('${doc.id}','${esc(d.dominio)}')">CONFERMA DOMINIO</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function approve(docId,domain){
+  const key=document.getElementById(`key_${docId}`).value.trim();
+  const name=document.getElementById(`name_${docId}`).value.trim();
+  if(!key||!name){
+    alert("Inserisci bancaKey e Nome banca.");
+    return;
+  }
+
+  const callable=fn.httpsCallable("confermaDominioBanca");
+  await callable({
+    dominio: domain,
+    bancaKey: key,
+    bancaNome: name
+  });
+
+  await load();
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(!user){
+    document.getElementById("list").innerHTML="Accesso Firebase richiesto.";
+    return;
+  }
+  load().catch(err=>{
+    document.getElementById("list").innerHTML=`Errore: ${esc(err.message)}`;
+  });
+});
+</script>
+</body>
+</html>

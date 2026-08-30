@@ -89,6 +89,55 @@ service cloud.firestore {
 
 
     /* ======================================================
+       GMAIL OAUTH
+
+       I refresh token non devono MAI essere accessibili dal browser.
+       Tutta la gestione avviene tramite Cloud Functions / Admin SDK.
+       ====================================================== */
+
+    match /gmail_connections/{uid} {
+      allow read, write: if false;
+    }
+
+    match /gmail_oauth_states/{stateId} {
+      allow read, write: if false;
+    }
+
+
+    /* ======================================================
+       MAIL ENGINE
+
+       Catalogo domini e code operative.
+       Le email abbinate alle pratiche sono subcollection di pratiche_mutuo
+       e vengono scritte dal backend Admin SDK.
+       ====================================================== */
+
+    match /mail_banche/{bancaId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /mail_domini_da_verificare/{domainId} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if false;
+    }
+
+    match /mail_da_associare/{mailId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    /*
+     * La dashboard può leggere le email della pratica.
+     * La scrittura resta esclusivamente al Mail Engine (Admin SDK).
+     */
+    match /pratiche_mutuo/{praticaId}/email_timeline/{emailId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+
+    /* ======================================================
        CONSULENTI
 
        - ogni consulente può leggere il proprio profilo

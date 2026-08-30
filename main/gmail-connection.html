@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collegamento Gmail - Credipass</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  background:#eef2f6;
+  font-family:Arial,Helvetica,sans-serif;
+  color:#27313a
+}
+.wrap{
+  max-width:760px;
+  margin:50px auto;
+  padding:0 18px
+}
+.card{
+  background:#fff;
+  border-radius:16px;
+  border:1px solid #e2e7ed;
+  overflow:hidden;
+  box-shadow:0 12px 36px rgba(0,0,0,.08)
+}
+.head{
+  background:#002d72;
+  color:#fff;
+  padding:27px 30px;
+  border-bottom:5px solid #C99700
+}
+.body{
+  padding:26px 30px
+}
+.status{
+  padding:15px;
+  border-radius:10px;
+  background:#f7f9fc;
+  border:1px solid #e2e7ed;
+  margin-bottom:18px
+}
+.btn{
+  display:inline-block;
+  border:0;
+  border-radius:8px;
+  padding:12px 17px;
+  background:#002d72;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  margin:4px
+}
+.btn.red{background:#b42318}
+.btn.gray{background:#68737e}
+.small{
+  font-size:12px;
+  line-height:1.6;
+  color:#67727d
+}
+.ok{color:#198754;font-weight:bold}
+.ko{color:#b42318;font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+<div class="card">
+
+<div class="head">
+  <div style="font-size:11px;color:#C99700;font-weight:bold;text-transform:uppercase">
+    Comunicazioni pratica
+  </div>
+  <div style="font-size:24px;font-weight:bold;margin-top:6px">
+    Collegamento Gmail
+  </div>
+</div>
+
+<div class="body">
+
+  <div id="status" class="status">
+    Verifica collegamento...
+  </div>
+
+  <div>
+    <button id="connectBtn" class="btn" onclick="connectGmail()">
+      COLLEGA GMAIL
+    </button>
+
+    <button id="syncBtn" class="btn gray" onclick="syncNow()" style="display:none">
+      SINCRONIZZA ORA
+    </button>
+
+    <button id="disconnectBtn" class="btn red" onclick="disconnectGmail()" style="display:none">
+      SCOLLEGA
+    </button>
+  </div>
+
+  <div class="small" style="margin-top:18px">
+    Ogni consulente collega personalmente la propria casella Google una sola volta.
+    Il gestionale non salva la password Gmail e non richiede Password per le app.
+    Viene conservato esclusivamente il token OAuth necessario alla sincronizzazione automatica.
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCg4lKxQmhhrEwzAhXkT3jkequB8vbBJ4",
+  authDomain: "consulenza-credipass.firebaseapp.com",
+  projectId: "consulenza-credipass",
+  storageBucket: "consulenza-credipass.firebasestorage.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const fn =
+  firebase
+    .app()
+    .functions(
+      "us-central1"
+    );
+
+function esc(v){
+  return String(v||"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+async function refreshStatus(){
+
+  const box =
+    document.getElementById(
+      "status"
+    );
+
+  try{
+
+    const callable =
+      fn.httpsCallable(
+        "statoCollegamentoGmail"
+      );
+
+    const r =
+      await callable();
+
+    const d =
+      r.data
+      ||
+      {};
+
+    if(d.connected){
+
+      box.innerHTML =
+        `<div class="ok">● Gmail collegata</div>
+         <div style="margin-top:6px">${esc(d.email||"")}</div>
+         <div class="small" style="margin-top:7px">
+           Ultimo sync: ${esc(d.lastSyncAt||"Non ancora eseguito")}
+           ${d.lastSyncOk === false ? "<br><span class='ko'>Ultimo sync con errore</span>" : ""}
+         </div>`;
+
+      document.getElementById("connectBtn").style.display="none";
+      document.getElementById("syncBtn").style.display="inline-block";
+      document.getElementById("disconnectBtn").style.display="inline-block";
+
+    }
+    else{
+
+      box.innerHTML =
+        `<div class="ko">● Gmail non collegata</div>
+         <div class="small" style="margin-top:6px">
+           Collega la tua casella per acquisire automaticamente nella timeline
+           le comunicazioni relative alle tue pratiche.
+         </div>`;
+
+      document.getElementById("connectBtn").style.display="inline-block";
+      document.getElementById("syncBtn").style.display="none";
+      document.getElementById("disconnectBtn").style.display="none";
+
+    }
+
+  }
+  catch(error){
+
+    box.innerHTML =
+      `<span class="ko">${esc(error.message||"Errore")}</span>`;
+
+  }
+
+}
+
+async function connectGmail(){
+
+  const callable =
+    fn.httpsCallable(
+      "creaCollegamentoGmail"
+    );
+
+  const result =
+    await callable();
+
+  const url =
+    result.data
+      ?.url;
+
+  if(!url){
+    alert("URL OAuth non ricevuto.");
+    return;
+  }
+
+  window.open(
+    url,
+    "_blank",
+    "width=650,height=780"
+  );
+
+  /*
+   * Ricontrolla lo stato dopo il ritorno OAuth.
+   */
+  let tries=0;
+
+  const timer=setInterval(
+    async ()=>{
+      tries++;
+      await refreshStatus();
+
+      if(
+        document.getElementById("disconnectBtn").style.display !== "none"
+        ||
+        tries >= 30
+      ){
+        clearInterval(timer);
+      }
+    },
+    2000
+  );
+
+}
+
+async function syncNow(){
+
+  const button =
+    document.getElementById(
+      "syncBtn"
+    );
+
+  button.disabled=true;
+  button.textContent="SINCRONIZZAZIONE...";
+
+  try{
+
+    const callable =
+      fn.httpsCallable(
+        "sincronizzaGmailPersonale"
+      );
+
+    const result =
+      await callable();
+
+    alert(
+      `Sincronizzazione completata.\nEmail analizzate: ${result.data?.processed || 0}\nAssociate: ${result.data?.matched || 0}`
+    );
+
+    await refreshStatus();
+
+  }
+  catch(error){
+
+    alert(
+      error.message
+      ||
+      "Errore sincronizzazione."
+    );
+
+  }
+  finally{
+
+    button.disabled=false;
+    button.textContent="SINCRONIZZA ORA";
+
+  }
+
+}
+
+async function disconnectGmail(){
+
+  if(
+    !confirm(
+      "Scollegare Gmail dal gestionale?"
+    )
+  ){
+    return;
+  }
+
+  const callable =
+    fn.httpsCallable(
+      "scollegaGmail"
+    );
+
+  await callable();
+
+  await refreshStatus();
+
+}
+
+firebase.auth().onAuthStateChanged(
+  user => {
+
+    if(!user){
+
+      document.getElementById("status").innerHTML=
+        '<span class="ko">Effettua prima il login al gestionale.</span>';
+
+      return;
+    }
+
+    refreshStatus();
+
+  }
+);
+</script>
+
+</body>
+</html>

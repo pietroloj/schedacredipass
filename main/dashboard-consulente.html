@@ -1072,6 +1072,100 @@ document.addEventListener(
         margin-top: 5px;
     }
 
+
+    .timeline-email-btn {
+        margin-top: 7px;
+        border: 0;
+        border-radius: 7px;
+        padding: 7px 10px;
+        background: #002d72;
+        color: #fff;
+        font-family: 'Poppins', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    #emailTimelineModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        background: rgba(0,0,0,.58);
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+    }
+
+    .email-timeline-modal-card {
+        width: min(760px, 96vw);
+        max-height: 88vh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+
+    .email-timeline-modal-head {
+        background: #002d72;
+        color: #fff;
+        padding: 18px 20px;
+        border-bottom: 4px solid #C99700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .email-timeline-modal-body {
+        padding: 20px;
+    }
+
+    .email-meta-row {
+        display: grid;
+        grid-template-columns: 95px 1fr;
+        gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px solid #edf0f3;
+        font-size: 11px;
+    }
+
+    .email-meta-label {
+        color: #7d8790;
+        font-weight: 700;
+    }
+
+    .email-message-box {
+        margin-top: 16px;
+        white-space: pre-wrap;
+        background: #f8fafc;
+        border: 1px solid #e3e8ee;
+        border-radius: 9px;
+        padding: 14px;
+        color: #37424b;
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+    .email-modal-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+
+    .email-modal-action {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 13px;
+        background: #002d72;
+        color: #fff;
+        font-family: 'Poppins', sans-serif;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
     /* ===== MODAL PROMEMORIA STATO ===== */
     #statusReminderModal {
         display: none;
@@ -2386,6 +2480,29 @@ Accesso in sola consultazione: non è possibile caricare, eliminare o scaricare 
 </td>
 </tr>
 </table>
+
+
+<div id="emailTimelineModal">
+    <div class="email-timeline-modal-card">
+        <div class="email-timeline-modal-head">
+            <div>
+                <div style="font-size:9px;color:#C99700;font-weight:800;text-transform:uppercase;">Corrispondenza pratica</div>
+                <div id="emailTimelineModalTitle" style="font-size:16px;font-weight:800;margin-top:3px;">Email</div>
+            </div>
+
+            <button
+                type="button"
+                onclick="chiudiEmailTimelineModal()"
+                style="border:0;background:transparent;color:#fff;font-size:27px;cursor:pointer;"
+            >&times;</button>
+        </div>
+
+        <div id="emailTimelineModalBody" class="email-timeline-modal-body">
+            Caricamento...
+        </div>
+    </div>
+</div>
+
 
 </body>
 </html>`;
@@ -3792,6 +3909,266 @@ Cordiali saluti`
         );
     }
 
+
+    function chiudiEmailTimelineModal() {
+        const modal =
+            document.getElementById(
+                "emailTimelineModal"
+            );
+
+        if (modal) {
+            modal.style.display =
+                "none";
+        }
+    }
+
+
+    function emailListText(value) {
+        return Array.isArray(value)
+            ? value.join(", ")
+            : String(value || "");
+    }
+
+
+    async function apriEmailTimeline(emailDocId) {
+        if (
+            !emailDocId
+            ||
+            !idCliente
+        ) {
+            return;
+        }
+
+        const modal =
+            document.getElementById(
+                "emailTimelineModal"
+            );
+
+        const title =
+            document.getElementById(
+                "emailTimelineModalTitle"
+            );
+
+        const body =
+            document.getElementById(
+                "emailTimelineModalBody"
+            );
+
+        if (
+            !modal
+            ||
+            !body
+        ) {
+            return;
+        }
+
+        modal.style.display =
+            "flex";
+
+        body.innerHTML =
+            "Caricamento email...";
+
+        try {
+            const snap =
+                await db
+                    .collection(
+                        "pratiche_mutuo"
+                    )
+                    .doc(
+                        idCliente
+                    )
+                    .collection(
+                        "email_timeline"
+                    )
+                    .doc(
+                        emailDocId
+                    )
+                    .get();
+
+            if (!snap.exists) {
+                throw new Error(
+                    "Email non trovata."
+                );
+            }
+
+            const d =
+                snap.data()
+                ||
+                {};
+
+            const mittente =
+                emailListText(
+                    d.mittente
+                );
+
+            const destinatari =
+                emailListText(
+                    d.destinatari
+                );
+
+            const direzione =
+                d.direzione
+                ||
+                "";
+
+            const replyAddress =
+                direzione ===
+                "ricevuta"
+                    ? (
+                        Array.isArray(d.replyTo)
+                        &&
+                        d.replyTo[0]
+                            ? d.replyTo[0]
+                            : (
+                                Array.isArray(d.mittente)
+                                &&
+                                d.mittente[0]
+                                    ? d.mittente[0]
+                                    : ""
+                              )
+                      )
+                    : (
+                        Array.isArray(d.destinatari)
+                        &&
+                        d.destinatari[0]
+                            ? d.destinatari[0]
+                            : ""
+                      );
+
+            const subject =
+                String(
+                    d.oggetto
+                    ||
+                    ""
+                );
+
+            if (title) {
+                title.textContent =
+                    subject
+                    ||
+                    "Email";
+            }
+
+            const dataEmail =
+                d.data
+                    ?.toDate
+                    ? d.data
+                        .toDate()
+                        .toLocaleString(
+                            "it-IT"
+                        )
+                    : "";
+
+            const attachments =
+                Array.isArray(
+                    d.allegati
+                )
+                    ? d.allegati
+                    : [];
+
+            body.innerHTML = `
+                <div class="email-meta-row">
+                    <div class="email-meta-label">Direzione</div>
+                    <div>${escapeHtml(direzione || "-")}</div>
+                </div>
+
+                <div class="email-meta-row">
+                    <div class="email-meta-label">Data</div>
+                    <div>${escapeHtml(dataEmail || "-")}</div>
+                </div>
+
+                <div class="email-meta-row">
+                    <div class="email-meta-label">Da</div>
+                    <div>${escapeHtml(mittente || "-")}</div>
+                </div>
+
+                <div class="email-meta-row">
+                    <div class="email-meta-label">A</div>
+                    <div>${escapeHtml(destinatari || "-")}</div>
+                </div>
+
+                <div class="email-meta-row">
+                    <div class="email-meta-label">Banca</div>
+                    <div>${escapeHtml(d.banca || "-")}</div>
+                </div>
+
+                <div class="email-meta-row">
+                    <div class="email-meta-label">Pratica rilevata</div>
+                    <div>${escapeHtml(d.numeroPraticaRilevato || "-")}</div>
+                </div>
+
+                <div class="email-message-box">${escapeHtml(d.testo || "(nessun testo disponibile)")}</div>
+
+                ${
+                    attachments.length
+                        ? `
+                            <div style="margin-top:14px;font-size:10px;font-weight:800;color:#002d72;">
+                                ALLEGATI
+                            </div>
+                            <div style="margin-top:6px;font-size:10px;color:#58636c;">
+                                ${attachments
+                                    .map(a => `📎 ${escapeHtml(a.nome || "Allegato")}`)
+                                    .join("<br>")}
+                            </div>
+                          `
+                        : ""
+                }
+
+                <div class="email-modal-actions">
+                    ${
+                        replyAddress
+                            ? `
+                                <button
+                                    type="button"
+                                    class="email-modal-action"
+                                    onclick='apriRispostaClientPosta(${JSON.stringify(replyAddress)}, ${JSON.stringify(subject)})'
+                                >
+                                    <i class="fas fa-reply"></i>
+                                    RISPONDI
+                                </button>
+                              `
+                            : ""
+                    }
+
+                    <button
+                        type="button"
+                        class="email-modal-action"
+                        style="background:#6c757d;"
+                        onclick="chiudiEmailTimelineModal()"
+                    >
+                        CHIUDI
+                    </button>
+                </div>
+
+                <div style="margin-top:10px;color:#8a949e;font-size:9px;line-height:1.5;">
+                    Il pulsante Rispondi apre il gestore di posta associato ai link mailto sul dispositivo.
+                    Dopo l'invio, il Mail Engine leggerà anche la cartella Posta inviata e registrerà la risposta nella timeline al prossimo sincronismo.
+                </div>
+            `;
+        }
+        catch(error) {
+            body.innerHTML =
+                `<div style="color:#b42318;font-size:11px;">${escapeHtml(error?.message || "Errore apertura email")}</div>`;
+        }
+    }
+
+
+    function apriRispostaClientPosta(address, originalSubject) {
+        const subject =
+            /^re:/i.test(
+                String(originalSubject || "")
+            )
+                ? String(originalSubject || "")
+                : `Re: ${String(originalSubject || "")}`;
+
+        const href =
+            `mailto:${encodeURIComponent(address || "")}?subject=${encodeURIComponent(subject)}`;
+
+        window.location.href =
+            href;
+    }
+
+
     async function caricaTimelineInternaPratica() {
         const box =
             document.getElementById(
@@ -3903,6 +4280,27 @@ Cordiali saluti`
                                 ""
                             )}
                         </div>
+
+                        ${
+                            (
+                                item.tipo === "email_ricevuta"
+                                ||
+                                item.tipo === "email_inviata"
+                            )
+                            &&
+                            item.meta?.email_doc_id
+                                ? `
+                                    <button
+                                        type="button"
+                                        class="timeline-email-btn"
+                                        onclick='apriEmailTimeline(${JSON.stringify(item.meta.email_doc_id)})'
+                                    >
+                                        <i class="fas fa-envelope-open-text"></i>
+                                        APRI EMAIL
+                                    </button>
+                                  `
+                                : ""
+                        }
                     </div>`
                 )
                 .join("");

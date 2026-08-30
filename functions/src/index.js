@@ -3253,3 +3253,60 @@ const {
 exports.controllaReminderDocumenti =
   controllaReminderDocumenti;
 
+
+/*
+|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| GMAIL API + OAUTH PERSONALE MULTIUTENTE
+|--------------------------------------------------------------------------
+*/
+
+const {
+  creaCollegamentoGmail,
+  gmailOAuthCallback,
+  statoCollegamentoGmail,
+  scollegaGmail,
+} = require("./gmail-oauth");
+
+const {
+  sincronizzaGmailPratiche,
+  sincronizzaGmailPersonale,
+} = require("./gmail-api-engine");
+
+
+exports.creaCollegamentoGmail =
+  creaCollegamentoGmail;
+
+exports.gmailOAuthCallback =
+  gmailOAuthCallback;
+
+exports.statoCollegamentoGmail =
+  statoCollegamentoGmail;
+
+exports.scollegaGmail =
+  scollegaGmail;
+
+exports.sincronizzaGmailPratiche =
+  sincronizzaGmailPratiche;
+
+exports.sincronizzaGmailPersonale =
+  sincronizzaGmailPersonale;
+
+
+/*
+|--------------------------------------------------------------------------
+| GESTIONE DOMINI BANCA / ASSOCIAZIONI MANUALI
+|--------------------------------------------------------------------------
+*/
+
+const {
+  confermaDominioBanca,
+  associaEmailAPratica,
+} = require("./mail-admin-actions");
+
+
+exports.confermaDominioBanca =
+  confermaDominioBanca;
+
+exports.associaEmailAPratica =
+  associaEmailAPratica;
