@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -6090,6 +6091,50 @@ function getUltimiDueTrimestri(referenceDate = new Date()) {
    CHECKLIST DINAMICA
    ========================================================== */
 
+
+function secondoRichiedenteConfigurato() {
+
+    const nome =
+        V(
+            'cliente2_nome',
+            ''
+        ).trim();
+
+    const cognome =
+        V(
+            'cliente2_cognome',
+            ''
+        ).trim();
+
+    const cf =
+        V(
+            'cliente2_cf',
+            ''
+        )
+        .replace(
+            /[^A-Z0-9]/gi,
+            ''
+        )
+        .trim();
+
+    /*
+     * R2 esiste solo se è realmente configurato.
+     * Non basta che nella pagina esistano i campi R2 o che abbiano valori
+     * di default/storici: servono nome+cognome oppure un CF valorizzato.
+     */
+    return Boolean(
+        (
+            nome
+            &&
+            cognome
+        )
+        ||
+        cf.length >= 11
+    );
+
+}
+
+
 function getApplicantSnapshot(numero) {
 
     const hasApplicant =
@@ -6097,7 +6142,7 @@ function getApplicantSnapshot(numero) {
             ?
             nomeCompleto(1) !== ''
             :
-            nomeCompleto(2) !== '';
+            secondoRichiedenteConfigurato();
 
     if (!hasApplicant) {
         return null;
@@ -9624,16 +9669,30 @@ function segnalatoreDocumentLabel(codice) {
 
 function getSegnalatoreDocumentiRichiesti() {
 
+    const hasR2 =
+        secondoRichiedenteConfigurato();
+
     /*
-     * IMPORTANTISSIMO:
-     * usiamo la STESSA funzione che genera gli slot dell'Area Cliente.
-     * Quindi la mail non mostra documenti "potenzialmente elaborabili":
-     * mostra solo quelli realmente richiesti dalla pratica corrente.
-     *
-     * Esempio: se R2 non esiste, getUploadDocumentCodes() NON genera
-     * ci2 / ts2 / buste paga R2 / CU R2 / estratti R2.
+     * Usiamo la stessa lista dell'Area Cliente e applichiamo anche
+     * un filtro difensivo R2. Quindi eventuali dati storici o codici
+     * rimasti da una vecchia configurazione non possono far comparire
+     * documenti del secondo richiedente quando R2 non esiste.
      */
     return getUploadDocumentCodes()
+        .filter(codice => {
+
+            if (hasR2) {
+                return true;
+            }
+
+            return !/2$/.test(
+                String(
+                    codice ||
+                    ''
+                )
+            );
+
+        })
         .map(codice => ({
             codice,
             label:
@@ -10955,8 +11014,15 @@ function buildUploadAreaUrl() {
         ||
         'Cliente';
 
+    const hasR2 =
+        secondoRichiedenteConfigurato();
+
     const nome2 =
-        nomeCompleto(2);
+        hasR2
+            ?
+            nomeCompleto(2)
+            :
+            '';
 
     let idPratica =
         window.slugifyCredipassPart(
@@ -10985,6 +11051,17 @@ function buildUploadAreaUrl() {
     params.set(
         'nome',
         nome1
+    );
+
+    /*
+     * Flag esplicito: upload.html non deve dedurre R2 da vecchi parametri
+     * o da un catalogo statico di documenti.
+     */
+    params.set(
+        'r2',
+        hasR2
+            ? '1'
+            : '0'
     );
 
     if (nome2) {
