@@ -1,0 +1,12 @@
+{
+  "name": "credipass-gmail-connection-test",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": "24"
+  },
+  "dependencies": {
+    "imapflow": "^1.0.195",
+    "nodemailer": "^7.0.6"
+  }
+}
