@@ -1404,6 +1404,30 @@ function bloccaModificaSegnalatore() {
 const clienteRaw = urlParams.get("nome") || urlParams.get("cliente") || "Cliente";
 const cliente2Raw = urlParams.get("cliente2") || "";
 
+const r2Param =
+    String(
+        urlParams.get("r2")
+        ||
+        ""
+    )
+    .trim();
+
+const hasSecondApplicant =
+    r2Param === "1"
+        ?
+        true
+        :
+        r2Param === "0"
+            ?
+            false
+            :
+            Boolean(
+                String(
+                    cliente2Raw ||
+                    ""
+                ).trim()
+            );
+
 function slugifyPraticaPart(text) {
     return String(text || "")
         .normalize("NFD")
@@ -2257,13 +2281,62 @@ async function registraAttivitaDaUpload({
 
 
 const docsStr = urlParams.get("docs") || "";
-const docsRichiesti = docsStr ? docsStr.split(",").map(x => x.trim()).filter(Boolean) : [];
+
+const docsRichiestiRaw =
+    docsStr
+        ?
+        docsStr
+            .split(",")
+            .map(x => x.trim())
+            .filter(Boolean)
+        :
+        [];
+
+/*
+ * Sicurezza logica:
+ * se la pratica dichiara r2=0, nessun documento con suffisso 2 può
+ * essere mostrato, anche se un vecchio link contiene accidentalmente
+ * ci2/cud2/bustepaga2/ec2/mov2.
+ */
+const docsRichiesti =
+    docsRichiestiRaw.filter(
+        codice =>
+            hasSecondApplicant
+            ||
+            !/2$/.test(
+                String(
+                    codice ||
+                    ""
+                )
+            )
+    );
 
 document.getElementById("welcome-text").innerHTML =
     `Gentile <strong>${escapeHtml(clienteRaw)}</strong>, di seguito l'elenco dei documenti necessari.`;
 
-if (cliente2Raw) {
+if (hasSecondApplicant && cliente2Raw) {
     document.getElementById("nome_richiedente2").innerText = `- ${cliente2Raw}`;
+}
+else {
+    const secR2 =
+        document.getElementById(
+            "sec_richiedente2"
+        );
+
+    const docsR2 =
+        document.getElementById(
+            "docs_richiedente2"
+        );
+
+    if (secR2) {
+        secR2.style.display =
+            "none";
+    }
+
+    if (docsR2) {
+        docsR2.style.display =
+            "none";
+    }
 }
 
 const documenti = [
@@ -2321,6 +2394,15 @@ const mappaDocumentiAI = {};
 function renderDocumenti() {
 
     documenti.forEach(gruppo => {
+
+        if (
+            gruppo.section ===
+            "richiedente2"
+            &&
+            !hasSecondApplicant
+        ) {
+            return;
+        }
 
         const container =
             document.getElementById(
@@ -2495,8 +2577,26 @@ if (docsRichiesti.length > 0) {
 
             const idSezione = rigaDocumento.getAttribute("data-section");
             if (idSezione) {
-                const sezione = document.getElementById(idSezione);
-                if (sezione) sezione.classList.add("show-block");
+
+                if (
+                    idSezione ===
+                    "sec_richiedente2"
+                    &&
+                    !hasSecondApplicant
+                ) {
+                    return;
+                }
+
+                const sezione =
+                    document.getElementById(
+                        idSezione
+                    );
+
+                if (sezione) {
+                    sezione.classList.add(
+                        "show-block"
+                    );
+                }
             }
         }
     });
