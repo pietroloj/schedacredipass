@@ -1,1004 +1,1440 @@
-/**
- * Reminder automatici documentazione + reminder interni pratica.
- *
- * LOGICA DOCUMENTI
- * - il timer parte quando viene richiesta un'integrazione;
- * - reminder cliente ogni 48h finché esistono documenti richiesti mancanti;
- * - vale sia con 0/10 caricati sia con 8/10 caricati;
- * - stato "sospesa" mette in pausa i reminder documentali;
- * - uscendo da "sospesa" il ciclo riparte;
- * - quando i documenti sono completi si arresta.
- *
- * ESCALATION
- * - dopo 7 giorni, se la documentazione è ancora incompleta,
- *   una sola email di assistenza a cliente + Backoffice + consulente.
- *
- * REMINDER INTERNI
- * - quando dashboard salva stato "sospesa" o "attesa_documenti"
- *   con motivo/data, alla data indicata invia una sola email
- *   a Backoffice e consulente.
- */
+const {
+  onSchedule,
+} = require("firebase-functions/v2/scheduler");
 
-const admin = require("firebase-admin");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { logger } = require("firebase-functions");
+const admin =
+  require("firebase-admin");
+
 
 if (!admin.apps.length) {
-    admin.initializeApp();
+  admin.initializeApp();
 }
 
-const db = admin.firestore();
 
-const APP_ORIGIN =
-    "https://consulenza-credipass.it";
+const db =
+  admin.firestore();
 
-const SEND_EMAIL_ENDPOINT =
-    `${APP_ORIGIN}/api/send-email`;
 
-const HOURS_48 =
-    48 * 60 * 60 * 1000;
+const EMAIL_ENDPOINT =
+  process.env.REMINDER_EMAIL_ENDPOINT
+  ||
+  "https://consulenza-credipass.it/api/send-email";
 
-const DAYS_7 =
-    7 * 24 * 60 * 60 * 1000;
 
-const STATE_META = {
-    da_istruire: { step: 0, pct: 12, label: "Da istruire" },
-    istruttoria: { step: 1, pct: 25, label: "Istruttoria" },
-    integrazione_documenti: { step: 1, pct: 30, label: "Integrazione documenti" },
-    attesa_documenti: { step: 1, pct: 30, label: "Attesa documenti" },
-    caricato_banca: { step: 2, pct: 42, label: "Caricato in banca" },
-    valutazione_reddituale: { step: 2, pct: 48, label: "Valutazione reddituale" },
-    delibera_reddituale_ok: { step: 2, pct: 55, label: "Delibera reddituale OK" },
-    delibera_reddituale_ko: { step: 2, pct: 55, label: "Delibera reddituale KO" },
-    attesa_perizia: { step: 3, pct: 60, label: "Attesa perizia" },
-    perizia_in_corso: { step: 3, pct: 67, label: "Perizia in corso" },
-    perizia_ok: { step: 3, pct: 72, label: "Perizia OK" },
-    perizia_ko: { step: 3, pct: 67, label: "Perizia KO" },
-    attesa_documentazione_notarile: { step: 4, pct: 78, label: "Documentazione notarile" },
-    chiamata_atto: { step: 4, pct: 88, label: "Chiamata d'atto" },
-    stipulato: { step: 5, pct: 100, label: "Stipulato" },
-    sospesa: { step: 2, pct: 45, label: "Sospesa" },
-    rinunciata: { step: 1, pct: 25, label: "Rinunciata / KO" }
-};
+const HOUR =
+  60 * 60 * 1000;
 
-function esc(value) {
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+const REMINDER_48H_MS =
+  48 * HOUR;
+
+const HELP_7D_MS =
+  7 * 24 * HOUR;
+
+
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+function asMillis(value) {
+
+  if (!value) {
+    return null;
+  }
+
+  if (
+    typeof value.toMillis ===
+    "function"
+  ) {
+    return value.toMillis();
+  }
+
+  if (
+    typeof value.toDate ===
+    "function"
+  ) {
+    return value
+      .toDate()
+      .getTime();
+  }
+
+  const n =
+    Number(value);
+
+  if (
+    Number.isFinite(n)
+  ) {
+    return n;
+  }
+
+  const parsed =
+    Date.parse(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+
 }
 
-function millis(value) {
-    if (!value) return 0;
 
-    if (
-        typeof value.toMillis ===
-        "function"
-    ) {
-        return value.toMillis();
-    }
+function uniqueEmails(values = []) {
 
-    const d =
-        new Date(value);
-
-    return Number.isFinite(
-        d.getTime()
-    )
-        ? d.getTime()
-        : 0;
-}
-
-function stateMeta(stato) {
-    return STATE_META[stato]
-        ||
-        STATE_META.integrazione_documenti;
-}
-
-function nomePratica(d = {}, idCliente = "") {
-    const names = [
-        d.cliente_nome_completo || d.nomeCliente || "",
-        d.cliente2_nome_completo || d.nomeCliente2 || ""
-    ]
-        .map(x => String(x || "").trim())
-        .filter(Boolean);
-
-    return names.length
-        ? names.join(" · ")
-        : String(idCliente || "")
-            .replace(/[_-]+/g, " ")
-            .replace(/\s+/g, " ")
+  return Array.from(
+    new Set(
+      values
+        .flatMap(
+          value =>
+            Array.isArray(value)
+              ? value
+              : [value]
+        )
+        .map(
+          value =>
+            String(
+              value ||
+              ""
+            )
             .trim()
-            .toUpperCase();
+            .toLowerCase()
+        )
+        .filter(
+          value =>
+            value
+            &&
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+              .test(value)
+        )
+    )
+  );
+
 }
 
-function fasiHtml(step) {
-    const labels = [
-        "Richiesta",
-        "Istruttoria",
-        "Banca / Delibera",
-        "Perizia",
-        "Notaio / Atto",
-        "Stipula"
-    ];
 
-    return `
-    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-        ${labels.map((label, index) => {
-            let bg = "#e3e8ee";
-            let fg = "#7d8790";
-            let tc = "#8a949e";
-            let val = String(index + 1);
+function safeHtml(value) {
 
-            if (index < step) {
-                bg = "#002d72";
-                fg = "#ffffff";
-                tc = "#002d72";
-                val = "✓";
-            }
-            else if (index === step) {
-                bg = "#C99700";
-                fg = "#ffffff";
-                tc = "#8a6800";
-            }
+  return String(
+    value ??
+    ""
+  )
+  .replace(
+    /&/g,
+    "&amp;"
+  )
+  .replace(
+    /</g,
+    "&lt;"
+  )
+  .replace(
+    />/g,
+    "&gt;"
+  )
+  .replace(
+    /"/g,
+    "&quot;"
+  )
+  .replace(
+    /'/g,
+    "&#039;"
+  );
 
-            return `
-            <td align="center" width="16.66%" valign="top">
-                <div style="
-                    width:28px;height:28px;line-height:28px;border-radius:50%;
-                    background:${bg};color:${fg};font-size:11px;font-weight:bold;margin:auto;
-                ">${val}</div>
-                <div style="
-                    font-size:8px;color:${tc};font-weight:bold;margin-top:6px;line-height:1.2;
-                ">${esc(label.toUpperCase())}</div>
-            </td>`;
-        }).join("")}
-        </tr>
-    </table>`;
 }
 
-function documentiMancanti(d = {}) {
-    const richiesti =
-        Array.isArray(d.elencoDocRichiesti)
-            ? d.elencoDocRichiesti
-            : [];
 
-    const versioni =
-        Array.isArray(d.documenti_versione_richiesta)
-            ? d.documenti_versione_richiesta
-            : [];
+function normalizeCode(value) {
 
-    return richiesti.filter(code => {
-        const raw =
-            String(code || "")
-                .replace(/^doc_/, "");
+  return String(
+    value ||
+    ""
+  )
+  .trim()
+  .replace(
+    /^doc_/,
+    ""
+  );
 
-        const presente =
-            d[`doc_${raw}`] === true
-            ||
-            d[raw] === true;
-
-        return (
-            !presente
-            ||
-            versioni.includes(raw)
-        );
-    });
 }
 
-function allComplete(d = {}) {
-    return (
-        Array.isArray(d.elencoDocRichiesti)
-        &&
-        d.elencoDocRichiesti.length > 0
-        &&
-        documentiMancanti(d).length === 0
+
+function documentLabel(code) {
+
+  const labels = {
+    ci1:
+      "Carta d'Identità R1",
+    ci2:
+      "Carta d'Identità R2",
+    ts1:
+      "Tessera Sanitaria / Codice Fiscale R1",
+    ts2:
+      "Tessera Sanitaria / Codice Fiscale R2",
+    residenza1:
+      "Certificato Cumulativo",
+    matrimonio:
+      "Atto / Estratto di matrimonio",
+    separazione:
+      "Documentazione separazione",
+    divorzio:
+      "Sentenza di divorzio",
+    mantenimento:
+      "Documentazione mantenimento",
+
+    bustepaga1:
+      "Ultime 2 Buste Paga R1",
+    bustepaga2:
+      "Ultime 2 Buste Paga R2",
+    cud1:
+      "Certificazione Unica R1",
+    cud2:
+      "Certificazione Unica R2",
+    contratto:
+      "Contratto di Lavoro",
+    contratto1:
+      "Contratto di Lavoro R1",
+    contratto2:
+      "Contratto di Lavoro R2",
+    unici1:
+      "Modello Redditi R1",
+    unici2:
+      "Modello Redditi R2",
+    ricevute1:
+      "Ricevuta dichiarazione R1",
+    ricevute2:
+      "Ricevuta dichiarazione R2",
+    f241:
+      "F24 R1",
+    f242:
+      "F24 R2",
+    visura1:
+      "Visura Camerale R1",
+    visura2:
+      "Visura Camerale R2",
+
+    ec1:
+      "Estratto Conto R1",
+    ec2:
+      "Estratto Conto R2",
+    mov1:
+      "Lista Movimenti R1",
+    mov2:
+      "Lista Movimenti R2",
+
+    locazioni:
+      "Contratti di locazione",
+    redditi_locazione:
+      "Redditi da locazione",
+    accrediti_locazione:
+      "Accrediti canoni di locazione",
+
+    atto:
+      "Atto di provenienza",
+    planimetria:
+      "Planimetria catastale",
+    visura_catastale:
+      "Visura catastale",
+    visuracat:
+      "Visura catastale",
+    titoli_edilizi:
+      "Titoli edilizi",
+    agibilita:
+      "Agibilità",
+    preliminare:
+      "Preliminare / Proposta",
+    computo_metrico:
+      "Computo metrico",
+
+    mutuo_pre:
+      "Documentazione mutuo in essere",
+    prestiti:
+      "Contratti finanziamenti",
+    conteggi_estintivi:
+      "Conteggi estintivi",
+    ctc:
+      "CTC online",
+  };
+
+  return (
+    labels[
+      normalizeCode(code)
+    ]
+    ||
+    normalizeCode(code)
+      .replace(
+        /_/g,
+        " "
+      )
+      .replace(
+        /\b\w/g,
+        c =>
+          c.toUpperCase()
+      )
+  );
+
+}
+
+
+function getRequiredCodes(data = {}) {
+
+  const source =
+    data
+      .richiestaIntegrazioneAttiva ===
+      true
+      ?
+      data
+        .elencoDocRichiesti
+      :
+      data
+        .documenti_richiesti_portale;
+
+  return Array.from(
+    new Set(
+      (
+        Array.isArray(source)
+          ?
+          source
+          :
+          []
+      )
+      .map(
+        normalizeCode
+      )
+      .filter(Boolean)
+    )
+  );
+
+}
+
+
+function isDocumentPresent(
+  data,
+  code
+) {
+
+  const raw =
+    normalizeCode(code);
+
+  return (
+    data[
+      `doc_${raw}`
+    ] ===
+      true
+    ||
+    data[
+      raw
+    ] ===
+      true
+  );
+
+}
+
+
+function getMissingCodes(
+  data = {}
+) {
+
+  const required =
+    getRequiredCodes(
+      data
     );
+
+  const versionRequests =
+    new Set(
+      (
+        Array.isArray(
+          data
+            .documenti_versione_richiesta
+        )
+          ?
+          data
+            .documenti_versione_richiesta
+          :
+          []
+      )
+      .map(
+        normalizeCode
+      )
+  );
+
+  return required
+    .filter(
+      code =>
+        !isDocumentPresent(
+          data,
+          code
+        )
+        ||
+        versionRequests
+          .has(
+            code
+          )
+    );
+
 }
 
-function backofficeEmail(d = {}) {
+
+function clientEmails(data = {}) {
+
+  return uniqueEmails([
+    data
+      .cliente_email,
+    data
+      .cliente2_email,
+  ]);
+
+}
+
+
+function internalEmails(data = {}) {
+
+  return uniqueEmails([
+    data
+      .referente_email,
+
+    data
+      .consulente_email,
+
+    data
+      .backoffice_email,
+
+    data
+      .email_backoffice,
+
+    data
+      .emailBO,
+  ]);
+
+}
+
+
+function practiceLabel(
+  id,
+  data = {}
+) {
+
+  return (
+    data
+      .nomeCliente
+    ||
+    data
+      .cliente_nome_completo
+    ||
+    data
+      .cliente_nome
+    ||
+    id
+  );
+
+}
+
+
+function clientAreaUrl(
+  id,
+  data = {}
+) {
+
+  if (
+    data
+      .area_cliente_url
+  ) {
     return String(
-        d.email_backoffice
-        ||
-        d.campo_email_auto
-        ||
-        d.emailBackoffice
-        ||
-        d.email_automazione
-        ||
-        ""
-    ).trim();
+      data
+        .area_cliente_url
+    );
+  }
+
+  return (
+    "https://consulenza-credipass.it/upload.html?id="
+    +
+    encodeURIComponent(
+      id
+    )
+  );
+
 }
 
-async function consulenteEmail(d = {}) {
-    const direct =
-        String(
-            d.consulente_email
-            ||
-            d.email_consulente
-            ||
-            d.referente_email
-            ||
-            ""
-        ).trim();
 
-    if (direct) {
-        return direct;
-    }
+function dashboardUrl(id) {
 
-    const uid =
-        d.consulente_uid
-        ||
-        d.owner_uid
-        ||
-        d.uid_consulente
-        ||
-        d.workspace_uid
-        ||
-        "";
+  return (
+    "https://consulenza-credipass.it/main/dashboard-consulente.html?id="
+    +
+    encodeURIComponent(
+      id
+    )
+  );
 
-    if (!uid) {
-        return "";
-    }
-
-    const snap =
-        await db.collection("consulenti")
-            .doc(uid)
-            .get();
-
-    if (!snap.exists) {
-        return "";
-    }
-
-    const c =
-        snap.data() || {};
-
-    return String(
-        c.email
-        ||
-        c.mail
-        ||
-        c.email_lavoro
-        ||
-        ""
-    ).trim();
 }
 
-function layoutEmail({
-    d,
-    idCliente,
-    audience,
-    title,
-    subtitle,
-    actionTitle,
-    actionText,
-    nextStep,
-    ctaLabel,
-    ctaUrl,
-    missing = []
+
+/*
+|--------------------------------------------------------------------------
+| EMAIL
+|--------------------------------------------------------------------------
+*/
+
+async function sendEmail({
+  to,
+  subject,
+  html,
+  replyTo = "",
 }) {
-    const stato =
-        d.stato_pratica
-        ||
-        "integrazione_documenti";
 
-    const meta =
-        stateMeta(stato);
+  const recipients =
+    uniqueEmails(
+      to
+    );
 
-    const nome =
-        nomePratica(
-            d,
-            idCliente
-        );
+  if (
+    !recipients.length
+  ) {
+    return {
+      ok:
+        false,
+      skipped:
+        true,
+      reason:
+        "no_recipients",
+    };
+  }
 
-    return `
+  const response =
+    await fetch(
+      EMAIL_ENDPOINT,
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            to:
+              recipients,
+
+            cc:
+              [],
+
+            bcc:
+              [],
+
+            subject,
+
+            html,
+
+            replyTo:
+              replyTo
+              ||
+              undefined,
+          }),
+      }
+    );
+
+  if (
+    !response.ok
+  ) {
+    let detail =
+      "";
+
+    try {
+      detail =
+        await response
+          .text();
+    }
+    catch(e) {}
+
+    throw new Error(
+      `Email endpoint ${response.status}: ${detail || "errore invio"}`
+    );
+  }
+
+  return {
+    ok:
+      true,
+    recipients,
+  };
+
+}
+
+
+function baseEmail({
+  eyebrow,
+  title,
+  intro,
+  missingCodes,
+  detail,
+  ctaLabel,
+  ctaUrl,
+  footer,
+}) {
+
+  const items =
+    missingCodes
+      .map(
+        code =>
+          `
+            <tr>
+              <td style="padding:7px 0;color:#303a43;font-size:12px;">
+                <span style="color:#C99700;font-weight:bold;">✓</span>
+                ${safeHtml(documentLabel(code))}
+              </td>
+            </tr>
+          `
+      )
+      .join("");
+
+  return `
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${esc(title)}</title>
+<title>${safeHtml(title)}</title>
 </head>
 
 <body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#27313a;">
 
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f6">
 <tr>
-<td align="center" style="padding:30px 12px;">
+<td align="center" style="padding:28px 12px;">
 
 <table width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="max-width:720px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e3e8ee;">
+       style="max-width:650px;background:#fff;border-radius:15px;overflow:hidden;border:1px solid #e2e7ed;">
 
 <tr>
-<td bgcolor="#002d72" style="padding:27px 32px 24px;border-bottom:5px solid #C99700;">
-
-    <img
-        src="https://consulenza-credipass.it/images/logo-credipass.png"
-        width="175"
-        alt="Credipass"
-    >
-
-    <div style="
-        margin-top:21px;
-        font-size:10px;
-        color:#C99700;
-        font-weight:bold;
-        text-transform:uppercase;
-        letter-spacing:.8px;
-    ">${esc(audience)}</div>
-
-    <div style="
-        margin-top:7px;
-        color:#fff;
-        font-size:24px;
-        font-weight:bold;
-    ">${esc(title)}</div>
-
-    <div style="
-        margin-top:7px;
-        color:#cbd7e6;
-        font-size:12px;
-        line-height:1.55;
-    ">${esc(subtitle)}</div>
-
+<td bgcolor="#002d72" style="padding:26px 30px;border-bottom:5px solid #C99700;">
+  <div style="font-size:11px;color:#C99700;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;">
+    ${safeHtml(eyebrow)}
+  </div>
+  <div style="margin-top:7px;color:#fff;font-size:22px;font-weight:bold;">
+    ${safeHtml(title)}
+  </div>
 </td>
 </tr>
 
 <tr>
-<td style="padding:23px 32px 18px;">
-    <div style="
-        background:#f7f9fc;
-        border:1px solid #e3e8ee;
-        border-radius:12px;
-        padding:17px 19px;
-    ">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-                <td>
-                    <div style="
-                        font-size:10px;
-                        color:#7a858f;
-                        font-weight:bold;
-                        text-transform:uppercase;
-                    ">Avanzamento pratica</div>
-
-                    <div style="
-                        font-size:13px;
-                        color:#002d72;
-                        font-weight:bold;
-                        margin-top:5px;
-                    ">${esc(meta.label)}</div>
-                </td>
-
-                <td align="right" style="
-                    font-size:21px;
-                    color:#002d72;
-                    font-weight:bold;
-                ">${meta.pct}%</td>
-            </tr>
-        </table>
-
-        <div style="
-            height:9px;
-            background:#e4e9ef;
-            border-radius:999px;
-            overflow:hidden;
-            margin-top:10px;
-        ">
-            <div style="
-                width:${meta.pct}%;
-                height:9px;
-                background:#C99700;
-            "></div>
-        </div>
-
-        <div style="margin-top:14px;">
-            ${fasiHtml(meta.step)}
-        </div>
-    </div>
+<td style="padding:26px 30px 12px;color:#4f5b64;font-size:13px;line-height:1.65;">
+  ${safeHtml(intro)}
 </td>
 </tr>
 
+${
+  missingCodes.length
+    ?
+    `
 <tr>
-<td style="padding:0 32px 18px;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-            <td width="50%" valign="top" style="padding-right:7px;">
-                <div style="
-                    background:#eef5ff;
-                    border:1px solid #d6e2f1;
-                    border-radius:11px;
-                    padding:15px;
-                ">
-                    <div style="
-                        font-size:9px;
-                        color:#6d7e93;
-                        font-weight:bold;
-                        text-transform:uppercase;
-                    ">Situazione attuale</div>
-
-                    <div style="
-                        font-size:12px;
-                        color:#002d72;
-                        font-weight:bold;
-                        margin-top:6px;
-                    ">${missing.length} documento/i ancora da completare</div>
-                </div>
-            </td>
-
-            <td width="50%" valign="top" style="padding-left:7px;">
-                <div style="
-                    background:#fff9e8;
-                    border:1px solid #f0d88b;
-                    border-radius:11px;
-                    padding:15px;
-                ">
-                    <div style="
-                        font-size:9px;
-                        color:#8a6800;
-                        font-weight:bold;
-                        text-transform:uppercase;
-                    ">${esc(actionTitle)}</div>
-
-                    <div style="
-                        font-size:12px;
-                        color:#775a00;
-                        font-weight:bold;
-                        margin-top:6px;
-                    ">${esc(actionText)}</div>
-                </div>
-            </td>
-        </tr>
-    </table>
+<td style="padding:4px 30px 16px;">
+  <div style="font-size:11px;color:#002d72;font-weight:bold;text-transform:uppercase;">
+    Documenti ancora da completare
+  </div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:7px;">
+    ${items}
+  </table>
 </td>
 </tr>
+    `
+    :
+    ""
+}
 
-${missing.length ? `
+${
+  detail
+    ?
+    `
 <tr>
-<td style="padding:0 32px 18px;">
-    <div style="
-        font-size:11px;
-        color:#002d72;
-        font-weight:bold;
-        text-transform:uppercase;
-        margin-bottom:10px;
-    ">Documenti ancora mancanti</div>
-
-    <div style="
-        border:1px solid #e4e9ef;
-        border-radius:10px;
-        padding:13px 15px;
-        color:#53606b;
-        font-size:11px;
-        line-height:1.7;
-    ">
-        ${missing.map(x => `• ${esc(String(x).replace(/^doc_/, ""))}`).join("<br>")}
-    </div>
-</td>
-</tr>` : ""}
-
-<tr>
-<td style="padding:0 32px 18px;">
-    <div style="
-        background:#f7f9fc;
-        border:1px solid #e5eaf0;
-        border-radius:10px;
-        padding:14px 15px;
-    ">
-        <div style="
-            font-size:9px;
-            color:#7a858f;
-            font-weight:bold;
-            text-transform:uppercase;
-        ">Prossimo passaggio</div>
-
-        <div style="
-            font-size:12px;
-            color:#002d72;
-            font-weight:bold;
-            margin-top:6px;
-        ">${esc(nextStep)}</div>
-    </div>
+<td style="padding:0 30px 18px;">
+  <div style="background:#fff9e8;border-left:4px solid #C99700;border-radius:8px;padding:12px 14px;color:#655b37;font-size:11px;line-height:1.55;">
+    ${safeHtml(detail)}
+  </div>
 </td>
 </tr>
+    `
+    :
+    ""
+}
+
+${
+  ctaUrl
+    ?
+    `
+<tr>
+<td align="center" style="padding:4px 30px 28px;">
+  <a href="${safeHtml(ctaUrl)}"
+     style="display:inline-block;background:#002d72;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;border-bottom:4px solid #C99700;font-size:12px;font-weight:bold;">
+    ${safeHtml(ctaLabel)}
+  </a>
+</td>
+</tr>
+    `
+    :
+    ""
+}
 
 <tr>
-<td align="center" style="padding:2px 32px 31px;">
-    <a
-        href="${ctaUrl}"
-        style="
-            display:inline-block;
-            background:#002d72;
-            color:#ffffff;
-            text-decoration:none;
-            padding:15px 28px;
-            border-radius:8px;
-            font-size:12px;
-            font-weight:bold;
-            border-bottom:4px solid #C99700;
-        "
-    >${esc(ctaLabel)}</a>
+<td bgcolor="#002d72" style="padding:17px 30px;color:#aebbd0;font-size:10px;line-height:1.5;">
+  <strong style="color:#C99700;">Credipass S.p.A.</strong><br>
+  ${safeHtml(footer)}
 </td>
 </tr>
 
 </table>
-
 </td>
 </tr>
 </table>
 
 </body>
-</html>`;
+</html>
+  `;
+
 }
 
-async function sendEmail(to, subject, html) {
-    if (!to) {
-        return false;
-    }
 
-    const response =
-        await fetch(
-            SEND_EMAIL_ENDPOINT,
-            {
-                method:
-                    "POST",
+/*
+|--------------------------------------------------------------------------
+| TIMELINE INTERNA
+|--------------------------------------------------------------------------
+*/
 
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
+async function addInternalTimeline(
+  ref,
+  {
+    tipo,
+    titolo,
+    descrizione,
+    meta = {},
+  }
+) {
 
-                body:
-                    JSON.stringify({
-                        to: [to],
-                        subject,
-                        html
-                    })
-            }
-        );
+  const entry = {
+    id:
+      `sys_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
 
-    if (!response.ok) {
-        throw new Error(
-            `Email non inviata (${response.status})`
-        );
-    }
+    tipo,
 
-    return true;
-}
+    titolo,
 
-async function inviaReminderInternoSeScaduto(doc, d, now) {
-    if (
-        d.stato_reminder_attivo !== true
-        ||
-        d.stato_reminder_inviato === true
-    ) {
-        return;
-    }
+    descrizione,
 
-    const due =
-        millis(
-            d.stato_reminder_data
-        );
+    stato:
+      "",
 
-    if (
-        !due
-        ||
-        now < due
-    ) {
-        return;
-    }
+    meta,
 
-    /*
-     * Il reminder è valido soltanto finché la pratica
-     * è ancora nello stesso stato per cui è stato creato.
-     */
-    if (
-        d.stato_reminder_stato
-        &&
-        d.stato_pratica !==
-            d.stato_reminder_stato
-    ) {
-        await doc.ref.set({
-            stato_reminder_attivo:
-                false
-        }, { merge: true });
+    autore:
+      "Sistema automatico",
 
-        return;
-    }
+    creato_il:
+      new Date()
+        .toISOString(),
+  };
 
-    const bo =
-        backofficeEmail(d);
+  await db.runTransaction(
+    async transaction => {
 
-    const consulente =
-        await consulenteEmail(d);
+      const snap =
+        await transaction
+          .get(
+            ref
+          );
 
-    const dashboardUrl =
-        `${APP_ORIGIN}/main/dashboard-consulente.html?clienteId=${encodeURIComponent(doc.id)}`;
-
-    const motivo =
-        String(
-            d.stato_motivo
+      const data =
+        snap.exists
+          ?
+          (
+            snap.data()
             ||
-            "Verificare la pratica"
-        );
+            {}
+          )
+          :
+          {};
 
-    const html =
-        layoutEmail({
-            d,
-            idCliente:
-                doc.id,
-            audience:
-                "Dashboard pratica · Promemoria interno",
-            title:
-                "Promemoria pratica",
-            subtitle:
-                `È arrivata la data impostata per verificare la pratica: ${motivo}`,
-            actionTitle:
-                "Azione richiesta",
-            actionText:
-                "Aprire la pratica e verificare se è possibile procedere o aggiornare il reminder.",
-            nextStep:
-                "Aggiornare stato, motivo o nuova data promemoria",
-            ctaLabel:
-                "APRI DASHBOARD PRATICA",
-            ctaUrl:
-                dashboardUrl,
-            missing:
-                documentiMancanti(d)
-        });
+      const current =
+        Array.isArray(
+          data
+            .attivita_interne
+        )
+          ?
+          data
+            .attivita_interne
+          :
+          [];
 
-    try {
-        if (bo) {
-            await sendEmail(
-                bo,
-                `Promemoria pratica - ${nomePratica(d, doc.id)}`,
-                html
-            );
+      transaction.set(
+        ref,
+        {
+          attivita_interne:
+            [
+              entry,
+              ...current,
+            ]
+            .slice(
+              0,
+              250
+            ),
+
+          attivita_interna_aggiornata_il:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        },
+        {
+          merge:
+            true,
         }
+      );
 
-        if (
-            consulente
-            &&
-            consulente !== bo
-        ) {
-            await sendEmail(
-                consulente,
-                `Promemoria pratica - ${nomePratica(d, doc.id)}`,
-                html
-            );
-        }
-
-        await doc.ref.set({
-            stato_reminder_inviato:
-                true,
-
-            stato_reminder_inviato_il:
-                admin.firestore.FieldValue.serverTimestamp(),
-
-            stato_reminder_attivo:
-                false
-        }, { merge: true });
     }
-    catch (error) {
-        logger.error(
-            "Errore reminder interno",
-            {
-                idCliente:
-                    doc.id,
+  );
 
-                error:
-                    error.message
-            }
-        );
-    }
 }
 
-exports.controllaReminderDocumenti =
-onSchedule(
+
+/*
+|--------------------------------------------------------------------------
+| PROCESSING
+|--------------------------------------------------------------------------
+*/
+
+async function processPractice(
+  docSnap
+) {
+
+  const id =
+    docSnap.id;
+
+  const data =
+    docSnap.data()
+    ||
+    {};
+
+  if (
+    data
+      .documentReminderAttivo !==
+      true
+  ) {
+    return;
+  }
+
+  if (
+    data
+      .documentReminderPausa ===
+      true
+    ||
+    data
+      .stato_pratica ===
+      "sospesa"
+  ) {
+    return;
+  }
+
+  const ref =
+    docSnap.ref;
+
+  const required =
+    getRequiredCodes(
+      data
+    );
+
+  if (
+    !required.length
+  ) {
+    return;
+  }
+
+  const missing =
+    getMissingCodes(
+      data
+    );
+
+  /*
+   * Tutto completo -> stop reminder.
+   */
+  if (
+    missing.length ===
+    0
+  ) {
+
+    if (
+      data
+        .documentReminderCompletato !==
+      true
+    ) {
+
+      await ref.set(
+        {
+          documentReminderAttivo:
+            false,
+
+          documentReminderCompletato:
+            true,
+
+          documentReminderCompletatoIl:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        },
+        {
+          merge:
+            true,
+        }
+      );
+
+      await addInternalTimeline(
+        ref,
+        {
+          tipo:
+            "reminder_documenti_completato",
+
+          titolo:
+            "Reminder documentazione terminato",
+
+          descrizione:
+            "Tutti i documenti richiesti risultano presenti. Il ciclo automatico di sollecito è stato chiuso.",
+
+          meta: {
+            documenti_richiesti:
+              required,
+          },
+        }
+      );
+
+    }
+
+    return;
+  }
+
+  const now =
+    Date.now();
+
+  const richiestaIl =
+    asMillis(
+      data
+        .documentReminderRichiestoIl
+    );
+
+  const primoUploadIl =
+    asMillis(
+      data
+        .documentReminderPrimoUploadIl
+    );
+
+  const ultimoInvioIl =
+    asMillis(
+      data
+        .documentReminderUltimoInvioIl
+    );
+
+  const isIntegration =
+    data
+      .richiestaIntegrazioneAttiva ===
+      true;
+
+  const customers =
+    clientEmails(
+      data
+    );
+
+  const internal =
+    internalEmails(
+      data
+    );
+
+  const label =
+    practiceLabel(
+      id,
+      data
+    );
+
+  const replyTo =
+    uniqueEmails([
+      data
+        .referente_email,
+      data
+        .consulente_email,
+    ])[0]
+    ||
+    "";
+
+  /*
+   * ESCALATION 7 GIORNI SENZA ALCUN UPLOAD
+   *
+   * Una sola volta.
+   */
+  if (
+    !primoUploadIl
+    &&
+    !isIntegration
+    &&
+    richiestaIl
+    &&
+    (
+      now -
+      richiestaIl
+    ) >=
+      HELP_7D_MS
+    &&
+    data
+      .documentReminderHelpInviato !==
+      true
+  ) {
+
+    if (
+      customers.length
+    ) {
+
+      await sendEmail({
+        to:
+          customers,
+
+        subject:
+          `Serve aiuto con i documenti? - ${label}`,
+
+        replyTo,
+
+        html:
+          baseEmail({
+            eyebrow:
+              "Supporto documentazione",
+
+            title:
+              "Possiamo aiutarti con i documenti?",
+
+            intro:
+              "La documentazione richiesta per la pratica non risulta ancora avviata. Se hai difficoltà nel reperire o caricare i documenti, il consulente può supportarti.",
+
+            missingCodes:
+              missing,
+
+            detail:
+              "Puoi utilizzare l'Area Cliente oppure rispondere direttamente a questa email per chiedere supporto.",
+
+            ctaLabel:
+              "APRI AREA CLIENTE",
+
+            ctaUrl:
+              clientAreaUrl(
+                id,
+                data
+              ),
+
+            footer:
+              `Pratica ${label}.`,
+          }),
+      });
+
+    }
+
+    if (
+      internal.length
+    ) {
+
+      await sendEmail({
+        to:
+          internal,
+
+        subject:
+          `Alert documentazione ferma da 7 giorni - ${label}`,
+
+        replyTo,
+
+        html:
+          baseEmail({
+            eyebrow:
+              "Alert operativo",
+
+            title:
+              "Documentazione non ancora avviata",
+
+            intro:
+              "Sono trascorsi 7 giorni dalla richiesta documentale e non risulta ancora alcun primo caricamento del cliente.",
+
+            missingCodes:
+              missing,
+
+            detail:
+              "Il cliente è stato contattato automaticamente per verificare se necessita di supporto.",
+
+            ctaLabel:
+              "APRI PRATICA",
+
+            ctaUrl:
+              dashboardUrl(
+                id
+              ),
+
+            footer:
+              "Comunicazione interna destinata a consulente e Backoffice.",
+          }),
+      });
+
+    }
+
+    await ref.set(
+      {
+        documentReminderHelpInviato:
+          true,
+
+        documentReminderHelpInviatoIl:
+          admin.firestore
+            .FieldValue
+            .serverTimestamp(),
+      },
+      {
+        merge:
+          true,
+      }
+    );
+
+    await addInternalTimeline(
+      ref,
+      {
+        tipo:
+          "reminder_documenti_help",
+
+        titolo:
+          "Escalation documentazione: 7 giorni",
+
+        descrizione:
+          "Nessun primo caricamento rilevato. Il cliente è stato contattato per offrire supporto; consulente e Backoffice sono stati informati.",
+
+        meta: {
+          documenti_mancanti:
+            missing,
+
+          destinatari_cliente:
+            customers,
+
+          destinatari_interni:
+            internal,
+        },
+      }
+    );
+
+    return;
+  }
+
+  /*
+   * REMINDER 48 ORE
+   *
+   * - pratica normale: solo dopo il primo upload;
+   * - integrazione: da subito, perché è già una richiesta specifica.
+   */
+  const reminderStarted =
+    isIntegration
+    ||
+    Boolean(
+      primoUploadIl
+    );
+
+  if (
+    !reminderStarted
+  ) {
+    return;
+  }
+
+  const baseTime =
+    ultimoInvioIl
+    ||
+    primoUploadIl
+    ||
+    richiestaIl;
+
+  if (
+    !baseTime
+    ||
+    (
+      now -
+      baseTime
+    ) <
+      REMINDER_48H_MS
+  ) {
+    return;
+  }
+
+  /*
+   * 1) CLIENTE
+   */
+  if (
+    customers.length
+  ) {
+
+    await sendEmail({
+      to:
+        customers,
+
+      subject:
+        isIntegration
+          ?
+          `Promemoria integrazione documenti - ${label}`
+          :
+          `Promemoria documentazione pratica - ${label}`,
+
+      replyTo,
+
+      html:
+        baseEmail({
+          eyebrow:
+            "Promemoria automatico",
+
+          title:
+            isIntegration
+              ?
+              "Integrazione documenti ancora da completare"
+              :
+              "Documentazione ancora da completare",
+
+          intro:
+            isIntegration
+              ?
+              "Ti ricordiamo che risultano ancora uno o più documenti richiesti in integrazione."
+              :
+              "Hai già iniziato a caricare la documentazione. Risultano però ancora alcuni documenti da completare.",
+
+          missingCodes:
+            missing,
+
+          detail:
+            "Il promemoria viene inviato automaticamente ogni 48 ore finché la documentazione richiesta non risulta completa.",
+
+          ctaLabel:
+            "COMPLETA DOCUMENTAZIONE",
+
+          ctaUrl:
+            clientAreaUrl(
+              id,
+              data
+            ),
+
+          footer:
+            `Pratica ${label}.`,
+        }),
+    });
+
+  }
+
+  /*
+   * 2) CONSULENTE + BACKOFFICE
+   *
+   * Ogni reminder 48h genera anche un alert interno.
+   */
+  if (
+    internal.length
+  ) {
+
+    await sendEmail({
+      to:
+        internal,
+
+      subject:
+        `Alert reminder 48h documentazione - ${label}`,
+
+      replyTo,
+
+      html:
+        baseEmail({
+          eyebrow:
+            "Alert operativo 48h",
+
+          title:
+            "Cliente sollecitato automaticamente",
+
+          intro:
+            "Il sistema ha inviato al cliente il promemoria automatico delle 48 ore perché la documentazione richiesta non risulta ancora completa.",
+
+          missingCodes:
+            missing,
+
+          detail:
+            `${missing.length} documento/i ancora da completare. Consulente e Backoffice ricevono questo alert per mantenere piena visibilità sulla pratica.`,
+
+          ctaLabel:
+            "APRI PRATICA",
+
+          ctaUrl:
+            dashboardUrl(
+              id
+            ),
+
+          footer:
+            "Comunicazione interna destinata a consulente e Backoffice.",
+        }),
+    });
+
+  }
+
+  await ref.set(
     {
-        schedule:
-            "every 1 hours",
+      documentReminderUltimoInvioIl:
+        admin.firestore
+          .FieldValue
+          .serverTimestamp(),
 
-        timeZone:
-            "Europe/Rome",
+      documentReminderNumeroInvii:
+        admin.firestore
+          .FieldValue
+          .increment(1),
+    },
+    {
+      merge:
+        true,
+    }
+  );
 
-        region:
-            "us-central1"
+  /*
+   * 3) TIMELINE INTERNA
+   */
+  await addInternalTimeline(
+    ref,
+    {
+      tipo:
+        "reminder_documenti_48h",
+
+      titolo:
+        "Reminder documentazione 48h inviato",
+
+      descrizione:
+        `Cliente sollecitato automaticamente. Documenti ancora mancanti: ${missing.map(documentLabel).join(", ")}.`,
+
+      meta: {
+        documenti_mancanti:
+          missing,
+
+        integrazione:
+          isIntegration,
+
+        destinatari_cliente:
+          customers,
+
+        destinatari_interni:
+          internal,
+      },
+    }
+  );
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CLOUD FUNCTION SCHEDULATA
+|--------------------------------------------------------------------------
+*/
+
+const controllaReminderDocumenti =
+  onSchedule(
+    {
+      schedule:
+        "every 60 minutes",
+
+      timeZone:
+        "Europe/Rome",
+
+      region:
+        "us-central1",
+
+      memory:
+        "512MiB",
+
+      timeoutSeconds:
+        540,
     },
 
     async () => {
-        const now =
-            Date.now();
 
-        /*
-         * 1) Reminder interni su tutte le pratiche che ne hanno uno attivo.
-         */
-        const internalSnap =
-            await db.collection("pratiche_mutuo")
-                .where(
-                    "stato_reminder_attivo",
-                    "==",
-                    true
-                )
-                .get();
+      const snap =
+        await db
+          .collection(
+            "pratiche_mutuo"
+          )
+          .where(
+            "documentReminderAttivo",
+            "==",
+            true
+          )
+          .get();
 
-        for (
-            const doc of
-            internalSnap.docs
-        ) {
-            await inviaReminderInternoSeScaduto(
-                doc,
-                doc.data() || {},
-                now
+      console.log(
+        `Reminder documenti: ${snap.size} pratiche attive da verificare.`
+      );
+
+      let ok =
+        0;
+
+      let errori =
+        0;
+
+      for (
+        const docSnap of
+        snap.docs
+      ) {
+
+        try {
+
+          await processPractice(
+            docSnap
+          );
+
+          ok++;
+
+        }
+        catch(error) {
+
+          errori++;
+
+          console.error(
+            "Errore reminder pratica",
+            docSnap.id,
+            error
+          );
+
+          try {
+
+            await addInternalTimeline(
+              docSnap.ref,
+              {
+                tipo:
+                  "reminder_documenti_errore",
+
+                titolo:
+                  "Errore reminder automatico",
+
+                descrizione:
+                  error?.message
+                  ||
+                  "Errore non specificato durante il controllo reminder.",
+
+                meta: {
+                  errore:
+                    error?.message
+                    ||
+                    "",
+                },
+              }
             );
+
+          }
+          catch(timelineError) {
+
+            console.error(
+              "Errore registrazione timeline reminder:",
+              timelineError
+            );
+
+          }
+
         }
 
-        /*
-         * 2) Reminder documentali sulle integrazioni attive.
-         */
-        const snap =
-            await db.collection("pratiche_mutuo")
-                .where(
-                    "richiestaIntegrazioneAttiva",
-                    "==",
-                    true
-                )
-                .get();
+      }
 
-        for (
-            const doc of
-            snap.docs
-        ) {
-            const d =
-                doc.data() || {};
+      console.log(
+        `Reminder documenti completato. OK=${ok}, errori=${errori}`
+      );
 
-            const idCliente =
-                doc.id;
-
-            /*
-             * SOSPESA = pausa totale reminder documentali.
-             * Il reminder interno dello stato sospeso resta invece attivo.
-             */
-            if (
-                d.stato_pratica ===
-                    "sospesa"
-                ||
-                d.documentReminderPausa ===
-                    true
-            ) {
-                continue;
-            }
-
-            const missing =
-                documentiMancanti(
-                    d
-                );
-
-            if (
-                allComplete(d)
-            ) {
-                await doc.ref.set({
-                    richiestaIntegrazioneAttiva:
-                        false,
-
-                    documentReminderAttivo:
-                        false,
-
-                    documentReminderCompletatoIl:
-                        admin.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                continue;
-            }
-
-            const cliente =
-                String(
-                    d.cliente_email
-                    ||
-                    ""
-                ).trim();
-
-            const requestedAt =
-                millis(
-                    d.documentReminderRichiestoIl
-                    ||
-                    d.ultimoAggiornamentoIntegrazione
-                );
-
-            const lastReminderAt =
-                millis(
-                    d.documentReminderUltimoInvioIl
-                )
-                ||
-                requestedAt;
-
-            /*
-             * REMINDER 48 ORE
-             * Parte dalla richiesta integrazione, non dal primo upload.
-             * Continua finché manca almeno un documento.
-             */
-            if (
-                requestedAt
-                &&
-                now - lastReminderAt >= HOURS_48
-                &&
-                cliente
-            ) {
-                const clientUrl =
-                    `${APP_ORIGIN}/upload.html?id=${encodeURIComponent(idCliente)}`;
-
-                const reminderHtml =
-                    layoutEmail({
-                        d,
-                        idCliente,
-                        audience:
-                            "Area Cliente · Promemoria documentazione",
-                        title:
-                            "Completiamo la documentazione",
-                        subtitle:
-                            `Restano ancora ${missing.length} documento/i da completare per poter proseguire con la pratica.`,
-                        actionTitle:
-                            "Cosa devi fare tu",
-                        actionText:
-                            "Caricare i documenti ancora mancanti",
-                        nextStep:
-                            "Completamento e verifica della documentazione",
-                        ctaLabel:
-                            "CONTINUA IL CARICAMENTO",
-                        ctaUrl:
-                            clientUrl,
-                        missing
-                    });
-
-                try {
-                    await sendEmail(
-                        cliente,
-                        `Promemoria documenti - ${nomePratica(d, idCliente)}`,
-                        reminderHtml
-                    );
-
-                    await doc.ref.set({
-                        documentReminderUltimoInvioIl:
-                            admin.firestore.FieldValue.serverTimestamp(),
-
-                        documentReminderAttivo:
-                            true
-                    }, { merge: true });
-                }
-                catch (error) {
-                    logger.error(
-                        "Errore reminder 48 ore",
-                        {
-                            idCliente,
-                            error:
-                                error.message
-                        }
-                    );
-                }
-            }
-
-            /*
-             * ESCALATION 7 GIORNI
-             * Se dopo 7 giorni la documentazione è ANCORA incompleta,
-             * indipendentemente da quanti file siano stati già caricati,
-             * invia una sola richiesta di supporto.
-             */
-            if (
-                requestedAt
-                &&
-                now - requestedAt >= DAYS_7
-                &&
-                missing.length > 0
-                &&
-                d.documentReminderHelpInviato !== true
-            ) {
-                const bo =
-                    backofficeEmail(d);
-
-                const consulente =
-                    await consulenteEmail(d);
-
-                const clientUrl =
-                    `${APP_ORIGIN}/upload.html?id=${encodeURIComponent(idCliente)}`;
-
-                const dashboardUrl =
-                    `${APP_ORIGIN}/main/dashboard-consulente.html?clienteId=${encodeURIComponent(idCliente)}`;
-
-                const clientHtml =
-                    layoutEmail({
-                        d,
-                        idCliente,
-                        audience:
-                            "Area Cliente · Supporto documentazione",
-                        title:
-                            "Hai bisogno di aiuto con i documenti?",
-                        subtitle:
-                            `La documentazione richiesta non risulta ancora completa. Mancano ${missing.length} documento/i.`,
-                        actionTitle:
-                            "Come possiamo aiutarti",
-                        actionText:
-                            "Apri l'Area Cliente oppure contatta il tuo consulente se hai difficoltà nel reperire o caricare i documenti.",
-                        nextStep:
-                            "Completamento della documentazione",
-                        ctaLabel:
-                            "APRI AREA CLIENTE",
-                        ctaUrl:
-                            clientUrl,
-                        missing
-                    });
-
-                const staffHtml =
-                    layoutEmail({
-                        d,
-                        idCliente,
-                        audience:
-                            "Dashboard pratica · Supporto documentazione",
-                        title:
-                            "Documentazione ancora incompleta",
-                        subtitle:
-                            `Dopo 7 giorni dalla richiesta risultano ancora mancanti ${missing.length} documento/i.`,
-                        actionTitle:
-                            "Azione consigliata",
-                        actionText:
-                            "Contattare il cliente per verificare se necessita supporto.",
-                        nextStep:
-                            "Contatto cliente / completamento documentazione",
-                        ctaLabel:
-                            "APRI DASHBOARD PRATICA",
-                        ctaUrl:
-                            dashboardUrl,
-                        missing
-                    });
-
-                try {
-                    if (cliente) {
-                        await sendEmail(
-                            cliente,
-                            "Serve aiuto con la documentazione?",
-                            clientHtml
-                        );
-                    }
-
-                    if (bo) {
-                        await sendEmail(
-                            bo,
-                            `Documentazione incompleta - ${nomePratica(d, idCliente)}`,
-                            staffHtml
-                        );
-                    }
-
-                    if (
-                        consulente
-                        &&
-                        consulente !== bo
-                    ) {
-                        await sendEmail(
-                            consulente,
-                            `Cliente da verificare - ${nomePratica(d, idCliente)}`,
-                            staffHtml
-                        );
-                    }
-
-                    await doc.ref.set({
-                        documentReminderHelpInviato:
-                            true,
-
-                        documentReminderHelpInviatoIl:
-                            admin.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                }
-                catch (error) {
-                    logger.error(
-                        "Errore escalation 7 giorni",
-                        {
-                            idCliente,
-                            error:
-                                error.message
-                        }
-                    );
-                }
-            }
-        }
     }
-);
+  );
+
+
+module.exports = {
+  controllaReminderDocumenti,
+};
