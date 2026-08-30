@@ -1,0 +1,146 @@
+name: Test Gmail Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-gmail:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install imapflow nodemailer
+
+      - name: Test IMAP e SMTP
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          node <<'EOF'
+          const { ImapFlow } = require("imapflow");
+          const nodemailer = require("nodemailer");
+
+          async function run() {
+
+            console.log("");
+            console.log("==================================");
+            console.log(" TEST CONNESSIONE GMAIL");
+            console.log("==================================");
+            console.log("");
+
+            console.log("Utente:", process.env.GMAIL_USER);
+
+            //
+            // IMAP
+            //
+
+            const client = new ImapFlow({
+              host: "imap.gmail.com",
+              port: 993,
+              secure: true,
+              auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_APP_PASSWORD
+              }
+            });
+
+            await client.connect();
+
+            console.log("✅ IMAP connesso");
+
+            let lock = await client.getMailboxLock("INBOX");
+
+            try {
+
+              console.log("Mailbox:", client.mailbox.path);
+              console.log("Messaggi:", client.mailbox.exists);
+
+              const messages = [];
+
+              for await (const msg of client.fetch(
+                "1:*",
+                {
+                  envelope: true
+                }
+              )) {
+                messages.push(msg);
+              }
+
+              const last = messages.slice(-5).reverse();
+
+              console.log("");
+              console.log("ULTIME EMAIL");
+              console.log("--------------------------------");
+
+              for (const m of last) {
+
+                console.log("");
+
+                console.log("Da:", m.envelope.from?.[0]?.address);
+
+                console.log("Oggetto:", m.envelope.subject);
+
+                console.log("Data:", m.envelope.date);
+
+              }
+
+            } finally {
+
+              lock.release();
+
+            }
+
+            await client.logout();
+
+            console.log("");
+            console.log("✅ IMAP OK");
+            console.log("");
+
+            //
+            // SMTP
+            //
+
+            const transporter = nodemailer.createTransport({
+
+              host: "smtp.gmail.com",
+
+              port: 465,
+
+              secure: true,
+
+              auth: {
+
+                user: process.env.GMAIL_USER,
+
+                pass: process.env.GMAIL_APP_PASSWORD
+
+              }
+
+            });
+
+            await transporter.verify();
+
+            console.log("✅ SMTP autenticato");
+
+            console.log("");
+            console.log("==================================");
+            console.log(" TUTTO OK");
+            console.log("==================================");
+          }
+
+          run().catch(err=>{
+            console.error("");
+            console.error("❌ TEST FALLITO");
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
