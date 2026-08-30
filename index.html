@@ -2,7 +2,6 @@
 
 
 
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1540,7 +1539,12 @@ hr {
                 id="campo_referente"
                 class="header-editable"
                 value="PIETRO LO IACONO"
+                list="rubrica_referenti_list"
+                autocomplete="off"
+                title="Inizia a scrivere per richiamare un referente già utilizzato"
             >
+
+            <datalist id="rubrica_referenti_list"></datalist>
 
             <span class="ruolo" style="margin-top:5px">
                 Sede / Indirizzo
@@ -8118,11 +8122,39 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        /*
+         * Contatti operativi memorizzati nella pratica.
+         * Servono anche alle Cloud Functions per reminder e alert.
+         */
+        referente_email:
+            V(
+                'campo_email',
+                ''
+            ),
+
+        backoffice_email:
+            V(
+                'campo_email_auto',
+                ''
+            ),
+
+        email_cc:
+            V(
+                'campo_email_agenzia',
+                ''
+            ),
+
         email_agenzia_immobiliare:
             V(
                 'campo_email_agenzia',
                 ''
             ),
+
+        documenti_richiesti_portale:
+            getUploadDocumentCodes(),
+
+        area_cliente_url:
+            buildUploadAreaUrl(),
 
         segnalatore_riferimento:
             V(
@@ -8172,6 +8204,90 @@ async function sincronizzaSchedaConDatabase() {
                     merge:true
                 }
             );
+
+        /*
+         * Salva automaticamente Nome + Email nella mini-rubrica referenti.
+         * Non memorizza altri dati del referente nella rubrica.
+         */
+        try {
+
+            if (
+                typeof salvaReferenteInRubrica ===
+                'function'
+            ) {
+
+                salvaReferenteInRubrica();
+
+            }
+
+        }
+        catch(rubricaError) {
+
+            console.warn(
+                'Impossibile aggiornare rubrica referente:',
+                rubricaError
+            );
+
+        }
+
+        /*
+         * Inizializzazione reminder documentali.
+         *
+         * - il timer "nessun upload" parte dalla prima sincronizzazione;
+         * - i reminder 48h veri e propri partiranno solo dal primo upload,
+         *   salvo integrazione documentale.
+         */
+        try {
+
+            const reminderRef =
+                db.collection(
+                    'pratiche_mutuo'
+                ).doc(id);
+
+            const reminderSnap =
+                await reminderRef.get();
+
+            const reminderData =
+                reminderSnap.exists
+                    ? (reminderSnap.data() || {})
+                    : {};
+
+            if (
+                !reminderData
+                    .documentReminderRichiestoIl
+            ) {
+
+                await reminderRef.set(
+                    {
+                        documentReminderRichiestoIl:
+                            firebase.firestore.FieldValue.serverTimestamp(),
+
+                        documentReminderAttivo:
+                            true,
+
+                        documentReminderPausa:
+                            false,
+
+                        documentReminderHelpInviato:
+                            false
+                    },
+                    {
+                        merge:
+                            true
+                    }
+                );
+
+            }
+
+        }
+        catch(reminderInitError) {
+
+            console.warn(
+                'Impossibile inizializzare reminder documentali:',
+                reminderInitError
+            );
+
+        }
 
         console.log(
             'Dati sincronizzati correttamente'
@@ -13365,6 +13481,544 @@ window.addEventListener(
 
         }
     );
+
+    /*
+     * MINI RUBRICA REFERENTI - FIRESTORE
+     *
+     * Salva SOLO:
+     * - nome referente
+     * - email referente
+     *
+     * Collection:
+     * rubrica_referenti/{idDeterministicoDaNome}
+     *
+     * La rubrica resta nel cloud e viene quindi recuperata anche
+     * cambiando PC o browser, purché l'utente sia autenticato.
+     */
+    const REFERENTI_RUBRICA_COLLECTION =
+        'rubrica_referenti';
+
+    let rubricaReferentiCache =
+        [];
+
+
+    function normalizzaReferenteRubrica(value) {
+
+        return String(
+            value ||
+            ''
+        )
+        .trim()
+        .replace(
+            /\s+/g,
+            ' '
+        );
+
+    }
+
+
+    function normalizzaNomeChiaveReferente(value) {
+
+        return normalizzaReferenteRubrica(
+            value
+        )
+        .toLocaleLowerCase(
+            'it'
+        )
+        .normalize(
+            'NFD'
+        )
+        .replace(
+            /[\u0300-\u036f]/g,
+            ''
+        );
+
+    }
+
+
+    function normalizzaEmailRubrica(value) {
+
+        return String(
+            value ||
+            ''
+        )
+        .trim()
+        .toLowerCase();
+
+    }
+
+
+    function rubricaReferenteDocId(nome) {
+
+        const normalized =
+            normalizzaNomeChiaveReferente(
+                nome
+            );
+
+        try {
+
+            return btoa(
+                unescape(
+                    encodeURIComponent(
+                        normalized
+                    )
+                )
+            )
+            .replace(
+                /\+/g,
+                '-'
+            )
+            .replace(
+                /\//g,
+                '_'
+            )
+            .replace(
+                /=+$/g,
+                ''
+            )
+            .slice(
+                0,
+                120
+            );
+
+        }
+        catch(error) {
+
+            return normalized
+                .replace(
+                    /[^a-z0-9]+/g,
+                    '_'
+                )
+                .replace(
+                    /^_+|_+$/g,
+                    ''
+                )
+                .slice(
+                    0,
+                    120
+                )
+                ||
+                `ref_${Date.now()}`;
+
+        }
+
+    }
+
+
+    function escapeDatalistAttribute(value) {
+
+        return String(
+            value ||
+            ''
+        )
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        );
+
+    }
+
+
+    function aggiornaDatalistReferentiFirestore() {
+
+        const datalist =
+            document.getElementById(
+                'rubrica_referenti_list'
+            );
+
+        if (!datalist) {
+            return;
+        }
+
+        const ordinata =
+            [
+                ...rubricaReferentiCache
+            ]
+            .sort(
+                (a, b) =>
+                    String(
+                        a.nome ||
+                        ''
+                    )
+                    .localeCompare(
+                        String(
+                            b.nome ||
+                            ''
+                        ),
+                        'it',
+                        {
+                            sensitivity:
+                                'base'
+                        }
+                    )
+            );
+
+        datalist.innerHTML =
+            ordinata
+                .map(
+                    item => {
+
+                        const nome =
+                            escapeDatalistAttribute(
+                                item.nome
+                            );
+
+                        const email =
+                            escapeDatalistAttribute(
+                                item.email
+                            );
+
+                        return (
+                            `<option value="${nome}" label="${email}"></option>`
+                        );
+
+                    }
+                )
+                .join('');
+
+    }
+
+
+    async function caricaRubricaReferentiFirestore() {
+
+        try {
+
+            try {
+                await authReady;
+            }
+            catch(e) {}
+
+            const snap =
+                await db
+                    .collection(
+                        REFERENTI_RUBRICA_COLLECTION
+                    )
+                    .orderBy(
+                        'nome_normalizzato'
+                    )
+                    .limit(
+                        500
+                    )
+                    .get();
+
+            rubricaReferentiCache =
+                snap.docs
+                    .map(
+                        doc => {
+
+                            const data =
+                                doc.data()
+                                ||
+                                {};
+
+                            return {
+                                id:
+                                    doc.id,
+
+                                nome:
+                                    normalizzaReferenteRubrica(
+                                        data.nome
+                                    ),
+
+                                email:
+                                    normalizzaEmailRubrica(
+                                        data.email
+                                    )
+                            };
+
+                        }
+                    )
+                    .filter(
+                        item =>
+                            item.nome
+                            &&
+                            item.email
+                    );
+
+            aggiornaDatalistReferentiFirestore();
+
+        }
+        catch(error) {
+
+            console.warn(
+                'Rubrica referenti Firestore non caricata:',
+                error
+            );
+
+        }
+
+    }
+
+
+    async function salvaReferenteInRubrica() {
+
+        const nome =
+            normalizzaReferenteRubrica(
+                V(
+                    'campo_referente',
+                    ''
+                )
+            );
+
+        const email =
+            normalizzaEmailRubrica(
+                V(
+                    'campo_email',
+                    ''
+                )
+            );
+
+        if (
+            !nome
+            ||
+            !email
+            ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                .test(
+                    email
+                )
+        ) {
+            return;
+        }
+
+        try {
+
+            try {
+                await authReady;
+            }
+            catch(e) {}
+
+            const nomeNormalizzato =
+                normalizzaNomeChiaveReferente(
+                    nome
+                );
+
+            const emailNormalizzata =
+                normalizzaEmailRubrica(
+                    email
+                );
+
+            const docId =
+                rubricaReferenteDocId(
+                    nome
+                );
+
+            const currentUser =
+                firebase.auth()
+                    .currentUser;
+
+            await db
+                .collection(
+                    REFERENTI_RUBRICA_COLLECTION
+                )
+                .doc(
+                    docId
+                )
+                .set(
+                    {
+                        nome,
+
+                        email,
+
+                        nome_normalizzato:
+                            nomeNormalizzato,
+
+                        email_normalizzata:
+                            emailNormalizzata,
+
+                        aggiornatoIl:
+                            firebase.firestore.FieldValue.serverTimestamp(),
+
+                        creatoDa:
+                            currentUser
+                                ?.uid
+                            ||
+                            null
+                    },
+                    {
+                        merge:
+                            true
+                    }
+                );
+
+            const existingIndex =
+                rubricaReferentiCache.findIndex(
+                    item =>
+                        normalizzaNomeChiaveReferente(
+                            item.nome
+                        )
+                        ===
+                        nomeNormalizzato
+                );
+
+            const voce = {
+                id:
+                    docId,
+
+                nome,
+
+                email
+            };
+
+            if (
+                existingIndex >=
+                0
+            ) {
+
+                rubricaReferentiCache[
+                    existingIndex
+                ] =
+                    voce;
+
+            }
+            else {
+
+                rubricaReferentiCache.push(
+                    voce
+                );
+
+            }
+
+            aggiornaDatalistReferentiFirestore();
+
+        }
+        catch(error) {
+
+            console.warn(
+                'Impossibile salvare referente in Firestore:',
+                error
+            );
+
+        }
+
+    }
+
+
+    function compilaEmailDaRubricaReferenti() {
+
+        const nome =
+            normalizzaReferenteRubrica(
+                V(
+                    'campo_referente',
+                    ''
+                )
+            );
+
+        if (!nome) {
+            return;
+        }
+
+        const nomeKey =
+            normalizzaNomeChiaveReferente(
+                nome
+            );
+
+        const voce =
+            rubricaReferentiCache
+                .find(
+                    item =>
+                        normalizzaNomeChiaveReferente(
+                            item.nome
+                        )
+                        ===
+                        nomeKey
+                );
+
+        if (!voce) {
+            return;
+        }
+
+        const emailEl =
+            document.getElementById(
+                'campo_email'
+            );
+
+        if (
+            emailEl
+            &&
+            voce.email
+        ) {
+
+            emailEl.value =
+                voce.email;
+
+            try {
+
+                localStorage.setItem(
+                    'ref_e',
+                    voce.email
+                );
+
+                localStorage.setItem(
+                    'ref_n',
+                    voce.nome
+                );
+
+            }
+            catch(error) {}
+
+        }
+
+    }
+
+
+    const campoReferenteRubrica =
+        document.getElementById(
+            'campo_referente'
+        );
+
+    const campoEmailRubrica =
+        document.getElementById(
+            'campo_email'
+        );
+
+    caricaRubricaReferentiFirestore();
+
+    if (campoReferenteRubrica) {
+
+        campoReferenteRubrica.addEventListener(
+            'change',
+            async () => {
+
+                compilaEmailDaRubricaReferenti();
+
+                await salvaReferenteInRubrica();
+
+            }
+        );
+
+        campoReferenteRubrica.addEventListener(
+            'blur',
+            salvaReferenteInRubrica
+        );
+
+    }
+
+    if (campoEmailRubrica) {
+
+        campoEmailRubrica.addEventListener(
+            'change',
+            salvaReferenteInRubrica
+        );
+
+        campoEmailRubrica.addEventListener(
+            'blur',
+            salvaReferenteInRubrica
+        );
+
+    }
 
     /* FOTO SALVATA */
 

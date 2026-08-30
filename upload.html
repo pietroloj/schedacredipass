@@ -3,7 +3,6 @@
 
 
 
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -3452,20 +3451,64 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
         /*
          * REMINDER DOCUMENTAZIONE
-         * Il timer parte dalla richiesta di integrazione.
-         * Ogni upload aggiorna soltanto l'ultima attività del cliente.
+         *
+         * Regola:
+         * - pratica normale: ciclo 48h dal PRIMO upload;
+         * - integrazione: il ciclo può essere già attivo dalla richiesta;
+         * - ogni upload aggiorna l'ultima attività del cliente.
          */
         try {
-            await praticaRef.set({
+
+            const reminderSnap =
+                await praticaRef.get();
+
+            const reminderData =
+                reminderSnap.exists
+                    ? (reminderSnap.data() || {})
+                    : {};
+
+            const reminderUpdate = {
                 documentReminderUltimaAttivitaClienteIl:
-                    firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                documentReminderAttivo:
+                    true
+            };
+
+            if (
+                !reminderData
+                    .documentReminderPrimoUploadIl
+            ) {
+
+                reminderUpdate
+                    .documentReminderPrimoUploadIl =
+                    firebase.firestore.FieldValue.serverTimestamp();
+
+                /*
+                 * Il primo reminder verrà valutato 48 ore da ora.
+                 */
+                reminderUpdate
+                    .documentReminderUltimoInvioIl =
+                    firebase.firestore.FieldValue.serverTimestamp();
+
+            }
+
+            await praticaRef.set(
+                reminderUpdate,
+                {
+                    merge:
+                        true
+                }
+            );
+
         }
         catch (reminderActivityError) {
+
             console.warn(
                 "Impossibile aggiornare attività reminder:",
                 reminderActivityError
             );
+
         }
 
 

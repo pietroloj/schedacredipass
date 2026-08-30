@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ======================================================
+       FUNZIONI DI SICUREZZA CONSULENTI
+       ====================================================== */
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/consulenti/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/consulenti/$(request.auth.uid)
+        ).data.ruolo == "admin"
+        && get(
+          /databases/$(database)/documents/consulenti/$(request.auth.uid)
+        ).data.attivo != false;
+    }
+
+
+    /* ======================================================
+       PRATICHE MUTUO
+       Per adesso lasciamo invariato per compatibilità
+       con il Portale Cliente esistente.
+       ====================================================== */
+
+    match /pratiche_mutuo/{document} {
+      allow read, write: if true;
+    }
+
+
+    /* ======================================================
+       CLIENTI
+       Per adesso lasciamo invariato.
+       ====================================================== */
+
+    match /clienti/{document} {
+      allow read, write: if true;
+    }
+
+
+    /* ======================================================
+       REPORT AI
+       Per adesso lasciamo invariato.
+       ====================================================== */
+
+    match /analisi_deliberante/{document} {
+      allow read, write: if true;
+    }
+
+
+    /* ======================================================
+       RUBRICA REFERENTI
+
+       - solo utenti Firebase autenticati possono leggere
+       - solo utenti autenticati possono creare/aggiornare
+       - la rubrica contiene soltanto Nome + Email
+         e metadati tecnici di indicizzazione/audit
+       - eliminazione riservata all'Admin
+       ====================================================== */
+
+    match /rubrica_referenti/{referenteId} {
+
+      allow read: if isSignedIn();
+
+      allow create, update: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          "nome",
+          "email",
+          "nome_normalizzato",
+          "email_normalizzata",
+          "aggiornatoIl",
+          "creatoDa"
+        ])
+        && request.resource.data.nome is string
+        && request.resource.data.email is string
+        && request.resource.data.nome_normalizzato is string
+        && request.resource.data.email_normalizzata is string;
+
+      allow delete: if isAdmin();
+    }
+
+
+    /* ======================================================
+       CONSULENTI
+
+       - ogni consulente può leggere il proprio profilo
+       - Admin può vedere tutti i consulenti
+       - nessuna scrittura diretta dal browser
+       - creazione/modifica avvengono tramite Cloud Functions
+       ====================================================== */
+
+    match /consulenti/{uid} {
+
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == uid
+          || isAdmin()
+        );
+
+      allow create, update, delete: if false;
+    }
+
+
+    /* ======================================================
+       WORKSPACES
+
+       - consulente vede il proprio workspace
+       - Admin può vedere tutti
+       - scrittura soltanto dalle Cloud Functions
+       ====================================================== */
+
+    match /workspaces/{uid} {
+
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == uid
+          || isAdmin()
+        );
+
+      allow create, update, delete: if false;
+    }
+
+
+    /* ======================================================
+       CONFIGURAZIONE SISTEMA
+
+       Il browser non deve modificare system/security.
+       Le Cloud Functions Admin possono comunque accedervi
+       perché Admin SDK non è soggetto a queste Rules.
+       ====================================================== */
+
+    match /system/{document} {
+      allow read, write: if false;
+    }
+
+  }
+}
