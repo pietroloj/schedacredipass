@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -1263,6 +1264,35 @@ document.addEventListener(
         box-shadow: 0 0 0 3px rgba(201,151,0,.10);
     }
 
+    .header-practice-title {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .header-practice-title h1 {
+        margin-bottom: 3px;
+    }
+
+    .header-referente {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        color: #68737e;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    .header-referente.show {
+        display: flex;
+    }
+
+    .header-referente i {
+        color: #C99700;
+        font-size: 10px;
+    }
+
     .mutuo-edit-actions {
         display: flex;
         justify-content: flex-end;
@@ -1306,8 +1336,21 @@ document.addEventListener(
 
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-folder-open" style="color:#C99700;"></i> Fascicolo: <span id="labelCliente">...</span></h1>
-        <a href="ricerca-clienti.html" class="btn-back"><i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO</a>
+        <div class="header-practice-title">
+            <h1>
+                <i class="fas fa-folder-open" style="color:#C99700;"></i>
+                Fascicolo: <span id="labelCliente">...</span>
+            </h1>
+
+            <div id="labelReferentePratica" class="header-referente">
+                <i class="fas fa-user-tie"></i>
+                <span>Referente: <strong id="labelReferentePraticaNome"></strong></span>
+            </div>
+        </div>
+
+        <a href="ricerca-clienti.html" class="btn-back">
+            <i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO
+        </a>
     </div>
 
     <div class="practice-status-panel" id="practiceStatusPanel">
@@ -4263,6 +4306,49 @@ Cordiali saluti`
                 }
                 return "";
             };
+
+            /*
+             * Referente pratica visibile anche nell'intestazione della dashboard.
+             * Lo mostriamo solo se effettivamente presente in Firestore.
+             */
+            const referentePratica =
+                firstAvailable(
+                    d.referente,
+                    d.campo_referente,
+                    d.nome_referente,
+                    d.referente_nome,
+                    d.consulente_nome
+                );
+
+            const referenteBox =
+                document.getElementById(
+                    "labelReferentePratica"
+                );
+
+            const referenteNome =
+                document.getElementById(
+                    "labelReferentePraticaNome"
+                );
+
+            if (
+                referentePratica
+                &&
+                referenteBox
+                &&
+                referenteNome
+            ) {
+                referenteNome.textContent =
+                    referentePratica;
+
+                referenteBox.classList.add(
+                    "show"
+                );
+            }
+            else if (referenteBox) {
+                referenteBox.classList.remove(
+                    "show"
+                );
+            }
 
             const row = (label, val) => {
                 const clean = normalizeDisplay(val);
