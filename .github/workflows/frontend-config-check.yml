@@ -1,0 +1,42 @@
+name: Frontend Config Check
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "upload.html"
+      - "main/**"
+      - ".github/workflows/frontend-config-check.yml"
+
+jobs:
+  check-frontend-config:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify central config exists
+        run: |
+          test -f main/config/app.js || (echo "❌ main/config/app.js mancante" && exit 1)
+          test -f main/config/firebase.js || (echo "❌ main/config/firebase.js mancante" && exit 1)
+          echo "✅ Config centralizzata presente"
+
+      - name: Reject real secrets in frontend
+        run: |
+          if grep -RniE \
+            --include='*.html' \
+            --include='*.js' \
+            --exclude='firebase.js' \
+            '(GOCSPX-|OPENAI_API_KEY[[:space:]]*[:=][[:space:]]*["'\"''][^$]|GMAIL_APP_PASSWORD[[:space:]]*[:=])' \
+            index.html upload.html main 2>/dev/null
+          then
+            echo "❌ Possibile segreto reale trovato nel frontend"
+            exit 1
+          fi
+
+          echo "✅ Nessun OAuth Client Secret / password Gmail rilevato nel frontend"
