@@ -24,19 +24,53 @@ jobs:
         run: |
           test -f main/config/app.js || (echo "❌ main/config/app.js mancante" && exit 1)
           test -f main/config/firebase.js || (echo "❌ main/config/firebase.js mancante" && exit 1)
+
           echo "✅ Config centralizzata presente"
 
       - name: Reject real secrets in frontend
+        shell: bash
         run: |
+          set -e
+
+          echo "Controllo possibili segreti reali nel frontend..."
+
           if grep -RniE \
-            --include='*.html' \
-            --include='*.js' \
-            --exclude='firebase.js' \
-            '(GOCSPX-|OPENAI_API_KEY[[:space:]]*[:=][[:space:]]*["'\"''][^$]|GMAIL_APP_PASSWORD[[:space:]]*[:=])' \
+            --include="*.html" \
+            --include="*.js" \
+            --exclude="firebase.js" \
+            'GOCSPX-|GMAIL_APP_PASSWORD|OPENAI_API_KEY' \
             index.html upload.html main 2>/dev/null
           then
             echo "❌ Possibile segreto reale trovato nel frontend"
             exit 1
           fi
 
-          echo "✅ Nessun OAuth Client Secret / password Gmail rilevato nel frontend"
+          echo "✅ Nessun OAuth Client Secret / password Gmail / OpenAI key rilevato nel frontend"
+
+      - name: Verify Gmail frontend pages
+        run: |
+          test -f main/gmail-connection.html || (echo "❌ main/gmail-connection.html mancante" && exit 1)
+          test -f main/test-gmail-oauth.html || (echo "❌ main/test-gmail-oauth.html mancante" && exit 1)
+          test -f main/mail-domini.html || (echo "❌ main/mail-domini.html mancante" && exit 1)
+
+          echo "✅ Pagine Gmail presenti"
+
+      - name: Verify centralized Firebase references
+        run: |
+          grep -q '/main/config/firebase.js' main/gmail-connection.html \
+            || (echo "❌ gmail-connection.html non usa config centralizzata" && exit 1)
+
+          grep -q '/main/config/firebase.js' main/test-gmail-oauth.html \
+            || (echo "❌ test-gmail-oauth.html non usa config centralizzata" && exit 1)
+
+          grep -q '/main/config/firebase.js' main/mail-domini.html \
+            || (echo "❌ mail-domini.html non usa config centralizzata" && exit 1)
+
+          echo "✅ Config Firebase centralizzata correttamente"
+
+      - name: Final result
+        run: |
+          echo ""
+          echo "========================================"
+          echo "✅ FRONTEND CONFIG CHECK SUPERATO"
+          echo "========================================"
