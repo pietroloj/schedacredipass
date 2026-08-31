@@ -22,16 +22,9 @@ pre{background:#f7f9fb;padding:14px;border-radius:8px;white-space:pre-wrap}
 <pre id="out">In attesa...</pre>
 </div>
 
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCg4lKxQmhhrEwzAhXkT3jkequB8vbBJ4",
-  authDomain: "consulenza-credipass.firebaseapp.com",
-  projectId: "consulenza-credipass",
-  storageBucket: "consulenza-credipass.firebasestorage.app"
-};
-
-firebase.initializeApp(firebaseConfig);
-
 async function run(){
   const out=document.getElementById("out");
   const user=firebase.auth().currentUser;
@@ -42,7 +35,7 @@ async function run(){
   }
 
   try{
-    const fn=firebase.app().functions("us-central1");
+    const fn=firebase.app().functions(window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion || "us-central1");
     const callable=fn.httpsCallable("creaCollegamentoGmail");
     const r=await callable();
 

@@ -26,21 +26,12 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script src="/main/auth-guard.js"></script>
 
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
 <script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
-    authDomain: "consulenza-credipass.firebaseapp.com",
-    projectId: "consulenza-credipass",
-    storageBucket: "consulenza-credipass.firebasestorage.app"
-};
-
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
 const db = firebase.firestore();
 const storage = firebase.storage();
-const functionsFirebase = firebase.app().functions("us-central1");
+const functionsFirebase = firebase.app().functions(window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion || "us-central1");
 const authReady = CredipassAuth.guard();
 </script>
 

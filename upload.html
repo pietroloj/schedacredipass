@@ -1337,26 +1337,16 @@ body.viewer-segnalatore .version-request-note {
     </div>
 </div>
 
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
 <script>
 function toggleInfo(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
-    authDomain: "consulenza-credipass.firebaseapp.com",
-    projectId: "consulenza-credipass",
-    storageBucket: "consulenza-credipass.firebasestorage.app"
-};
-
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
 const db = firebase.firestore();
 const storage = firebase.storage();
-const functionsFirebase = firebase.app().functions("us-central1");
+const functionsFirebase = firebase.app().functions(window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion || "us-central1");
 
 const urlParams = new URLSearchParams(window.location.search);
 
