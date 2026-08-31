@@ -1166,6 +1166,85 @@ document.addEventListener(
         cursor: pointer;
     }
 
+
+    .gmail-integration-card {
+        margin-top: 14px;
+        border: 1px solid #e1e6ec;
+        border-left: 5px solid #C99700;
+        border-radius: 10px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .gmail-integration-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .gmail-integration-title {
+        color: #002d72;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .gmail-status-dot {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .gmail-status-dot.ok {
+        color: #198754;
+    }
+
+    .gmail-status-dot.ko {
+        color: #b42318;
+    }
+
+    .gmail-integration-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .gmail-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .gmail-btn.primary {
+        background: #002d72;
+        color: #fff;
+    }
+
+    .gmail-btn.gray {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    .gmail-btn.red {
+        background: #b42318;
+        color: #fff;
+    }
+
+    .gmail-sync-meta {
+        margin-top: 8px;
+        color: #6d7780;
+        font-size: 9px;
+        line-height: 1.5;
+    }
+
     /* ===== MODAL PROMEMORIA STATO ===== */
     #statusReminderModal {
         display: none;
@@ -1426,6 +1505,54 @@ document.addEventListener(
 </style>
 </head>
 <body>
+
+            <div class="gmail-integration-card" id="gmailIntegrationCard">
+                <div class="gmail-integration-head">
+                    <div>
+                        <div class="gmail-integration-title">
+                            <i class="fas fa-envelope"></i>
+                            Integrazione Gmail
+                        </div>
+                        <div id="gmailIntegrationStatus" class="gmail-sync-meta">
+                            Verifica collegamento...
+                        </div>
+                    </div>
+
+                    <div id="gmailIntegrationBadge" class="gmail-status-dot ko">
+                        ● Non collegata
+                    </div>
+                </div>
+
+                <div class="gmail-integration-actions">
+                    <button
+                        type="button"
+                        id="gmailConnectBtn"
+                        class="gmail-btn primary"
+                        onclick="apriPaginaCollegamentoGmail()"
+                    >
+                        COLLEGA GMAIL
+                    </button>
+
+                    <button
+                        type="button"
+                        id="gmailSyncBtn"
+                        class="gmail-btn gray"
+                        onclick="sincronizzaGmailDaDashboard()"
+                        style="display:none;"
+                    >
+                        SINCRONIZZA ORA
+                    </button>
+
+                    <button
+                        type="button"
+                        class="gmail-btn gray"
+                        onclick="apriPaginaCollegamentoGmail()"
+                    >
+                        IMPOSTAZIONI GMAIL
+                    </button>
+                </div>
+            </div>
+
 
 <div class="container">
     <div class="header">
@@ -4167,6 +4294,227 @@ Cordiali saluti`
         window.location.href =
             href;
     }
+
+
+
+    function apriPaginaCollegamentoGmail() {
+        window.location.href =
+            "/main/gmail-connection.html";
+    }
+
+
+    async function aggiornaStatoGmailDashboard() {
+
+        const statusEl =
+            document.getElementById(
+                "gmailIntegrationStatus"
+            );
+
+        const badgeEl =
+            document.getElementById(
+                "gmailIntegrationBadge"
+            );
+
+        const connectBtn =
+            document.getElementById(
+                "gmailConnectBtn"
+            );
+
+        const syncBtn =
+            document.getElementById(
+                "gmailSyncBtn"
+            );
+
+        if (
+            !statusEl
+            ||
+            !badgeEl
+        ) {
+            return;
+        }
+
+        try {
+
+            const callable =
+                firebase
+                    .app()
+                    .functions(
+                        "us-central1"
+                    )
+                    .httpsCallable(
+                        "statoCollegamentoGmail"
+                    );
+
+            const result =
+                await callable();
+
+            const data =
+                result.data
+                ||
+                {};
+
+            if (
+                data.connected ===
+                true
+            ) {
+
+                badgeEl.className =
+                    "gmail-status-dot ok";
+
+                badgeEl.textContent =
+                    "● Collegata";
+
+                statusEl.innerHTML =
+                    `
+                        ${escapeHtml(data.email || "")}
+                        <br>
+                        Ultimo sync:
+                        ${escapeHtml(data.lastSyncAt || "non ancora eseguito")}
+                        ${
+                            data.lastSyncOk === false
+                                ? `<br><span style="color:#b42318;font-weight:800;">
+                                    Ultimo sync con errore
+                                   </span>`
+                                : ""
+                        }
+                    `;
+
+                if (connectBtn) {
+                    connectBtn.style.display =
+                        "none";
+                }
+
+                if (syncBtn) {
+                    syncBtn.style.display =
+                        "inline-block";
+                }
+
+            }
+            else {
+
+                badgeEl.className =
+                    "gmail-status-dot ko";
+
+                badgeEl.textContent =
+                    "● Non collegata";
+
+                statusEl.textContent =
+                    "Collega la tua casella Gmail Credipass per acquisire automaticamente le comunicazioni delle pratiche.";
+
+                if (connectBtn) {
+                    connectBtn.style.display =
+                        "inline-block";
+                }
+
+                if (syncBtn) {
+                    syncBtn.style.display =
+                        "none";
+                }
+
+            }
+
+        }
+        catch(error) {
+
+            badgeEl.className =
+                "gmail-status-dot ko";
+
+            badgeEl.textContent =
+                "● Errore";
+
+            statusEl.textContent =
+                error?.message
+                ||
+                "Impossibile verificare lo stato Gmail.";
+
+        }
+
+    }
+
+
+    async function sincronizzaGmailDaDashboard() {
+
+        const button =
+            document.getElementById(
+                "gmailSyncBtn"
+            );
+
+        if (button) {
+            button.disabled =
+                true;
+
+            button.textContent =
+                "SINCRONIZZAZIONE...";
+        }
+
+        try {
+
+            const callable =
+                firebase
+                    .app()
+                    .functions(
+                        "us-central1"
+                    )
+                    .httpsCallable(
+                        "sincronizzaGmailPersonale"
+                    );
+
+            const result =
+                await callable();
+
+            const data =
+                result.data
+                ||
+                {};
+
+            alert(
+                `Sincronizzazione Gmail completata.\nEmail analizzate: ${data.processed || 0}\nAssociate: ${data.matched || 0}`
+            );
+
+            await aggiornaStatoGmailDashboard();
+
+            if (
+                typeof caricaTimelineInternaPratica ===
+                "function"
+            ) {
+                await caricaTimelineInternaPratica();
+            }
+
+        }
+        catch(error) {
+
+            alert(
+                error?.message
+                ||
+                "Errore durante la sincronizzazione Gmail."
+            );
+
+        }
+        finally {
+
+            if (button) {
+                button.disabled =
+                    false;
+
+                button.textContent =
+                    "SINCRONIZZA ORA";
+            }
+
+        }
+
+    }
+
+
+    firebase.auth().onAuthStateChanged(
+        user => {
+
+            if (user) {
+                aggiornaStatoGmailDashboard();
+            }
+
+        }
+    );
+
 
 
     async function caricaTimelineInternaPratica() {

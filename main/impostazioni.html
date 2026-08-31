@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Impostazioni - Consulenza Credipass</title>
+<style>
+body{
+  margin:0;background:#eef2f6;
+  font-family:Arial,Helvetica,sans-serif;color:#26323c
+}
+.wrap{max-width:900px;margin:45px auto;padding:0 18px}
+.head{
+  background:#002d72;color:#fff;border-bottom:5px solid #C99700;
+  border-radius:16px 16px 0 0;padding:26px 28px
+}
+.body{background:#fff;border-radius:0 0 16px 16px;padding:24px 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{
+  border:1px solid #e1e6ec;border-radius:12px;padding:18px;
+  text-decoration:none;color:#26323c;background:#fff
+}
+.card strong{display:block;color:#002d72;margin-bottom:7px}
+.card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div style="font-size:11px;color:#C99700;font-weight:bold;text-transform:uppercase">Gestionale</div>
+    <div style="font-size:25px;font-weight:bold;margin-top:6px">Impostazioni</div>
+  </div>
+  <div class="body">
+    <div class="grid">
+      <a class="card" href="/main/gmail-connection.html">
+        <strong>✉️ Gmail</strong>
+        Collega o scollega la tua casella e verifica l'ultima sincronizzazione.
+      </a>
+
+      <a class="card" href="/main/mail-domini.html">
+        <strong>🏦 Domini banca</strong>
+        Gestisci e conferma i nuovi domini bancari rilevati dal sistema.
+      </a>
+
+      <a class="card" href="/main/dashboard-consulente.html">
+        <strong>📊 Dashboard</strong>
+        Torna alla dashboard consulente.
+      </a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

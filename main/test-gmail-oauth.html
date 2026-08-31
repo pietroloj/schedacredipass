@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test OAuth Gmail</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<style>
+body{font-family:Arial;background:#eef2f6;margin:0;padding:30px}
+.box{max-width:700px;margin:auto;background:#fff;border-radius:14px;padding:25px;border-top:5px solid #C99700}
+button{padding:11px 15px;border:0;border-radius:8px;background:#002d72;color:white;font-weight:bold;cursor:pointer}
+pre{background:#f7f9fb;padding:14px;border-radius:8px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>Test collegamento Gmail OAuth</h2>
+<p>Questa pagina verifica che la Cloud Function restituisca correttamente l'URL di autorizzazione Google.</p>
+<button onclick="run()">AVVIA TEST OAUTH</button>
+<pre id="out">In attesa...</pre>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCg4lKxQmhhrEwzAhXkT3jkequB8vbBJ4",
+  authDomain: "consulenza-credipass.firebaseapp.com",
+  projectId: "consulenza-credipass",
+  storageBucket: "consulenza-credipass.firebasestorage.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+async function run(){
+  const out=document.getElementById("out");
+  const user=firebase.auth().currentUser;
+
+  if(!user){
+    out.textContent="Effettua prima l'accesso al gestionale.";
+    return;
+  }
+
+  try{
+    const fn=firebase.app().functions("us-central1");
+    const callable=fn.httpsCallable("creaCollegamentoGmail");
+    const r=await callable();
+
+    if(!r.data?.url){
+      throw new Error("URL OAuth non ricevuto");
+    }
+
+    out.textContent="OK. Apro Google...";
+    window.open(r.data.url,"_blank","width=650,height=780");
+  }catch(error){
+    out.textContent="ERRORE: "+(error.message||error);
+  }
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  document.getElementById("out").textContent =
+    user
+      ? "Utente autenticato: "+(user.email||user.uid)
+      : "Utente non autenticato.";
+});
+</script>
+</body>
+</html>
