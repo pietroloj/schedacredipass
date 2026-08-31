@@ -3325,3 +3325,40 @@ const {
 
 exports.listaAuditGmailPersonale =
   listaAuditGmailPersonale;
+
+
+/*
+|--------------------------------------------------------------------------
+| CENTRO NOTIFICHE / INBOX EMAIL / AI MAIL INTELLIGENCE
+|--------------------------------------------------------------------------
+*/
+
+const {
+  listaNotifichePersonali,
+  aggiornaNotificaPersonale,
+} = require("./notification-center");
+
+const {
+  listaEmailDaAssociare,
+  ignoraEmailDaAssociare,
+} = require("./mail-inbox");
+
+const {
+  analizzaEmailPraticaAI,
+} = require("./mail-intelligence");
+
+
+exports.listaNotifichePersonali =
+  listaNotifichePersonali;
+
+exports.aggiornaNotificaPersonale =
+  aggiornaNotificaPersonale;
+
+exports.listaEmailDaAssociare =
+  listaEmailDaAssociare;
+
+exports.ignoraEmailDaAssociare =
+  ignoraEmailDaAssociare;
+
+exports.analizzaEmailPraticaAI =
+  analizzaEmailPraticaAI;

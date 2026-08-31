@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Centro notifiche - Consulenza Credipass</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+body{margin:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#25323d}
+.wrap{max-width:980px;margin:35px auto;padding:0 18px}
+.head{background:#002d72;color:#fff;border-bottom:5px solid #C99700;border-radius:15px 15px 0 0;padding:24px 27px}
+.body{background:#fff;border-radius:0 0 15px 15px;padding:22px 27px}
+.toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.btn{border:0;border-radius:8px;padding:10px 13px;background:#002d72;color:#fff;font-weight:bold;cursor:pointer}
+.item{border:1px solid #e1e6ec;border-radius:11px;padding:14px;margin:10px 0;background:#fff}
+.item.unread{border-left:5px solid #C99700;background:#fffdf5}
+.item.urgent{border-left-color:#b42318}
+.meta{font-size:12px;color:#68737d;margin-top:6px}
+.title{font-weight:800;color:#002d72}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.smallbtn{border:0;border-radius:7px;padding:8px 10px;cursor:pointer;font-weight:bold}
+.primary{background:#002d72;color:#fff}
+.gray{background:#e9edf2;color:#32404d}
+.badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:bold;background:#eef2f6}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<div class="head">
+  <div style="font-size:11px;color:#C99700;font-weight:bold">CENTRO OPERATIVO</div>
+  <div style="font-size:25px;font-weight:bold;margin-top:5px">🔔 Notifiche</div>
+  <div id="counter" style="font-size:12px;margin-top:6px;opacity:.9"></div>
+</div>
+
+<div class="body">
+  <div class="toolbar">
+    <button class="btn" onclick="loadNotifications()">AGGIORNA</button>
+    <button class="btn" onclick="location.href='/main/email-da-associare.html'">EMAIL DA ASSOCIARE</button>
+  </div>
+
+  <div id="list">Caricamento...</div>
+</div>
+</div>
+
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
+
+<script>
+const fn = window.CREDIPASS_FIREBASE.functions;
+
+function esc(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+function formatDate(v){
+  if(!v) return "";
+  try{
+    return new Date(v).toLocaleString("it-IT");
+  }catch(e){
+    return String(v);
+  }
+}
+
+async function updateNotification(id, patch){
+  const callable = fn.httpsCallable("aggiornaNotificaPersonale");
+  await callable({notificationId:id, ...patch});
+  await loadNotifications();
+}
+
+async function openPractice(item){
+  if(!item.practiceId) return;
+  await updateNotification(item.id,{read:true});
+
+  const url =
+    `/main/dashboard-consulente.html?id=${encodeURIComponent(item.practiceId)}`;
+
+  location.href = url;
+}
+
+async function loadNotifications(){
+  const box=document.getElementById("list");
+  box.textContent="Caricamento...";
+
+  try{
+    const callable=fn.httpsCallable("listaNotifichePersonali");
+    const r=await callable({limit:100});
+    const d=r.data || {};
+    const items=d.notifications || [];
+
+    document.getElementById("counter").textContent =
+      `${d.unread || 0} non lette • ${items.length} recenti`;
+
+    if(!items.length){
+      box.innerHTML="<div>Nessuna notifica.</div>";
+      return;
+    }
+
+    box.innerHTML=items.map(item=>{
+      const cls=[
+        "item",
+        item.read ? "" : "unread",
+        item.priority === "urgent" ? "urgent" : ""
+      ].join(" ");
+
+      const docs =
+        item.metadata?.requestedDocuments || [];
+
+      return `
+        <div class="${cls}">
+          <div class="title">${esc(item.title)}</div>
+          <div style="margin-top:5px;line-height:1.55">${esc(item.message)}</div>
+          <div class="meta">
+            ${esc(formatDate(item.createdAt))}
+            • <span class="badge">${esc(item.priority)}</span>
+          </div>
+
+          ${
+            docs.length
+              ? `<div class="meta" style="margin-top:8px">
+                  Documenti richiesti: ${docs.map(esc).join(", ")}
+                 </div>`
+              : ""
+          }
+
+          <div class="actions">
+            ${
+              item.practiceId
+                ? `<button class="smallbtn primary" onclick='openPractice(${JSON.stringify(item)})'>APRI PRATICA</button>`
+                : ""
+            }
+
+            ${
+              !item.read
+                ? `<button class="smallbtn gray" onclick="updateNotification('${esc(item.id)}',{read:true})">SEGNA LETTA</button>`
+                : ""
+            }
+
+            ${
+              !item.handled
+                ? `<button class="smallbtn gray" onclick="updateNotification('${esc(item.id)}',{handled:true})">GESTITA</button>`
+                : ""
+            }
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    box.textContent=error.message || "Errore caricamento notifiche.";
+  }
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(user) loadNotifications();
+  else document.getElementById("list").textContent="Effettua il login.";
+});
+</script>
+</body>
+</html>

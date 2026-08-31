@@ -1572,6 +1572,39 @@ document.addEventListener(
         margin-top: 18px;
     }
 
+
+    .notification-center-fab {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        z-index: 99990;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 50%;
+        background: #002d72;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 8px 22px rgba(0,0,0,.18);
+    }
+
+    .notification-center-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #b42318;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
 </style>
 </head>
 <body>
@@ -1971,6 +2004,17 @@ document.addEventListener(
     </div>
 </div>
 
+
+
+<button
+    type="button"
+    class="notification-center-fab"
+    title="Centro notifiche"
+    onclick="window.location.href='/main/centro-notifiche.html'"
+>
+    <i class="fas fa-bell"></i>
+    <span id="notificationCenterCount" class="notification-center-count"></span>
+</button>
 
 <div id="gmailDisconnectedModal" class="gmail-disconnected-modal" role="dialog" aria-modal="true" aria-labelledby="gmailDisconnectedTitle">
     <div class="gmail-disconnected-box">
@@ -4400,6 +4444,73 @@ Cordiali saluti`
 
 
 
+
+    async function aggiornaContatoreNotifiche() {
+
+        const badge =
+            document.getElementById(
+                "notificationCenterCount"
+            );
+
+        if (!badge) {
+            return;
+        }
+
+        try {
+
+            const callable =
+                firebase
+                    .app()
+                    .functions(
+                        window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion
+                        ||
+                        "us-central1"
+                    )
+                    .httpsCallable(
+                        "listaNotifichePersonali"
+                    );
+
+            const result =
+                await callable({
+                    limit:
+                        50,
+                });
+
+            const unread =
+                Number(
+                    result.data?.unread
+                    ||
+                    0
+                );
+
+            if (
+                unread > 0
+            ) {
+                badge.textContent =
+                    unread > 99
+                        ? "99+"
+                        : String(unread);
+
+                badge.style.display =
+                    "flex";
+            }
+            else {
+                badge.style.display =
+                    "none";
+            }
+
+        }
+        catch(error) {
+            console.warn(
+                "Contatore notifiche:",
+                error
+            );
+        }
+
+    }
+
+
+
     function mostraAvvisoGmailNonCollegata() {
 
         const modal =
@@ -4683,6 +4794,7 @@ Cordiali saluti`
 
             if (user) {
                 aggiornaStatoGmailDashboard();
+                aggiornaContatoreNotifiche();
             }
 
         }

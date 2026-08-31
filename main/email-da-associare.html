@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email da associare - Consulenza Credipass</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+body{margin:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#25323d}
+.wrap{max-width:1000px;margin:35px auto;padding:0 18px}
+.head{background:#002d72;color:#fff;border-bottom:5px solid #C99700;border-radius:15px 15px 0 0;padding:24px 27px}
+.body{background:#fff;border-radius:0 0 15px 15px;padding:22px 27px}
+.item{border:1px solid #e1e6ec;border-radius:11px;padding:15px;margin:11px 0}
+.title{font-weight:bold;color:#002d72}
+.meta{font-size:12px;color:#68737d;line-height:1.6;margin-top:6px}
+button{border:0;border-radius:7px;padding:9px 11px;font-weight:bold;cursor:pointer}
+.primary{background:#002d72;color:#fff}
+.gray{background:#e8edf2}
+input{padding:9px;border:1px solid #ccd4dd;border-radius:7px;min-width:230px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<div class="head">
+  <div style="font-size:11px;color:#C99700;font-weight:bold">EMAIL NON ASSOCIATE AUTOMATICAMENTE</div>
+  <div style="font-size:25px;font-weight:bold;margin-top:5px">📨 Da verificare</div>
+</div>
+
+<div class="body">
+  <button class="primary" onclick="loadItems()">AGGIORNA</button>
+  <button class="gray" onclick="location.href='/main/centro-notifiche.html'">CENTRO NOTIFICHE</button>
+
+  <div id="list" style="margin-top:15px">Caricamento...</div>
+</div>
+</div>
+
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
+
+<script>
+const fn=window.CREDIPASS_FIREBASE.functions;
+
+function esc(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+async function ignoreEmail(id){
+  if(!confirm("Ignorare questa email?")) return;
+  await fn.httpsCallable("ignoraEmailDaAssociare")({emailId:id});
+  await loadItems();
+}
+
+async function associate(id){
+  const input=document.getElementById(`practice_${id}`);
+  const practiceId=String(input?.value || "").trim();
+
+  if(!practiceId){
+    alert("Inserisci l'ID pratica.");
+    return;
+  }
+
+  await fn.httpsCallable("associaEmailAPratica")({
+    emailId:id,
+    practiceId
+  });
+
+  alert("Email associata.");
+  await loadItems();
+}
+
+async function loadItems(){
+  const box=document.getElementById("list");
+  box.textContent="Caricamento...";
+
+  try{
+    const r=await fn.httpsCallable("listaEmailDaAssociare")();
+    const items=r.data?.items || [];
+
+    if(!items.length){
+      box.innerHTML="<div>Nessuna email da verificare.</div>";
+      return;
+    }
+
+    box.innerHTML=items.map(item=>{
+      const candidate=item.candidati?.[0] || null;
+
+      return `
+        <div class="item">
+          <div class="title">${esc(item.oggetto || "(senza oggetto)")}</div>
+
+          <div class="meta">
+            Da: ${esc((item.mittente || []).join(", "))}<br>
+            Banca suggerita: ${esc(item.bancaSuggerita || "N/D")}<br>
+            Numeri pratica rilevati: ${esc((item.numeriPraticaRilevati || []).join(", ") || "nessuno")}<br>
+            ${
+              candidate
+                ? `Miglior candidato: ${esc(candidate.praticaId || "")} • score ${esc(candidate.score ?? "")}`
+                : "Nessun candidato forte."
+            }
+          </div>
+
+          <div class="actions">
+            <input
+              id="practice_${esc(item.id)}"
+              value="${esc(candidate?.praticaId || "")}"
+              placeholder="ID pratica"
+            >
+
+            <button class="primary" onclick="associate('${esc(item.id)}')">
+              ASSOCIA
+            </button>
+
+            <button class="gray" onclick="ignoreEmail('${esc(item.id)}')">
+              IGNORA
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    box.textContent=error.message || "Errore caricamento.";
+  }
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(user) loadItems();
+  else document.getElementById("list").textContent="Effettua il login.";
+});
+</script>
+</body>
+</html>

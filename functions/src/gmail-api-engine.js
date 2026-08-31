@@ -31,6 +31,15 @@ const {
 } = require("./gmail-audit");
 
 const {
+  OPENAI_API_KEY,
+  analyzeEmailWithAI,
+} = require("./mail-intelligence");
+
+const {
+  createNotification,
+} = require("./notification-center");
+
+const {
   BANK_DOMAIN_SEED,
 } = require("./mail-bank-domains.seed");
 
@@ -1486,6 +1495,105 @@ async function saveMatched({
     });
   }
 
+  /*
+   * Notifica base immediata: anche se l'AI dovesse fallire,
+   * il consulente sa che è arrivata una nuova comunicazione.
+   */
+  if (
+    direction ===
+      "ricevuta"
+  ) {
+    await createNotification({
+      uid:
+        connection.uid,
+
+      type:
+        "bank_email_received",
+
+      title:
+        `📧 Nuova email${bankDetection?.bank?.bancaNome ? ` - ${bankDetection.bank.bancaNome}` : ""}`,
+
+      message:
+        String(
+          mail.subject
+          ||
+          "(senza oggetto)"
+        ),
+
+      practiceId,
+
+      emailId,
+
+      priority:
+        "normal",
+
+      metadata: {
+        bank:
+          bankDetection
+            ?.bank
+            ?.bancaNome
+          ||
+          null,
+
+        practiceNumber:
+          number
+          ||
+          null,
+      },
+    });
+
+    /*
+     * AI Mail Intelligence:
+     * viene eseguita solo per email ricevute associate a una pratica,
+     * con testo disponibile. Se fallisce, NON blocca la sincronizzazione.
+     */
+    if (
+      String(
+        mail.text
+        ||
+        ""
+      )
+      .trim()
+    ) {
+      try {
+        await analyzeEmailWithAI({
+          practiceId,
+          emailId,
+          uid:
+            connection.uid,
+
+          bank:
+            bankDetection
+              ?.bank
+              ?.bancaNome
+            ||
+            null,
+
+          subject:
+            mail.subject
+            ||
+            "",
+
+          body:
+            mail.text
+            ||
+            "",
+
+          from,
+
+          force:
+            false,
+        });
+      }
+      catch(aiError) {
+        console.error(
+          "AI Mail Intelligence non bloccante:",
+          aiError
+        );
+      }
+    }
+  }
+
   return true;
 
 }
@@ -2071,6 +2179,7 @@ const sincronizzaGmailPratiche =
         GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET,
         GMAIL_TOKEN_ENCRYPTION_KEY,
+        OPENAI_API_KEY,
       ],
     },
 
@@ -2112,6 +2221,7 @@ const sincronizzaGmailPersonale =
         GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET,
         GMAIL_TOKEN_ENCRYPTION_KEY,
+        OPENAI_API_KEY,
       ],
     },
 

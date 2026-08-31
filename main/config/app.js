@@ -29,6 +29,12 @@ window.CREDIPASS_APP_CONFIG = Object.freeze({
     testPage:
       "/main/test-gmail-oauth.html",
 
+    notificationCenterPage:
+      "/main/centro-notifiche.html",
+
+    pendingEmailPage:
+      "/main/email-da-associare.html",
+
     oauthCallback:
       "https://us-central1-consulenza-credipass.cloudfunctions.net/gmailOAuthCallback",
 
