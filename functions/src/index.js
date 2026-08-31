@@ -3362,3 +3362,26 @@ exports.ignoraEmailDaAssociare =
 
 exports.analizzaEmailPraticaAI =
   analizzaEmailPraticaAI;
+
+
+/*
+|--------------------------------------------------------------------------
+| PROVENIENZA PRATICHE / DASHBOARD GESTIONALE
+|--------------------------------------------------------------------------
+*/
+
+const {
+  salvaProvenienzaPratica,
+  listaAgenzieImmobiliari,
+  dashboardGestionaleDati,
+} = require("./practice-source");
+
+
+exports.salvaProvenienzaPratica =
+  salvaProvenienzaPratica;
+
+exports.listaAgenzieImmobiliari =
+  listaAgenzieImmobiliari;
+
+exports.dashboardGestionaleDati =
+  dashboardGestionaleDati;

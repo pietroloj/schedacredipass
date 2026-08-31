@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provenienza pratica</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+body{margin:0;background:#eef2f6;font-family:Arial,sans-serif;color:#26323c}
+.wrap{max-width:850px;margin:35px auto;padding:0 18px}
+.head{background:#0b2a5b;color:#fff;border-bottom:5px solid #c89a2b;border-radius:14px 14px 0 0;padding:23px}
+.body{background:#fff;border-radius:0 0 14px 14px;padding:22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:10px;color:#6d7783;font-weight:800;text-transform:uppercase;margin-bottom:5px}
+input,select{width:100%;padding:10px;border:1px solid #ccd4dd;border-radius:8px}
+.row{margin-bottom:12px}
+.hidden{display:none}
+.btn{border:0;border-radius:8px;padding:10px 13px;background:#0b2a5b;color:white;font-weight:bold;cursor:pointer}
+.help{font-size:11px;color:#6d7783;line-height:1.55;margin-top:8px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div style="font-size:10px;color:#e5c66f;font-weight:bold">ANAGRAFICA COMMERCIALE</div>
+    <div style="font-size:23px;font-weight:bold;margin-top:5px">Provenienza pratica</div>
+  </div>
+
+  <div class="body">
+
+    <div class="row">
+      <label>Categoria provenienza</label>
+      <select id="category" onchange="toggleFields()">
+        <option value="">Seleziona...</option>
+        <option value="agenzia_immobiliare">Agenzia immobiliare</option>
+        <option value="passaparola">Passaparola</option>
+        <option value="diretto">Diretto</option>
+        <option value="web">Web</option>
+        <option value="altro">Altro</option>
+      </select>
+    </div>
+
+    <div id="agencyFields" class="hidden">
+      <div class="grid">
+        <div class="row">
+          <label>Agenzia</label>
+          <input id="agencyName" list="agencyList" placeholder="Nome agenzia">
+          <datalist id="agencyList"></datalist>
+        </div>
+
+        <div class="row">
+          <label>Referente</label>
+          <input id="referentName" placeholder="Nome referente">
+        </div>
+      </div>
+    </div>
+
+    <div id="referralFields" class="hidden">
+      <div class="grid">
+        <div class="row">
+          <label>Segnalato da</label>
+          <input id="referredBy" placeholder="Nome e cognome">
+        </div>
+
+        <div class="row">
+          <label>Tipo segnalatore</label>
+          <select id="referrerType">
+            <option value="">Seleziona...</option>
+            <option>Cliente</option>
+            <option>Conoscente</option>
+            <option>Professionista</option>
+            <option>Altro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="webFields" class="hidden">
+      <div class="grid">
+        <div class="row">
+          <label>Canale web</label>
+          <select id="webChannel">
+            <option value="">Seleziona...</option>
+            <option>Google</option>
+            <option>Facebook</option>
+            <option>Instagram</option>
+            <option>Sito Credipass</option>
+            <option>Landing page</option>
+            <option>Altro</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Campagna / fonte</label>
+          <input id="webCampaign" placeholder="es. Facebook Lead Ads Agosto">
+        </div>
+      </div>
+    </div>
+
+    <div id="otherFields" class="hidden">
+      <div class="row">
+        <label>Dettaglio</label>
+        <input id="otherDetail" placeholder="Specifica la provenienza">
+      </div>
+    </div>
+
+    <button class="btn" onclick="saveSource()">SALVA PROVENIENZA</button>
+
+    <div class="help">
+      La provenienza viene salvata direttamente nella pratica e alimenta automaticamente
+      la Dashboard Gestionale e il ranking delle agenzie immobiliari.
+    </div>
+
+  </div>
+</div>
+
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
+<script src="/main/js/practice-source.js"></script>
+
+<script>
+const db = window.CREDIPASS_FIREBASE.db;
+const practiceId =
+  new URLSearchParams(location.search).get("practiceId")
+  ||
+  new URLSearchParams(location.search).get("id")
+  ||
+  "";
+
+function toggleFields(){
+
+  const category =
+    document.getElementById("category").value;
+
+  document.getElementById("agencyFields").classList.toggle(
+    "hidden",
+    category !== "agenzia_immobiliare"
+  );
+
+  document.getElementById("referralFields").classList.toggle(
+    "hidden",
+    category !== "passaparola"
+  );
+
+  document.getElementById("webFields").classList.toggle(
+    "hidden",
+    category !== "web"
+  );
+
+  document.getElementById("otherFields").classList.toggle(
+    "hidden",
+    category !== "altro"
+  );
+}
+
+async function loadAgencies(){
+
+  try{
+    const agencies =
+      await CredipassPracticeSource.agencies();
+
+    document.getElementById("agencyList").innerHTML =
+      agencies
+        .map(a => `<option value="${String(a.nome || "").replace(/"/g,"&quot;")}"></option>`)
+        .join("");
+  }
+  catch(error){
+    console.warn(error);
+  }
+}
+
+async function loadPractice(){
+
+  if(!practiceId){
+    return;
+  }
+
+  const snap =
+    await db
+      .collection("pratiche_mutuo")
+      .doc(practiceId)
+      .get();
+
+  if(!snap.exists){
+    return;
+  }
+
+  const s =
+    snap.data()?.provenienza || {};
+
+  document.getElementById("category").value =
+    s.categoria || "";
+
+  document.getElementById("agencyName").value =
+    s.agenziaNome || "";
+
+  document.getElementById("referentName").value =
+    s.referenteNome || "";
+
+  document.getElementById("referredBy").value =
+    s.segnalatoDa || "";
+
+  document.getElementById("referrerType").value =
+    s.tipoSegnalatore || "";
+
+  document.getElementById("webChannel").value =
+    s.canaleWeb || "";
+
+  document.getElementById("webCampaign").value =
+    s.campagnaWeb || "";
+
+  document.getElementById("otherDetail").value =
+    s.altroDettaglio || "";
+
+  toggleFields();
+}
+
+async function saveSource(){
+
+  if(!practiceId){
+    alert("ID pratica mancante.");
+    return;
+  }
+
+  const categoria =
+    document.getElementById("category").value;
+
+  if(!categoria){
+    alert("Seleziona una categoria.");
+    return;
+  }
+
+  const provenienza = {
+    categoria,
+
+    agenziaNome:
+      document.getElementById("agencyName").value,
+
+    referenteNome:
+      document.getElementById("referentName").value,
+
+    segnalatoDa:
+      document.getElementById("referredBy").value,
+
+    tipoSegnalatore:
+      document.getElementById("referrerType").value,
+
+    canaleWeb:
+      document.getElementById("webChannel").value,
+
+    campagnaWeb:
+      document.getElementById("webCampaign").value,
+
+    altroDettaglio:
+      document.getElementById("otherDetail").value,
+  };
+
+  try{
+    await CredipassPracticeSource.save({
+      practiceId,
+      provenienza
+    });
+
+    alert("Provenienza salvata.");
+
+    if(history.length > 1){
+      history.back();
+    }
+  }
+  catch(error){
+    alert(error.message || "Errore salvataggio provenienza.");
+  }
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(user){
+    loadAgencies();
+    loadPractice();
+  }
+});
+</script>
+</body>
+</html>

@@ -1890,7 +1890,31 @@ document.addEventListener(
                     <p style="text-align:center; padding:20px; font-size:12px; color:#999;">Caricamento dati scheda...</p>
                 </div>
 
-                <div class="gmail-integration-card gmail-integration-card-timeline" id="gmailIntegrationCard">
+                
+                <div class="gmail-integration-card" id="practiceSourceCard" style="border-left-color:#2c66b8;">
+                    <div class="gmail-integration-head">
+                        <div>
+                            <div class="gmail-integration-title">
+                                <i class="fas fa-route"></i>
+                                Provenienza pratica
+                            </div>
+
+                            <div id="practiceSourceText" class="gmail-sync-meta">
+                                Non definita
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="gmail-btn gray"
+                            onclick="apriProvenienzaPratica()"
+                        >
+                            MODIFICA
+                        </button>
+                    </div>
+                </div>
+
+<div class="gmail-integration-card gmail-integration-card-timeline" id="gmailIntegrationCard">
                 <div class="gmail-integration-head">
                     <div>
                         <div class="gmail-integration-title">
@@ -4627,6 +4651,145 @@ Cordiali saluti`
     }
 
 
+
+    function apriProvenienzaPratica() {
+
+        if (!currentPracticeId) {
+            return;
+        }
+
+        window.location.href =
+            `/main/provenienza-pratica.html?practiceId=${encodeURIComponent(currentPracticeId)}`;
+
+    }
+
+
+    function formattaProvenienzaPratica(
+        provenienza = {}
+    ) {
+
+        const category =
+            provenienza.categoria
+            ||
+            "";
+
+        if (
+            category ===
+            "agenzia_immobiliare"
+        ) {
+            return [
+                "Agenzia immobiliare",
+                provenienza.agenziaNome,
+                provenienza.referenteNome
+                    ? `Referente: ${provenienza.referenteNome}`
+                    : ""
+            ]
+            .filter(Boolean)
+            .join(" • ");
+        }
+
+        if (
+            category ===
+            "passaparola"
+        ) {
+            return [
+                "Passaparola",
+                provenienza.segnalatoDa
+                    ? `Segnalato da: ${provenienza.segnalatoDa}`
+                    : ""
+            ]
+            .filter(Boolean)
+            .join(" • ");
+        }
+
+        if (
+            category ===
+            "diretto"
+        ) {
+            return "Diretto";
+        }
+
+        if (
+            category ===
+            "web"
+        ) {
+            return [
+                "Web",
+                provenienza.canaleWeb,
+                provenienza.campagnaWeb
+            ]
+            .filter(Boolean)
+            .join(" • ");
+        }
+
+        if (
+            category ===
+            "altro"
+        ) {
+            return [
+                "Altro",
+                provenienza.altroDettaglio
+            ]
+            .filter(Boolean)
+            .join(" • ");
+        }
+
+        return "Non definita";
+
+    }
+
+
+    async function aggiornaProvenienzaPraticaDashboard() {
+
+        const el =
+            document.getElementById(
+                "practiceSourceText"
+            );
+
+        if (
+            !el
+            ||
+            !currentPracticeId
+        ) {
+            return;
+        }
+
+        try {
+
+            const snap =
+                await firebase
+                    .firestore()
+                    .collection(
+                        "pratiche_mutuo"
+                    )
+                    .doc(
+                        currentPracticeId
+                    )
+                    .get();
+
+            const source =
+                snap.data()
+                    ?.provenienza
+                ||
+                {};
+
+            el.textContent =
+                formattaProvenienzaPratica(
+                    source
+                );
+
+        }
+        catch(error) {
+
+            el.textContent =
+                "Provenienza non disponibile";
+
+        }
+
+    }
+
+
+
     function apriPaginaCollegamentoGmail() {
         window.location.href =
             "/main/gmail-connection.html";
@@ -4853,6 +5016,7 @@ Cordiali saluti`
             if (user) {
                 aggiornaStatoGmailDashboard();
                 aggiornaContatoreNotifiche();
+                aggiornaProvenienzaPraticaDashboard();
             }
 
         }

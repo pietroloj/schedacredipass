@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Gestionale - Consulenza Credipass</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+:root{
+  --navy:#0b2a5b;
+  --navy2:#143d7a;
+  --gold:#c89a2b;
+  --bg:#eef2f6;
+  --card:#fff;
+  --muted:#6f7a86;
+  --line:#e2e7ed;
+  --green:#1f8f5f;
+  --red:#bf3a2b;
+  --amber:#ad7a00;
+  --blue:#2c66b8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#25313b}
+.topbar{
+  background:linear-gradient(135deg,#08224b,#0b2a5b);
+  color:#fff;
+  padding:18px 26px;
+  border-bottom:4px solid var(--gold);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+}
+.topbar h1{margin:0;font-size:23px}
+.topbar small{color:#e2c56b;font-weight:800;letter-spacing:.08em}
+.top-actions{display:flex;gap:9px;align-items:center}
+.btn{border:0;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer}
+.btn.light{background:#fff;color:var(--navy)}
+.btn.gold{background:var(--gold);color:#fff}
+.wrap{max-width:1600px;margin:auto;padding:20px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:12px}
+.kpi{
+  background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px;
+  box-shadow:0 3px 12px rgba(0,0,0,.05)
+}
+.kpi small{display:block;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase}
+.kpi strong{display:block;font-size:25px;color:var(--navy);margin-top:6px}
+.kpi .delta{font-size:10px;margin-top:5px;color:var(--green);font-weight:700}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-top:16px}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:13px;
+  box-shadow:0 3px 12px rgba(0,0,0,.05);padding:16px
+}
+.card h2{font-size:15px;margin:0 0 14px;color:var(--navy)}
+.status-row{display:flex;align-items:center;gap:12px;margin:10px 0}
+.status-row span:first-child{width:150px;font-size:12px;font-weight:700}
+.bar{height:10px;background:#edf1f5;border-radius:999px;flex:1;overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--blue);border-radius:999px}
+.status-row b{width:45px;text-align:right;font-size:12px}
+.alert-list{display:flex;flex-direction:column;gap:9px}
+.alert{
+  border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:10px;
+  padding:11px 12px;background:#fff
+}
+.alert.red{border-left-color:var(--red);background:#fff8f7}
+.alert.green{border-left-color:var(--green);background:#f6fcf8}
+.alert strong{font-size:12px;color:var(--navy)}
+.alert p{margin:4px 0 0;font-size:11px;color:var(--muted);line-height:1.5}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-size:10px;text-transform:uppercase}
+td strong{color:var(--navy)}
+.badge{display:inline-block;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:800}
+.badge.green{background:#e8f6ee;color:var(--green)}
+.badge.gold{background:#fff3d3;color:var(--amber)}
+.badge.red{background:#fde9e6;color:var(--red)}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end}
+.funnel-box{
+  background:#f5f8fb;border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center
+}
+.funnel-box strong{display:block;font-size:24px;color:var(--navy)}
+.funnel-box small{color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800}
+.chart{
+  height:220px;display:flex;align-items:end;gap:14px;padding:15px 8px 4px;border-bottom:1px solid var(--line)
+}
+.col{flex:1;text-align:center;min-width:55px}
+.col .barv{
+  width:100%;max-width:48px;margin:auto;
+  background:linear-gradient(180deg,#295fa8,#0b2a5b);
+  border-radius:8px 8px 0 0;min-height:4px
+}
+.col small{display:block;margin-top:7px;font-size:9px;color:var(--muted)}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
+.metric-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{
+  border:1px solid var(--line);border-radius:10px;padding:12px;background:#fafbfc
+}
+.metric small{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}
+.metric strong{display:block;margin-top:6px;color:var(--navy);font-size:17px}
+.agency-detail{margin-top:16px}
+.agency-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+.agency-bars{display:flex;flex-direction:column;gap:12px}
+.agency-row{display:grid;grid-template-columns:170px 1fr 60px;gap:10px;align-items:center}
+.agency-row span{font-size:11px;font-weight:700;color:#2a3642}
+.agency-bar{height:11px;background:#edf1f5;border-radius:999px;overflow:hidden}
+.agency-bar i{
+  display:block;height:100%;
+  background:linear-gradient(90deg,#c89a2b,#0b2a5b);
+  border-radius:999px
+}
+.agency-row b{text-align:right;font-size:11px}
+.agency-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.agency-kpi{
+  border:1px solid var(--line);border-radius:10px;padding:12px;background:#fafbfc
+}
+.agency-kpi small{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}
+.agency-kpi strong{display:block;margin-top:6px;color:var(--navy);font-size:18px}
+.empty{color:var(--muted);font-size:11px}
+@media(max-width:1200px){
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .grid,.bottom-grid,.agency-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .topbar{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <small>DASHBOARD DIREZIONALE</small>
+    <h1>Cruscotto Gestionale Admin / Responsabile</h1>
+  </div>
+
+  <div class="top-actions">
+    <button class="btn light" onclick="loadDashboard()">AGGIORNA</button>
+    <button class="btn gold" onclick="exportCsv()">ESPORTA REPORT</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="kpis">
+    <div class="kpi"><small>Pratiche totali</small><strong id="kTotal">—</strong><div class="delta">Database attuale</div></div>
+    <div class="kpi"><small>Da istruire</small><strong id="kToProcess">—</strong><div class="delta">Stato iniziale</div></div>
+    <div class="kpi"><small>In istruttoria</small><strong id="kProcessing">—</strong><div class="delta">In lavorazione</div></div>
+    <div class="kpi"><small>Deliberate</small><strong id="kDeliberate">—</strong><div class="delta">Esiti deliberativi</div></div>
+    <div class="kpi"><small>Stipulate</small><strong id="kStipulated">—</strong><div class="delta">Completate</div></div>
+    <div class="kpi"><small>Ferme &gt; 7 giorni</small><strong id="kStale">—</strong><div class="delta" style="color:var(--red)">Da attenzionare</div></div>
+    <div class="kpi"><small>Doc. incomplete</small><strong id="kIncomplete">—</strong><div class="delta" style="color:var(--amber)">Da integrare</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Pratiche per stato</h2>
+      <div id="stateRows" class="empty">Caricamento...</div>
+    </div>
+
+    <div class="card">
+      <h2>Attenzione richiesta</h2>
+      <div id="attentionList" class="alert-list">
+        <div class="alert"><strong>Caricamento dati...</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Produttività per collaboratore</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Consulente</th>
+              <th>Pratiche</th>
+              <th>Delibere</th>
+              <th>Stipule</th>
+              <th>Conversione</th>
+            </tr>
+          </thead>
+          <tbody id="consultantBody">
+            <tr><td colspan="5" class="empty">La PATCH 032 prepara il cruscotto; la produttività per collaboratore sarà alimentata quando i dati consulente sono uniformi nelle pratiche.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Funnel pratica → delibera → stipula</h2>
+
+      <div class="funnel">
+        <div class="funnel-box"><small>Pratiche</small><strong id="fPractices">—</strong></div>
+        <div class="funnel-box"><small>Da agenzie</small><strong id="fAgencies">—</strong></div>
+        <div class="funnel-box"><small>Delibere</small><strong id="fDeliberate">—</strong></div>
+        <div class="funnel-box"><small>Stipule</small><strong id="fStipulated">—</strong></div>
+      </div>
+
+      <div class="metric-list" style="margin-top:12px">
+        <div class="metric"><small>Pratica → delibera</small><strong id="mPracticeToDecision">—</strong></div>
+        <div class="metric"><small>Pratica → stipula</small><strong id="mPracticeToStipula">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+
+    <div class="card">
+      <h2>Provenienza pratiche</h2>
+
+      <div id="sourceChart" class="chart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Tempi medi pratica</h2>
+
+      <div class="metric-list">
+        <div class="metric"><small>Creazione → istruttoria</small><strong>—</strong></div>
+        <div class="metric"><small>Istruttoria → delibera</small><strong>—</strong></div>
+        <div class="metric"><small>Delibera → perizia</small><strong>—</strong></div>
+        <div class="metric"><small>Delibera → stipula</small><strong>—</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Qualità operativa</h2>
+
+      <div class="metric-list">
+        <div class="metric"><small>Email banca non gestite</small><strong id="qEmails">—</strong></div>
+        <div class="metric"><small>Reminder 48h attivi</small><strong>—</strong></div>
+        <div class="metric"><small>Gmail da ricollegare</small><strong>—</strong></div>
+        <div class="metric"><small>Review AI pendenti</small><strong>—</strong></div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="agency-detail">
+    <div class="card">
+
+      <h2>Dettaglio provenienza pratiche — Agenzie immobiliari</h2>
+
+      <div class="agency-grid">
+
+        <div>
+          <div id="agencyBars" class="agency-bars">
+            <div class="empty">Caricamento...</div>
+          </div>
+        </div>
+
+        <div class="agency-kpis">
+          <div class="agency-kpi"><small>Pratiche da agenzie</small><strong id="aPractices">—</strong></div>
+          <div class="agency-kpi"><small>Stipule da agenzie</small><strong id="aStipulated">—</strong></div>
+          <div class="agency-kpi"><small>Conversione media</small><strong id="aConversion">—</strong></div>
+          <div class="agency-kpi"><small>Agenzie attive</small><strong id="aActive">—</strong></div>
+        </div>
+
+      </div>
+
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead>
+            <tr>
+              <th>Agenzia</th>
+              <th>Referenti attivi</th>
+              <th>Pratiche</th>
+              <th>Delibere</th>
+              <th>Stipule</th>
+              <th>Conversione</th>
+            </tr>
+          </thead>
+
+          <tbody id="agencyBody">
+            <tr><td colspan="6" class="empty">Caricamento...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
+
+<script>
+const fn =
+  window
+    .CREDIPASS_FIREBASE
+    .functions;
+
+let dashboardData =
+  null;
+
+
+function pct(
+  value,
+  total
+) {
+
+  if (!total) {
+    return "0,0%";
+  }
+
+  return (
+    value
+    /
+    total
+    *
+    100
+  )
+  .toLocaleString(
+    "it-IT",
+    {
+      maximumFractionDigits:
+        1,
+      minimumFractionDigits:
+        1,
+    }
+  )
+  +
+  "%";
+}
+
+
+function safe(
+  value
+) {
+  return String(
+    value
+    ??
+    ""
+  )
+  .replace(
+    /&/g,
+    "&amp;"
+  )
+  .replace(
+    /</g,
+    "&lt;"
+  )
+  .replace(
+    />/g,
+    "&gt;"
+  );
+}
+
+
+function stateSum(
+  matcher
+) {
+
+  const entries =
+    Object.entries(
+      dashboardData
+        ?.countsByState
+      ||
+      {}
+    );
+
+  return entries
+    .filter(
+      ([name]) =>
+        matcher(
+          name
+        )
+    )
+    .reduce(
+      (
+        sum,
+        [,count]
+      ) =>
+        sum
+        +
+        Number(
+          count
+          ||
+          0
+        ),
+      0
+    );
+}
+
+
+function renderStates() {
+
+  const counts =
+    dashboardData
+      ?.countsByState
+    ||
+    {};
+
+  const entries =
+    Object.entries(
+      counts
+    )
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        b[1]
+        -
+        a[1]
+    )
+    .slice(
+      0,
+      8
+    );
+
+  const max =
+    Math.max(
+      1,
+      ...entries.map(
+        x => x[1]
+      )
+    );
+
+  document
+    .getElementById(
+      "stateRows"
+    )
+    .innerHTML =
+      entries.length
+        ? entries
+            .map(
+              ([name,count]) => `
+                <div class="status-row">
+                  <span>${safe(name)}</span>
+                  <div class="bar">
+                    <i style="width:${Math.max(3,count/max*100)}%"></i>
+                  </div>
+                  <b>${count}</b>
+                </div>
+              `
+            )
+            .join("")
+        : `<div class="empty">Nessuno stato disponibile.</div>`;
+
+}
+
+
+function renderSources() {
+
+  const source =
+    dashboardData
+      ?.countsBySource
+    ||
+    {};
+
+  const categories = [
+    [
+      "agenzia_immobiliare",
+      "Ag. immobiliari"
+    ],
+    [
+      "passaparola",
+      "Passaparola"
+    ],
+    [
+      "diretto",
+      "Diretto"
+    ],
+    [
+      "web",
+      "Web"
+    ],
+    [
+      "altro",
+      "Altro"
+    ],
+  ];
+
+  const max =
+    Math.max(
+      1,
+      ...categories
+        .map(
+          ([key]) =>
+            Number(
+              source[key]
+              ||
+              0
+            )
+        )
+    );
+
+  document
+    .getElementById(
+      "sourceChart"
+    )
+    .innerHTML =
+      categories
+        .map(
+          ([key,label]) => {
+
+            const value =
+              Number(
+                source[key]
+                ||
+                0
+              );
+
+            const height =
+              value
+                ? Math.max(
+                    12,
+                    value
+                    /
+                    max
+                    *
+                    170
+                  )
+                : 4;
+
+            return `
+              <div class="col">
+                <div
+                  class="barv"
+                  title="${value}"
+                  style="height:${height}px"
+                ></div>
+
+                <small>
+                  ${safe(label)}
+                  <br>
+                  <strong>${value}</strong>
+                </small>
+              </div>
+            `;
+          }
+        )
+        .join("");
+
+}
+
+
+function renderAgencies() {
+
+  const agencies =
+    dashboardData
+      ?.agencies
+    ||
+    [];
+
+  const max =
+    Math.max(
+      1,
+      ...agencies.map(
+        a =>
+          Number(
+            a.pratiche
+            ||
+            0
+          )
+      )
+    );
+
+  const agencyPractices =
+    agencies.reduce(
+      (
+        sum,
+        item
+      ) =>
+        sum
+        +
+        Number(
+          item.pratiche
+          ||
+          0
+        ),
+      0
+    );
+
+  const agencyStipulated =
+    agencies.reduce(
+      (
+        sum,
+        item
+      ) =>
+        sum
+        +
+        Number(
+          item.stipule
+          ||
+          0
+        ),
+      0
+    );
+
+  document
+    .getElementById(
+      "aPractices"
+    )
+    .textContent =
+      agencyPractices;
+
+  document
+    .getElementById(
+      "aStipulated"
+    )
+    .textContent =
+      agencyStipulated;
+
+  document
+    .getElementById(
+      "aConversion"
+    )
+    .textContent =
+      pct(
+        agencyStipulated,
+        agencyPractices
+      );
+
+  document
+    .getElementById(
+      "aActive"
+    )
+    .textContent =
+      agencies.length;
+
+  document
+    .getElementById(
+      "agencyBars"
+    )
+    .innerHTML =
+      agencies.length
+        ? agencies
+            .slice(
+              0,
+              8
+            )
+            .map(
+              item => `
+                <div class="agency-row">
+                  <span>${safe(item.nome)}</span>
+
+                  <div class="agency-bar">
+                    <i style="width:${Math.max(3,item.pratiche/max*100)}%"></i>
+                  </div>
+
+                  <b>${item.pratiche}</b>
+                </div>
+              `
+            )
+            .join("")
+        : `<div class="empty">Nessuna pratica è ancora classificata come proveniente da agenzia immobiliare.</div>`;
+
+  document
+    .getElementById(
+      "agencyBody"
+    )
+    .innerHTML =
+      agencies.length
+        ? agencies
+            .map(
+              item => {
+
+                const conversion =
+                  Number(
+                    item.conversione
+                    ||
+                    0
+                  );
+
+                const badge =
+                  conversion >= 45
+                    ? "green"
+                    : conversion >= 30
+                    ? "gold"
+                    : "red";
+
+                return `
+                  <tr>
+                    <td><strong>${safe(item.nome)}</strong></td>
+                    <td>${item.referentiAttivi || 0}</td>
+                    <td>${item.pratiche || 0}</td>
+                    <td>${item.delibere || 0}</td>
+                    <td>${item.stipule || 0}</td>
+                    <td>
+                      <span class="badge ${badge}">
+                        ${conversion.toLocaleString("it-IT",{maximumFractionDigits:1})}%
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }
+            )
+            .join("")
+        : `<tr><td colspan="6" class="empty">Nessuna agenzia con statistiche disponibili.</td></tr>`;
+
+}
+
+
+function renderDashboard() {
+
+  const d =
+    dashboardData;
+
+  const total =
+    Number(
+      d.totalPractices
+      ||
+      0
+    );
+
+  const toProcess =
+    stateSum(
+      name =>
+        name.includes("richiest")
+        ||
+        name.includes("istruire")
+        ||
+        name.includes("nuova")
+    );
+
+  const processing =
+    stateSum(
+      name =>
+        name.includes("istruttor")
+        ||
+        name.includes("lavoraz")
+    );
+
+  document.getElementById("kTotal").textContent =
+    total;
+
+  document.getElementById("kToProcess").textContent =
+    toProcess;
+
+  document.getElementById("kProcessing").textContent =
+    processing;
+
+  document.getElementById("kDeliberate").textContent =
+    d.deliberate || 0;
+
+  document.getElementById("kStipulated").textContent =
+    d.stipulated || 0;
+
+  document.getElementById("kStale").textContent =
+    d.staleOver7Days || 0;
+
+  document.getElementById("kIncomplete").textContent =
+    d.incompleteDocs || 0;
+
+  document.getElementById("fPractices").textContent =
+    total;
+
+  document.getElementById("fAgencies").textContent =
+    d.countsBySource?.agenzia_immobiliare || 0;
+
+  document.getElementById("fDeliberate").textContent =
+    d.deliberate || 0;
+
+  document.getElementById("fStipulated").textContent =
+    d.stipulated || 0;
+
+  document.getElementById("mPracticeToDecision").textContent =
+    pct(
+      d.deliberate || 0,
+      total
+    );
+
+  document.getElementById("mPracticeToStipula").textContent =
+    pct(
+      d.stipulated || 0,
+      total
+    );
+
+  document.getElementById("attentionList").innerHTML = `
+    <div class="alert red">
+      <strong>${d.staleOver7Days || 0} pratiche ferme da oltre 7 giorni</strong>
+      <p>Pratiche che non risultano aggiornate da più di una settimana.</p>
+    </div>
+
+    <div class="alert">
+      <strong>${d.incompleteDocs || 0} pratiche con documentazione incompleta</strong>
+      <p>Dato disponibile quando la pratica espone il flag documentazioneCompleta/documentiCompleti.</p>
+    </div>
+
+    <div class="alert green">
+      <strong>${d.stipulated || 0} pratiche stipulate / in fase atto</strong>
+      <p>Conteggio derivato dagli stati pratica attualmente salvati.</p>
+    </div>
+  `;
+
+  renderStates();
+  renderSources();
+  renderAgencies();
+
+}
+
+
+async function loadDashboard() {
+
+  try {
+
+    const callable =
+      fn.httpsCallable(
+        "dashboardGestionaleDati"
+      );
+
+    const result =
+      await callable();
+
+    dashboardData =
+      result.data
+      ||
+      {};
+
+    renderDashboard();
+
+  }
+  catch(error) {
+
+    console.error(
+      error
+    );
+
+    alert(
+      error.message
+      ||
+      "Errore caricamento dashboard."
+    );
+
+  }
+
+}
+
+
+function exportCsv() {
+
+  if (!dashboardData) {
+    return;
+  }
+
+  const rows = [
+    [
+      "Agenzia",
+      "Pratiche",
+      "Delibere",
+      "Stipule",
+      "Conversione %"
+    ],
+
+    ...(
+      dashboardData.agencies
+      ||
+      []
+    )
+    .map(
+      a => [
+        a.nome,
+        a.pratiche,
+        a.delibere,
+        a.stipule,
+        Number(
+          a.conversione
+          ||
+          0
+        )
+        .toFixed(
+          1
+        ),
+      ]
+    ),
+  ];
+
+  const csv =
+    rows
+      .map(
+        row =>
+          row
+            .map(
+              value =>
+                `"${String(value ?? "").replace(/"/g,'""')}"`
+            )
+            .join(
+              ";"
+            )
+      )
+      .join(
+        "\n"
+      );
+
+  const blob =
+    new Blob(
+      [csv],
+      {
+        type:
+          "text/csv;charset=utf-8",
+      }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const a =
+    document.createElement(
+      "a"
+    );
+
+  a.href =
+    url;
+
+  a.download =
+    "dashboard-agenzie.csv";
+
+  a.click();
+
+  URL.revokeObjectURL(
+    url
+  );
+
+}
+
+
+firebase
+  .auth()
+  .onAuthStateChanged(
+    user => {
+
+      if (user) {
+        loadDashboard();
+      }
+
+    }
+  );
+</script>
+</body>
+</html>

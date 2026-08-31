@@ -110,6 +110,12 @@ service cloud.firestore {
     }
 
 
+    match /agenzie_immobiliari/{agencyId} {
+      allow read, write: if false;
+    }
+
+
+
 
     match /gmail_oauth_states/{stateId} {
       allow read, write: if false;
