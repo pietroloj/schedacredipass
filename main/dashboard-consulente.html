@@ -1502,56 +1502,81 @@ document.addEventListener(
         }
     }
 
+
+    .gmail-integration-card-timeline {
+        margin-top: 14px;
+        margin-bottom: 14px;
+        border-top: 1px solid #e7ebf0;
+        padding-top: 14px;
+    }
+
+    .gmail-disconnected-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        background: rgba(0, 20, 55, .48);
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+    }
+
+    .gmail-disconnected-modal.show {
+        display: flex;
+    }
+
+    .gmail-disconnected-box {
+        width: min(460px, 100%);
+        background: #fff;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 22px 65px rgba(0,0,0,.22);
+        border-top: 5px solid #C99700;
+    }
+
+    .gmail-disconnected-body {
+        padding: 23px 24px;
+    }
+
+    .gmail-disconnected-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #fff4cc;
+        color: #8a6500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        margin-bottom: 13px;
+    }
+
+    .gmail-disconnected-title {
+        color: #002d72;
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 7px;
+    }
+
+    .gmail-disconnected-text {
+        color: #5e6872;
+        font-size: 11px;
+        line-height: 1.65;
+    }
+
+    .gmail-disconnected-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+
 </style>
 </head>
 <body>
 
-            <div class="gmail-integration-card" id="gmailIntegrationCard">
-                <div class="gmail-integration-head">
-                    <div>
-                        <div class="gmail-integration-title">
-                            <i class="fas fa-envelope"></i>
-                            Integrazione Gmail
-                        </div>
-                        <div id="gmailIntegrationStatus" class="gmail-sync-meta">
-                            Verifica collegamento...
-                        </div>
-                    </div>
-
-                    <div id="gmailIntegrationBadge" class="gmail-status-dot ko">
-                        ● Non collegata
-                    </div>
-                </div>
-
-                <div class="gmail-integration-actions">
-                    <button
-                        type="button"
-                        id="gmailConnectBtn"
-                        class="gmail-btn primary"
-                        onclick="apriPaginaCollegamentoGmail()"
-                    >
-                        COLLEGA GMAIL
-                    </button>
-
-                    <button
-                        type="button"
-                        id="gmailSyncBtn"
-                        class="gmail-btn gray"
-                        onclick="sincronizzaGmailDaDashboard()"
-                        style="display:none;"
-                    >
-                        SINCRONIZZA ORA
-                    </button>
-
-                    <button
-                        type="button"
-                        class="gmail-btn gray"
-                        onclick="apriPaginaCollegamentoGmail()"
-                    >
-                        IMPOSTAZIONI GMAIL
-                    </button>
-                </div>
-            </div>
+            
 
 
 <div class="container">
@@ -1765,6 +1790,53 @@ document.addEventListener(
                     <p style="text-align:center; padding:20px; font-size:12px; color:#999;">Caricamento dati scheda...</p>
                 </div>
 
+                <div class="gmail-integration-card gmail-integration-card-timeline" id="gmailIntegrationCard">
+                <div class="gmail-integration-head">
+                    <div>
+                        <div class="gmail-integration-title">
+                            <i class="fas fa-envelope"></i>
+                            Integrazione Gmail
+                        </div>
+                        <div id="gmailIntegrationStatus" class="gmail-sync-meta">
+                            Verifica collegamento...
+                        </div>
+                    </div>
+
+                    <div id="gmailIntegrationBadge" class="gmail-status-dot ko">
+                        ● Non collegata
+                    </div>
+                </div>
+
+                <div class="gmail-integration-actions">
+                    <button
+                        type="button"
+                        id="gmailConnectBtn"
+                        class="gmail-btn primary"
+                        onclick="apriPaginaCollegamentoGmail()"
+                    >
+                        COLLEGA GMAIL
+                    </button>
+
+                    <button
+                        type="button"
+                        id="gmailSyncBtn"
+                        class="gmail-btn gray"
+                        onclick="sincronizzaGmailDaDashboard()"
+                        style="display:none;"
+                    >
+                        SINCRONIZZA ORA
+                    </button>
+
+                    <button
+                        type="button"
+                        class="gmail-btn gray"
+                        onclick="apriPaginaCollegamentoGmail()"
+                    >
+                        IMPOSTAZIONI GMAIL
+                    </button>
+                </div>
+            </div>
+
                 <div class="internal-notes-box">
                     <div class="internal-notes-title">
                         <i class="fas fa-note-sticky" style="color:#C99700;"></i>
@@ -1896,6 +1968,45 @@ document.addEventListener(
             <span onclick="document.getElementById('modalAI').style.display='none'" style="cursor:pointer; font-size:30px; color:#999;">&times;</span>
         </div>
         <div id="aiBody" style="font-size:14px; line-height:1.7;"></div>
+    </div>
+</div>
+
+
+<div id="gmailDisconnectedModal" class="gmail-disconnected-modal" role="dialog" aria-modal="true" aria-labelledby="gmailDisconnectedTitle">
+    <div class="gmail-disconnected-box">
+        <div class="gmail-disconnected-body">
+            <div class="gmail-disconnected-icon">
+                <i class="fas fa-envelope-open-text"></i>
+            </div>
+
+            <div id="gmailDisconnectedTitle" class="gmail-disconnected-title">
+                Gmail non è collegata
+            </div>
+
+            <div class="gmail-disconnected-text">
+                Per ricevere automaticamente nella timeline le email relative alle pratiche,
+                collega la tua casella Gmail. Puoi farlo adesso oppure in un secondo momento
+                dalla sezione sopra la timeline.
+            </div>
+
+            <div class="gmail-disconnected-actions">
+                <button
+                    type="button"
+                    class="gmail-btn gray"
+                    onclick="chiudiAvvisoGmailNonCollegata()"
+                >
+                    PIÙ TARDI
+                </button>
+
+                <button
+                    type="button"
+                    class="gmail-btn primary"
+                    onclick="collegaGmailDaAvviso()"
+                >
+                    COLLEGA GMAIL
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -4288,6 +4399,65 @@ Cordiali saluti`
 
 
 
+
+    function mostraAvvisoGmailNonCollegata() {
+
+        const modal =
+            document.getElementById(
+                "gmailDisconnectedModal"
+            );
+
+        if (!modal) {
+            return;
+        }
+
+        const alreadyShown =
+            sessionStorage.getItem(
+                "gmail_disconnected_notice_shown"
+            ) ===
+            "1";
+
+        if (alreadyShown) {
+            return;
+        }
+
+        sessionStorage.setItem(
+            "gmail_disconnected_notice_shown",
+            "1"
+        );
+
+        modal.classList.add(
+            "show"
+        );
+
+    }
+
+
+    function chiudiAvvisoGmailNonCollegata() {
+
+        const modal =
+            document.getElementById(
+                "gmailDisconnectedModal"
+            );
+
+        if (modal) {
+            modal.classList.remove(
+                "show"
+            );
+        }
+
+    }
+
+
+    function collegaGmailDaAvviso() {
+
+        chiudiAvvisoGmailNonCollegata();
+
+        apriPaginaCollegamentoGmail();
+
+    }
+
+
     function apriPaginaCollegamentoGmail() {
         window.location.href =
             "/main/gmail-connection.html";
@@ -4401,6 +4571,16 @@ Cordiali saluti`
                     syncBtn.style.display =
                         "none";
                 }
+
+                /*
+                 * Avviso discreto: una sola volta per sessione browser.
+                 * Il pulsante Gmail resta comunque sempre disponibile
+                 * sopra la timeline della pratica.
+                 */
+                setTimeout(
+                    mostraAvvisoGmailNonCollegata,
+                    350
+                );
 
             }
 
