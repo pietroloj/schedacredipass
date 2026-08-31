@@ -1680,8 +1680,7 @@ document.addEventListener(
             <a href="ricerca-clienti.html" class="btn-back">
                 <i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO
             </a>
-
-            <button
+<button
                 type="button"
                 class="notification-center-fab"
                 title="Centro notifiche"
@@ -4654,12 +4653,12 @@ Cordiali saluti`
 
     function apriProvenienzaPratica() {
 
-        if (!currentPracticeId) {
+        if (!idCliente) {
             return;
         }
 
         window.location.href =
-            `/main/provenienza-pratica.html?practiceId=${encodeURIComponent(currentPracticeId)}`;
+            `/main/provenienza-pratica.html?practiceId=${encodeURIComponent(idCliente)}`;
 
     }
 
@@ -4749,7 +4748,7 @@ Cordiali saluti`
         if (
             !el
             ||
-            !currentPracticeId
+            !idCliente
         ) {
             return;
         }
@@ -4763,7 +4762,7 @@ Cordiali saluti`
                         "pratiche_mutuo"
                     )
                     .doc(
-                        currentPracticeId
+                        idCliente
                     )
                     .get();
 

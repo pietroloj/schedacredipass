@@ -15,36 +15,6 @@ function roleOf(profile) {
     ).toLowerCase();
 }
 
-
-const ROLE_DEFAULT_PERMISSIONS = {
-    admin: {crea_pratiche:true,vede_rete:true,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:true,vede_report_rete:true},
-    responsabile: {crea_pratiche:true,vede_rete:true,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:false,vede_report_rete:true},
-    consulente: {crea_pratiche:true,vede_rete:false,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:false,vede_report_rete:false},
-    collaboratore: {crea_pratiche:true,vede_rete:false,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:false,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:false,vede_bank_matching:false,gestisce_utenti:false,vede_report_rete:false},
-    segreteria: {crea_pratiche:false,vede_rete:true,vede_scheda_consulenza:false,modifica_scheda_consulenza:false,modifica_operazione_mutuo:false,vede_documenti:true,carica_documenti:true,elimina_documenti:false,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:false,usa_ai:false,vede_bank_matching:false,gestisce_utenti:false,vede_report_rete:false},
-    segnalatore: {crea_pratiche:false,vede_rete:false,vede_scheda_consulenza:false,modifica_scheda_consulenza:false,modifica_operazione_mutuo:false,vede_documenti:false,carica_documenti:false,elimina_documenti:false,richiede_integrazioni:false,cambia_stato:false,vede_timeline:false,modifica_timeline:false,gestisce_reminder:false,invia_email:false,vede_ai:false,usa_ai:false,vede_bank_matching:false,gestisce_utenti:false,vede_report_rete:false}
-};
-
-function mergedPermissions(profile) {
-    const role = roleOf(profile);
-    return {
-        ...(ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.consulente),
-        ...(
-            profile?.permessi &&
-            typeof profile.permessi === "object"
-                ? profile.permessi
-                : {}
-        )
-    };
-}
-
-function can(permission, session = sessionCache) {
-    if (!session) return false;
-    if (session.isAdmin) return true;
-    return mergedPermissions(session.profile)[permission] === true;
-}
-
-
 function goLogin() {
     const back = encodeURIComponent(
         window.location.pathname +
@@ -67,6 +37,13 @@ function isConsultantsPage() {
     return window.location.pathname
         .toLowerCase()
         .includes("gestione-consulenti");
+}
+
+
+function isManagementDashboardPage() {
+    return window.location.pathname
+        .toLowerCase()
+        .includes("dashboard-gestionale");
 }
 
 function isConsultationPage() {
@@ -559,6 +536,36 @@ function injectBadge(session) {
                 Archivio pratiche
             </a>
 
+
+            ${(session.isAdmin || session.isResponsabile) ? `
+                <a
+                    href="/main/dashboard-gestionale.html"
+                    class="credipass-user-menu-item"
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                        padding:12px 14px;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-size:9px;
+                        font-weight:700;
+                        border-bottom:1px solid rgba(255,255,255,.13);
+                        transition:background .15s ease,color .15s ease;
+                    "
+                >
+                    <i
+                        class="fas fa-chart-line"
+                        style="
+                            width:15px;
+                            text-align:center;
+                        "
+                    ></i>
+
+                    Dashboard gestionale
+                </a>
+            ` : ""}
+
             ${session.isAdmin ? `
                 <a
                     href="/main/gestione-consulenti.html"
@@ -741,6 +748,114 @@ function injectBadge(session) {
                     returnLink
                 )
             ) {
+                normalizeReturnLink(
+                    returnLink
+                );
+
+                rightControls.appendChild(
+                    returnLink
+                );
+
+            } else if (!returnLink) {
+
+                returnLink =
+                    createReturnLink();
+
+                rightControls.appendChild(
+                    returnLink
+                );
+            }
+
+            rightControls.appendChild(
+                wrapper
+            );
+        }
+
+    } else if (isManagementDashboardPage()) {
+
+        const head =
+            document.querySelector(
+                ".topbar"
+            ) ||
+            document.querySelector(
+                ".head"
+            ) ||
+            document.querySelector(
+                ".header"
+            );
+
+        if (head) {
+
+            /*
+             * Dashboard Gestionale:
+             *
+             * Titolo                    [TORNA] [UTENTE ▼]
+             *
+             * Stesso comportamento delle altre sezioni del gestionale.
+             */
+            head.style.position =
+                "relative";
+
+            head.style.display =
+                "flex";
+
+            head.style.alignItems =
+                "center";
+
+            head.style.justifyContent =
+                "space-between";
+
+            head.style.gap =
+                "18px";
+
+            head.style.flexWrap =
+                "wrap";
+
+            let rightControls =
+                document.getElementById(
+                    "credipass-dashboard-right-controls"
+                );
+
+            if (!rightControls) {
+
+                rightControls =
+                    document.createElement(
+                        "div"
+                    );
+
+                rightControls.id =
+                    "credipass-dashboard-right-controls";
+
+                rightControls.style.cssText = [
+                    "margin-left:auto",
+                    "display:flex",
+                    "align-items:center",
+                    "justify-content:flex-end",
+                    "gap:12px",
+                    "min-width:0",
+                    "flex:0 1 auto"
+                ].join(";");
+
+                head.appendChild(
+                    rightControls
+                );
+            }
+
+            let returnLink =
+                findReturnLink(
+                    head
+                ) ||
+                findReturnLink(
+                    document
+                );
+
+            if (
+                returnLink &&
+                !wrapper.contains(
+                    returnLink
+                )
+            ) {
+
                 normalizeReturnLink(
                     returnLink
                 );
@@ -1167,18 +1282,13 @@ async function ensureProfile(user) {
         ruolo,
         isAdmin:
             ruolo === "admin",
+        isResponsabile:
+            ruolo === "responsabile" ||
+            ruolo.includes("responsabile"),
         isSegreteria:
             ruolo === "segreteria",
-        isResponsabile:
-            ruolo === "responsabile",
-        isCollaboratore:
-            ruolo === "collaboratore",
-        isSegnalatore:
-            ruolo === "segnalatore",
         isConsulente:
-            ruolo === "consulente",
-        permessi:
-            mergedPermissions(profile)
+            ruolo === "consulente"
     };
 }
 
@@ -1287,6 +1397,21 @@ async function guard(options = {}) {
     }
 
     if (
+        options.managementOnly &&
+        !sessionCache.isAdmin &&
+        !sessionCache.isResponsabile
+    ) {
+
+        window.location.replace(
+            "/main/ricerca-clienti.html"
+        );
+
+        throw new Error(
+            "Accesso riservato ad Admin/Responsabile."
+        );
+    }
+
+    if (
         options.adminOnly &&
         !sessionCache.isAdmin
     ) {
@@ -1351,8 +1476,7 @@ async function practiceIsAccessible(
      * ai consulenti scelti dall'Admin in Gestione Consulenti.
      */
     if (
-        session.isSegreteria ||
-        session.isResponsabile
+        session.isSegreteria
     ) {
         const allowed =
             Array.isArray(
@@ -1396,16 +1520,6 @@ if (
    ============================================================ */
 
 window.CredipassAuth = {
-    canSendEmail: () => can("invia_email"),
-    canManageReminders: () => can("gestisce_reminder"),
-    canChangeStatus: () => can("cambia_stato"),
-    canViewAI: () => can("vede_ai"),
-    canUseAI: () => can("usa_ai"),
-    canDeleteDocument: () => can("elimina_documenti"),
-    canEditMortgageOperation: () => can("modifica_operazione_mutuo"),
-    canEditConsultation: () => can("modifica_scheda_consulenza"),
-    canViewConsultation: () => can("vede_scheda_consulenza"),
-    canCreatePractice: () => can("crea_pratiche"),
     guard,
 
     getSession:

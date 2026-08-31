@@ -5,9 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Gestionale - Consulenza Credipass</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<script src="/main/auth-guard.js"></script>
 
 <style>
 :root{
@@ -24,7 +29,7 @@
   --blue:#2c66b8;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#25313b}
+body{margin:0;background:var(--bg);font-family:'Poppins',Arial,Helvetica,sans-serif;color:#25313b}
 .topbar{
   background:linear-gradient(135deg,#08224b,#0b2a5b);
   color:#fff;
@@ -134,7 +139,7 @@ td strong{color:var(--navy)}
 <body>
 
 <div class="topbar">
-  <div>
+  <div class="dashboard-title-block">
     <small>DASHBOARD DIREZIONALE</small>
     <h1>Cruscotto Gestionale Admin / Responsabile</h1>
   </div>
@@ -290,6 +295,13 @@ td strong{color:var(--navy)}
 
 <script src="/main/config/app.js"></script>
 <script src="/main/config/firebase.js"></script>
+
+<script>
+const authReady =
+  CredipassAuth.guard({
+    managementOnly: true
+  });
+</script>
 
 <script>
 const fn =
@@ -925,17 +937,16 @@ function exportCsv() {
 }
 
 
-firebase
-  .auth()
-  .onAuthStateChanged(
-    user => {
-
-      if (user) {
-        loadDashboard();
-      }
-
-    }
-  );
+authReady
+  .then(() => {
+    loadDashboard();
+  })
+  .catch(error => {
+    console.error(
+      "Accesso Dashboard Gestionale:",
+      error
+    );
+  });
 </script>
 </body>
 </html>
