@@ -43,6 +43,7 @@ jobs:
           node --check src/notification-center.js
           node --check src/mail-inbox.js
           node --check src/mail-intelligence.js
+          node --check src/practice-source.js
           node --check src/gmail-oauth.js
           node --check src/gmail-api-engine.js
           node --check src/mail-admin-actions.js
