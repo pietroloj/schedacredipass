@@ -3310,3 +3310,18 @@ exports.confermaDominioBanca =
 
 exports.associaEmailAPratica =
   associaEmailAPratica;
+
+
+/*
+|--------------------------------------------------------------------------
+| GMAIL SECURITY AUDIT
+|--------------------------------------------------------------------------
+*/
+
+const {
+  listaAuditGmailPersonale,
+} = require("./gmail-audit");
+
+
+exports.listaAuditGmailPersonale =
+  listaAuditGmailPersonale;

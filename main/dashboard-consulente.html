@@ -4560,7 +4560,9 @@ Cordiali saluti`
                     "● Non collegata";
 
                 statusEl.textContent =
-                    "Collega la tua casella Gmail Credipass per acquisire automaticamente le comunicazioni delle pratiche.";
+                    data.reconnectRequired === true
+                        ? "L'autorizzazione Gmail non è più valida. Ricollega la casella per riprendere la sincronizzazione."
+                        : "Collega la tua casella Gmail Credipass per acquisire automaticamente le comunicazioni delle pratiche.";
 
                 if (connectBtn) {
                     connectBtn.style.display =

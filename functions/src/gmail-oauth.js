@@ -18,6 +18,15 @@ const {
   google,
 } = require("googleapis");
 
+const {
+  GMAIL_TOKEN_ENCRYPTION_KEY,
+  encryptRefreshToken,
+} = require("./gmail-token-crypto");
+
+const {
+  writeGmailAudit,
+} = require("./gmail-audit");
+
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -227,6 +236,7 @@ const gmailOAuthCallback =
       secrets: [
         GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET,
+        GMAIL_TOKEN_ENCRYPTION_KEY,
       ],
     },
 
@@ -468,8 +478,17 @@ const gmailOAuthCallback =
               email:
                 gmailAddress,
 
+              ...encryptRefreshToken(
+                tokens.refresh_token
+              ),
+
+              /*
+               * Non salviamo mai il refresh token in chiaro.
+               */
               refreshToken:
-                tokens.refresh_token,
+                admin.firestore
+                  .FieldValue
+                  .delete(),
 
               scope:
                 tokens.scope
@@ -480,6 +499,12 @@ const gmailOAuthCallback =
 
               connected:
                 true,
+
+              reconnectRequired:
+                false,
+
+              disconnectedReason:
+                null,
 
               connectedAt:
                 admin.firestore
@@ -531,6 +556,37 @@ const gmailOAuthCallback =
                 true,
             }
           );
+
+        await writeGmailAudit({
+          uid,
+
+          event:
+            "gmail_connected",
+
+          email:
+            gmailAddress,
+
+          ok:
+            true,
+
+          source:
+            "oauth_callback",
+
+          detail:
+            "Account Gmail collegato tramite OAuth 2.0.",
+
+          metadata: {
+            scope:
+              tokens.scope
+              ||
+              GMAIL_SCOPES.join(
+                " "
+              ),
+
+            tokenEncryption:
+              "AES-256-GCM",
+          },
+        });
 
         await stateRef.delete();
 
@@ -656,6 +712,34 @@ const statoCollegamentoGmail =
           data.lastError
           ||
           null,
+
+        reconnectRequired:
+          data.reconnectRequired ===
+          true,
+
+        disconnectedReason:
+          data.disconnectedReason
+          ||
+          null,
+
+        tokenEncrypted:
+          Boolean(
+            data.refreshTokenEncrypted
+            &&
+            data.refreshTokenIv
+            &&
+            data.refreshTokenTag
+          ),
+
+        tokenEncryption:
+          data.refreshTokenEncryption
+          ||
+          null,
+
+        scope:
+          data.scope
+          ||
+          "",
       };
 
     }
@@ -684,14 +768,49 @@ const scollegaGmail =
         uid
       );
 
-      await db
-        .collection(
-          "gmail_connections"
-        )
-        .doc(
-          uid
-        )
-        .delete();
+      const connectionRef =
+        db
+          .collection(
+            "gmail_connections"
+          )
+          .doc(
+            uid
+          );
+
+      const connectionSnap =
+        await connectionRef.get();
+
+      const connectionData =
+        connectionSnap.exists
+          ? (
+              connectionSnap.data()
+              ||
+              {}
+            )
+          : {};
+
+      await writeGmailAudit({
+        uid,
+
+        event:
+          "gmail_disconnected",
+
+        email:
+          connectionData.email
+          ||
+          null,
+
+        ok:
+          true,
+
+        source:
+          "user",
+
+        detail:
+          "Account Gmail scollegato dal consulente.",
+      });
+
+      await connectionRef.delete();
 
       await db
         .collection(

@@ -97,6 +97,10 @@ body{
       SINCRONIZZA ORA
     </button>
 
+    <button id="changeBtn" class="btn" onclick="changeGmail()" style="display:none">
+      CAMBIA ACCOUNT
+    </button>
+
     <button id="disconnectBtn" class="btn red" onclick="disconnectGmail()" style="display:none">
       SCOLLEGA
     </button>
@@ -105,7 +109,19 @@ body{
   <div class="small" style="margin-top:18px">
     Ogni consulente collega personalmente la propria casella Google una sola volta.
     Il gestionale non salva la password Gmail e non richiede Password per le app.
-    Viene conservato esclusivamente il token OAuth necessario alla sincronizzazione automatica.
+    Il refresh token OAuth viene cifrato AES-256-GCM prima del salvataggio.
+  </div>
+
+  <div id="securityBox" class="status" style="margin-top:18px;">
+    <strong style="color:#002d72;">Sicurezza Gmail</strong>
+    <div class="small" style="margin-top:8px;">Caricamento...</div>
+  </div>
+
+  <div class="status" style="margin-top:18px;">
+    <strong style="color:#002d72;">Ultimi eventi di sicurezza</strong>
+    <div id="gmailAuditList" class="small" style="margin-top:8px;">
+      Caricamento...
+    </div>
   </div>
 
 </div>
@@ -163,6 +179,7 @@ async function refreshStatus(){
 
       document.getElementById("connectBtn").style.display="none";
       document.getElementById("syncBtn").style.display="inline-block";
+      document.getElementById("changeBtn").style.display="inline-block";
       document.getElementById("disconnectBtn").style.display="inline-block";
 
     }
@@ -177,9 +194,16 @@ async function refreshStatus(){
 
       document.getElementById("connectBtn").style.display="inline-block";
       document.getElementById("syncBtn").style.display="none";
+      document.getElementById("changeBtn").style.display="none";
       document.getElementById("disconnectBtn").style.display="none";
 
     }
+
+    renderSecurityStatus(
+      d
+    );
+
+    await loadGmailAudit();
 
   }
   catch(error){
@@ -190,6 +214,188 @@ async function refreshStatus(){
   }
 
 }
+
+
+function renderSecurityStatus(d){
+
+  const box =
+    document.getElementById(
+      "securityBox"
+    );
+
+  if(!box){
+    return;
+  }
+
+  const encrypted =
+    d.tokenEncrypted ===
+    true;
+
+  const readonly =
+    String(
+      d.scope
+      ||
+      ""
+    )
+    .includes(
+      "gmail.readonly"
+    );
+
+  const reconnect =
+    d.reconnectRequired ===
+    true;
+
+  box.innerHTML = `
+    <strong style="color:#002d72;">Sicurezza Gmail</strong>
+
+    <div class="small" style="margin-top:9px;line-height:1.8;">
+      ${encrypted ? "✅" : "⚠️"}
+      Refresh token:
+      <strong>${encrypted ? "cifrato AES-256-GCM" : "da migrare/cifrare"}</strong>
+      <br>
+
+      ${readonly ? "✅" : "⚠️"}
+      Permesso Gmail:
+      <strong>${readonly ? "sola lettura" : "verificare scope"}</strong>
+      <br>
+
+      ❌ Invio email tramite API
+      <br>
+
+      ❌ Eliminazione email tramite API
+      <br>
+
+      ❌ Modifica email tramite API
+      <br>
+
+      ${reconnect ? "⚠️" : "✅"}
+      Autorizzazione:
+      <strong>${reconnect ? "ricollegamento necessario" : "valida/monitorata"}</strong>
+    </div>
+  `;
+
+}
+
+
+async function loadGmailAudit(){
+
+  const box =
+    document.getElementById(
+      "gmailAuditList"
+    );
+
+  if(!box){
+    return;
+  }
+
+  try{
+
+    const callable =
+      fn.httpsCallable(
+        "listaAuditGmailPersonale"
+      );
+
+    const result =
+      await callable();
+
+    const events =
+      result.data
+        ?.events
+      ||
+      [];
+
+    if(!events.length){
+
+      box.innerHTML =
+        "Nessun evento registrato.";
+
+      return;
+    }
+
+    box.innerHTML =
+      events
+        .slice(0,10)
+        .map(
+          event => {
+
+            const when =
+              event.createdAt
+                ? new Date(
+                    event.createdAt
+                  )
+                  .toLocaleString(
+                    "it-IT"
+                  )
+                : "";
+
+            const symbol =
+              event.ok
+                ? "✅"
+                : "⚠️";
+
+            return `
+              <div style="padding:7px 0;border-bottom:1px solid #e6eaf0;">
+                ${symbol}
+                <strong>${esc(event.event || "evento")}</strong>
+                ${when ? ` - ${esc(when)}` : ""}
+                ${
+                  event.detail
+                    ? `<div style="margin-top:3px;">${esc(event.detail)}</div>`
+                    : ""
+                }
+              </div>
+            `;
+
+          }
+        )
+        .join("");
+
+  }
+  catch(error){
+
+    box.innerHTML =
+      `Impossibile caricare audit: ${esc(error.message || "errore")}`;
+
+  }
+
+}
+
+
+async function changeGmail(){
+
+  if(
+    !confirm(
+      "Vuoi cambiare la casella Gmail collegata? La connessione attuale verrà rimossa e Google ti chiederà di scegliere un nuovo account."
+    )
+  ){
+    return;
+  }
+
+  try{
+
+    const disconnect =
+      fn.httpsCallable(
+        "scollegaGmail"
+      );
+
+    await disconnect();
+
+    await connectGmail();
+
+  }
+  catch(error){
+
+    alert(
+      error.message
+      ||
+      "Errore durante il cambio account Gmail."
+    );
+
+  }
+
+}
+
+
 
 async function connectGmail(){
 

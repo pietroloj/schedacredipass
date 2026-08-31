@@ -21,6 +21,16 @@ const {
 } = require("./gmail-oauth");
 
 const {
+  GMAIL_TOKEN_ENCRYPTION_KEY,
+  encryptRefreshToken,
+  decryptRefreshToken,
+} = require("./gmail-token-crypto");
+
+const {
+  writeGmailAudit,
+} = require("./gmail-audit");
+
+const {
   BANK_DOMAIN_SEED,
 } = require("./mail-bank-domains.seed");
 
@@ -419,22 +429,186 @@ async function getGmailForConnection(
   connection
 ) {
 
+  const tokenInfo =
+    decryptRefreshToken(
+      connection
+    );
+
   const oauth2Client =
     buildOAuthClient();
 
   oauth2Client
     .setCredentials({
       refresh_token:
-        connection
-          .refreshToken,
+        tokenInfo.token,
     });
 
-  return google.gmail({
-    version:
-      "v1",
+  const gmail =
+    google.gmail({
+      version:
+        "v1",
 
-    auth:
-      oauth2Client,
+      auth:
+        oauth2Client,
+    });
+
+  return {
+    gmail,
+    tokenInfo,
+  };
+
+}
+
+
+function oauthReconnectRequired(
+  error
+) {
+
+  const message =
+    String(
+      error?.message
+      ||
+      error?.response?.data?.error_description
+      ||
+      error?.response?.data?.error
+      ||
+      ""
+    )
+    .toLowerCase();
+
+  const code =
+    Number(
+      error?.code
+      ||
+      error?.response?.status
+      ||
+      0
+    );
+
+  return (
+    code ===
+      401
+    ||
+    message.includes(
+      "invalid_grant"
+    )
+    ||
+    message.includes(
+      "invalid credentials"
+    )
+    ||
+    message.includes(
+      "token has been expired"
+    )
+    ||
+    message.includes(
+      "token has been revoked"
+    )
+    ||
+    message.includes(
+      "unauthorized_client"
+    )
+  );
+
+}
+
+
+async function markReconnectRequired({
+  connectionRef,
+  connection,
+  error,
+}) {
+
+  const detail =
+    String(
+      error?.message
+      ||
+      error
+    )
+    .slice(
+      0,
+      1500
+    );
+
+  await connectionRef.set(
+    {
+      connected:
+        false,
+
+      reconnectRequired:
+        true,
+
+      disconnectedReason:
+        "token_revoked_or_expired",
+
+      lastSyncAt:
+        admin.firestore
+          .FieldValue
+          .serverTimestamp(),
+
+      lastSyncOk:
+        false,
+
+      lastError:
+        detail,
+
+      updatedAt:
+        admin.firestore
+          .FieldValue
+          .serverTimestamp(),
+    },
+    {
+      merge:
+        true,
+    }
+  );
+
+  await db
+    .collection(
+      "consulenti"
+    )
+    .doc(
+      connection.uid
+    )
+    .set(
+      {
+        gmailCollegata:
+          false,
+
+        gmailRicollegamentoRichiesto:
+          true,
+      },
+      {
+        merge:
+          true,
+      }
+    );
+
+  await writeGmailAudit({
+    uid:
+      connection.uid,
+
+    event:
+      "gmail_reconnect_required",
+
+    email:
+      connection.email
+      ||
+      null,
+
+    ok:
+      false,
+
+    source:
+      "gmail_api",
+
+    detail:
+      "Google ha rifiutato il token OAuth. È necessario ricollegare Gmail.",
+
+    metadata: {
+      error:
+        detail,
+    },
   });
 
 }
@@ -1328,10 +1502,75 @@ async function syncConnection(
   bankCatalog
 ) {
 
-  const gmail =
+  const {
+    gmail,
+    tokenInfo,
+  } =
     await getGmailForConnection(
       connection
     );
+
+  /*
+   * Migrazione automatica delle vecchie connessioni che avevano ancora
+   * il refresh token in chiaro.
+   */
+  if (
+    tokenInfo
+      .legacyPlaintext
+  ) {
+
+    await db
+      .collection(
+        "gmail_connections"
+      )
+      .doc(
+        connection.uid
+      )
+      .set(
+        {
+          ...encryptRefreshToken(
+            tokenInfo.token
+          ),
+
+          refreshToken:
+            admin.firestore
+              .FieldValue
+              .delete(),
+
+          updatedAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        },
+        {
+          merge:
+            true,
+        }
+      );
+
+    await writeGmailAudit({
+      uid:
+        connection.uid,
+
+      event:
+        "gmail_token_migrated",
+
+      email:
+        connection.email
+        ||
+        null,
+
+      ok:
+        true,
+
+      source:
+        "security_migration",
+
+      detail:
+        "Refresh token migrato automaticamente da formato legacy a AES-256-GCM.",
+    });
+
+  }
 
   const state =
     connection.syncState
@@ -1571,12 +1810,58 @@ async function syncConnection(
 
         lastError:
           null,
+
+        reconnectRequired:
+          false,
+
+        disconnectedReason:
+          null,
       },
       {
         merge:
           true,
       }
     );
+
+  /*
+   * Per non creare migliaia di log inutili:
+   * registriamo il sync schedulato solo se ha realmente processato email.
+   * Il timestamp lastSyncAt viene comunque aggiornato a ogni controllo.
+   */
+  if (
+    processed > 0
+    ||
+    matched > 0
+  ) {
+
+    await writeGmailAudit({
+      uid:
+        connection.uid,
+
+      event:
+        "gmail_sync_completed",
+
+      email:
+        connection.email
+        ||
+        null,
+
+      ok:
+        true,
+
+      source:
+        "scheduler",
+
+      detail:
+        `Sincronizzazione completata: ${processed} email analizzate, ${matched} associate.`,
+
+      metadata: {
+        processed,
+        matched,
+      },
+    });
+
+  }
 
   return {
     uid:
@@ -1654,32 +1939,76 @@ async function syncAllConnections() {
         error
       );
 
-      await doc.ref.set(
-        {
-          lastSyncAt:
-            admin.firestore
-              .FieldValue
-              .serverTimestamp(),
+      if (
+        oauthReconnectRequired(
+          error
+        )
+      ) {
 
-          lastSyncOk:
+        await markReconnectRequired({
+          connectionRef:
+            doc.ref,
+
+          connection,
+
+          error,
+        });
+
+      }
+      else {
+
+        const detail =
+          String(
+            error?.message
+            ||
+            error
+          )
+          .slice(
+            0,
+            1500
+          );
+
+        await doc.ref.set(
+          {
+            lastSyncAt:
+              admin.firestore
+                .FieldValue
+                .serverTimestamp(),
+
+            lastSyncOk:
+              false,
+
+            lastError:
+              detail,
+          },
+          {
+            merge:
+              true,
+          }
+        );
+
+        await writeGmailAudit({
+          uid:
+            connection.uid,
+
+          event:
+            "gmail_sync_error",
+
+          email:
+            connection.email
+            ||
+            null,
+
+          ok:
             false,
 
-          lastError:
-            String(
-              error?.message
-              ||
-              error
-            )
-            .slice(
-              0,
-              1500
-            ),
-        },
-        {
-          merge:
-            true,
-        }
-      );
+          source:
+            "scheduler",
+
+          detail,
+        });
+
+      }
 
       results.push({
         uid:
@@ -1741,6 +2070,7 @@ const sincronizzaGmailPratiche =
       secrets: [
         GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET,
+        GMAIL_TOKEN_ENCRYPTION_KEY,
       ],
     },
 
@@ -1781,6 +2111,7 @@ const sincronizzaGmailPersonale =
       secrets: [
         GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET,
+        GMAIL_TOKEN_ENCRYPTION_KEY,
       ],
     },
 
@@ -1823,28 +2154,94 @@ const sincronizzaGmailPersonale =
           db
         );
 
-      const result =
-        await syncConnection(
-          {
-            uid:
-              snap.id,
+      const connection = {
+        uid:
+          snap.id,
 
-            ...(
-              snap.data()
-              ||
-              {}
-            ),
-          },
-
-          bankCatalog
-        );
-
-      return {
-        ok:
-          true,
-
-        ...result,
+        ...(
+          snap.data()
+          ||
+          {}
+        ),
       };
+
+      try {
+
+        const result =
+          await syncConnection(
+            connection,
+            bankCatalog
+          );
+
+        await writeGmailAudit({
+          uid:
+            connection.uid,
+
+          event:
+            "gmail_manual_sync",
+
+          email:
+            connection.email
+            ||
+            null,
+
+          ok:
+            true,
+
+          source:
+            "user",
+
+          detail:
+            `Sincronizzazione manuale: ${result.processed || 0} email analizzate, ${result.matched || 0} associate.`,
+
+          metadata: {
+            processed:
+              result.processed
+              ||
+              0,
+
+            matched:
+              result.matched
+              ||
+              0,
+          },
+        });
+
+        return {
+          ok:
+            true,
+
+          ...result,
+        };
+
+      }
+      catch(error) {
+
+        if (
+          oauthReconnectRequired(
+            error
+          )
+        ) {
+
+          await markReconnectRequired({
+            connectionRef:
+              ref,
+
+            connection,
+
+            error,
+          });
+
+          throw new HttpsError(
+            "failed-precondition",
+            "L'autorizzazione Gmail non è più valida. Ricollega il tuo account Gmail."
+          );
+
+        }
+
+        throw error;
+
+      }
 
     }
   );
