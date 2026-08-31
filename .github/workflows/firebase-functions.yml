@@ -38,6 +38,8 @@ jobs:
       - name: Verify Mail Engine modules
         working-directory: functions
         run: |
+          node --check src/gmail-token-crypto.js
+          node --check src/gmail-audit.js
           node --check src/gmail-oauth.js
           node --check src/gmail-api-engine.js
           node --check src/mail-admin-actions.js
@@ -66,6 +68,30 @@ jobs:
             --token "${{ secrets.FIREBASE_TOKEN }}"
 
           rm -f /tmp/google_oauth_client_id.txt /tmp/google_oauth_client_secret.txt
+
+      - name: Ensure Gmail token encryption key
+        run: |
+          echo "Controllo GMAIL_TOKEN_ENCRYPTION_KEY..."
+
+          if firebase functions:secrets:access GMAIL_TOKEN_ENCRYPTION_KEY \
+            --project consulenza-credipass \
+            --token "${{ secrets.FIREBASE_TOKEN }}" >/dev/null 2>&1
+          then
+            echo "✅ GMAIL_TOKEN_ENCRYPTION_KEY già presente"
+          else
+            echo "Creo una nuova chiave AES-256 casuale direttamente nel runner..."
+
+            openssl rand -base64 32 > /tmp/gmail_token_encryption_key.txt
+
+            firebase functions:secrets:set GMAIL_TOKEN_ENCRYPTION_KEY \
+              --data-file=/tmp/gmail_token_encryption_key.txt \
+              --project consulenza-credipass \
+              --token "${{ secrets.FIREBASE_TOKEN }}"
+
+            rm -f /tmp/gmail_token_encryption_key.txt
+
+            echo "✅ Chiave AES-256 creata in Firebase Secret Manager"
+          fi
 
       - name: Deploy Firebase Functions
         run: firebase deploy --only functions --project consulenza-credipass --token "${{ secrets.FIREBASE_TOKEN }}"
