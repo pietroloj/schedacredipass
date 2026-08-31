@@ -1573,36 +1573,86 @@ document.addEventListener(
     }
 
 
+    /* =========================================================
+       CENTRO NOTIFICHE - OPZIONE 1
+       Campanella integrata nell'header, allineata agli altri controlli
+       ========================================================= */
+
+    .header {
+        justify-content: flex-start;
+    }
+
+    .header-practice-title {
+        margin-right: auto;
+        min-width: 0;
+    }
+
+    .header-primary-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 0 0 auto;
+    }
+
     .notification-center-fab {
-        position: fixed;
-        top: 18px;
-        right: 18px;
-        z-index: 99990;
-        width: 44px;
-        height: 44px;
-        border: 0;
-        border-radius: 50%;
-        background: #002d72;
+        position: relative;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        border: 1px solid rgba(255,255,255,.28);
+        border-radius: 11px;
+        background: rgba(255,255,255,.08);
         color: #fff;
         cursor: pointer;
-        box-shadow: 0 8px 22px rgba(0,0,0,.18);
+        box-shadow: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition:
+            background .18s ease,
+            border-color .18s ease,
+            transform .18s ease;
+    }
+
+    .notification-center-fab:hover {
+        background: rgba(255,255,255,.16);
+        border-color: rgba(255,255,255,.42);
+        transform: translateY(-1px);
     }
 
     .notification-center-count {
         position: absolute;
-        top: -5px;
-        right: -5px;
+        top: -6px;
+        right: -6px;
         min-width: 20px;
         height: 20px;
         padding: 0 5px;
         border-radius: 999px;
-        background: #b42318;
-        color: #fff;
-        font-size: 10px;
-        font-weight: 800;
+        background: #C99700;
+        color: #002d72;
+        border: 2px solid #002d72;
+        font-size: 9px;
+        line-height: 1;
+        font-weight: 900;
         display: none;
         align-items: center;
         justify-content: center;
+    }
+
+    @media (max-width: 900px) {
+        .header {
+            flex-wrap: wrap;
+        }
+
+        .header-practice-title {
+            width: 100%;
+            margin-right: 0;
+        }
+
+        .header-primary-actions {
+            margin-left: auto;
+        }
     }
 
 </style>
@@ -1626,9 +1676,26 @@ document.addEventListener(
             </div>
         </div>
 
-        <a href="ricerca-clienti.html" class="btn-back">
-            <i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO
-        </a>
+        <div class="header-primary-actions">
+            <a href="ricerca-clienti.html" class="btn-back">
+                <i class="fas fa-arrow-left"></i> TORNA ALL'ARCHIVIO
+            </a>
+
+            <button
+                type="button"
+                class="notification-center-fab"
+                title="Centro notifiche"
+                aria-label="Apri centro notifiche"
+                onclick="window.location.href='/main/centro-notifiche.html'"
+            >
+                <i class="fas fa-bell"></i>
+                <span
+                    id="notificationCenterCount"
+                    class="notification-center-count"
+                    aria-label="Notifiche non lette"
+                ></span>
+            </button>
+        </div>
     </div>
 
     <div class="practice-status-panel" id="practiceStatusPanel">
@@ -2006,15 +2073,6 @@ document.addEventListener(
 
 
 
-<button
-    type="button"
-    class="notification-center-fab"
-    title="Centro notifiche"
-    onclick="window.location.href='/main/centro-notifiche.html'"
->
-    <i class="fas fa-bell"></i>
-    <span id="notificationCenterCount" class="notification-center-count"></span>
-</button>
 
 <div id="gmailDisconnectedModal" class="gmail-disconnected-modal" role="dialog" aria-modal="true" aria-labelledby="gmailDisconnectedTitle">
     <div class="gmail-disconnected-box">
