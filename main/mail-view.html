@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email pratica - Consulenza Credipass</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+
+<style>
+:root{
+  --navy:#0b2a5b;
+  --gold:#c89a2b;
+  --bg:#eef2f6;
+  --card:#ffffff;
+  --muted:#6d7783;
+  --line:#e3e8ee;
+  --green:#177245;
+  --green-bg:#e8f6ee;
+  --red:#b42318;
+  --amber:#9a6700;
+  --amber-bg:#fff7dd;
+  --blue-bg:#eaf1fb;
+  --wa:#25D366;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:Arial,Helvetica,sans-serif;
+  color:#25313b;
+}
+.topbar{
+  background:linear-gradient(135deg,#08224b,#0b2a5b);
+  color:#fff;
+  padding:18px 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:4px solid var(--gold);
+  gap:14px;
+}
+.top-left{display:flex;gap:14px;align-items:center;min-width:0}
+.back{
+  width:38px;height:38px;border-radius:10px;
+  background:rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer;flex:0 0 auto;
+}
+.brand{min-width:0}
+.brand small{
+  color:#e7c76e;font-weight:800;
+  text-transform:uppercase;letter-spacing:.08em
+}
+.brand h1{
+  margin:4px 0 0;
+  font-size:22px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{
+  border:0;border-radius:9px;padding:10px 13px;
+  font-weight:800;cursor:pointer;font-size:12px;
+}
+.btn.primary{background:#fff;color:var(--navy)}
+.btn.gold{background:var(--gold);color:#fff}
+.btn.soft{background:#eef2f6;color:#2d3944}
+.btn.whatsapp{background:var(--wa);color:#fff}
+.container{max-width:1500px;margin:0 auto;padding:20px}
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,2.15fr) minmax(330px,.85fr);
+  gap:18px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:0 4px 18px rgba(27,40,59,.06);
+}
+.card-body{padding:18px}
+.mail-head{
+  padding:18px;
+  border-bottom:1px solid var(--line);
+}
+.mail-head-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:start;
+}
+.sender-block h2{
+  margin:0;
+  color:var(--navy);
+  font-size:22px;
+}
+.sender-meta{
+  margin-top:9px;
+  font-size:12px;
+  line-height:1.65;
+  color:var(--muted);
+}
+.badges{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+  line-height:1;
+}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.gold{background:var(--amber-bg);color:var(--amber)}
+.badge.blue{background:var(--blue-bg);color:#174f94}
+.mail-body{
+  padding:22px;
+  line-height:1.68;
+  font-size:14px;
+  white-space:pre-wrap;
+}
+.attachments{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
+}
+.attachment{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  cursor:pointer;
+}
+.attachment .icon{
+  width:34px;height:34px;border-radius:8px;
+  background:#eef3fa;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:var(--navy);
+}
+.section-title{margin:0 0 12px;color:var(--navy);font-size:14px}
+.ai-card{border-left:5px solid var(--gold)}
+.ai-summary{font-size:13px;line-height:1.6}
+.kpi-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+.kpi{background:#f7f9fb;border-radius:10px;padding:11px}
+.kpi small{
+  display:block;color:var(--muted);font-size:10px;
+  text-transform:uppercase;font-weight:800
+}
+.kpi strong{display:block;margin-top:5px;color:var(--navy)}
+.priority{color:var(--red)!important}
+.checklist{display:flex;flex-direction:column;gap:8px}
+.check{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+}
+.check.ok{background:#f1faf5}
+.check.missing{background:#fff7f6}
+.check .state{font-size:10px;font-weight:800}
+.ok .state{color:var(--green)}
+.missing .state{color:var(--red)}
+.reply{
+  background:linear-gradient(180deg,#ffffff,#fbfcfe);
+  border:1px dashed #cfd7e1;
+  border-radius:10px;
+  padding:12px;
+  white-space:pre-wrap;
+  font-size:12px;
+  line-height:1.6
+}
+.thread{display:flex;flex-direction:column;gap:14px}
+.thread-item{display:grid;grid-template-columns:90px 1fr;gap:12px}
+.thread-date{color:var(--muted);font-size:11px}
+.thread-content{border-left:3px solid #d7dfe8;padding-left:12px}
+.thread-content.active{border-left-color:var(--gold)}
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quick-actions .btn{width:100%}
+.footer-actions{
+  position:sticky;
+  bottom:0;
+  background:rgba(238,242,246,.95);
+  backdrop-filter:blur(8px);
+  padding:12px 0 0;
+}
+.footer-actions-inner{display:flex;gap:8px;flex-wrap:wrap}
+.client-contact{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+.client-contact .btn{width:100%;margin-top:8px}
+.phone{color:var(--muted);font-size:11px;margin-top:3px}
+.empty{color:var(--muted);font-size:12px}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+@media(max-width:980px){
+  .grid{grid-template-columns:1fr}
+  .mail-head-grid{grid-template-columns:1fr}
+  .badges{justify-content:flex-start}
+  .topbar{align-items:flex-start;flex-direction:column}
+  .top-actions{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="top-left">
+    <div class="back" onclick="goBack()">←</div>
+
+    <div class="brand">
+      <small id="practiceLabel">Pratica</small>
+      <h1 id="mailSubject">Caricamento email...</h1>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <button id="waTopBtn" class="btn whatsapp" onclick="openWhatsApp()" style="display:none">
+      WhatsApp cliente
+    </button>
+
+    <button class="btn primary" onclick="openPractice()">
+      Apri fascicolo
+    </button>
+
+    <button class="btn gold" onclick="replyEmail()">
+      Rispondi
+    </button>
+  </div>
+</div>
+
+<div class="container">
+<div id="loading" class="card loading">Caricamento email...</div>
+
+<div id="content" class="grid" style="display:none">
+
+  <div>
+    <div class="card">
+      <div class="mail-head">
+        <div class="mail-head-grid">
+          <div class="sender-block">
+            <h2 id="bankName">Email pratica</h2>
+
+            <div id="senderMeta" class="sender-meta"></div>
+          </div>
+
+          <div class="badges">
+            <span id="autoBadge" class="badge green">Associata</span>
+            <span id="practiceBadge" class="badge blue">Pratica</span>
+            <span id="priorityBadge" class="badge gold">Priorità</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="mailBody" class="mail-body"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-body">
+        <h3 class="section-title">📎 Allegati</h3>
+        <div id="attachments" class="attachments"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-body">
+        <h3 class="section-title">🧵 Conversazione</h3>
+        <div id="thread" class="thread"></div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <div class="footer-actions-inner">
+        <button class="btn gold" onclick="replyEmail()">Rispondi</button>
+        <button id="waBottomBtn" class="btn whatsapp" onclick="openWhatsApp()" style="display:none">
+          WhatsApp cliente
+        </button>
+        <button class="btn primary" onclick="requestDocuments()">Richiedi documenti al cliente</button>
+        <button class="btn soft" onclick="markHandled()">Segna come gestita</button>
+        <button class="btn soft" onclick="openMailClient()">Apri posta</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card ai-card">
+      <div class="card-body">
+        <h3 class="section-title">🤖 AI Mail Intelligence</h3>
+
+        <div id="aiSummary" class="ai-summary"></div>
+
+        <div class="kpi-grid">
+          <div class="kpi">
+            <small>Priorità</small>
+            <strong id="aiPriority" class="priority">N/D</strong>
+          </div>
+
+          <div class="kpi">
+            <small>Confidenza AI</small>
+            <strong id="aiConfidence">N/D</strong>
+          </div>
+
+          <div class="kpi">
+            <small>Stato suggerito</small>
+            <strong id="aiStatus">N/D</strong>
+          </div>
+
+          <div class="kpi">
+            <small>Azione richiesta</small>
+            <strong id="aiActionRequired">N/D</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-body">
+        <h3 class="section-title">📂 Documenti richiesti vs fascicolo</h3>
+        <div id="documentChecklist" class="checklist"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-body">
+        <h3 class="section-title">💬 Risposta suggerita</h3>
+        <div id="suggestedReply" class="reply"></div>
+
+        <div class="quick-actions" style="margin-top:10px">
+          <button class="btn gold" onclick="useSuggestedReply()">Usa risposta</button>
+          <button class="btn soft" onclick="editSuggestedReply()">Modifica</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-body">
+        <h3 class="section-title">📁 Fascicolo</h3>
+
+        <div id="practiceInfo" class="sender-meta" style="font-size:12px;line-height:1.9"></div>
+
+        <div id="clientContact" class="client-contact" style="display:none">
+          <strong style="color:var(--navy);font-size:12px">Contatta il cliente</strong>
+
+          <div id="clientPhone" class="phone"></div>
+
+          <button class="btn whatsapp" onclick="openWhatsApp()">
+            WhatsApp cliente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="/main/config/app.js"></script>
+<script src="/main/config/firebase.js"></script>
+
+<script>
+const db = window.CREDIPASS_FIREBASE.db;
+const fn = window.CREDIPASS_FIREBASE.functions;
+
+let currentPracticeId = "";
+let currentEmailId = "";
+let currentEmail = null;
+let currentPractice = null;
+
+function esc(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+function qs(name){
+  return new URLSearchParams(location.search).get(name) || "";
+}
+
+function formatDate(value){
+  if(!value) return "";
+  try{
+    if(value.toDate){
+      return value.toDate().toLocaleString("it-IT");
+    }
+    return new Date(value).toLocaleString("it-IT");
+  }catch(error){
+    return String(value);
+  }
+}
+
+function normalizePhone(phone){
+  return String(phone || "")
+    .replace(/[^\d+]/g,"")
+    .replace(/^00/,"+");
+}
+
+function clientName(){
+  const p = currentPractice || {};
+
+  return [
+    p.nome,
+    p.cognome
+  ].filter(Boolean).join(" ")
+  ||
+  [
+    p.r1_nome,
+    p.r1_cognome
+  ].filter(Boolean).join(" ")
+  ||
+  p.nome_cliente
+  ||
+  "cliente";
+}
+
+function clientPhone(){
+  const p = currentPractice || {};
+
+  return p.telefono
+    || p.cellulare
+    || p.r1_telefono
+    || p.r1_cellulare
+    || p.telefono_cliente
+    || "";
+}
+
+function aiData(){
+  return currentEmail?.aiAnalysis || {};
+}
+
+function buildWhatsAppText(){
+  const ai = aiData();
+  const docs = ai.requestedDocuments || [];
+  const name = clientName();
+
+  if(docs.length){
+    return `Ciao ${name}, la banca ha richiesto un'integrazione documentale per la pratica. Mi occorrono: ${docs.join(", ")}. Appena puoi inviami i documenti così procediamo. Grazie.`;
+  }
+
+  return `Ciao ${name}, ti contatto per un aggiornamento relativo alla pratica di mutuo. Appena puoi sentiamoci. Grazie.`;
+}
+
+function buildSuggestedReply(){
+  const ai = aiData();
+  const docs = ai.requestedDocuments || [];
+
+  if(ai.positiveOutcome){
+    return `Buongiorno,
+
+grazie per l'aggiornamento.
+
+Prendiamo atto dell'esito comunicato e restiamo a disposizione per i prossimi adempimenti.
+
+Cordiali saluti.`;
+  }
+
+  if(docs.length){
+    return `Buongiorno,
+
+abbiamo preso in carico la richiesta di integrazione.
+
+Provvederemo a trasmettere la documentazione richiesta non appena disponibile.
+
+Cordiali saluti.`;
+  }
+
+  return `Buongiorno,
+
+grazie per l'aggiornamento.
+
+Restiamo a disposizione per ogni ulteriore necessità.
+
+Cordiali saluti.`;
+}
+
+function renderAttachments(){
+  const box = document.getElementById("attachments");
+  const attachments = currentEmail?.allegati || [];
+
+  if(!attachments.length){
+    box.innerHTML='<div class="empty">Nessun allegato.</div>';
+    return;
+  }
+
+  box.innerHTML = attachments.map(a => {
+    const name = a.nome || a.filename || "Allegato";
+    const url = a.url || a.downloadUrl || "";
+
+    return `
+      <div class="attachment" ${url ? `onclick="window.open('${esc(url)}','_blank')"` : ""}>
+        <div class="icon">FILE</div>
+        <div>
+          <strong>${esc(name)}</strong>
+          <div class="sender-meta">${esc(a.size || "")}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function renderThread(){
+  const box = document.getElementById("thread");
+
+  try{
+    const snap = await db
+      .collection("pratiche_mutuo")
+      .doc(currentPracticeId)
+      .collection("email_timeline")
+      .orderBy("data","asc")
+      .limit(50)
+      .get();
+
+    const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+
+    if(!docs.length){
+      box.innerHTML='<div class="empty">Nessun thread disponibile.</div>';
+      return;
+    }
+
+    box.innerHTML = docs.map(item => {
+      const active = item.id === currentEmailId ? "active" : "";
+      return `
+        <div class="thread-item">
+          <div class="thread-date">${esc(formatDate(item.data))}</div>
+          <div class="thread-content ${active}">
+            <strong>${esc(item.oggetto || "(senza oggetto)")}</strong>
+            <div class="sender-meta">${esc((item.mittente || []).join(", "))}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    box.innerHTML='<div class="empty">Thread non disponibile.</div>';
+  }
+}
+
+function renderAI(){
+  const ai = aiData();
+
+  document.getElementById("aiSummary").textContent =
+    ai.summary || "Analisi AI non ancora disponibile.";
+
+  document.getElementById("aiPriority").textContent =
+    ai.priority || "N/D";
+
+  document.getElementById("aiConfidence").textContent =
+    ai.confidence !== undefined && ai.confidence !== null
+      ? `${Math.round(Number(ai.confidence)*100)}%`
+      : "N/D";
+
+  document.getElementById("aiStatus").textContent =
+    ai.statusSuggestion || "N/D";
+
+  document.getElementById("aiActionRequired").textContent =
+    ai.requiresAction === true
+      ? "Sì"
+      : ai.requiresAction === false
+      ? "No"
+      : "N/D";
+
+  const priorityBadge = document.getElementById("priorityBadge");
+  priorityBadge.textContent = `Priorità ${ai.priority || "normale"}`;
+
+  const docs = ai.requestedDocuments || [];
+  const checklist = document.getElementById("documentChecklist");
+
+  if(!docs.length){
+    checklist.innerHTML='<div class="empty">Nessun documento richiesto rilevato.</div>';
+  }else{
+    checklist.innerHTML = docs.map(doc => `
+      <div class="check missing">
+        <span>${esc(doc)}</span>
+        <span class="state">DA VERIFICARE</span>
+      </div>
+    `).join("");
+  }
+
+  document.getElementById("suggestedReply").textContent =
+    buildSuggestedReply();
+}
+
+function renderPractice(){
+  const p = currentPractice || {};
+
+  document.getElementById("practiceLabel").textContent =
+    `Pratica ${currentPracticeId}`;
+
+  document.getElementById("practiceBadge").textContent =
+    `Pratica ${currentPracticeId}`;
+
+  document.getElementById("practiceInfo").innerHTML = `
+    <strong>Cliente:</strong> ${esc(clientName())}<br>
+    <strong>Banca:</strong> ${esc(currentEmail?.banca || "N/D")}<br>
+    <strong>Consulente:</strong> ${esc(p.consulenteNome || p.consulente || "N/D")}<br>
+    <strong>Stato:</strong> ${esc(p.stato || p.stato_pratica || "N/D")}
+  `;
+
+  const phone = clientPhone();
+
+  if(phone){
+    document.getElementById("clientContact").style.display = "block";
+    document.getElementById("clientPhone").textContent = phone;
+    document.getElementById("waTopBtn").style.display = "inline-block";
+    document.getElementById("waBottomBtn").style.display = "inline-block";
+  }
+}
+
+function renderEmail(){
+  document.getElementById("mailSubject").textContent =
+    currentEmail?.oggetto || "(senza oggetto)";
+
+  document.getElementById("bankName").textContent =
+    currentEmail?.banca || "Email pratica";
+
+  document.getElementById("senderMeta").innerHTML = `
+    <strong>Da:</strong> ${esc((currentEmail?.mittente || []).join(", "))}<br>
+    <strong>A:</strong> ${esc((currentEmail?.destinatari || []).join(", "))}<br>
+    ${esc(formatDate(currentEmail?.data))}
+  `;
+
+  document.getElementById("mailBody").textContent =
+    currentEmail?.testo || "(testo non disponibile)";
+
+  document.getElementById("autoBadge").textContent =
+    currentEmail?.autoAssociata === false
+      ? "Associata manualmente"
+      : "✓ Associata automaticamente";
+}
+
+async function loadData(){
+  currentPracticeId = qs("practiceId") || qs("id");
+  currentEmailId = qs("emailId");
+
+  if(!currentPracticeId || !currentEmailId){
+    document.getElementById("loading").textContent =
+      "practiceId o emailId mancanti.";
+    return;
+  }
+
+  try{
+    const [practiceSnap,emailSnap] = await Promise.all([
+      db.collection("pratiche_mutuo").doc(currentPracticeId).get(),
+      db.collection("pratiche_mutuo")
+        .doc(currentPracticeId)
+        .collection("email_timeline")
+        .doc(currentEmailId)
+        .get()
+    ]);
+
+    if(!emailSnap.exists){
+      throw new Error("Email non trovata.");
+    }
+
+    currentPractice = practiceSnap.exists ? (practiceSnap.data() || {}) : {};
+    currentEmail = emailSnap.data() || {};
+
+    renderEmail();
+    renderPractice();
+    renderAI();
+    renderAttachments();
+    await renderThread();
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "grid";
+
+  }catch(error){
+    document.getElementById("loading").textContent =
+      error.message || "Errore caricamento email.";
+  }
+}
+
+function goBack(){
+  if(history.length > 1){
+    history.back();
+  }else{
+    openPractice();
+  }
+}
+
+function openPractice(){
+  if(!currentPracticeId) return;
+  location.href =
+    `/main/dashboard-consulente.html?id=${encodeURIComponent(currentPracticeId)}`;
+}
+
+function openWhatsApp(){
+  const phone = normalizePhone(clientPhone());
+
+  if(!phone){
+    alert("Numero di telefono del cliente non disponibile.");
+    return;
+  }
+
+  const normalized =
+    phone.startsWith("+")
+      ? phone.slice(1)
+      : phone;
+
+  const text = encodeURIComponent(buildWhatsAppText());
+
+  window.open(
+    `https://wa.me/${normalized}?text=${text}`,
+    "_blank"
+  );
+}
+
+function replyEmail(){
+  const to =
+    (currentEmail?.mittente || [])[0] || "";
+
+  const subject =
+    currentEmail?.oggetto || "";
+
+  const body =
+    document.getElementById("suggestedReply").textContent || "";
+
+  location.href =
+    `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent("Re: " + subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function openMailClient(){
+  replyEmail();
+}
+
+function requestDocuments(){
+  openWhatsApp();
+}
+
+async function markHandled(){
+  alert("Email segnata come gestita nella demo UI. La funzione può essere collegata al centro notifiche.");
+}
+
+function useSuggestedReply(){
+  replyEmail();
+}
+
+function editSuggestedReply(){
+  const el = document.getElementById("suggestedReply");
+  const updated = prompt("Modifica risposta:", el.textContent);
+
+  if(updated !== null){
+    el.textContent = updated;
+  }
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(user){
+    loadData();
+  }else{
+    document.getElementById("loading").textContent =
+      "Effettua il login per visualizzare l'email.";
+  }
+});
+</script>
+</body>
+</html>

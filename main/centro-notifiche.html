@@ -75,6 +75,21 @@ async function updateNotification(id, patch){
   await loadNotifications();
 }
 
+
+async function openEmail(item){
+  if(!item.practiceId || !item.emailId) return;
+
+  await updateNotification(
+    item.id,
+    {
+      read:true
+    }
+  );
+
+  location.href =
+    `/main/mail-view.html?practiceId=${encodeURIComponent(item.practiceId)}&emailId=${encodeURIComponent(item.emailId)}`;
+}
+
 async function openPractice(item){
   if(!item.practiceId) return;
   await updateNotification(item.id,{read:true});
@@ -132,8 +147,14 @@ async function loadNotifications(){
 
           <div class="actions">
             ${
+              item.emailId && item.practiceId
+                ? `<button class="smallbtn primary" onclick='openEmail(${JSON.stringify(item)})'>APRI EMAIL</button>`
+                : ""
+            }
+
+            ${
               item.practiceId
-                ? `<button class="smallbtn primary" onclick='openPractice(${JSON.stringify(item)})'>APRI PRATICA</button>`
+                ? `<button class="smallbtn gray" onclick='openPractice(${JSON.stringify(item)})'>APRI PRATICA</button>`
                 : ""
             }
 
