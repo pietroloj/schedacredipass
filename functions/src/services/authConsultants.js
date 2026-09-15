@@ -48,9 +48,10 @@ async function resolveVisibleCollaborators(uids = []) {
     const d = snap.data() || {};
     const ruolo = clean(d.ruolo).toLowerCase();
 
-    // La segreteria può essere associata solo a collaboratori operativi.
+    // La segreteria può essere associata solo a collaboratori operativi
+    // a consulenti, collaboratori e responsabili attivi.
     if (
-      !["consulente", "collaboratore"].includes(ruolo) ||
+      !["consulente", "collaboratore", "responsabile"].includes(ruolo) ||
       d.attivo === false
     ) {
       continue;
