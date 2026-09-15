@@ -310,7 +310,7 @@ async function listUsers(){
     );
 
     consultants=allUsers.filter(d=>
-        ["consulente","collaboratore"].includes(roleOf(d)) &&
+        ["consulente","collaboratore","responsabile"].includes(roleOf(d)) &&
         d.attivo!==false
     );
 
