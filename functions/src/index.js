@@ -79,6 +79,12 @@ const {
   deletePracticeDocument,
 } = require("./services/deletePracticeDocument");
 
+const practiceSubjects = require("./services/practiceSubjects");
+const {
+  subjectIdFromDocument,
+  filterAnalysesForActiveSubjects,
+} = practiceSubjects;
+
 const {
   bootstrapFirstAdmin,
   ensureConsultantProfile,
@@ -627,6 +633,15 @@ function normalizeIncomingDocumentCode({
 |--------------------------------------------------------------------------
 */
 
+function stripDynamicSubjectSuffix(code = "") {
+  const raw = String(code || "").trim();
+  // Nuovo formato: doc_cud_g1 / doc_ec_r3
+  const dynamic = raw.replace(/_([rg]\d+)$/i, "");
+  if (dynamic !== raw) return dynamic;
+  // Formato storico: doc_cud1 / doc_ec2
+  return stripNumericSuffix(raw);
+}
+
 function computeAnalysisKey({
   idCliente,
   codiceBase,
@@ -692,7 +707,7 @@ async function loadClientDocumentAnalyses(
     }
 
     const tipoDocumentoBase =
-      stripNumericSuffix(
+      stripDynamicSubjectSuffix(
         tipoDocumento
       );
 
@@ -747,6 +762,17 @@ async function loadClientDocumentAnalyses(
           decisionCode:
             data
               .decisionCode ||
+            "",
+
+          subjectId:
+            data.subjectId ||
+            data.soggetto_id ||
+            data.decisioneBackend?._subjectId ||
+            subjectIdFromDocument(data),
+
+          subjectRole:
+            data.subjectRole ||
+            data.decisioneBackend?._subjectRole ||
             "",
         }
       );
@@ -1428,6 +1454,11 @@ function buildPracticeSummary({
 exports.deletePracticeDocument =
   deletePracticeDocument;
 
+exports.getPracticeSubjects = practiceSubjects.getPracticeSubjects;
+exports.savePracticeSubject = practiceSubjects.savePracticeSubject;
+exports.excludePracticeSubject = practiceSubjects.excludePracticeSubject;
+exports.reactivatePracticeSubject = practiceSubjects.reactivatePracticeSubject;
+
 
 
 
@@ -1465,6 +1496,9 @@ exports.analizzaDocumentoAI =
         tipoDocumentoAtteso,
 
         codiceDocumento = null,
+
+        subjectId = "",
+        subjectRole = "",
 
         urlFileBase64,
 
@@ -1520,9 +1554,20 @@ exports.analizzaDocumentoAI =
         });
 
       const codiceBase =
-        stripNumericSuffix(
+        stripDynamicSubjectSuffix(
           codiceDocumentoNormalizzato
         );
+
+      const resolvedSubjectId =
+        String(subjectId || "").trim().toLowerCase() ||
+        subjectIdFromDocument({
+          tipoDocumentoOriginale: codiceDocumentoNormalizzato
+        });
+
+      const resolvedSubjectRole =
+        String(subjectRole || "").trim().toLowerCase() ||
+        (resolvedSubjectId.startsWith("g") ? "garante" :
+          (resolvedSubjectId.startsWith("r") ? "richiedente" : ""));
 
       console.log("AI document routing", {
         tipoDocumentoAtteso,
@@ -2533,6 +2578,12 @@ exports.analizzaDocumentoAI =
             pipelineVersion:
               POLICY.pipelineVersion,
 
+            subjectId:
+              resolvedSubjectId,
+
+            subjectRole:
+              resolvedSubjectRole,
+
             classificazione,
 
             estrazione,
@@ -2546,6 +2597,12 @@ exports.analizzaDocumentoAI =
                */
               _tipoDocumentoOriginale:
                 codiceDocumentoNormalizzato,
+
+              _subjectId:
+                resolvedSubjectId,
+
+              _subjectRole:
+                resolvedSubjectRole,
 
               practiceSnapshot,
 
@@ -2826,9 +2883,19 @@ exports.ricostruisciPraticaCompleta =
         |--------------------------------------------------------------------------
         */
 
-        const documentAnalyses =
+        const allDocumentAnalyses =
           await loadClientDocumentAnalyses(
             idCliente
+          );
+
+        /*
+         * La ricostruzione usa esclusivamente i soggetti attivi.
+         * Gli audit dei soggetti esclusi restano conservati nello storico.
+         */
+        const documentAnalyses =
+          filterAnalysesForActiveSubjects(
+            allDocumentAnalyses,
+            practiceData
           );
 
         /* Anche senza documenti continuiamo con i dati della scheda, marcandoli come non verificati. */

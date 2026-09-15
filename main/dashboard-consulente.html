@@ -1655,6 +1655,22 @@ document.addEventListener(
         }
     }
 
+
+/* ===== GESTIONE SOGGETTI PRATICA ===== */
+.subjects-card{margin-top:14px;border:1px solid #e2e7ed;border-left:5px solid #C99700;border-radius:10px;padding:14px;background:#fff}
+.subjects-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.subjects-title{font-size:11px;font-weight:800;color:#002d72;text-transform:uppercase}
+.subjects-actions{display:flex;gap:6px;flex-wrap:wrap}
+.subjects-btn{border:0;border-radius:7px;padding:7px 9px;font-family:Poppins,sans-serif;font-size:8px;font-weight:800;cursor:pointer;background:#002d72;color:#fff}
+.subjects-btn.gold{background:#C99700}.subjects-btn.light{background:#edf1f5;color:#33404b}
+.subject-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #edf0f3;font-size:9px}.subject-row:last-child{border-bottom:0}
+.subject-name{font-weight:800;color:#263238}.subject-meta{font-size:8px;color:#7a858f;margin-top:2px}.subject-off{opacity:.55}
+#practiceSubjectModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:60000;align-items:center;justify-content:center;padding:18px}
+.subject-modal-card{width:100%;max-width:720px;max-height:92vh;overflow:auto;background:#fff;border-radius:13px;border-top:6px solid #C99700;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+.subject-modal-head{background:#002d72;color:#fff;padding:17px 20px;display:flex;justify-content:space-between;align-items:center}.subject-modal-head h3{margin:0;font-size:14px}
+.subject-modal-body{padding:18px 20px}.subject-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.subject-field label{display:block;font-size:8px;font-weight:800;text-transform:uppercase;color:#68737e;margin-bottom:4px}.subject-field input,.subject-field select{width:100%;padding:9px;border:1px solid #dce3ea;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px}
+.subject-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}@media(max-width:650px){.subject-form-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -1889,6 +1905,17 @@ document.addEventListener(
                     <p style="text-align:center; padding:20px; font-size:12px; color:#999;">Caricamento dati scheda...</p>
                 </div>
 
+                <div class="subjects-card" id="practiceSubjectsCard">
+                    <div class="subjects-head">
+                        <div class="subjects-title"><i class="fas fa-users"></i> Soggetti pratica</div>
+                        <div class="subjects-actions">
+                            <button class="subjects-btn" type="button" onclick="nuovoSoggettoPratica('richiedente')">+ RICHIEDENTE</button>
+                            <button class="subjects-btn gold" type="button" onclick="nuovoSoggettoPratica('garante')">+ GARANTE</button>
+                        </div>
+                    </div>
+                    <div id="practiceSubjectsList"><div style="font-size:9px;color:#999">Caricamento...</div></div>
+                </div>
+
                 
                 <div class="gmail-integration-card" id="practiceSourceCard" style="border-left-color:#2c66b8;">
                     <div class="gmail-integration-head">
@@ -2058,6 +2085,31 @@ document.addEventListener(
     </div>
 </div>
 
+
+<div id="practiceSubjectModal">
+  <div class="subject-modal-card">
+    <div class="subject-modal-head"><h3><i class="fas fa-user-pen" style="color:#C99700"></i> <span id="subjectModalTitle">Soggetto pratica</span></h3><span onclick="chiudiSoggettoPratica()" style="cursor:pointer;font-size:26px">&times;</span></div>
+    <div class="subject-modal-body">
+      <input type="hidden" id="subjectIdField">
+      <div class="subject-form-grid">
+        <div class="subject-field"><label>Ruolo</label><select id="subjectRoleField"><option value="richiedente">Richiedente</option><option value="cointestatario">Cointestatario</option><option value="garante">Garante</option></select></div>
+        <div class="subject-field"><label>Codice fiscale</label><input id="subjectCfField" maxlength="16"></div>
+        <div class="subject-field"><label>Nome</label><input id="subjectNomeField"></div>
+        <div class="subject-field"><label>Cognome</label><input id="subjectCognomeField"></div>
+        <div class="subject-field"><label>Data nascita</label><input id="subjectDataNascitaField" type="date"></div>
+        <div class="subject-field"><label>Comune nascita</label><input id="subjectComuneNascitaField"></div>
+        <div class="subject-field"><label>Residenza</label><input id="subjectResidenzaField"></div>
+        <div class="subject-field"><label>Cellulare</label><input id="subjectCellField"></div>
+        <div class="subject-field"><label>Email</label><input id="subjectEmailField" type="email"></div>
+        <div class="subject-field"><label>Contratto / attività</label><input id="subjectContrattoField"></div>
+        <div class="subject-field"><label>Reddito netto mensile</label><input id="subjectRedditoField" type="number" step="0.01"></div>
+      </div>
+      <div id="subjectModalMsg" style="font-size:9px;margin-top:10px"></div>
+      <div class="subject-modal-actions"><button class="subjects-btn light" type="button" onclick="chiudiSoggettoPratica()">ANNULLA</button><button class="subjects-btn gold" id="subjectSaveBtn" type="button" onclick="salvaSoggettoPratica()"><i class="fas fa-check"></i> SALVA E RICALCOLA AI</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="modalAI" class="modal">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; border-bottom:2px solid #C99700; padding-bottom:15px; margin-bottom:20px;">
@@ -2144,6 +2196,82 @@ const db = firebase.firestore();
     let sessioneConsulente = null;
 
     const idCliente = new URLSearchParams(window.location.search).get('clienteId');
+
+
+    let practiceSubjectsCache = [];
+
+    function escSubject(v){
+        return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    async function caricaSoggettiPratica(){
+        const box=document.getElementById("practiceSubjectsList");
+        if(!box || !idCliente) return;
+        try{
+            const fn=functionsFirebase.httpsCallable("getPracticeSubjects");
+            const res=await fn({idCliente});
+            practiceSubjectsCache=[...(res.data?.attivi||[]),...(res.data?.esclusi||[])];
+            renderSoggettiPratica();
+        }catch(e){
+            console.error("Caricamento soggetti pratica",e);
+            box.innerHTML='<div style="font-size:9px;color:#b42318">Impossibile caricare i soggetti.</div>';
+        }
+    }
+
+    function renderSoggettiPratica(){
+        const box=document.getElementById("practiceSubjectsList"); if(!box)return;
+        if(!practiceSubjectsCache.length){box.innerHTML='<div style="font-size:9px;color:#89939d">Nessun soggetto configurato.</div>';return;}
+        box.innerHTML=practiceSubjectsCache.map(s=>{
+            const active=s.attivo!==false;
+            const role=(s.ruolo||"richiedente").toUpperCase();
+            const name=s.nome_completo||[s.nome,s.cognome].filter(Boolean).join(" ")||s.id?.toUpperCase()||"Soggetto";
+            return `<div class="subject-row ${active?'':'subject-off'}"><div><div class="subject-name">${escSubject((s.id||'').toUpperCase())} · ${escSubject(name)}</div><div class="subject-meta">${escSubject(role)}${s.codice_fiscale?' · '+escSubject(s.codice_fiscale):''}${active?'':' · ESCLUSO'}</div></div><div class="subjects-actions"><button class="subjects-btn light" type="button" onclick="modificaSoggettoPratica('${escSubject(s.id)}')">MODIFICA</button>${s.id==='r1'?'':active?`<button class="subjects-btn" type="button" onclick="escludiSoggettoPratica('${escSubject(s.id)}')">ESCLUDI</button>`:`<button class="subjects-btn gold" type="button" onclick="riattivaSoggettoPratica('${escSubject(s.id)}')">RIATTIVA</button>`}</div></div>`;
+        }).join("");
+    }
+
+    function nuovoSoggettoPratica(role){
+        document.getElementById("subjectIdField").value="";
+        document.getElementById("subjectRoleField").value=role||"richiedente";
+        ["Nome","Cognome","Cf","DataNascita","ComuneNascita","Residenza","Cell","Email","Contratto","Reddito"].forEach(k=>{const e=document.getElementById(`subject${k}Field`);if(e)e.value="";});
+        document.getElementById("subjectModalTitle").textContent=role==="garante"?"Aggiungi garante":"Aggiungi richiedente";
+        document.getElementById("subjectModalMsg").textContent="";
+        document.getElementById("practiceSubjectModal").style.display="flex";
+    }
+
+    function modificaSoggettoPratica(id){
+        const s=practiceSubjectsCache.find(x=>x.id===id); if(!s)return;
+        document.getElementById("subjectIdField").value=s.id||""; document.getElementById("subjectRoleField").value=s.ruolo||"richiedente";
+        document.getElementById("subjectNomeField").value=s.nome||""; document.getElementById("subjectCognomeField").value=s.cognome||""; document.getElementById("subjectCfField").value=s.codice_fiscale||"";
+        document.getElementById("subjectDataNascitaField").value=s.data_nascita||""; document.getElementById("subjectComuneNascitaField").value=s.comune_nascita||""; document.getElementById("subjectResidenzaField").value=s.residenza||"";
+        document.getElementById("subjectCellField").value=s.cellulare||""; document.getElementById("subjectEmailField").value=s.email||""; document.getElementById("subjectContrattoField").value=s.contratto||""; document.getElementById("subjectRedditoField").value=s.reddito_netto??"";
+        document.getElementById("subjectModalTitle").textContent=`Modifica ${(s.id||'').toUpperCase()}`; document.getElementById("subjectModalMsg").textContent=""; document.getElementById("practiceSubjectModal").style.display="flex";
+    }
+    function chiudiSoggettoPratica(){document.getElementById("practiceSubjectModal").style.display="none";}
+
+    async function ricalcolaAIDopoSoggetti(){
+        const fn=functionsFirebase.httpsCallable("ricostruisciPraticaCompleta");
+        await fn({idCliente});
+    }
+
+    async function salvaSoggettoPratica(){
+        const msg=document.getElementById("subjectModalMsg"); const btn=document.getElementById("subjectSaveBtn");
+        const soggetto={id:document.getElementById("subjectIdField").value.trim(),ruolo:document.getElementById("subjectRoleField").value,nome:document.getElementById("subjectNomeField").value.trim(),cognome:document.getElementById("subjectCognomeField").value.trim(),codice_fiscale:document.getElementById("subjectCfField").value.trim().toUpperCase(),data_nascita:document.getElementById("subjectDataNascitaField").value,comune_nascita:document.getElementById("subjectComuneNascitaField").value.trim(),residenza:document.getElementById("subjectResidenzaField").value.trim(),cellulare:document.getElementById("subjectCellField").value.trim(),email:document.getElementById("subjectEmailField").value.trim(),contratto:document.getElementById("subjectContrattoField").value.trim(),reddito_netto:document.getElementById("subjectRedditoField").value===""?null:Number(document.getElementById("subjectRedditoField").value)};
+        if(!soggetto.nome&&!soggetto.cognome&&!soggetto.codice_fiscale){msg.style.color="#b42318";msg.textContent="Inserisci almeno nominativo o codice fiscale.";return;}
+        try{btn.disabled=true;msg.style.color="#68737e";msg.textContent="Salvataggio e ricalcolo AI..."; const fn=functionsFirebase.httpsCallable("savePracticeSubject"); await fn({idCliente,soggetto}); await ricalcolaAIDopoSoggetti(); await caricaSoggettiPratica(); chiudiSoggettoPratica();}
+        catch(e){console.error(e);msg.style.color="#b42318";msg.textContent=e?.message||"Errore salvataggio soggetto.";}finally{btn.disabled=false;}
+    }
+
+    async function escludiSoggettoPratica(id){
+        if(!confirm(`Escludere ${id.toUpperCase()} dalla composizione attuale? I documenti storici NON saranno cancellati.`))return;
+        try{const fn=functionsFirebase.httpsCallable("excludePracticeSubject");await fn({idCliente,subjectId:id,motivo:"Escluso dalla composizione corrente della pratica"});await ricalcolaAIDopoSoggetti();await caricaSoggettiPratica();}
+        catch(e){alert(e?.message||"Errore esclusione soggetto.");}
+    }
+    async function riattivaSoggettoPratica(id){
+        try{const fn=functionsFirebase.httpsCallable("reactivatePracticeSubject");await fn({idCliente,subjectId:id});await ricalcolaAIDopoSoggetti();await caricaSoggettiPratica();}
+        catch(e){alert(e?.message||"Errore riattivazione soggetto.");}
+    }
+
+    setTimeout(()=>caricaSoggettiPratica(),700);
 
     const STATO_PRATICA_CONFIG = {
         da_istruire: { label: "Da istruire", color: "#6c757d", step: 0 },

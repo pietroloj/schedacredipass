@@ -1444,6 +1444,23 @@ const clienteId =
     ||
     "demo_pratica";
 
+let soggettiPraticaUpload = [];
+const subjectMetaByField = {};
+
+function subjectFromFieldName(fieldName){
+    const raw=String(fieldName||"").replace(/^doc_/,"").toLowerCase();
+    const dynamic=raw.match(/_([rg]\d+)$/);
+    if(dynamic)return dynamic[1];
+    const legacy=raw.match(/(\d+)$/);
+    return legacy?`r${legacy[1]}`:"";
+}
+
+function roleFromSubjectId(subjectId){
+    const s=soggettiPraticaUpload.find(x=>String(x.id||"").toLowerCase()===String(subjectId||"").toLowerCase());
+    return s?.ruolo || (String(subjectId).startsWith("g")?"garante":"richiedente");
+}
+
+
 const emailRef = urlParams.get("emailRef") || "";
 const emailBO = urlParams.get("emailBO") || "";
 
@@ -2557,6 +2574,48 @@ function renderDocumenti() {
 }
 renderDocumenti();
 
+async function caricaSoggettiDinamiciUpload(){
+    try{
+        const fn=functionsFirebase.httpsCallable("getPracticeSubjects");
+        const res=await fn({idCliente:clienteId});
+        soggettiPraticaUpload=(res.data?.attivi||[]).filter(s=>s&&s.attivo!==false);
+
+        const extra=soggettiPraticaUpload.filter(s=>!["r1","r2"].includes(String(s.id||"").toLowerCase()));
+        if(!extra.length)return;
+
+        const commonDocs=[
+            ["ci","Carta d'Identità","ID","Carta d'identità italiana fronte e retro"],
+            ["ts","Tessera Sanitaria / C.Fiscale","ID","Tessera sanitaria o codice fiscale italiano"],
+            ["bustepaga","Ultime 2 Buste Paga","A4","Busta paga"],
+            ["cud","Ultimo CUD / CU","A4","Certificazione Unica o CUD"],
+            ["unici","Ultimi Modelli Unici / Redditi","A4","Modello Redditi o Modello Unico con ricevuta telematica"],
+            ["visura","Visura Camerale","A4","Visura camerale"],
+            ["f24","Ultimi F24 Pagati","A4","Modello F24 pagato"],
+            ["ec","Estratto Conto Trimestrale","A4","Estratto conto trimestrale"],
+            ["mov","Lista Movimenti Aggiornata","A4","Lista movimenti conto corrente aggiornata"]
+        ];
+
+        const comuni=document.getElementById("sec_comuni");
+        extra.forEach(s=>{
+            const sid=String(s.id||"").toLowerCase();
+            const sectionId=`sec_subject_${sid}`; const containerId=`docs_subject_${sid}`;
+            if(document.getElementById(sectionId))return;
+            const label=s.ruolo==="garante"?"Garante":"Richiedente";
+            const nome=s.nome_completo||[s.nome,s.cognome].filter(Boolean).join(" ")||sid.toUpperCase();
+            const sec=document.createElement("div"); sec.className="section-title show-block"; sec.id=sectionId; sec.innerHTML=`<i class="fas fa-user"></i> ${escapeHtml(label)} ${escapeHtml(sid.toUpperCase())} <span style="color:#002d72;">- ${escapeHtml(nome)}</span>`;
+            const cont=document.createElement("div"); cont.id=containerId;
+            comuni?.parentNode?.insertBefore(sec,comuni); comuni?.parentNode?.insertBefore(cont,comuni);
+
+            commonDocs.forEach(([base,title,formato,ai])=>{
+                const code=`${base}_${sid}`; const fieldName=`doc_${code}`; const rowId=`row_${fieldName}`; const cameraId=`camera_${fieldName}`;
+                mappaDocumentiAI[fieldName]=ai; subjectMetaByField[fieldName]={subjectId:sid,subjectRole:s.ruolo||""};
+                cont.insertAdjacentHTML("beforeend",`<div class="doc-row show-flex" id="${rowId}" data-section="${sectionId}"><div class="doc-info"><span class="doc-title">${escapeHtml(title)}</span></div>${isSegnalatore?`<div class="actions-wrapper"><div class="viewer-status-badge mancante" id="viewer_status_${fieldName}"><i class="fas fa-circle-minus"></i><span>Mancante</span></div></div>`:`<div class="actions-wrapper"><div class="file-input-wrapper"><button type="button" class="btn-upload"><i class="fas fa-paperclip"></i> Allega</button><input type="file" name="${fieldName}" accept=".pdf,image/*" multiple onchange="gestisciFileSelezionato(this, '${cameraId}')"></div><button type="button" class="btn-camera" onclick="apriFotocamera('${cameraId}', '${formato}')"><i class="fas fa-camera"></i></button><input type="file" id="${cameraId}" name="${fieldName}" accept=".pdf,image/*" multiple style="display:none"><div class="status-badge"><i class="fas fa-check"></i> Acquisito</div></div><div class="file-name" id="filename_${cameraId}"></div>`}</div>`);
+            });
+        });
+    }catch(e){console.warn("Soggetti dinamici upload non disponibili",e);}
+}
+caricaSoggettiDinamiciUpload();
+
 if (docsRichiesti.length > 0) {
     docsRichiesti.forEach(docCodice => {
         const rigaDocumento = document.getElementById("row_doc_" + docCodice);
@@ -3387,7 +3446,9 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
                         tipoDocumentoAtteso: descrizioneDocumento,
                         codiceDocumento: fieldName,
                         nomeFile: file.name,
-                        idCliente: clienteId
+                        idCliente: clienteId,
+                        subjectId: subjectFromFieldName(fieldName),
+                        subjectRole: roleFromSubjectId(subjectFromFieldName(fieldName))
                     });
 
                     let risposta = risultatoAI.data;
