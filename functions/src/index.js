@@ -91,6 +91,7 @@ const {
   createConsultant,
   updateConsultantVisibility,
   updateConsultantPermissions,
+  listActiveConsultants,
 } = require("./services/authConsultants");
 
 const {
@@ -1476,6 +1477,9 @@ exports.updateConsultantVisibility =
 
 exports.updateConsultantPermissions =
   updateConsultantPermissions;
+
+exports.listActiveConsultants =
+  listActiveConsultants;
 
 exports.analizzaDocumentoAI =
   onCall(

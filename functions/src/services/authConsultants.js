@@ -537,3 +537,28 @@ exports.updateConsultantPermissions = onCall(
     };
   }
 );
+
+
+/* Elenco utenti attivi selezionabili come collega associato a una pratica. */
+exports.listActiveConsultants = onCall(
+  { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+  async request => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Accesso richiesto.");
+    }
+    const caller = await db.collection("consulenti").doc(request.auth.uid).get();
+    if (!caller.exists || caller.data()?.attivo === false) {
+      throw new HttpsError("permission-denied", "Account non attivo.");
+    }
+    const snap = await db.collection("consulenti").where("attivo", "!=", false).get();
+    const users=[];
+    snap.forEach(doc => {
+      const d=doc.data()||{};
+      const ruolo=clean(d.ruolo).toLowerCase();
+      if (!["admin","responsabile","consulente","collaboratore","segreteria"].includes(ruolo)) return;
+      users.push({uid:doc.id,nome:clean(d.nome),cognome:clean(d.cognome),email:clean(d.email).toLowerCase(),ruolo});
+    });
+    users.sort((x,y)=>`${x.cognome} ${x.nome}`.localeCompare(`${y.cognome} ${y.nome}`,"it"));
+    return {ok:true,users};
+  }
+);

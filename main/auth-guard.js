@@ -1471,6 +1471,14 @@ async function practiceIsAccessible(
         return true;
     }
 
+    /* Un collega esplicitamente associato può vedere e aprire il fascicolo. */
+    const sharedColleagueUid =
+        String(data.collega_segnalato_uid || "").trim();
+
+    if (sharedColleagueUid && sharedColleagueUid === session.user.uid) {
+        return true;
+    }
+
     /*
      * La Segreteria vede le pratiche appartenenti esclusivamente
      * ai consulenti scelti dall'Admin in Gestione Consulenti.

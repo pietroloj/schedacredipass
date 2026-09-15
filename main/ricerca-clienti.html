@@ -460,18 +460,18 @@
                 setupCollaboratorFilter();
             }
             else {
-                const snap =
-                    await db.collection("pratiche_mutuo")
-                        .where(
-                            "consulente_uid",
-                            "==",
-                            sessioneConsulente.user.uid
-                        )
-                        .get();
-
-                snap.forEach(doc =>
-                    docs.push(doc)
-                );
+                const result = new Map();
+                const [ownSnap, sharedSnap] = await Promise.all([
+                    db.collection("pratiche_mutuo")
+                        .where("consulente_uid", "==", sessioneConsulente.user.uid)
+                        .get(),
+                    db.collection("pratiche_mutuo")
+                        .where("collega_segnalato_uid", "==", sessioneConsulente.user.uid)
+                        .get()
+                ]);
+                ownSnap.forEach(doc => result.set(doc.id, doc));
+                sharedSnap.forEach(doc => result.set(doc.id, doc));
+                docs = Array.from(result.values());
             }
 
             docs.forEach(doc => {
@@ -584,6 +584,8 @@
                         <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
                         <p>ID: ${cliente.idOriginale}</p>
                         <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
+                        ${cliente.dati.collega_segnalato_uid ? `<div class="client-progress-info"><i class="fas fa-user-friends"></i> Collega associato: ${String(cliente.dati.collega_segnalato_nome || cliente.dati.collega_segnalato_uid).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>` : ""}
+                        ${["segreteria","responsabile"].includes(roleSession()) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${ownerLabel}</div>` : ""}
                     </div>
                     <div class="client-actions">
                         <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
