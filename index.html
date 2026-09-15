@@ -1428,6 +1428,13 @@ hr {
 .sesso-inline-picker label:hover{border-color:#d7b85a;color:#002d72}
 .sesso-inline-picker input[type="radio"]:checked + label{background:#fff8df;border-color:#C99700;color:#002d72;box-shadow:none}
 .sesso-inline-picker input[type="radio"]:checked + label::before{content:"✓";display:inline-grid;place-items:center;width:17px;height:17px;min-width:17px;border-radius:50%;background:#C99700;color:#fff;font-size:9px;margin-right:5px}
+
+/* ASSEGNO UNICO - DESIGN 12: pannello grigio leggero */
+.assegno-panel-light{margin-top:2px;padding:15px;background:#f7f9fb;border:1px solid #e2e7ec;border-radius:10px;}
+.assegno-panel-light .assegno-five-grid{display:grid;grid-template-columns:1.2fr repeat(4,minmax(0,1fr));gap:12px;align-items:end;}
+.assegno-panel-light .form-group{margin-bottom:0;}
+@media(max-width:1000px){.assegno-panel-light .assegno-five-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:700px){.assegno-panel-light .assegno-five-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 
@@ -2952,104 +2959,36 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
     </div>
 
     <div class="grid-3">
-
         <div class="form-group">
-
             <label>Componenti</label>
-
-            <input
-                type="number"
-                id="num_componenti"
-            >
-
+            <input type="number" id="num_componenti">
         </div>
-
         <div class="form-group">
             <label>Percettori di reddito</label>
             <input type="number" id="num_percettori_reddito" min="0" step="1" placeholder="Es. 2">
         </div>
-
         <div class="form-group">
-
             <label>Assegno Unico?</label>
-
             <div class="toggle-group blue">
-
-                <input
-                    type="radio"
-                    id="ass_si"
-                    name="assegno"
-                    value="Sì"
-                >
-
-                <label for="ass_si">
-                    Sì
-                </label>
-
-                <input
-                    type="radio"
-                    id="ass_no"
-                    name="assegno"
-                    value="No"
-                    checked
-                >
-
-                <label for="ass_no">
-                    No
-                </label>
-
+                <input type="radio" id="ass_si" name="assegno" value="Sì">
+                <label for="ass_si">Sì</label>
+                <input type="radio" id="ass_no" name="assegno" value="No" checked>
+                <label for="ass_no">No</label>
             </div>
-
         </div>
-
-        <div class="form-group">
-
-            <label>Importo Assegno €</label>
-
-            <input
-                type="text"
-                id="assegno_importo"
-            >
-
-        </div>
-
     </div>
 
-    <div class="grid-3">
-
-        <div class="form-group">
-
-            <label>Età 1° Figlio</label>
-
-            <input
-                type="number"
-                id="eta_f1"
-            >
-
+    <div id="assegno_unico_dettagli" class="assegno-panel-light" style="display:none;">
+        <div class="assegno-five-grid">
+            <div class="form-group">
+                <label>Importo Assegno €</label>
+                <input type="text" id="assegno_importo">
+            </div>
+            <div class="form-group"><label>Età 1° Figlio</label><input type="number" id="eta_f1"></div>
+            <div class="form-group"><label>Età 2° Figlio</label><input type="number" id="eta_f2"></div>
+            <div class="form-group"><label>Età 3° Figlio</label><input type="number" id="eta_f3"></div>
+            <div class="form-group"><label>Età 4° Figlio</label><input type="number" id="eta_f4"></div>
         </div>
-
-        <div class="form-group">
-
-            <label>Età 2° Figlio</label>
-
-            <input
-                type="number"
-                id="eta_f2"
-            >
-
-        </div>
-
-        <div class="form-group">
-
-            <label>Età 3° Figlio</label>
-
-            <input
-                type="number"
-                id="eta_f3"
-            >
-
-        </div>
-
     </div>
 
     <hr>
@@ -8619,6 +8558,12 @@ async function sincronizzaSchedaConDatabase() {
                 ''
             ),
 
+        eta_f4:
+            V(
+                'eta_f4',
+                ''
+            ),
+
         sit_abitativa:
             S(
                 'sit_abitativa',
@@ -9038,6 +8983,12 @@ function figliText() {
             ''
         );
 
+    const eta4 =
+        V(
+            'eta_f4',
+            ''
+        );
+
     if (eta1) {
 
         figli.push(
@@ -9058,6 +9009,14 @@ function figliText() {
 
         figli.push(
             `${eta3} anni`
+        );
+
+    }
+
+    if (eta4) {
+
+        figli.push(
+            `${eta4} anni`
         );
 
     }
@@ -10402,6 +10361,7 @@ ${
 </td>
 </tr>
 </table>
+
 
 </body>
 </html>
@@ -16474,6 +16434,27 @@ window.addEventListener(
 
 });
 
+</script>
+
+<script>
+/* Visibilità condizionale pannello Assegno Unico */
+(function(){
+  function aggiornaPannelloAssegno(){
+    const box=document.getElementById('assegno_unico_dettagli');
+    const si=document.getElementById('ass_si');
+    if(box) box.style.display=(si && si.checked)?'block':'none';
+  }
+  function bind(){
+    document.querySelectorAll('input[name="assegno"]').forEach(function(el){
+      if(el.dataset.assegnoPanelBound==='1') return;
+      el.dataset.assegnoPanelBound='1';
+      el.addEventListener('change',aggiornaPannelloAssegno);
+    });
+    aggiornaPannelloAssegno();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
+  window.aggiornaPannelloAssegno=aggiornaPannelloAssegno;
+})();
 </script>
 
 <script>
