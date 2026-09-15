@@ -123,44 +123,105 @@ async function saveSourceRubrica(){
 function extraSubjectTemplate(item,index){
     const n=index+3;
     const role=item.ruolo==='GARANTE'?'GARANTE':'RICHIEDENTE';
-    return `
-    <div class="extra-subject-card" data-extra-index="${index}">
-      <div class="extra-subject-head">
-        <div class="extra-subject-title">${role==='GARANTE'?'GARANTE':'RICHIEDENTE'} ${role==='RICHIEDENTE'?n:''}</div>
-        <button type="button" class="extra-subject-remove" onclick="removeExtraSubject(${index})"><i class="fas fa-trash"></i></button>
+    const garante=role==='GARANTE';
+    const incomeTypes=['INDETERMINATO','DETERMINATO','STATALE','AUTONOMO','AGRARIO','PENSIONATO','MARITTIMO'];
+    const incomeLabels={'INDETERMINATO':'Indeterminato','DETERMINATO':'Determinato','STATALE':'Statale','AUTONOMO':'Autonomo','DISOCCUPATO/A':'Disoccupato/a','AGRARIO':'Agrario','PENSIONATO':'Pensionato','MARITTIMO':'Marittimo'};
+    const sex=item.sesso||'';
+    const reddito=item.tipologia_reddituale||'';
+    return `<section class="card subject15h ${garante?'garante':''}" data-extra-index="${index}">
+      <div class="head">
+        <div class="avatar"><i class="fas ${garante?'fa-shield-alt':'fa-user'}"></i></div>
+        <div>
+          <div class="kicker">SOGGETTO ${n}</div>
+          <h2>${role}</h2>
+          <div class="sub">Inserisci i dati anagrafici e reddituali del ${garante?'garante':'richiedente'}</div>
+        </div>
+        <button type="button" class="trash" onclick="removeExtraSubject(${index})" title="Rimuovi soggetto"><i class="fas fa-trash"></i></button>
       </div>
-      <div class="subject-role-row">
-        <input type="radio" id="extra_role_r_${index}" name="extra_role_${index}" value="RICHIEDENTE" ${role==='RICHIEDENTE'?'checked':''} onchange="updateExtraSubject(${index},'ruolo',this.value)">
-        <label for="extra_role_r_${index}">Richiedente</label>
-        <input type="radio" id="extra_role_g_${index}" name="extra_role_${index}" value="GARANTE" ${role==='GARANTE'?'checked':''} onchange="updateExtraSubject(${index},'ruolo',this.value)">
-        <label for="extra_role_g_${index}">Garante</label>
+
+      <div class="steps">
+        ${['Dati anagrafici','Contatti','Reddito','Riepilogo'].map((x,i)=>`<div class="step ${i===0?'active':''}"><div class="dot">${i+1}</div>${x}</div>`).join('')}
       </div>
-      <div class="grid-2">
-        <div class="form-group"><label>Nome</label><input value="${escHtmlSource(item.nome||'')}" oninput="updateExtraSubject(${index},'nome',this.value)"></div>
-        <div class="form-group"><label>Cognome</label><input value="${escHtmlSource(item.cognome||'')}" oninput="updateExtraSubject(${index},'cognome',this.value)"></div>
+
+      <div class="body">
+        <div class="grid">
+          <label class="mock-label">👤 Nome *
+            <input value="${escHtmlSource(item.nome||'')}" placeholder="Nome" oninput="updateExtraSubject(${index},'nome',this.value)">
+          </label>
+          <label class="mock-label">👤 Cognome *
+            <input value="${escHtmlSource(item.cognome||'')}" placeholder="Cognome" oninput="updateExtraSubject(${index},'cognome',this.value)">
+          </label>
+
+          <label class="mock-label">▣ Data di nascita *
+            <input type="date" value="${escHtmlSource(item.data_nascita||'')}" onchange="updateExtraSubject(${index},'data_nascita',this.value)">
+          </label>
+          <label class="mock-label">⚥ Sesso *
+            <div class="sex">
+              <button type="button" class="${sex==='M'?'active':''}" onclick="toggleExtraSex(${index},'M',this)">♂ MASCHIO</button>
+              <button type="button" class="${sex==='F'?'active':''}" onclick="toggleExtraSex(${index},'F',this)">♀ FEMMINA</button>
+            </div>
+          </label>
+
+          <label class="mock-label">● Comune / Stato di nascita *
+            <input value="${escHtmlSource(item.comune_nascita||'')}" placeholder="Inserisci comune o stato" oninput="updateExtraSubject(${index},'comune_nascita',this.value)">
+          </label>
+          <label class="mock-label">▣ Codice fiscale *
+            <div class="cfline">
+              <input value="${escHtmlSource(item.cf||'')}" oninput="updateExtraSubject(${index},'cf',this.value)">
+              <button type="button" onclick="calcolaCFExtra(${index})">▦ GENERA CF</button>
+            </div>
+          </label>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="grid">
+          <label class="mock-label">✉ Email
+            <input type="email" value="${escHtmlSource(item.email||'')}" placeholder="email@esempio.it" oninput="updateExtraSubject(${index},'email',this.value)">
+          </label>
+          <label class="mock-label">☎ Cellulare
+            <input type="tel" value="${escHtmlSource(item.cellulare||'')}" placeholder="es. 328 1234567" oninput="updateExtraSubject(${index},'cellulare',this.value)">
+          </label>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="income-title">▣ TIPOLOGIA REDDITUALE *</div>
+        <div class="income-types">
+          ${incomeTypes.map(t=>`<button type="button" class="${reddito===t?'active':''}" onclick="toggleExtraIncome(${index},'${t}',this)">${incomeLabels[t]}</button>`).join('')}
+        </div>
+
+        <div class="grid">
+          <label class="mock-label">▥ Professione
+            <input value="${escHtmlSource(item.professione||'')}" placeholder="Inserisci la professione" oninput="updateExtraSubject(${index},'professione',this.value)">
+          </label>
+          <label class="mock-label">▤ Reddito netto mensile €
+            <input value="${escHtmlSource(item.reddito_netto||'')}" placeholder="0,00" oninput="updateExtraSubject(${index},'reddito_netto',this.value)">
+          </label>
+        </div>
       </div>
-      <div class="grid-3">
-        <div class="form-group"><label>Data di nascita</label><input type="date" value="${escHtmlSource(item.data_nascita||'')}" oninput="updateExtraSubject(${index},'data_nascita',this.value)"></div>
-        <div class="form-group"><label>Sesso</label><select onchange="updateExtraSubject(${index},'sesso',this.value)"><option value="">-</option><option value="M" ${item.sesso==='M'?'selected':''}>Maschio</option><option value="F" ${item.sesso==='F'?'selected':''}>Femmina</option></select></div>
-        <div class="form-group"><label>Comune / Stato nascita</label><input value="${escHtmlSource(item.comune_nascita||'')}" oninput="updateExtraSubject(${index},'comune_nascita',this.value)"></div>
-      </div>
-      <div class="form-group"><label>Codice Fiscale</label><input maxlength="16" value="${escHtmlSource(item.cf||'')}" oninput="updateExtraSubject(${index},'cf',this.value.toUpperCase())"></div>
-      <div class="grid-2">
-        <div class="form-group"><label>Email</label><input value="${escHtmlSource(item.email||'')}" oninput="updateExtraSubject(${index},'email',this.value)"></div>
-        <div class="form-group"><label>Cellulare</label><input value="${escHtmlSource(item.cell||'')}" oninput="updateExtraSubject(${index},'cell',this.value)"></div>
-      </div>
-      <div class="form-group">
-        <label>Tipologia reddituale</label>
-        <select onchange="updateExtraSubject(${index},'lavoro',this.value)">
-          ${['','INDETERMINATO','DETERMINATO','STATALE','AUTONOMO','AGRARIO','PENSIONATO','MARITTIMO','DISOCCUPATO/A'].map(v=>`<option value="${v}" ${item.lavoro===v?'selected':''}>${v||'- Seleziona -'}</option>`).join('')}
-        </select>
-      </div>
-      <div class="grid-2">
-        <div class="form-group"><label>Professione</label><input value="${escHtmlSource(item.professione||'')}" oninput="updateExtraSubject(${index},'professione',this.value)"></div>
-        <div class="form-group"><label>Reddito netto €</label><input value="${escHtmlSource(item.reddito||'')}" oninput="updateExtraSubject(${index},'reddito',this.value)"></div>
-      </div>
-    </div>`;
+    </section>`;
 }
+
+window.toggleExtraSex=function(index,value,btn){
+    const current=(extraSubjects[index]&&extraSubjects[index].sesso)||'';
+    const next=current===value?'':value;
+    updateExtraSubject(index,'sesso',next);
+    const box=btn.parentElement;
+    box.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    if(next) btn.classList.add('active');
+};
+
+window.toggleExtraIncome=function(index,value,btn){
+    const current=(extraSubjects[index]&&extraSubjects[index].tipologia_reddituale)||'';
+    const next=current===value?'':value;
+    updateExtraSubject(index,'tipologia_reddituale',next);
+    const box=btn.parentElement;
+    box.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    if(next) btn.classList.add('active');
+};
+
+
 function renderExtraSubjects(){
     const box=document.getElementById('extraSubjects');
     if(box)box.innerHTML=extraSubjectsState.map(extraSubjectTemplate).join('');
@@ -1435,7 +1496,568 @@ hr {
 .assegno-panel-light .form-group{margin-bottom:0;}
 @media(max-width:1000px){.assegno-panel-light .assegno-five-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:700px){.assegno-panel-light .assegno-five-grid{grid-template-columns:1fr;}}
+
+/* ==========================================================
+   SOGGETTI AGGIUNTIVI - DESIGN 15H
+   ========================================================== */
+#extraSubjects.extra-subjects{
+    margin-top:18px;
+    margin-bottom:28px; /* separazione netta dallo slot STATO CIVILE */
+    align-items:start;
+}
+.subject15h{
+    padding:0 !important;
+    overflow:hidden;
+    background:#f8fafc !important;
+    border:1px solid #dce4ec !important;
+    border-radius:14px !important;
+    box-shadow:none !important;
+}
+.subject15h-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:17px 18px 14px;
+    background:linear-gradient(90deg,#f3f7fb,#fff);
+    border-bottom:1px solid #e6ebf0;
+}
+.subject15h-avatar{
+    width:44px;height:44px;min-width:44px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:#002d72;color:#fff;font-size:17px;
+}
+.subject15h .subject15h-heading{min-width:0;flex:1}
+.subject15h-kicker{font-size:8px;font-weight:800;color:#7b8794;letter-spacing:.5px}
+.subject15h .extra-subject-title{font-size:15px;margin-top:1px}
+.subject15h-sub{font-size:8px;color:#7b8794;margin-top:2px}
+.subject15h .extra-subject-remove{width:36px;height:36px;border-radius:7px}
+.subject15h-role{padding:14px 18px 0;margin-bottom:4px}
+.subject15h-role label{min-height:39px;display:flex;align-items:center;justify-content:center;gap:6px}
+.subject15h > .grid-2,
+.subject15h > .subject15h-birth-grid,
+.subject15h > .form-group,
+.subject15h > .subject15h-divider{margin-left:18px;margin-right:18px}
+.subject15h-birth-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:12px;
+}
+.subject15h .sesso-inline-picker{max-width:none}
+.subject15h-cf-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.subject15h-cf-row .btn-cf{height:42px;white-space:nowrap}
+.subject15h-divider{height:1px;background:#dfe6ed;margin-top:4px;margin-bottom:14px}
+.subject15h-income-block{margin-bottom:14px}
+.subject15h-income-picker{
+    display:grid;
+    grid-template-columns:repeat(8,minmax(0,1fr));
+    gap:5px;
+    margin-top:7px;
+}
+.subject15h-income-picker input{position:absolute;opacity:0;pointer-events:none}
+.subject15h-income-picker label{
+    min-width:0;min-height:40px;margin:0 !important;padding:6px 3px !important;
+    display:flex !important;align-items:center;justify-content:center;
+    border:1px solid #d7e0e8;border-radius:7px;background:#fff;
+    color:#4f5965 !important;font-size:7.5px !important;font-weight:800 !important;
+    text-align:center;line-height:1.1;cursor:pointer;text-transform:none !important;
+}
+.subject15h-income-picker input:checked + label{
+    background:#fff8df;border-color:#C99700;color:#002d72 !important;
+}
+.subject15h > .grid-2:last-child{padding-bottom:4px}
+@media(max-width:1200px){
+    .subject15h-income-picker{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:800px){
+    #extraSubjects.extra-subjects{margin-bottom:22px}
+    .subject15h-birth-grid{grid-template-columns:1fr}
+    .subject15h-cf-row{grid-template-columns:1fr}
+    .subject15h-income-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+
+
+/* ==========================================================
+   HEADER PREMIUM V10
+   ========================================================== */
+.header.header-premium-v10{
+    min-height:138px;background:linear-gradient(90deg,#173d7c 0%,#123878 55%,#0f3473 100%);
+    color:#fff;padding:17px 30px 14px 205px;display:grid;
+    grid-template-columns:minmax(340px,1.08fr) 1px minmax(330px,.95fr) minmax(185px,.55fr);
+    gap:28px;align-items:center;border-bottom:3px solid #C99700;position:relative;overflow:visible;
+}
+.header-premium-v10 .ref-photo-premium{
+    position:absolute;left:32px;top:18px;width:158px;height:158px;margin:0;z-index:20;
+    border:6px solid #C99700;background:#fff;box-shadow:0 5px 12px rgba(0,0,0,.28);cursor:pointer;overflow:visible;
+}
+.header-premium-v10 .ref-photo-premium img{border-radius:50%;overflow:hidden}
+.header-premium-v10 .ref-photo-premium #referente_foto_placeholder{font-size:55px;color:#8fa4c8}
+.photo-edit-badge{position:absolute;right:2px;bottom:8px;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#C99700;color:#123878;border:3px solid #fff;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.ref-identity-block,.backoffice-premium{min-width:0;align-self:center}
+.header-kicker{display:block;color:#b7c4dc;font-size:9px;font-weight:700;letter-spacing:1.2px;margin-bottom:4px}
+.header-premium-v10 .ref-name-premium{color:#C99700!important;font-size:25px!important;font-weight:800!important;line-height:1.08!important;margin-bottom:11px!important;text-transform:none!important}
+.ref-contact-list,.backoffice-list{display:grid;gap:8px}
+.ref-contact-item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center;min-height:19px}
+.minimal-icon{width:22px;height:22px;display:grid;place-items:center;color:#C99700;font-size:12px}
+.minimal-cc{font-size:8px;font-weight:900;border:1px solid rgba(201,151,0,.8);border-radius:4px;height:16px;align-self:center}
+.header-premium-v10 .info-sub{color:#fff!important;font-size:10.5px!important;line-height:1.25!important;opacity:.96!important;min-height:18px!important}
+.header-premium-v10 textarea.info-sub{height:31px!important;min-height:31px!important;resize:none!important;overflow:hidden!important;padding-top:2px!important}
+.ref-address-item{align-items:start}
+.header-divider-premium{width:1px;height:91px;background:rgba(255,255,255,.28);justify-self:center}
+.backoffice-premium{padding-left:18px}
+.backoffice-title{font-size:11px;font-weight:800;letter-spacing:.5px;margin-bottom:11px;color:#fff}
+.logo-premium{min-width:180px;align-items:center!important;justify-self:end;gap:5px!important}
+.logo-premium img.logo-main{width:155px!important;max-height:42px;object-fit:contain}
+.logo-premium img.logo-anniv{width:100px!important;max-height:58px;object-fit:contain}
+.main-title{padding-top:18px}
+.ref-photo-modal{display:none;position:fixed;inset:0;z-index:1000000;background:rgba(7,20,45,.72);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px}
+.ref-photo-modal.open{display:flex}
+.ref-photo-dialog{position:relative;width:min(92vw,480px);background:#fff;border-radius:18px;padding:30px;box-shadow:0 22px 70px rgba(0,0,0,.3);border-top:5px solid #C99700}
+.ref-photo-close{position:absolute;right:16px;top:15px;width:34px;height:34px;border:0;border-radius:50%;background:#f1f4f7;color:#52606d;cursor:pointer;font-size:15px}
+.ref-photo-dialog-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:#fff7dc;color:#9a7300;font-size:20px;margin-bottom:12px}
+.ref-photo-dialog h2{margin:0;color:#123878;font-size:22px}.ref-photo-dialog p{margin:6px 0 20px;color:#6c7783;font-size:12px;line-height:1.5}
+.ref-photo-fields{display:grid;grid-template-columns:100px 1fr 1fr;gap:10px}.ref-photo-fields label{font-size:9px;font-weight:800;color:#53606d;text-transform:uppercase}.ref-photo-fields input{margin-top:5px;height:43px;font-size:12px;text-transform:none}
+.ref-photo-submit{margin-top:18px;width:100%;height:45px;border:0;border-radius:8px;background:#123878;color:#fff;font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;cursor:pointer}.ref-photo-submit i{color:#C99700;margin-right:7px}
+@media(max-width:1100px){.header.header-premium-v10{padding:175px 24px 22px;grid-template-columns:1fr;gap:18px}.header-premium-v10 .ref-photo-premium{left:50%;transform:translateX(-50%);top:16px}.header-divider-premium{display:none}.backoffice-premium{padding-left:0}.logo-premium{justify-self:start;align-items:flex-start!important}.main-title{padding-top:15px}}
+@media(max-width:600px){.ref-photo-fields{grid-template-columns:1fr}.header-premium-v10 .ref-name-premium{font-size:22px!important}}
 </style>
+
+<style>
+.field-label-icon{
+    color:#C99700;
+    width:14px;
+    margin-right:5px;
+    text-align:center;
+    font-size:10px;
+}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
+<script>
+(function(){
+ const iconMap=[
+  // ANAGRAFICA
+  [/^nome\b/i,'fa-user'],[/^cognome\b/i,'fa-user-tag'],
+  [/data di nascita|età|eta\b|nascita/i,'fa-calendar-alt'],
+  [/sesso/i,'fa-venus-mars'],
+  [/comune.*nascita|stato.*nascita|luogo.*nascita/i,'fa-map-marker-alt'],
+  [/codice fiscale|\bcf\b/i,'fa-id-card'],
+  [/email|e-mail/i,'fa-envelope'],[/cellulare|telefono|tel\./i,'fa-phone'],
+
+  // FAMIGLIA / STATO CIVILE
+  [/stato civile/i,'fa-ring'],[/regime patrimoniale/i,'fa-balance-scale'],
+  [/componenti|nucleo familiare/i,'fa-users'],
+  [/percettori.*reddito/i,'fa-user-friends'],
+  [/assegno unico/i,'fa-child'],[/importo assegno/i,'fa-euro-sign'],
+  [/figlio|figli/i,'fa-child'],
+
+  // LAVORO / REDDITO
+  [/datore di lavoro|attività|attivita/i,'fa-building'],
+  [/tipologia reddituale|situazione lavorativa|contratto/i,'fa-briefcase'],
+  [/professione|mansione/i,'fa-user-tie'],
+  [/reddito netto|reddito mensile|reddito/i,'fa-euro-sign'],
+  [/anzianità|anzianita/i,'fa-history'],
+  [/partita iva|p\.?\s*iva/i,'fa-file-invoice'],
+
+  // IMMOBILE / ABITAZIONE
+  [/compravendita|prezzo.*acquisto|prezzo immobile/i,'fa-tags'],
+  [/canone mensile|canone affitto|affitto/i,'fa-home'],
+  [/situazione abitativa/i,'fa-home'],
+  [/indirizzo|residenza/i,'fa-map-marker-alt'],
+  [/immobile|abitazione/i,'fa-home'],
+  [/rendita catastale/i,'fa-landmark'],
+  [/superficie|mq|metri quadri/i,'fa-ruler-combined'],
+
+  // MUTUO / FINANZA
+  [/importo mutuo|importo richiesto|capitale richiesto/i,'fa-euro-sign'],
+  [/rata/i,'fa-money-check-alt'],
+  [/durata|anni|mesi/i,'fa-clock'],
+  [/finalità|finalita/i,'fa-bullseye'],
+  [/banca|istituto/i,'fa-university'],
+  [/finanziament|prestito/i,'fa-hand-holding-usd'],
+  [/debito residuo|residuo/i,'fa-coins'],
+  [/liquidità|liquidita/i,'fa-wallet'],
+  [/ltv|ltc/i,'fa-percentage'],
+  [/tasso|tan|taeg|spread/i,'fa-percentage'],
+
+  // PROVENIENZA / SEGNALAZIONE
+  [/segnalatore/i,'fa-user-plus'],
+  [/agenzia immobiliare/i,'fa-store'],
+  [/tipo provenienza|provenienza/i,'fa-share-alt'],
+  [/nominativo|ragione sociale/i,'fa-address-card'],
+  [/segnala collega|collega/i,'fa-user-friends'],
+
+  // GENERICI
+  [/data\b/i,'fa-calendar-alt'],
+  [/importo/i,'fa-euro-sign'],
+  [/numero|n°|num\./i,'fa-hashtag'],
+  [/note|descrizione|annotazioni/i,'fa-sticky-note'],
+  [/document/i,'fa-file-alt']
+ ];
+
+ function normalizedText(label){
+   const clone=label.cloneNode(true);
+   clone.querySelectorAll('i,svg').forEach(x=>x.remove());
+   return clone.textContent.replace(/\s+/g,' ').trim();
+ }
+
+ function decorate(root=document){
+   root.querySelectorAll('.form-group > label, .field > label, .grid-2 > label, .grid-3 > label, .grid-4 > label').forEach(label=>{
+     if(label.dataset.fieldIcon==='1')return;
+     const txt=normalizedText(label);
+     const hit=iconMap.find(([rx])=>rx.test(txt));
+     if(!hit)return;
+     const i=document.createElement('i');
+     i.className='fas '+hit[1]+' field-label-icon';
+     i.setAttribute('aria-hidden','true');
+     label.prepend(i);
+     label.dataset.fieldIcon='1';
+   });
+ }
+
+ document.addEventListener('DOMContentLoaded',()=>{
+   decorate(document);
+   new MutationObserver(ms=>{
+     ms.forEach(m=>m.addedNodes.forEach(n=>{
+       if(n.nodeType===1)decorate(n);
+     }));
+   }).observe(document.body,{childList:true,subtree:true});
+ });
+})();
+</script>
+
+
+<style id="fix-grafica-15h">
+:root{
+    --h15-blue:#063b84;
+    --h15-gold:#d69b00;
+    --h15-line:#cbd6e1;
+}
+
+/* Tasti coerenti con il mockup 15H: rettangolari, ordinati, niente pillole */
+.toggle-group label,
+.imposta-options label,
+.mediazione-option label,
+.stato-civile-options label,
+.source-type-row label{
+    border-radius:7px !important;
+    min-height:42px !important;
+    padding:8px 12px !important;
+    background:#fff !important;
+    border:1px solid var(--h15-line) !important;
+    color:#33465f !important;
+    box-shadow:none !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    font-weight:700 !important;
+}
+
+.toggle-group input[type="radio"]:checked + label,
+.toggle-group.blue input[type="radio"]:checked + label,
+.imposta-options input[type="radio"]:checked + label,
+.mediazione-option input[type="radio"]:checked + label,
+.stato-civile-options input[type="radio"]:checked + label,
+.source-type-row input[type="radio"]:checked + label{
+    background:#fff8df !important;
+    border-color:var(--h15-gold) !important;
+    color:var(--h15-blue) !important;
+    box-shadow:none !important;
+}
+
+/* Accreditato su C/C: due tasti Sì / No */
+.fitto-accredito-buttons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+    width:100%;
+}
+
+.fitto-choice-btn{
+    width:100%;
+    height:42px;
+    border:1px solid var(--h15-line);
+    background:#fff;
+    border-radius:7px;
+    color:#33465f;
+    font-family:'Poppins',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:none;
+}
+
+.fitto-choice-btn.active{
+    background:#fff8df;
+    border-color:var(--h15-gold);
+    color:var(--h15-blue);
+}
+
+.fitto-choice-btn.active::before{
+    content:"✓";
+    display:inline-grid;
+    place-items:center;
+    width:17px;
+    height:17px;
+    border-radius:50%;
+    background:var(--h15-gold);
+    color:#fff;
+    font-size:9px;
+    margin-right:6px;
+}
+
+.fitto-accredito-compat{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+    padding:0 !important;
+    margin:0 !important;
+}
+
+/* Scadenza e Finalità: identica altezza */
+.finanziamento-item .fin-scadenza,
+.finanziamento-item .fin-finalita,
+#mutuo_pre_scadenza,
+#mutuo_pre_finalita{
+    height:46px !important;
+    min-height:46px !important;
+    padding-top:0 !important;
+    padding-bottom:0 !important;
+}
+
+/* Richiedenti / garanti: geometria coerente col 15H */
+.subject15h .subject15h-income-picker label,
+.subject15h .sesso-inline-picker label{
+    min-height:42px !important;
+    border-radius:7px !important;
+    box-shadow:none !important;
+}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
+
+<style id="subject15h-exact-user-mockup">
+.subject15h.card{--blue:#063b84;--blue2:#1269bd;--gold:#d69b00;--ink:#18345e;--text:#4c5663;--line:#d5dee8;--soft:#f5f8fb;--danger:#bd2a20}
+.subject15h.card{box-sizing:border-box;background:#fff;border:1px solid #e0e6ec;border-radius:15px;overflow:hidden;box-shadow:0 5px 16px rgba(0,0,0,.05);padding:0!important}
+.subject15h.card *{box-sizing:border-box}
+.subject15h .head{display:flex;align-items:center;gap:15px;padding:20px 22px 14px;background:linear-gradient(90deg,#f5f9fd,#fff)}
+.subject15h .avatar{width:52px;height:52px;min-width:52px;border-radius:50%;background:var(--blue);display:grid;place-items:center;color:#fff;font-size:25px;font-weight:800}
+.subject15h.garante .avatar{background:var(--gold)}
+.subject15h .kicker{font-size:11px;font-weight:800;color:#728197}
+.subject15h .head h2{margin:3px 0 2px;color:var(--blue);font-size:21px;line-height:1.1}
+.subject15h .sub{font-size:11px;color:#6d7783}
+.subject15h .trash{margin-left:auto;width:40px;height:40px;border:1px solid #f0b8b3;background:#fff;color:var(--danger);border-radius:5px;font-size:17px;cursor:pointer}
+.subject15h .steps{display:grid;grid-template-columns:repeat(4,1fr);padding:8px 22px 18px;border-bottom:1px solid #e7ebef;background:#fff}
+.subject15h .step{text-align:center;position:relative;font-size:10px;color:#65758a}
+.subject15h .step:before{content:"";position:absolute;height:2px;background:#dce4ec;left:-50%;right:50%;top:12px}
+.subject15h .step:first-child:before{display:none}
+.subject15h .dot{position:relative;z-index:1;margin:0 auto 7px;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#d7e0e9;color:#fff;font-size:10px;font-weight:800}
+.subject15h .step.active{color:var(--blue);font-weight:800}
+.subject15h .step.active .dot{background:var(--blue)}
+.subject15h .body{padding:20px 22px 22px;background:#f8fafc}
+.subject15h .grid{display:grid;grid-template-columns:1fr 1fr;gap:15px 18px}
+.subject15h .mock-label{font-size:11px;font-weight:800;color:#273e60;display:block}
+.subject15h .mock-label input,.subject15h .mock-label select{display:block;width:100%;height:42px;margin-top:7px;border:1px solid #cbd6e1;border-radius:7px;background:#fff;padding:0 12px;font:inherit;color:#4f5965}
+.subject15h .sex{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.subject15h .sex button,.subject15h .income-types button{height:42px;border:1px solid #cbd6e1;background:#fff;border-radius:7px;color:#33465f;font-weight:800;cursor:pointer}
+.subject15h .sex button.active,.subject15h .income-types button.active{background:var(--blue2);color:#fff;border-color:var(--blue2)}
+.subject15h .cfline{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:7px}
+.subject15h .cfline input{margin-top:0}
+.subject15h .cfline button{border:0;border-radius:7px;background:var(--blue2);color:#fff;font-weight:800;padding:0 15px;cursor:pointer}
+.subject15h .sep{height:1px;background:#dde5ec;margin:19px 0}
+.subject15h .income-title{font-size:11px;font-weight:900;color:#273e60;margin-bottom:8px}
+.subject15h .income-types{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:15px}
+.subject15h .income-types button{padding:0 5px;font-size:9px;white-space:nowrap}
+.subject15h .full{grid-column:1/-1}
+@media(max-width:1300px){.subject15h .income-types{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:600px){.subject15h .grid{grid-template-columns:1fr}.subject15h .income-types{grid-template-columns:repeat(2,1fr)}.subject15h .steps{padding-left:8px;padding-right:8px}}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
+
+<style id="subject15h-income-text-fix">
+/* Mantiene gli 8 pulsanti sulla stessa riga evitando qualsiasi fuoriuscita del testo */
+.subject15h .income-types{
+  grid-template-columns:repeat(8,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+.subject15h .income-types button{
+  min-width:0 !important;
+  width:100% !important;
+  padding:0 3px !important;
+  font-size:clamp(7px,.62vw,9px) !important;
+  line-height:1.05 !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+  text-align:center !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+@media(max-width:1300px){
+  .subject15h .income-types{
+    grid-template-columns:repeat(8,minmax(0,1fr)) !important;
+  }
+}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
+
+<style id="subject15h-income-nowrap-final">
+/* Testo SEMPRE su una sola riga negli 8 pulsanti */
+.subject15h .income-types{
+  grid-template-columns:repeat(8,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+.subject15h .income-types button{
+  min-width:0 !important;
+  width:100% !important;
+  padding:0 2px !important;
+  white-space:nowrap !important;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  font-size:clamp(6.5px,.54vw,9px) !important;
+  line-height:1 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+}
+@media(max-width:1300px){
+  .subject15h .income-types{
+    grid-template-columns:repeat(8,minmax(0,1fr)) !important;
+  }
+}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
+
+<style id="subject15h-final-7-income-date-align">
+/* 7 tipologie reddituali: più grandi, testo più grande e sempre su una riga */
+.subject15h .income-types{
+  display:grid !important;
+  grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+  gap:8px !important;
+}
+.subject15h .income-types button{
+  width:100% !important;
+  min-width:0 !important;
+  height:46px !important;
+  min-height:46px !important;
+  padding:0 6px !important;
+  font-size:10.5px !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+}
+
+/* Data di nascita: stessa altezza e centratura verticale degli altri input */
+.subject15h input[type="date"]{
+  height:42px !important;
+  min-height:42px !important;
+  margin-top:7px !important;
+  padding:0 12px !important;
+  line-height:42px !important;
+  display:block !important;
+  vertical-align:middle !important;
+}
+.subject15h input[type="date"]::-webkit-datetime-edit{
+  display:flex !important;
+  align-items:center !important;
+  height:40px !important;
+  padding:0 !important;
+}
+.subject15h input[type="date"]::-webkit-date-and-time-value{
+  text-align:left !important;
+  margin:0 !important;
+  min-height:40px !important;
+  line-height:40px !important;
+}
+.subject15h input[type="date"]::-webkit-datetime-edit-fields-wrapper{
+  display:flex !important;
+  align-items:center !important;
+  height:40px !important;
+}
+
+@media(max-width:1300px){
+  .subject15h .income-types{
+    grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+  }
+  .subject15h .income-types button{
+    font-size:9.5px !important;
+    padding:0 3px !important;
+  }
+}
+
+/* FIX: gestione impegno finanziamenti — identica al mutuo */
+.finance-management-buttons button,
+.gestione-impegno-buttons button,
+.commitment-buttons button {
+  text-transform: uppercase !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+}
+</style>
+
 </head>
 
 <body>
@@ -1892,171 +2514,83 @@ hr {
 
 <div class="app-container" id="app_main_container">
 
-<div class="header">
+<div class="header header-premium-v10">
 
-    <div style="display:flex;gap:15px;flex:1;max-width:450px">
-
-        <div class="ref-photo-container">
-
-            <img
-                id="referente_foto_preview"
-                src=""
-            >
-
-            <i
-                id="referente_foto_placeholder"
-                class="fas fa-user-tie"
-            ></i>
-
-        </div>
-
-        <div class="header-box">
-
-            <span class="ruolo">
-                Referente Consulenza
-            </span>
-
-            <input
-                type="text"
-                id="campo_referente"
-                class="header-editable"
-                value="PIETRO LO IACONO"
-                list="rubrica_referenti_list"
-                autocomplete="off"
-                title="Inizia a scrivere per richiamare un referente già utilizzato"
-            >
-
-            <datalist id="rubrica_referenti_list"></datalist>
-
-            <span class="ruolo" style="margin-top:5px">
-                Sede / Indirizzo
-            </span>
-
-            <textarea
-                id="campo_indirizzo"
-                class="header-editable info-sub"
-                rows="2"
-            >VIA MARTIRI DEL DISSENSO 99/101
-SANTA MARIA CAPUA VETERE (CE)</textarea>
-
-            <span class="ruolo" style="margin-top:5px">
-                Email e Contatti
-            </span>
-
-            <input
-                type="text"
-                id="campo_email"
-                class="header-editable info-sub"
-                value="pietro.loiacono@credipass.it"
-            >
-
-            <input
-                type="text"
-                id="campo_cellulare"
-                class="header-editable info-sub"
-                value="3925701385"
-            >
-
-        </div>
-
+    <div class="ref-photo-container ref-photo-premium" role="button" tabindex="0"
+         title="Clicca per aggiornare la foto profilo"
+         onclick="openRefPhotoModal()"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRefPhotoModal();}">
+        <img id="referente_foto_preview" src="" alt="Foto referente">
+        <i id="referente_foto_placeholder" class="fa-solid fa-user-tie"></i>
     </div>
 
-    <div class="header-box" style="max-width:450px">
+    <section class="ref-identity-block">
+        <span class="header-kicker">REFERENTE CONSULENZA</span>
+        <input type="text" id="campo_referente" class="header-editable ref-name-premium"
+               value="PIETRO LO IACONO" list="rubrica_referenti_list" autocomplete="off"
+               title="Inizia a scrivere per richiamare un referente già utilizzato">
+        <datalist id="rubrica_referenti_list"></datalist>
 
-        <span class="ruolo">
-            Email Backoffice
-        </span>
-
-        <input
-            type="text"
-            id="campo_email_auto"
-            class="header-editable info-sub"
-            value="segreteria.passaretti@credipass.it"
-        >
-
-        <span class="ruolo" style="margin-top:8px">
-            Email in copia conoscenza
-        </span>
-
-        <input
-            type="text"
-            id="campo_email_agenzia"
-            class="header-editable info-sub"
-            value=""
-        >
-
-        <span class="ruolo" style="margin-top:8px">
-            WhatsApp Automazione
-        </span>
-
-        <input
-            type="text"
-            id="campo_wa_auto"
-            class="header-editable info-sub"
-            value="393760552826"
-        >
-
-        <div style="margin-top:12px">
-
-            <span class="ruolo" style="color:#C99700">
-                Foto Profilo
-            </span>
-
-            <div style="display:flex;gap:5px">
-
-                <input
-                    type="text"
-                    id="ref_provincia"
-                    class="header-editable info-sub"
-                    placeholder="Provincia"
-                >
-
-                <input
-                    type="text"
-                    id="ref_nome"
-                    class="header-editable info-sub"
-                    placeholder="Nome"
-                >
-
-                <input
-                    type="text"
-                    id="ref_cognome"
-                    class="header-editable info-sub"
-                    placeholder="Cognome"
-                >
-
+        <div class="ref-contact-list">
+            <div class="ref-contact-item">
+                <span class="minimal-icon"><i class="fa-solid fa-phone"></i></span>
+                <input type="text" id="campo_cellulare" class="header-editable info-sub" value="3925701385">
             </div>
-
-            <button
-                type="button"
-                class="btn-aggiorna"
-                onclick="loadCredipassReferentePhoto()"
-            >
-                Aggiorna Informazioni
-            </button>
-
+            <div class="ref-contact-item">
+                <span class="minimal-icon"><i class="fa-regular fa-envelope"></i></span>
+                <input type="text" id="campo_email" class="header-editable info-sub" value="pietro.loiacono@credipass.it">
+            </div>
+            <div class="ref-contact-item ref-address-item">
+                <span class="minimal-icon"><i class="fa-solid fa-location-dot"></i></span>
+                <textarea id="campo_indirizzo" class="header-editable info-sub" rows="2">VIA MARTIRI DEL DISSENSO 99/101
+SANTA MARIA CAPUA VETERE (CE)</textarea>
+            </div>
         </div>
+    </section>
 
+    <div class="header-divider-premium"></div>
+
+    <section class="backoffice-premium">
+        <div class="backoffice-title">UFFICIO BACKOFFICE</div>
+        <div class="backoffice-list">
+            <div class="ref-contact-item">
+                <span class="minimal-icon"><i class="fa-regular fa-envelope"></i></span>
+                <input type="text" id="campo_email_auto" class="header-editable info-sub" value="segreteria.passaretti@credipass.it">
+            </div>
+            <div class="ref-contact-item">
+                <span class="minimal-icon minimal-cc">CC</span>
+                <input type="text" id="campo_email_agenzia" class="header-editable info-sub" value="pierluigi.passaretti@credipass.it">
+            </div>
+            <div class="ref-contact-item">
+                <span class="minimal-icon"><i class="fa-brands fa-whatsapp"></i></span>
+                <input type="text" id="campo_wa_auto" class="header-editable info-sub" value="39351724530">
+            </div>
+        </div>
+    </section>
+
+    <div class="logo-area-stack logo-premium">
+        <img src="/images/logo-credipass.png" class="logo-main" alt="Credipass">
+        <img src="/images/logo-20anni.png" class="logo-anniv" alt="20 anni Credipass">
     </div>
-
-    <div class="logo-area-stack">
-
-        <img
-            src="/images/logo-credipass.png"
-            class="logo-main"
-        >
-
-        <img
-            src="/images/logo-20anni.png"
-            class="logo-anniv"
-        >
-
-    </div>
-
-    
 
 </div>
 
+<div id="refPhotoModal" class="ref-photo-modal" aria-hidden="true" onclick="if(event.target===this)closeRefPhotoModal()">
+    <div class="ref-photo-dialog" role="dialog" aria-modal="true" aria-labelledby="refPhotoModalTitle">
+        <button type="button" class="ref-photo-close" onclick="closeRefPhotoModal()" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+        <div class="ref-photo-dialog-icon"><i class="fa-solid fa-camera"></i></div>
+        <h2 id="refPhotoModalTitle">Foto profilo</h2>
+        <p>Inserisci i dati del referente per recuperare e aggiornare la foto.</p>
+        <div class="ref-photo-fields">
+            <label>Provincia<input type="text" id="ref_provincia" placeholder="Es. Caserta"></label>
+            <label>Nome<input type="text" id="ref_nome" placeholder="Nome"></label>
+            <label>Cognome<input type="text" id="ref_cognome" placeholder="Cognome"></label>
+        </div>
+        <button type="button" class="ref-photo-submit" onclick="loadCredipassReferentePhotoFromModal()">
+            <i class="fa-solid fa-image"></i> CARICA FOTO
+        </button>
+    </div>
+</div>
 <div class="main-title">
     SCHEDA DI CONSULENZA
 </div>
@@ -2899,24 +3433,15 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                                 Accreditato su C/C?
                             </label>
 
-                            <select
-                                class="fitto-accredito"
-                                id="fitto_accredito_cc"
-                            >
-
-                                <option value="">
-                                    - Seleziona -
-                                </option>
-
-                                <option value="Sì">
-                                    Sì
-                                </option>
-
-                                <option value="No">
-                                    No
-                                </option>
-
-                            </select>
+                            <div class="fitto-accredito-buttons">
+        <button type="button" class="fitto-choice-btn" data-value="Sì" onclick="setFittoAccredito(this,'Sì')">Sì</button>
+        <button type="button" class="fitto-choice-btn" data-value="No" onclick="setFittoAccredito(this,'No')">No</button>
+        <select class="fitto-accredito fitto-accredito-compat" id="fitto_accredito_cc" aria-hidden="true" tabindex="-1">
+            <option value=""></option>
+            <option value="Sì">Sì</option>
+            <option value="No">No</option>
+        </select>
+    </div>
 
                         </div>
 
@@ -3354,9 +3879,9 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
                 <label>Gestione dell'impegno</label>
                 <div class="toggle-group blue" style="max-width:420px">
                     <input type="radio" id="mutuo_pre_mantieni" name="mutuo_pre_gestione" value="MANTENERE" checked>
-                    <label for="mutuo_pre_mantieni">Mantieni impegno</label>
+                    <label for="mutuo_pre_mantieni">MANTIENI IMPEGNO</label>
                     <input type="radio" id="mutuo_pre_estingui" name="mutuo_pre_gestione" value="ESTINGUERE">
-                    <label for="mutuo_pre_estingui">Da estinguere</label>
+                    <label for="mutuo_pre_estingui">DA ESTINGUERE</label>
                 </div>
             </div>
 
@@ -3475,10 +4000,20 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
 
                     <div class="form-group" style="margin-top:10px">
                         <label>Gestione dell'impegno</label>
-                        <select class="fin-gestione">
-                            <option value="MANTENERE">Mantieni impegno</option>
-                            <option value="ESTINGUERE">Da estinguere</option>
-                        </select>
+                        <div class="fin-gestione-pulsanti" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;margin-top:7px;">
+                            <button type="button" class="fin-choice active" data-value="MANTENERE"
+                                style="height:46px;border:1px solid #d69b00;border-radius:9px;background:#fff7dc;color:#063b84;font-weight:800;font-family:inherit;cursor:pointer;">
+                                MANTIENI IMPEGNO
+                            </button>
+                            <button type="button" class="fin-choice" data-value="ESTINGUERE"
+                                style="height:46px;border:1px solid #cbd6e1;border-radius:9px;background:#fff;color:#33465f;font-weight:800;font-family:inherit;cursor:pointer;">
+                                DA ESTINGUERE
+                            </button>
+                            <select class="fin-gestione" style="display:none!important;">
+                                <option value="MANTENERE" selected>MANTIENI IMPEGNO</option>
+                                <option value="ESTINGUERE">DA ESTINGUERE</option>
+                            </select>
+                        </div>
                     </div>
 
                 </div>
@@ -5397,6 +5932,24 @@ async function decodificaCF(cf) {
 
 }
 
+window.openRefPhotoModal=function(){
+    const modal=document.getElementById('refPhotoModal');
+    if(!modal)return;
+    modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+    setTimeout(()=>document.getElementById('ref_provincia')?.focus(),50);
+};
+window.closeRefPhotoModal=function(){
+    const modal=document.getElementById('refPhotoModal');
+    if(!modal)return;
+    modal.classList.remove('open'); modal.setAttribute('aria-hidden','true');
+};
+window.loadCredipassReferentePhotoFromModal=async function(){
+    await window.loadCredipassReferentePhoto();
+    const img=document.getElementById('referente_foto_preview');
+    if(img && img.src && img.style.display!=='none') closeRefPhotoModal();
+};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRefPhotoModal();});
+
 /* ==========================================================
    FOTO REFERENTE
    ========================================================== */
@@ -5404,11 +5957,17 @@ async function decodificaCF(cf) {
 window.loadCredipassReferentePhoto =
 async function() {
 
-    const provincia =
+    const provinciaInserita =
         V(
             'ref_provincia',
             ''
-        );
+        ).trim();
+
+    const provinceItaliane = {
+        'AGRIGENTO':'AG','ALESSANDRIA':'AL','ANCONA':'AN','AOSTA':'AO','AREZZO':'AR','ASCOLI PICENO':'AP','ASTI':'AT','AVELLINO':'AV','BARI':'BA','BARLETTA-ANDRIA-TRANI':'BT','BELLUNO':'BL','BENEVENTO':'BN','BERGAMO':'BG','BIELLA':'BI','BOLOGNA':'BO','BOLZANO':'BZ','BRESCIA':'BS','BRINDISI':'BR','CAGLIARI':'CA','CALTANISSETTA':'CL','CAMPOBASSO':'CB','CASERTA':'CE','CATANIA':'CT','CATANZARO':'CZ','CHIETI':'CH','COMO':'CO','COSENZA':'CS','CREMONA':'CR','CROTONE':'KR','CUNEO':'CN','ENNA':'EN','FERMO':'FM','FERRARA':'FE','FIRENZE':'FI','FOGGIA':'FG','FORLI-CESENA':'FC','FROSINONE':'FR','GENOVA':'GE','GORIZIA':'GO','GROSSETO':'GR','IMPERIA':'IM','ISERNIA':'IS','LA SPEZIA':'SP','L AQUILA':'AQ','LATINA':'LT','LECCE':'LE','LECCO':'LC','LIVORNO':'LI','LODI':'LO','LUCCA':'LU','MACERATA':'MC','MANTOVA':'MN','MASSA-CARRARA':'MS','MATERA':'MT','MESSINA':'ME','MILANO':'MI','MODENA':'MO','MONZA E BRIANZA':'MB','NAPOLI':'NA','NOVARA':'NO','NUORO':'NU','ORISTANO':'OR','PADOVA':'PD','PALERMO':'PA','PARMA':'PR','PAVIA':'PV','PERUGIA':'PG','PESARO E URBINO':'PU','PESCARA':'PE','PIACENZA':'PC','PISA':'PI','PISTOIA':'PT','PORDENONE':'PN','POTENZA':'PZ','PRATO':'PO','RAGUSA':'RG','RAVENNA':'RA','REGGIO CALABRIA':'RC','REGGIO EMILIA':'RE','RIETI':'RI','RIMINI':'RN','ROMA':'RM','ROVIGO':'RO','SALERNO':'SA','SASSARI':'SS','SAVONA':'SV','SIENA':'SI','SIRACUSA':'SR','SONDRIO':'SO','SUD SARDEGNA':'SU','TARANTO':'TA','TERAMO':'TE','TERNI':'TR','TORINO':'TO','TRAPANI':'TP','TRENTO':'TN','TREVISO':'TV','TRIESTE':'TS','UDINE':'UD','VARESE':'VA','VENEZIA':'VE','VERBANO-CUSIO-OSSOLA':'VB','VERCELLI':'VC','VERONA':'VR','VIBO VALENTIA':'VV','VICENZA':'VI','VITERBO':'VT'
+    };
+    const chiaveProvincia = provinciaInserita.toUpperCase().replace(/[’']/g,'').replace(/\s+/g,' ').trim();
+    const provincia = provinceItaliane[chiaveProvincia] || provinciaInserita.toUpperCase();
 
     const nome =
         V(
@@ -5721,21 +6280,15 @@ function templateFitto(numero) {
                     Accreditato su C/C?
                 </label>
 
-                <select class="fitto-accredito">
-
-                    <option value="">
-                        - Seleziona -
-                    </option>
-
-                    <option value="Sì">
-                        Sì
-                    </option>
-
-                    <option value="No">
-                        No
-                    </option>
-
-                </select>
+                <div class="fitto-accredito-buttons">
+        <button type="button" class="fitto-choice-btn" data-value="Sì" onclick="setFittoAccredito(this,'Sì')">Sì</button>
+        <button type="button" class="fitto-choice-btn" data-value="No" onclick="setFittoAccredito(this,'No')">No</button>
+        <select class="fitto-accredito fitto-accredito-compat" aria-hidden="true" tabindex="-1">
+            <option value=""></option>
+            <option value="Sì">Sì</option>
+            <option value="No">No</option>
+        </select>
+    </div>
 
             </div>
 
@@ -6061,12 +6614,22 @@ function templateFinanziamento(numero) {
         </div>
 
         <div class="form-group" style="margin-top:10px">
-            <label>Gestione dell'impegno</label>
-            <select class="fin-gestione">
-                <option value="MANTENERE">Mantieni impegno</option>
-                <option value="ESTINGUERE">Da estinguere</option>
-            </select>
-        </div>
+                        <label>Gestione dell'impegno</label>
+                        <div class="fin-gestione-pulsanti" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;margin-top:7px;">
+                            <button type="button" class="fin-choice active" data-value="MANTENERE"
+                                style="height:46px;border:1px solid #d69b00;border-radius:9px;background:#fff7dc;color:#063b84;font-weight:800;font-family:inherit;cursor:pointer;">
+                                MANTIENI IMPEGNO
+                            </button>
+                            <button type="button" class="fin-choice" data-value="ESTINGUERE"
+                                style="height:46px;border:1px solid #cbd6e1;border-radius:9px;background:#fff;color:#33465f;font-weight:800;font-family:inherit;cursor:pointer;">
+                                DA ESTINGUERE
+                            </button>
+                            <select class="fin-gestione" style="display:none!important;">
+                                <option value="MANTENERE" selected>MANTIENI IMPEGNO</option>
+                                <option value="ESTINGUERE">DA ESTINGUERE</option>
+                            </select>
+                        </div>
+                    </div>
 
     </div>
 
@@ -16484,5 +17047,94 @@ window.addEventListener(
   new MutationObserver(()=>bindSexOptional()).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+
+<script id="fix-grafica-15h-js">
+function setFittoAccredito(btn,value){
+    const box = btn.closest('.fitto-accredito-buttons');
+    if(!box) return;
+
+    const select = box.querySelector('select.fitto-accredito');
+    const alreadyActive = btn.classList.contains('active');
+
+    box.querySelectorAll('.fitto-choice-btn').forEach(b => b.classList.remove('active'));
+
+    if(select){
+        select.value = alreadyActive ? '' : value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+
+    if(!alreadyActive) btn.classList.add('active');
+}
+
+function syncFittoAccreditoButtons(root){
+    (root || document).querySelectorAll('.fitto-accredito-buttons').forEach(box => {
+        const select = box.querySelector('select.fitto-accredito');
+        if(!select) return;
+        box.querySelectorAll('.fitto-choice-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === select.value);
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    syncFittoAccreditoButtons(document);
+
+    document.addEventListener('change', function(e){
+        if(e.target && e.target.matches('select.fitto-accredito')){
+            syncFittoAccreditoButtons(e.target.closest('.fitto-item') || document);
+        }
+    });
+
+    const observer = new MutationObserver(function(mutations){
+        let needsSync = false;
+        for(const mutation of mutations){
+            if(mutation.addedNodes && mutation.addedNodes.length){
+                needsSync = true;
+                break;
+            }
+        }
+        if(needsSync) syncFittoAccreditoButtons(document);
+    });
+
+    observer.observe(document.body,{childList:true,subtree:true});
+});
+</script>
+
+
+<script>
+(function(){
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.fin-choice');
+    if(!btn) return;
+
+    var wrap = btn.closest('.fin-gestione-pulsanti');
+    if(!wrap) return;
+
+    var sel = wrap.querySelector('select.fin-gestione');
+    var buttons = wrap.querySelectorAll('.fin-choice');
+
+    buttons.forEach(function(b){
+      var active = (b === btn);
+      b.classList.toggle('active', active);
+      if(active){
+        b.style.background = '#fff7dc';
+        b.style.borderColor = '#d69b00';
+        b.style.color = '#063b84';
+      } else {
+        b.style.background = '#fff';
+        b.style.borderColor = '#cbd6e1';
+        b.style.color = '#33465f';
+      }
+    });
+
+    if(sel){
+      sel.value = btn.getAttribute('data-value');
+      sel.dispatchEvent(new Event('change', {bubbles:true}));
+      sel.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
