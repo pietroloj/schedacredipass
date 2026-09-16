@@ -481,9 +481,27 @@
                 const datiDoc =
                     doc.data() || {};
 
+                // Priorità al nominativo reale salvato nei campi anagrafici.
+                // Alcune pratiche legacy hanno nomeCliente = "Cliente".
+                const nomeDaCampi =
+                    [datiDoc.cliente_nome, datiDoc.cliente_cognome]
+                        .map(x => String(x || "").trim())
+                        .filter(Boolean)
+                        .join(" ");
+
+                const nomeClienteLegacy =
+                    String(datiDoc.nomeCliente || "").trim();
+
                 let nomeReale =
-                    datiDoc.nomeCliente ||
-                    idDocumento.replace(/_/g, ' ');
+                    String(datiDoc.cliente_nome_completo || "").trim() ||
+                    nomeDaCampi ||
+                    (
+                        nomeClienteLegacy &&
+                        nomeClienteLegacy.toLowerCase() !== "cliente"
+                            ? nomeClienteLegacy
+                            : ""
+                    ) ||
+                    idDocumento.replace(/[-_]/g, ' ');
 
                 const nomeFormattato =
                     String(nomeReale || "")
