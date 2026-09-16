@@ -407,24 +407,10 @@ async function findPracticeMatch({
       mail
     );
 
-  let query =
-    db.collection("pratiche_mutuo");
-
-  /*
-   * Nel provider personale ogni casella può associare email
-   * esclusivamente alle pratiche del consulente autenticato.
-   */
-  if (ownerUid) {
-    query =
-      query.where(
-        "consulente_uid",
-        "==",
-        ownerUid
-      );
-  }
-
   const snap =
-    await query.get();
+    await db
+      .collection("pratiche_mutuo")
+      .get();
 
   const candidates = [];
 
@@ -433,6 +419,21 @@ async function findPracticeMatch({
       doc.data()
       ||
       {};
+
+    if (ownerUid) {
+      const practiceOwner =
+        String(
+          data.consulente_uid
+          || data.workspace_uid
+          || data.owner_uid
+          || data.assegnato_a_uid
+          || ""
+        ).trim();
+
+      if (practiceOwner && practiceOwner !== ownerUid) {
+        continue;
+      }
+    }
 
     const createdMillis =
       practiceCreatedMillis(
