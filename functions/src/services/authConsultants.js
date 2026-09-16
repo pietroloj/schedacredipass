@@ -593,54 +593,178 @@ exports.listActiveConsultants = onCall(
 exports.assignConsultantManager = onCall(
   { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
   async request => {
-    if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Accesso richiesto.");
-    if (!(await isAdmin(request.auth.uid))) {
-      throw new HttpsError("permission-denied", "Funzione riservata all'amministratore.");
-    }
-
-    const uid = clean(request.data?.uid);
-    const responsabileUid = clean(request.data?.responsabile_uid);
-    if (!uid) throw new HttpsError("invalid-argument", "UID consulente mancante.");
-
-    const consultantRef = db.collection("consulenti").doc(uid);
-    const consultantSnap = await consultantRef.get();
-    if (!consultantSnap.exists || clean(consultantSnap.data()?.ruolo).toLowerCase() !== "consulente") {
-      throw new HttpsError("failed-precondition", "L'utente da assegnare deve essere un Consulente.");
-    }
-
-    let oldManagerUid = clean(consultantSnap.data()?.responsabile_uid);
-
-    if (responsabileUid) {
-      const managerSnap = await db.collection("consulenti").doc(responsabileUid).get();
-      if (!managerSnap.exists ||
-          clean(managerSnap.data()?.ruolo).toLowerCase() !== "responsabile" ||
-          managerSnap.data()?.attivo === false) {
-        throw new HttpsError("invalid-argument", "Responsabile non valido.");
+    try {
+      if (!request.auth?.uid) {
+        throw new HttpsError("unauthenticated", "Accesso richiesto.");
       }
+
+      if (!(await isAdmin(request.auth.uid))) {
+        throw new HttpsError(
+          "permission-denied",
+          "Funzione riservata all'amministratore."
+        );
+      }
+
+      const data = request.data || {};
+      const uid = clean(data.uid);
+      const responsabileUid = clean(data.responsabile_uid);
+
+      if (!uid) {
+        throw new HttpsError(
+          "invalid-argument",
+          "UID consulente mancante."
+        );
+      }
+
+      if (uid === responsabileUid) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Un consulente non può essere responsabile di se stesso."
+        );
+      }
+
+      const consultantRef = db.collection("consulenti").doc(uid);
+      const consultantSnap = await consultantRef.get();
+
+      if (!consultantSnap.exists) {
+        throw new HttpsError("not-found", "Consulente non trovato.");
+      }
+
+      const consultant = consultantSnap.data() || {};
+      const consultantRole = clean(consultant.ruolo).toLowerCase();
+
+      if (consultantRole !== "consulente") {
+        throw new HttpsError(
+          "failed-precondition",
+          "L'utente da assegnare deve avere ruolo Consulente."
+        );
+      }
+
+      const oldManagerUid = clean(consultant.responsabile_uid);
+
+      let newManagerSnap = null;
+      if (responsabileUid) {
+        newManagerSnap = await db.collection("consulenti").doc(responsabileUid).get();
+
+        if (!newManagerSnap.exists) {
+          throw new HttpsError("not-found", "Responsabile selezionato non trovato.");
+        }
+
+        const manager = newManagerSnap.data() || {};
+        if (
+          clean(manager.ruolo).toLowerCase() !== "responsabile" ||
+          manager.attivo === false
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "L'utente selezionato non è un Responsabile attivo."
+          );
+        }
+      }
+
+      const batch = db.batch();
+      const now = admin.firestore.FieldValue.serverTimestamp();
+
+      // 1. Salva il responsabile sul profilo del consulente.
+      batch.set(
+        consultantRef,
+        {
+          responsabile_uid: responsabileUid,
+          responsabile_aggiornato_il: now,
+          responsabile_aggiornato_da: request.auth.uid,
+        },
+        { merge: true }
+      );
+
+      // 2. Se il consulente aveva un altro responsabile, lo rimuoviamo dal vecchio team.
+      if (oldManagerUid && oldManagerUid !== responsabileUid) {
+        const oldManagerRef = db.collection("consulenti").doc(oldManagerUid);
+        const oldManagerSnap = await oldManagerRef.get();
+
+        if (oldManagerSnap.exists) {
+          const oldData = oldManagerSnap.data() || {};
+          const oldIds = cleanUidList(oldData.collaboratori_visibili)
+            .filter(x => x !== uid);
+
+          const oldDetails = Array.isArray(oldData.collaboratori_visibili_dettagli)
+            ? oldData.collaboratori_visibili_dettagli.filter(
+                x => clean(x?.uid) !== uid
+              )
+            : [];
+
+          batch.set(
+            oldManagerRef,
+            {
+              collaboratori_visibili: oldIds,
+              collaboratori_visibili_dettagli: oldDetails,
+              visibilita_aggiornata_il: now,
+              visibilita_aggiornata_da: request.auth.uid,
+            },
+            { merge: true }
+          );
+        }
+      }
+
+      // 3. Aggiungiamo il consulente al team del nuovo responsabile.
+      if (responsabileUid) {
+        const managerRef = db.collection("consulenti").doc(responsabileUid);
+        const managerData = newManagerSnap.data() || {};
+
+        const ids = cleanUidList([
+          ...(Array.isArray(managerData.collaboratori_visibili)
+            ? managerData.collaboratori_visibili
+            : []),
+          uid,
+        ]);
+
+        const existingDetails = Array.isArray(
+          managerData.collaboratori_visibili_dettagli
+        )
+          ? managerData.collaboratori_visibili_dettagli.filter(
+              x => clean(x?.uid) !== uid
+            )
+          : [];
+
+        existingDetails.push({
+          uid,
+          nome: clean(consultant.nome),
+          cognome: clean(consultant.cognome),
+          email: clean(consultant.email).toLowerCase(),
+        });
+
+        batch.set(
+          managerRef,
+          {
+            collaboratori_visibili: ids,
+            collaboratori_visibili_dettagli: existingDetails,
+            visibilita_aggiornata_il: now,
+            visibilita_aggiornata_da: request.auth.uid,
+          },
+          { merge: true }
+        );
+      }
+
+      await batch.commit();
+
+      return {
+        ok: true,
+        uid,
+        responsabile_uid: responsabileUid,
+        precedente_responsabile_uid: oldManagerUid,
+      };
+    } catch (error) {
+      console.error("assignConsultantManager error:", error);
+
+      // Mantiene i messaggi HttpsError leggibili nel browser.
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      throw new HttpsError(
+        "internal",
+        `Errore assegnazione responsabile: ${error?.message || String(error)}`
+      );
     }
-
-    await consultantRef.set({
-      responsabile_uid: responsabileUid,
-      responsabile_aggiornato_il: admin.firestore.FieldValue.serverTimestamp(),
-      responsabile_aggiornato_da: request.auth.uid,
-    }, { merge: true });
-
-    for (const managerUid of Array.from(new Set([oldManagerUid, responsabileUid])).filter(Boolean)) {
-      const managerRef = db.collection("consulenti").doc(managerUid);
-      const managerSnap = await managerRef.get();
-      if (!managerSnap.exists) continue;
-      let ids = cleanUidList(managerSnap.data()?.collaboratori_visibili);
-      ids = ids.filter(x => x !== uid);
-      if (managerUid === responsabileUid) ids.push(uid);
-      const resolved = await resolveVisibleCollaborators(ids);
-      await managerRef.set({
-        collaboratori_visibili: resolved.uids,
-        collaboratori_visibili_dettagli: resolved.dettagli,
-        visibilita_aggiornata_il: admin.firestore.FieldValue.serverTimestamp(),
-        visibilita_aggiornata_da: request.auth.uid,
-      }, { merge: true });
-    }
-
-    return { ok: true, uid, responsabile_uid: responsabileUid };
   }
 );
+
