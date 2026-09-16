@@ -1919,40 +1919,76 @@ document.addEventListener(
                 
                 <div class="gmail-integration-card" id="practiceSourceCard" style="border-left-color:#2c66b8;">
                     <div class="gmail-integration-head">
-                        <div>
+                        <div style="flex:1;min-width:0;">
                             <div class="gmail-integration-title">
                                 <i class="fas fa-route"></i>
                                 Provenienza pratica
                             </div>
-
-                            <div id="practiceSourceText" class="gmail-sync-meta">
-                                Non definita
-                            </div>
-
-                            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e7ebf0;">
-                                <div style="font-size:9px;font-weight:800;color:#002d72;text-transform:uppercase;margin-bottom:6px;">
-                                    <i class="fas fa-user-friends" style="color:#C99700;"></i> Collega segnalato
-                                </div>
-                                <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
-                                    <select id="dashboardCollegaSegnalato" style="flex:1;min-width:190px;padding:8px 9px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:9px;background:#fff;">
-                                        <option value="">- Nessun collega associato -</option>
-                                    </select>
-                                    <button type="button" class="gmail-btn" onclick="salvaCollegaSegnalatoDashboard()">SALVA</button>
-                                    <button type="button" class="gmail-btn gray" onclick="rimuoviCollegaSegnalatoDashboard()">RIMUOVI</button>
-                                </div>
-                                <div id="dashboardCollegaSegnalatoInfo" class="gmail-sync-meta" style="margin-top:6px;"></div>
-                            </div>
+                            <div id="practiceSourceText" class="gmail-sync-meta">Non definita</div>
                         </div>
 
-                        <button
-                            type="button"
-                            class="gmail-btn gray"
-                            onclick="apriProvenienzaPratica()"
-                        >
+                        <button type="button" class="gmail-btn gray" onclick="apriProvenienzaPratica()">
                             MODIFICA
                         </button>
                     </div>
                 </div>
+
+                <div class="gmail-integration-card" id="practiceColleagueCard" style="border-left-color:#C99700;">
+                    <div class="gmail-integration-head">
+                        <div style="flex:1;min-width:0;">
+                            <div class="gmail-integration-title">
+                                <i class="fas fa-user-friends"></i>
+                                Segnala collega
+                            </div>
+                            <div class="gmail-sync-meta" style="margin-bottom:8px;">
+                                Associa questa pratica a un collega senza modificarne la provenienza.
+                            </div>
+
+                            <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+                                <select id="dashboardCollegaSegnalato"
+                                    style="flex:1;min-width:190px;padding:8px 9px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:9px;background:#fff;">
+                                    <option value="">- Nessun collega associato -</option>
+                                </select>
+                                <button type="button" class="gmail-btn" onclick="salvaCollegaSegnalatoDashboard()">SALVA</button>
+                                <button type="button" class="gmail-btn gray" onclick="rimuoviCollegaSegnalatoDashboard()">RIMUOVI</button>
+                            </div>
+                            <div id="dashboardCollegaSegnalatoInfo" class="gmail-sync-meta" style="margin-top:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+<div id="provenienzaDashboardModal" style="display:none;position:fixed;inset:0;background:rgba(0,30,70,.55);z-index:99999;align-items:center;justify-content:center;padding:20px;">
+    <div style="width:min(560px,96vw);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;">
+        <div style="background:#002d72;color:#fff;padding:17px 20px;border-bottom:4px solid #C99700;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:13px;font-weight:800;"><i class="fas fa-route" style="margin-right:7px;"></i> MODIFICA PROVENIENZA PRATICA</div>
+            <button type="button" onclick="chiudiProvenienzaPratica()" style="border:0;background:transparent;color:#fff;font-size:20px;cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:20px;">
+            <div style="font-size:9px;font-weight:800;color:#002d72;text-transform:uppercase;margin-bottom:8px;">Provenienza</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                <label style="font-size:10px;font-weight:700;"><input type="radio" name="dashboard_tipo_fonte" value="DIRETTA" onchange="aggiornaCampiProvenienzaDashboard()"> Diretta</label>
+                <label style="font-size:10px;font-weight:700;"><input type="radio" name="dashboard_tipo_fonte" value="SEGNALATORE" onchange="aggiornaCampiProvenienzaDashboard()"> Segnalatore</label>
+                <label style="font-size:10px;font-weight:700;"><input type="radio" name="dashboard_tipo_fonte" value="AGENZIA_IMMOBILIARE" onchange="aggiornaCampiProvenienzaDashboard()"> Agenzia immobiliare</label>
+            </div>
+
+            <div id="dashboardSourceContactFields" style="display:none;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label style="display:block;font-size:8px;font-weight:800;color:#6c7782;text-transform:uppercase;margin-bottom:5px;">Nominativo / Agenzia</label>
+                    <input id="dashboardSegnalatoreRiferimento" type="text" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:8px;font-weight:800;color:#6c7782;text-transform:uppercase;margin-bottom:5px;">Email</label>
+                    <input id="dashboardSegnalatoreEmail" type="email" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px;">
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+                <button type="button" class="gmail-btn gray" onclick="chiudiProvenienzaPratica()">ANNULLA</button>
+                <button type="button" class="gmail-btn primary" onclick="salvaProvenienzaPraticaDashboard()">SALVA PROVENIENZA</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="gmail-integration-card gmail-integration-card-timeline" id="gmailIntegrationCard">
                 <div class="gmail-integration-head">
@@ -4902,142 +4938,143 @@ Cordiali saluti`
     }
 
 
-    function apriProvenienzaPratica() {
-
-        if (!idCliente) {
-            return;
-        }
-
-        window.location.href =
-            `/main/provenienza-pratica.html?practiceId=${encodeURIComponent(idCliente)}`;
-
+    function tipoFontePraticaLabel(tipo) {
+        const t = String(tipo || "").trim().toUpperCase();
+        if (t === "DIRETTA") return "Diretta";
+        if (t === "SEGNALATORE") return "Segnalatore";
+        if (t === "AGENZIA_IMMOBILIARE") return "Agenzia immobiliare";
+        return "Non definita";
     }
 
+    function formattaProvenienzaPratica(d = {}) {
+        const tipo = String(d.tipo_fonte_pratica || "").trim().toUpperCase();
+        const riferimento = normalizeDisplay(d.segnalatore_riferimento);
+        const email = normalizeDisplay(d.segnalatore_email);
 
-    function formattaProvenienzaPratica(
-        provenienza = {}
-    ) {
+        if (tipo === "DIRETTA") return "Diretta";
 
-        const category =
-            provenienza.categoria
-            ||
-            "";
-
-        if (
-            category ===
-            "agenzia_immobiliare"
-        ) {
+        if (tipo === "SEGNALATORE" || tipo === "AGENZIA_IMMOBILIARE") {
             return [
-                "Agenzia immobiliare",
-                provenienza.agenziaNome,
-                provenienza.referenteNome
-                    ? `Referente: ${provenienza.referenteNome}`
-                    : ""
-            ]
-            .filter(Boolean)
-            .join(" • ");
-        }
-
-        if (
-            category ===
-            "passaparola"
-        ) {
-            return [
-                "Passaparola",
-                provenienza.segnalatoDa
-                    ? `Segnalato da: ${provenienza.segnalatoDa}`
-                    : ""
-            ]
-            .filter(Boolean)
-            .join(" • ");
-        }
-
-        if (
-            category ===
-            "diretto"
-        ) {
-            return "Diretto";
-        }
-
-        if (
-            category ===
-            "web"
-        ) {
-            return [
-                "Web",
-                provenienza.canaleWeb,
-                provenienza.campagnaWeb
-            ]
-            .filter(Boolean)
-            .join(" • ");
-        }
-
-        if (
-            category ===
-            "altro"
-        ) {
-            return [
-                "Altro",
-                provenienza.altroDettaglio
-            ]
-            .filter(Boolean)
-            .join(" • ");
+                tipoFontePraticaLabel(tipo),
+                riferimento,
+                email
+            ].filter(Boolean).join(" • ");
         }
 
         return "Non definita";
-
     }
 
+    async function apriProvenienzaPratica() {
+        if (!idCliente) return;
 
-    async function aggiornaProvenienzaPraticaDashboard() {
+        try {
+            const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            const d = snap.exists ? (snap.data() || {}) : {};
+            const tipo = String(d.tipo_fonte_pratica || "").trim().toUpperCase();
 
-        const el =
-            document.getElementById(
-                "practiceSourceText"
-            );
+            document.querySelectorAll('input[name="dashboard_tipo_fonte"]').forEach(r => {
+                r.checked = r.value === tipo;
+            });
+
+            const ref = document.getElementById("dashboardSegnalatoreRiferimento");
+            const email = document.getElementById("dashboardSegnalatoreEmail");
+            if (ref) ref.value = d.segnalatore_riferimento || "";
+            if (email) email.value = d.segnalatore_email || "";
+
+            aggiornaCampiProvenienzaDashboard();
+
+            const modal = document.getElementById("provenienzaDashboardModal");
+            if (modal) modal.style.display = "flex";
+        } catch (error) {
+            console.error("Errore apertura provenienza pratica:", error);
+            alert("Errore durante il caricamento della provenienza pratica.");
+        }
+    }
+
+    function chiudiProvenienzaPratica() {
+        const modal = document.getElementById("provenienzaDashboardModal");
+        if (modal) modal.style.display = "none";
+    }
+
+    function aggiornaCampiProvenienzaDashboard() {
+        const tipo =
+            document.querySelector('input[name="dashboard_tipo_fonte"]:checked')?.value || "";
+        const fields = document.getElementById("dashboardSourceContactFields");
+        if (fields) {
+            fields.style.display =
+                (tipo === "SEGNALATORE" || tipo === "AGENZIA_IMMOBILIARE")
+                    ? "grid"
+                    : "none";
+        }
+    }
+
+    async function salvaProvenienzaPraticaDashboard() {
+        if (!idCliente) return;
+
+        const tipo =
+            document.querySelector('input[name="dashboard_tipo_fonte"]:checked')?.value || "";
+
+        if (!tipo) {
+            alert("Seleziona la provenienza della pratica.");
+            return;
+        }
+
+        const riferimento =
+            String(document.getElementById("dashboardSegnalatoreRiferimento")?.value || "").trim();
+        const email =
+            String(document.getElementById("dashboardSegnalatoreEmail")?.value || "").trim();
 
         if (
-            !el
-            ||
-            !idCliente
+            (tipo === "SEGNALATORE" || tipo === "AGENZIA_IMMOBILIARE")
+            && !riferimento
         ) {
+            alert("Inserisci il nominativo del segnalatore o dell'agenzia.");
             return;
         }
 
         try {
+            const update = {
+                tipo_fonte_pratica: tipo,
+                segnalatore_riferimento:
+                    tipo === "DIRETTA" ? "" : riferimento,
+                segnalatore_email:
+                    tipo === "DIRETTA" ? "" : email,
+                provenienza_aggiornata_il:
+                    firebase.firestore.FieldValue.serverTimestamp()
+            };
 
-            const snap =
-                await firebase
-                    .firestore()
-                    .collection(
-                        "pratiche_mutuo"
-                    )
-                    .doc(
-                        idCliente
-                    )
-                    .get();
+            await db.collection("pratiche_mutuo")
+                .doc(idCliente)
+                .set(update, { merge: true });
 
-            const source =
-                snap.data()
-                    ?.provenienza
-                ||
-                {};
+            praticaEmailCorrente = {
+                ...(praticaEmailCorrente || {}),
+                ...update
+            };
 
-            el.textContent =
-                formattaProvenienzaPratica(
-                    source
-                );
+            chiudiProvenienzaPratica();
+            await aggiornaProvenienzaPraticaDashboard();
 
+            alert("✅ Provenienza pratica aggiornata.");
+        } catch (error) {
+            console.error("Errore salvataggio provenienza pratica:", error);
+            alert("Errore durante il salvataggio della provenienza pratica.");
         }
-        catch(error) {
-
-            el.textContent =
-                "Provenienza non disponibile";
-
-        }
-
     }
 
+    async function aggiornaProvenienzaPraticaDashboard() {
+        const el = document.getElementById("practiceSourceText");
+        if (!el || !idCliente) return;
+
+        try {
+            const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            const d = snap.exists ? (snap.data() || {}) : {};
+            el.textContent = formattaProvenienzaPratica(d);
+        } catch (error) {
+            console.error("Errore caricamento provenienza:", error);
+            el.textContent = "Provenienza non disponibile";
+        }
+    }
 
 
     function apriPaginaCollegamentoGmail() {
