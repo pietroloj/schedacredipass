@@ -455,7 +455,7 @@ function clientAreaUrl(
 function dashboardUrl(id) {
 
   return (
-    "https://consulenza-credipass.it/main/dashboard-consulente.html?id="
+    "https://consulenza-credipass.it/main/dashboard-consulente.html?clienteId="
     +
     encodeURIComponent(
       id

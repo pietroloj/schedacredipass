@@ -2195,7 +2195,8 @@ const db = firebase.firestore();
     const functionsFirebase = firebase.app().functions(window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion || "us-central1");
     let sessioneConsulente = null;
 
-    const idCliente = new URLSearchParams(window.location.search).get('clienteId');
+    const params = new URLSearchParams(window.location.search);
+    const idCliente = params.get('clienteId') || params.get('id');
 
 
     let practiceSubjectsCache = [];
