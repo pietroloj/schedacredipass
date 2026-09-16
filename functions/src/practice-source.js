@@ -604,24 +604,39 @@ function dateMillis(
 
 
 function practiceDisplayName(practice = {}) {
-  const direct =
-    cleanText(practice.nome_cliente)
-    || cleanText(practice.cliente_nome)
-    || cleanText(practice.nominativo)
-    || cleanText(practice.nomeRichiedente)
-    || cleanText(practice.nome_ricerca);
-
-  if (direct) return direct;
-
-  const full =
+  /*
+   * Nella lista alert mostriamo sempre Nome + Cognome quando
+   * i due campi sono disponibili separatamente.
+   */
+  const fullName =
     [
-      cleanText(practice.nome),
-      cleanText(practice.cognome),
+      cleanText(
+        practice.nome
+        || practice.cliente_nome
+        || practice.nome_cliente
+        || practice.nomeRichiedente
+      ),
+      cleanText(
+        practice.cognome
+        || practice.cliente_cognome
+        || practice.cognome_cliente
+        || practice.cognomeRichiedente
+      ),
     ]
       .filter(Boolean)
-      .join(" ");
+      .join(" ")
+      .trim();
 
-  return full || cleanText(practice.id) || "Pratica";
+  if (fullName) return fullName;
+
+  const direct =
+    cleanText(practice.nome_cognome)
+    || cleanText(practice.nomeCompleto)
+    || cleanText(practice.cliente_nome_completo)
+    || cleanText(practice.nominativo)
+    || cleanText(practice.nome_ricerca);
+
+  return direct || cleanText(practice.id) || "Pratica";
 }
 
 
