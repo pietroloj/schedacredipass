@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Consulenti - Credipass</title>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestione Consulenti - Credipass</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -9,49 +12,163 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script src="/main/auth-guard.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#eef2f6;font-family:Poppins,sans-serif;padding:24px;color:#263238}
-.box{max-width:1180px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 12px 35px rgba(0,0,0,.12)}
-.head{padding:22px 26px;background:#002d72;color:#fff;border-bottom:5px solid #C99700;display:flex;justify-content:space-between;align-items:center}.head h1{font-size:19px;margin:0}.head a{color:#fff;text-decoration:none;font-size:10px;font-weight:800}
-.body{padding:24px}.grid{display:grid;grid-template-columns:.85fr 1.35fr;gap:18px;align-items:start}.card{border:1px solid #e1e6eb;border-radius:10px;padding:17px}
-h2{font-size:13px;color:#002d72;margin:0 0 13px}label{display:block;font-size:8px;font-weight:800;text-transform:uppercase;margin:8px 0 4px;color:#68737e}
-input,select{width:100%;padding:9px;border:1px solid #dce3ea;border-radius:7px;font-family:inherit;font-size:10px;background:#fff}
-button{border:0;border-radius:7px;background:#002d72;color:#fff;padding:9px 12px;font-family:inherit;font-size:9px;font-weight:800;cursor:pointer}
-#create{margin-top:12px;width:100%}.user{padding:12px 0;border-bottom:1px solid #edf0f3;font-size:10px}.user-main{display:grid;grid-template-columns:minmax(0,1fr) 150px 90px;gap:9px;align-items:center}
-.user-email{color:#7b858f;font-size:9px;word-break:break-all}.badge{font-size:8px;font-weight:800;color:#002d72;background:#eef3f8;border-radius:999px;padding:5px 8px;display:inline-block;margin-top:4px}
-.visibility{margin-top:10px;padding:10px;background:#f7f9fb;border:1px solid #e5eaf0;border-radius:8px}.visibility-title{font-size:8px;font-weight:800;color:#002d72;text-transform:uppercase;margin-bottom:7px}
-.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}.check{display:flex;align-items:center;gap:6px;font-size:9px}.check input{width:auto;margin:0}.btn-visibility{margin-top:9px;background:#C99700;color:#002d72}.msg{font-size:9px;margin-top:8px;min-height:14px}
-@media(max-width:850px){.grid{grid-template-columns:1fr}.user-main{grid-template-columns:1fr}.checks{grid-template-columns:1fr}}
-</style></head><body>
-<div class="box"><div class="head"><h1><i class="fas fa-users-cog"></i> Gestione Consulenti</h1><a href="/">TORNA ALLA SCHEDA</a></div>
-<div class="body"><div class="grid">
-<div class="card"><h2>Crea nuovo consulente</h2>
-<label>Nome</label><input id="nome"><label>Cognome</label><input id="cognome"><label>Email</label><input id="email" type="email">
-<label>Password temporanea</label><input id="password" type="password"><label>Ruolo</label>
-<select id="ruolo"><option value="consulente">Consulente</option><option value="responsabile">Responsabile</option><option value="segreteria">Segreteria</option><option value="admin">Admin</option></select>
-<button id="create">CREA ACCOUNT + WORKSPACE</button><div id="msg" class="msg"></div></div>
-<div class="card"><h2>Consulenti registrati</h2><div id="users">Caricamento...</div></div>
-</div></div></div>
+:root{--blue:#06377f;--blue2:#0a4da3;--gold:#dda900;--bg:#eef3f8;--line:#dce5ee;--text:#1f2d3d;--muted:#718096;--green:#118653;--purple:#7650c8;--red:#b42318}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Poppins,sans-serif;color:var(--text);padding:22px}
+.shell{max-width:1450px;margin:auto;background:#fff;border-radius:13px;overflow:hidden;box-shadow:0 10px 35px rgba(17,46,79,.13);min-height:760px}
+.header{background:var(--blue);color:#fff;padding:22px 28px;border-bottom:5px solid var(--gold);display:flex;align-items:center;justify-content:space-between;gap:18px}
+.header h1{margin:0;font-size:21px}.header .sub{font-size:10px;opacity:.8;margin-top:3px}.back{color:#fff;text-decoration:none;font-size:10px;font-weight:800}
+.content{padding:26px}
+.notice{background:#fff8df;border:1px solid #edd98e;border-radius:9px;padding:12px 15px;font-size:10px;margin-bottom:18px;color:#614d0b}
+.toolbar{display:flex;gap:9px;align-items:center;margin-bottom:17px;flex-wrap:wrap}
+.search{flex:1;min-width:260px}.field,.search,.filter{border:1px solid var(--line);border-radius:7px;padding:10px 11px;background:#fff;font-family:inherit;font-size:10px;outline:none}
+.btn{border:0;border-radius:7px;background:var(--blue);color:#fff;padding:10px 14px;font-family:inherit;font-size:9px;font-weight:800;cursor:pointer}
+.btn.gold{background:var(--gold);color:#082e67}.btn.gray{background:#edf2f7;color:#32485e}.btn:disabled{opacity:.55;cursor:not-allowed}
+.panel{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:10px}th{text-align:left;color:#69798a;font-size:8px;padding:11px 13px;background:#f7f9fb;border-bottom:1px solid var(--line);text-transform:uppercase}td{padding:13px;border-bottom:1px solid #edf1f5;vertical-align:middle}
+tr:last-child td{border-bottom:0}.name{font-weight:800}.email{color:var(--muted);font-size:9px;margin-top:2px}.avatar{width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;background:#e2edff;color:var(--blue);font-weight:800;margin-right:9px;vertical-align:middle}
+.person{display:flex;align-items:center}.badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:8px;font-weight:800;background:#e8f1ff;color:#1556a0}.badge.responsabile{background:#fff1cc;color:#946500}.badge.consulente{background:#e4f7ec;color:#087944}.badge.segreteria{background:#eee7ff;color:#6844b7}.badge.admin{background:#e7effc;color:#073a81}
+.role-select{min-width:135px}.managed{font-size:9px}.managed strong{color:var(--blue)}.muted{color:var(--muted)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}.msg{font-size:9px;margin-top:7px;min-height:13px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,30,70,.55);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}.modal-card{width:min(610px,96vw);background:#fff;border-radius:13px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,.28)}
+.modal-head{background:var(--blue);color:#fff;padding:17px 20px;border-bottom:4px solid var(--gold);display:flex;justify-content:space-between;align-items:center}.modal-head h2{font-size:13px;margin:0}.close{border:0;background:transparent;color:#fff;font-size:21px;cursor:pointer}
+.modal-body{padding:20px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}label{display:block;font-size:8px;font-weight:800;color:#687686;text-transform:uppercase;margin-bottom:5px}
+.hint{font-size:8px;color:var(--muted);margin-top:5px;line-height:1.5}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.team-box{display:none;margin-top:9px;padding:10px;background:#f7f9fb;border:1px solid var(--line);border-radius:8px}.team-box.show{display:block}.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}.check{display:flex;align-items:center;gap:6px;font-size:9px}.check input{width:auto}
+@media(max-width:850px){body{padding:8px}.content{padding:14px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{overflow:auto}table{min-width:950px}.checks{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div><h1><i class="fas fa-users-gear"></i> Gestione Consulenti</h1><div class="sub">Utenti, ruoli, gerarchie e visibilità backoffice</div></div>
+    <a class="back" href="/"><i class="fas fa-arrow-left"></i> TORNA ALLA SCHEDA</a>
+  </div>
+  <div class="content">
+    <div class="notice"><b>Logica gerarchica:</b> un collaboratore può essere assegnato a un Responsabile. La Segreteria che vede quel Responsabile eredita automaticamente la visibilità del suo team, oltre alle pratiche proprie del Responsabile.</div>
+    <div class="toolbar">
+      <input id="search" class="search" placeholder="Cerca per nome, email o ruolo..." oninput="renderUsers()">
+      <select id="roleFilter" class="filter" onchange="renderUsers()"><option value="">Tutti i ruoli</option><option value="admin">Admin</option><option value="responsabile">Responsabile</option><option value="consulente">Consulente</option><option value="segreteria">Segreteria</option></select>
+      <button class="btn" onclick="openCreate()"><i class="fas fa-plus"></i> NUOVO COLLABORATORE</button>
+    </div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Utente</th><th>Ruolo</th><th>Gestito da / Visibilità</th><th>Stato</th><th>Azioni</th></tr></thead>
+        <tbody id="users"><tr><td colspan="5">Caricamento...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="createModal" class="modal">
+ <div class="modal-card">
+  <div class="modal-head"><h2><i class="fas fa-user-plus"></i> NUOVO COLLABORATORE</h2><button class="close" onclick="closeCreate()">&times;</button></div>
+  <div class="modal-body">
+   <div class="form-grid">
+    <div><label>Nome</label><input id="nome" class="field"></div>
+    <div><label>Cognome</label><input id="cognome" class="field"></div>
+    <div><label>Email</label><input id="email" type="email" class="field"></div>
+    <div><label>Password temporanea</label><input id="password" type="password" class="field"></div>
+    <div><label>Ruolo</label><select id="ruolo" class="field" onchange="updateCreateManager()"><option value="consulente">Consulente</option><option value="responsabile">Responsabile</option><option value="segreteria">Segreteria</option><option value="admin">Admin</option></select></div>
+    <div id="managerWrap"><label>Gestito da</label><select id="responsabile_uid" class="field"><option value="">Nessun responsabile / autonomo</option></select><div class="hint">Se scegli un Responsabile, il collaboratore entra nel suo team. Le Segreterie che vedono quel Responsabile erediteranno automaticamente anche questo collaboratore.</div></div>
+   </div>
+   <div id="createMsg" class="msg"></div>
+   <div class="modal-actions"><button class="btn gray" onclick="closeCreate()">ANNULLA</button><button id="create" class="btn">CREA ACCOUNT + WORKSPACE</button></div>
+  </div>
+ </div>
+</div>
+
 <script>
 const firebaseConfig={apiKey:"AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",authDomain:"consulenza-credipass.firebaseapp.com",projectId:"consulenza-credipass",storageBucket:"consulenza-credipass.firebasestorage.app"};
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore(),fns=firebase.app().functions("us-central1");let allUsers=[];
+const db=firebase.firestore(),fns=firebase.app().functions("us-central1");
+let allUsers=[];
+
 const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const canHave=r=>["responsabile","segreteria"].includes(r);
-async function listUsers(){
- const box=document.getElementById("users"),snap=await db.collection("consulenti").get();allUsers=[];snap.forEach(doc=>allUsers.push({uid:doc.id,...(doc.data()||{})}));
- allUsers.sort((a,b)=>String(a.email||"").localeCompare(String(b.email||""),"it"));box.innerHTML="";
- allUsers.forEach(d=>{const role=String(d.ruolo||"consulente").toLowerCase(),sel=new Set(Array.isArray(d.collaboratori_visibili)?d.collaboratori_visibili:[]);
- const collaborators=allUsers.filter(x=>x.uid!==d.uid&&x.attivo!==false&&String(x.ruolo||"").toLowerCase()==="consulente");
- const el=document.createElement("div");el.className="user";el.innerHTML=`<div class="user-main"><div><strong>${esc(d.nome||"")} ${esc(d.cognome||"")}</strong><div class="user-email">${esc(d.email||"")}</div><span class="badge">${esc(role.toUpperCase())}</span></div>
- <select class="role-select" data-uid="${esc(d.uid)}"><option value="consulente" ${role==="consulente"?"selected":""}>Consulente</option><option value="responsabile" ${role==="responsabile"?"selected":""}>Responsabile</option><option value="segreteria" ${role==="segreteria"?"selected":""}>Segreteria</option><option value="admin" ${role==="admin"?"selected":""}>Admin</option></select>
- <button data-role="${esc(d.uid)}">SALVA RUOLO</button></div>
- <div class="visibility" id="vis-${esc(d.uid)}" style="display:${canHave(role)?"block":"none"}"><div class="visibility-title"><i class="fas fa-users"></i> Collaboratori visibili</div><div class="checks">${collaborators.map(c=>`<label class="check"><input type="checkbox" value="${esc(c.uid)}" ${sel.has(c.uid)?"checked":""}><span>${esc((c.nome||"")+" "+(c.cognome||""))}</span></label>`).join("")||"<span>Nessun consulente disponibile.</span>"}</div><button class="btn-visibility" data-vis="${esc(d.uid)}">SALVA COLLABORATORI</button></div><div class="msg" id="msg-${esc(d.uid)}"></div>`;
- box.appendChild(el);});
- box.querySelectorAll(".role-select").forEach(x=>x.onchange=()=>{const v=document.getElementById("vis-"+x.dataset.uid);if(v)v.style.display=canHave(x.value)?"block":"none"});
- box.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>saveRole(b.dataset.role));box.querySelectorAll("[data-vis]").forEach(b=>b.onclick=()=>saveVis(b.dataset.vis));
+const roleLabel=r=>({admin:"Admin",responsabile:"Responsabile",consulente:"Consulente",segreteria:"Segreteria"})[r]||"Consulente";
+const nameOf=u=>`${u?.nome||""} ${u?.cognome||""}`.trim()||u?.email||u?.uid||"Utente";
+const getUser=uid=>allUsers.find(x=>x.uid===uid);
+
+function openCreate(){populateManagers();document.getElementById("createModal").classList.add("open");updateCreateManager()}
+function closeCreate(){document.getElementById("createModal").classList.remove("open")}
+function updateCreateManager(){document.getElementById("managerWrap").style.display=document.getElementById("ruolo").value==="consulente"?"block":"none"}
+function populateManagers(){
+ const sel=document.getElementById("responsabile_uid");
+ const responsabili=allUsers.filter(u=>u.attivo!==false&&String(u.ruolo||"").toLowerCase()==="responsabile");
+ sel.innerHTML='<option value="">Nessun responsabile / autonomo</option>'+responsabili.map(u=>`<option value="${esc(u.uid)}">${esc(nameOf(u))}</option>`).join("");
 }
-async function saveRole(uid){const s=document.querySelector(`.role-select[data-uid="${CSS.escape(uid)}"]`),m=document.getElementById("msg-"+uid);try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantPermissions")({uid,ruolo:s.value});m.style.color="#23723c";m.textContent="✅ Ruolo aggiornato.";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore."}}
-async function saveVis(uid){const r=document.getElementById("vis-"+uid),m=document.getElementById("msg-"+uid),ids=[...r.querySelectorAll('input:checked')].map(x=>x.value);try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantVisibility")({uid,collaboratori_visibili:ids});m.style.color="#23723c";m.textContent="✅ Collaboratori aggiornati.";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore."}}
-document.getElementById("create").onclick=async()=>{const d={nome:nome.value.trim(),cognome:cognome.value.trim(),email:email.value.trim(),password:password.value,ruolo:ruolo.value},m=document.getElementById("msg");if(!d.nome||!d.cognome||!d.email||d.password.length<8){m.style.color="#b42318";m.textContent="Completa i campi. Password minimo 8 caratteri.";return}try{await fns.httpsCallable("createConsultant")(d);m.style.color="#23723c";m.textContent="✅ Account e workspace creati.";await listUsers()}catch(e){m.style.color="#b42318";m.textContent=e?.message||"Errore creazione."}};
+function inheritedSecretaryNames(responsabileUid){
+ return allUsers.filter(u=>String(u.ruolo||"").toLowerCase()==="segreteria"&&Array.isArray(u.collaboratori_visibili)&&u.collaboratori_visibili.includes(responsabileUid)).map(nameOf);
+}
+function visibilityText(u){
+ const role=String(u.ruolo||"consulente").toLowerCase();
+ if(role==="consulente"){
+   const managerUid=String(u.responsabile_uid||u.gestito_da_uid||"");
+   if(!managerUid)return '<span class="muted">Autonomo / nessun responsabile</span>';
+   const manager=getUser(managerUid),secs=inheritedSecretaryNames(managerUid);
+   return `<div class="managed">Gestito da <strong>${esc(nameOf(manager))}</strong>${secs.length?`<div class="muted">Backoffice ereditato: ${esc(secs.join(", "))}</div>`:""}</div>`;
+ }
+ if(role==="responsabile"){
+   const team=allUsers.filter(x=>String(x.responsabile_uid||x.gestito_da_uid||"")===u.uid);
+   const secs=inheritedSecretaryNames(u.uid);
+   return `<div class="managed"><strong>${team.length} collaborator${team.length===1?"e":"i"}</strong>${secs.length?`<div class="muted">Segreteria: ${esc(secs.join(", "))}</div>`:""}</div>`;
+ }
+ if(role==="segreteria"){
+   const ids=Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili:[];
+   const managers=ids.map(getUser).filter(Boolean);
+   const inherited=allUsers.filter(x=>managers.some(m=>m.uid===String(x.responsabile_uid||x.gestito_da_uid||"")));
+   return `<div class="managed"><strong>${managers.length} utenti/team diretti</strong><div class="muted">+ ${inherited.length} collaboratori ereditati</div></div>`;
+ }
+ return '<span class="muted">Accesso amministrativo</span>';
+}
+async function listUsers(){
+ const tbody=document.getElementById("users");tbody.innerHTML='<tr><td colspan="5">Caricamento...</td></tr>';
+ const snap=await db.collection("consulenti").get();allUsers=[];snap.forEach(doc=>allUsers.push({uid:doc.id,...(doc.data()||{})}));
+ allUsers.sort((a,b)=>nameOf(a).localeCompare(nameOf(b),"it"));populateManagers();renderUsers();
+}
+function renderUsers(){
+ const tbody=document.getElementById("users"),q=document.getElementById("search").value.trim().toLowerCase(),rf=document.getElementById("roleFilter").value;
+ const list=allUsers.filter(u=>{const r=String(u.ruolo||"consulente").toLowerCase();return(!rf||r===rf)&&(!q||`${nameOf(u)} ${u.email||""} ${r}`.toLowerCase().includes(q))});
+ tbody.innerHTML=list.map(u=>{const role=String(u.ruolo||"consulente").toLowerCase();return `<tr>
+ <td><div class="person"><span class="avatar">${esc((u.nome||u.email||"?")[0].toUpperCase())}</span><div><div class="name">${esc(nameOf(u))}</div><div class="email">${esc(u.email||"")}</div></div></div></td>
+ <td><select class="field role-select" data-uid="${esc(u.uid)}"><option value="consulente" ${role==="consulente"?"selected":""}>Consulente</option><option value="responsabile" ${role==="responsabile"?"selected":""}>Responsabile</option><option value="segreteria" ${role==="segreteria"?"selected":""}>Segreteria</option><option value="admin" ${role==="admin"?"selected":""}>Admin</option></select><div style="margin-top:5px"><span class="badge ${role}">${esc(roleLabel(role).toUpperCase())}</span></div></td>
+ <td>${visibilityText(u)}</td><td>${u.attivo===false?'<span style="color:#b42318">● Disattivo</span>':'<span style="color:#138a55">● Attivo</span>'}</td>
+ <td><div class="actions"><button class="btn" onclick="saveRole('${esc(u.uid)}')">SALVA RUOLO</button>${role==="responsabile"||role==="segreteria"?`<button class="btn gold" onclick="editVisibility('${esc(u.uid)}')">GESTISCI</button>`:""}</div><div class="msg" id="msg-${esc(u.uid)}"></div></td></tr>`}).join("")||'<tr><td colspan="5">Nessun utente trovato.</td></tr>';
+}
+async function saveRole(uid){
+ const sel=document.querySelector(`.role-select[data-uid="${CSS.escape(uid)}"]`),m=document.getElementById("msg-"+uid);
+ try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantPermissions")({uid,ruolo:sel.value});m.style.color="#138a55";m.textContent="✓ Ruolo aggiornato";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore"}
+}
+function editVisibility(uid){
+ const u=getUser(uid),role=String(u?.ruolo||"").toLowerCase();
+ const candidates=allUsers.filter(x=>x.uid!==uid&&x.attivo!==false&&(role==="segreteria"?["responsabile","consulente"].includes(String(x.ruolo||"").toLowerCase()):String(x.ruolo||"").toLowerCase()==="consulente");
+ const selected=new Set(Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili:[]);
+ const names=candidates.map((x,i)=>`${selected.has(x.uid)?"☑":"☐"} ${i+1}. ${nameOf(x)} (${roleLabel(String(x.ruolo||"").toLowerCase())})`).join("\n");
+ const raw=prompt(`Inserisci i numeri separati da virgola degli utenti/team visibili per ${nameOf(u)}:\n\n${names}\n\nPer la Segreteria, selezionando un Responsabile viene ereditato automaticamente tutto il suo team.`,candidates.map((x,i)=>selected.has(x.uid)?i+1:null).filter(Boolean).join(","));
+ if(raw===null)return;
+ const ids=raw.split(",").map(x=>parseInt(x.trim(),10)).filter(n=>n>=1&&n<=candidates.length).map(n=>candidates[n-1].uid);
+ saveVisibility(uid,ids);
+}
+async function saveVisibility(uid,ids){
+ const m=document.getElementById("msg-"+uid);
+ try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantVisibility")({uid,collaboratori_visibili:ids});m.style.color="#138a55";m.textContent="✓ Visibilità aggiornata";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore"}
+}
+document.getElementById("create").onclick=async()=>{
+ const d={nome:document.getElementById("nome").value.trim(),cognome:document.getElementById("cognome").value.trim(),email:document.getElementById("email").value.trim(),password:document.getElementById("password").value,ruolo:document.getElementById("ruolo").value,responsabile_uid:document.getElementById("ruolo").value==="consulente"?document.getElementById("responsabile_uid").value:""};
+ const m=document.getElementById("createMsg");
+ if(!d.nome||!d.cognome||!d.email||d.password.length<8){m.style.color="#b42318";m.textContent="Completa i campi. Password minimo 8 caratteri.";return}
+ try{
+   m.style.color="#687686";m.textContent="Creazione account...";
+   const res=await fns.httpsCallable("createConsultant")(d);
+   const newUid=res?.data?.uid||"";
+   // createConsultant salva già responsabile_uid e aggiorna il team del Responsabile.
+
+   m.style.color="#138a55";m.textContent="✓ Account creato e gerarchia associata.";
+   setTimeout(()=>{closeCreate();m.textContent=""},700);await listUsers();
+ }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore creazione."}
+};
 (async()=>{await CredipassAuth.guard({adminOnly:true});await listUsers()})();
-</script></body></html>
+</script>
+</body>
+</html>

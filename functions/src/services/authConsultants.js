@@ -42,9 +42,10 @@ async function resolveVisibleCollaborators(uids = []) {
     const d = snap.data() || {};
     const ruolo = clean(d.ruolo).toLowerCase();
 
-    // La segreteria può essere associata solo a collaboratori operativi.
+    // Visibilità configurabile su Consulenti e Responsabili attivi.
+    // Per la Segreteria, un Responsabile rappresenta anche il suo team.
     if (
-      ruolo !== "consulente" ||
+      !["consulente", "responsabile"].includes(ruolo) ||
       d.attivo === false
     ) {
       continue;
@@ -103,6 +104,10 @@ async function createWorkspaceProfile(uid, fields = {}) {
   if (Array.isArray(fields.collaboratori_visibili_dettagli)) {
     profilePayload.collaboratori_visibili_dettagli =
       fields.collaboratori_visibili_dettagli;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(fields, "responsabile_uid")) {
+    profilePayload.responsabile_uid = clean(fields.responsabile_uid);
   }
 
   await profileRef.set(
@@ -282,6 +287,19 @@ exports.createConsultant = onCall(
     const ruolo = ["admin", "consulente", "responsabile", "segreteria"].includes(requestedRole)
       ? requestedRole : "consulente";
 
+    let responsabileUid = "";
+    if (ruolo === "consulente" && clean(d.responsabile_uid)) {
+      const managerSnap = await db.collection("consulenti").doc(clean(d.responsabile_uid)).get();
+      if (
+        !managerSnap.exists ||
+        clean(managerSnap.data()?.ruolo).toLowerCase() !== "responsabile" ||
+        managerSnap.data()?.attivo === false
+      ) {
+        throw new HttpsError("invalid-argument", "Responsabile selezionato non valido.");
+      }
+      responsabileUid = managerSnap.id;
+    }
+
     const requestedCollaborators =
       ["segreteria", "responsabile"].includes(ruolo)
         ? cleanUidList(d.collaboratori_visibili)
@@ -322,13 +340,32 @@ exports.createConsultant = onCall(
         visibility.uids,
       collaboratori_visibili_dettagli:
         visibility.dettagli,
+      responsabile_uid: responsabileUid,
     });
+
+    if (ruolo === "consulente" && responsabileUid) {
+      const managerRef = db.collection("consulenti").doc(responsabileUid);
+      const managerSnap = await managerRef.get();
+      const managerData = managerSnap.data() || {};
+      const direct = cleanUidList([
+        ...(managerData.collaboratori_visibili || []),
+        user.uid
+      ]);
+      const directResolved = await resolveVisibleCollaborators(direct);
+      await managerRef.set({
+        collaboratori_visibili: directResolved.uids,
+        collaboratori_visibili_dettagli: directResolved.dettagli,
+        visibilita_aggiornata_il: admin.firestore.FieldValue.serverTimestamp(),
+        visibilita_aggiornata_da: request.auth.uid,
+      }, { merge: true });
+    }
 
     return {
       ok: true,
       uid: user.uid,
       email,
       ruolo,
+      responsabile_uid: responsabileUid,
       collaboratori_visibili:
         visibility.uids,
     };
@@ -399,10 +436,31 @@ exports.updateConsultantVisibility = onCall(
       );
     }
 
-    const visibility =
+    let visibility =
       await resolveVisibleCollaborators(
         data.collaboratori_visibili
       );
+
+    const targetRole = clean(target.ruolo).toLowerCase();
+
+    if (targetRole === "responsabile") {
+      visibility.dettagli = visibility.dettagli.filter(
+        x => clean(
+          (targetSnap.exists && x.uid)
+            ? "" : ""
+        ) === "" || true
+      );
+      const candidateRefs = visibility.uids.map(uid =>
+        db.collection("consulenti").doc(uid)
+      );
+      const candidateSnaps = candidateRefs.length
+        ? await db.getAll(...candidateRefs)
+        : [];
+      const allowed = candidateSnaps
+        .filter(s => s.exists && clean(s.data()?.ruolo).toLowerCase() === "consulente")
+        .map(s => s.id);
+      visibility = await resolveVisibleCollaborators(allowed);
+    }
 
     await targetRef.set({
       collaboratori_visibili:
@@ -509,5 +567,64 @@ exports.listActiveConsultants = onCall(
     );
 
     return { ok: true, consultants, consulenti: consultants };
+  }
+);
+
+
+/* ============================================================
+   ASSEGNA CONSULENTE A RESPONSABILE - SOLO ADMIN
+   ============================================================ */
+exports.assignConsultantManager = onCall(
+  { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+  async request => {
+    if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Accesso richiesto.");
+    if (!(await isAdmin(request.auth.uid))) {
+      throw new HttpsError("permission-denied", "Funzione riservata all'amministratore.");
+    }
+
+    const uid = clean(request.data?.uid);
+    const responsabileUid = clean(request.data?.responsabile_uid);
+    if (!uid) throw new HttpsError("invalid-argument", "UID consulente mancante.");
+
+    const consultantRef = db.collection("consulenti").doc(uid);
+    const consultantSnap = await consultantRef.get();
+    if (!consultantSnap.exists || clean(consultantSnap.data()?.ruolo).toLowerCase() !== "consulente") {
+      throw new HttpsError("failed-precondition", "L'utente da assegnare deve essere un Consulente.");
+    }
+
+    let oldManagerUid = clean(consultantSnap.data()?.responsabile_uid);
+
+    if (responsabileUid) {
+      const managerSnap = await db.collection("consulenti").doc(responsabileUid).get();
+      if (!managerSnap.exists ||
+          clean(managerSnap.data()?.ruolo).toLowerCase() !== "responsabile" ||
+          managerSnap.data()?.attivo === false) {
+        throw new HttpsError("invalid-argument", "Responsabile non valido.");
+      }
+    }
+
+    await consultantRef.set({
+      responsabile_uid: responsabileUid,
+      responsabile_aggiornato_il: admin.firestore.FieldValue.serverTimestamp(),
+      responsabile_aggiornato_da: request.auth.uid,
+    }, { merge: true });
+
+    for (const managerUid of Array.from(new Set([oldManagerUid, responsabileUid])).filter(Boolean)) {
+      const managerRef = db.collection("consulenti").doc(managerUid);
+      const managerSnap = await managerRef.get();
+      if (!managerSnap.exists) continue;
+      let ids = cleanUidList(managerSnap.data()?.collaboratori_visibili);
+      ids = ids.filter(x => x !== uid);
+      if (managerUid === responsabileUid) ids.push(uid);
+      const resolved = await resolveVisibleCollaborators(ids);
+      await managerRef.set({
+        collaboratori_visibili: resolved.uids,
+        collaboratori_visibili_dettagli: resolved.dettagli,
+        visibilita_aggiornata_il: admin.firestore.FieldValue.serverTimestamp(),
+        visibilita_aggiornata_da: request.auth.uid,
+      }, { merge: true });
+    }
+
+    return { ok: true, uid, responsabile_uid: responsabileUid };
   }
 );

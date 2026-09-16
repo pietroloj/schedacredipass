@@ -236,6 +236,7 @@
     var functionsFirebase = firebase.app().functions("us-central1");
     var tuttiIClienti = [];
     var sessioneConsulente = null;
+    var expandedCollaboratorNames = {};
 
     const STATO_PRATICA_CONFIG = {
         da_istruire: { label: "Da istruire", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
@@ -316,7 +317,64 @@
         return map;
     }
 
-    function setupCollaboratorFilter() {
+
+    async function buildExpandedVisibility() {
+        const role = roleSession();
+        const myUid = String(sessioneConsulente?.user?.uid || "").trim();
+        const directIds = secretaryCollaborators();
+        const ids = new Set(directIds);
+        const names = collaboratorNameMap();
+
+        if (!["segreteria","responsabile"].includes(role)) {
+            return { ids: Array.from(ids), names };
+        }
+
+        // Leggiamo i profili per espandere la gerarchia:
+        // Segreteria -> Responsabile -> Consulenti del Responsabile.
+        const snap = await db.collection("consulenti").get();
+        const profiles = {};
+        snap.forEach(doc => {
+            const d = doc.data() || {};
+            profiles[doc.id] = { uid: doc.id, ...d };
+            const label = `${d.nome || ""} ${d.cognome || ""}`.trim() || d.email || doc.id;
+            names[doc.id] = label;
+        });
+
+        if (role === "segreteria") {
+            directIds.forEach(uid => {
+                const p = profiles[uid];
+                if (!p || String(p.ruolo || "").toLowerCase() !== "responsabile") return;
+
+                // Il Responsabile è già visibile e aggiungiamo tutto il suo team.
+                Object.values(profiles).forEach(c => {
+                    if (
+                        String(c.ruolo || "").toLowerCase() === "consulente" &&
+                        String(c.responsabile_uid || "") === uid &&
+                        c.attivo !== false
+                    ) ids.add(c.uid);
+                });
+
+                // Compatibilità con associazioni responsabile legacy.
+                (Array.isArray(p.collaboratori_visibili) ? p.collaboratori_visibili : [])
+                    .forEach(cuid => ids.add(String(cuid || "").trim()));
+            });
+        }
+
+        if (role === "responsabile") {
+            Object.values(profiles).forEach(c => {
+                if (
+                    String(c.ruolo || "").toLowerCase() === "consulente" &&
+                    String(c.responsabile_uid || "") === myUid &&
+                    c.attivo !== false
+                ) ids.add(c.uid);
+            });
+        }
+
+        ids.delete("");
+        return { ids: Array.from(ids), names };
+    }
+
+    async function setupCollaboratorFilter() {
         const wrapper =
             document.getElementById(
                 "collaboratorFilter"
@@ -335,11 +393,10 @@
             return;
         }
 
-        const ids =
-            secretaryCollaborators();
-
-        const names =
-            collaboratorNameMap();
+        const expanded = await buildExpandedVisibility();
+        const ids = expanded.ids;
+        const names = expanded.names;
+        expandedCollaboratorNames = names;
 
         wrapper.classList.add(
             "visible"
@@ -471,8 +528,11 @@
             else if (
                 ["segreteria","responsabile"].includes(role)
             ) {
+                const expandedVisibility =
+                    await buildExpandedVisibility();
+
                 const owners =
-                    secretaryCollaborators();
+                    expandedVisibility.ids.slice();
 
                 /*
                  * Manteniamo anche l'UID della Segreteria, così eventuali
@@ -487,7 +547,7 @@
                         owners
                     );
 
-                setupCollaboratorFilter();
+                await setupCollaboratorFilter();
             }
             else {
                 const result = new Map();
@@ -602,7 +662,7 @@
 
 
             const ownerNames =
-                collaboratorNameMap();
+                Object.assign({}, collaboratorNameMap(), expandedCollaboratorNames);
 
             const ownerLabel =
                 ownerNames[cliente.ownerUid]
