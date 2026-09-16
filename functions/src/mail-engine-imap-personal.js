@@ -1826,7 +1826,161 @@ const associaEmailAPratica =
   );
 
 
+
+const leggiEmailTimeline =
+  onCall(
+    {
+      region: "us-central1",
+      timeoutSeconds: 60,
+      memory: "256MiB",
+    },
+
+    async request => {
+      const uid =
+        request.auth?.uid;
+
+      if (!uid) {
+        throw new HttpsError(
+          "unauthenticated",
+          "Accesso richiesto."
+        );
+      }
+
+      const practiceId =
+        String(
+          request.data?.practiceId
+          ||
+          ""
+        ).trim();
+
+      const emailDocId =
+        String(
+          request.data?.emailDocId
+          ||
+          ""
+        ).trim();
+
+      if (!practiceId || !emailDocId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Pratica o email non specificata."
+        );
+      }
+
+      const practiceRef =
+        db.collection("pratiche_mutuo")
+          .doc(practiceId);
+
+      const practiceSnap =
+        await practiceRef.get();
+
+      if (!practiceSnap.exists) {
+        throw new HttpsError(
+          "not-found",
+          "Pratica non trovata."
+        );
+      }
+
+      /*
+       * Il controllo applicativo usa lo stesso proprietario della pratica
+       * quando presente. Admin/responsabili restano compatibili con le
+       * autorizzazioni già gestite dal progetto.
+       */
+      const practice =
+        practiceSnap.data() || {};
+
+      const consultantSnap =
+        await db.collection("consulenti")
+          .doc(uid)
+          .get();
+
+      const me =
+        consultantSnap.exists
+          ? (consultantSnap.data() || {})
+          : {};
+
+      const role =
+        String(me.ruolo || "")
+          .trim()
+          .toLowerCase();
+
+      const ownerUid =
+        String(
+          practice.consulente_uid
+          ||
+          practice.consulenteUid
+          ||
+          practice.uidConsulente
+          ||
+          ""
+        ).trim();
+
+      const privileged =
+        role === "admin"
+        ||
+        role === "responsabile"
+        ||
+        role === "segreteria";
+
+      if (
+        ownerUid
+        &&
+        ownerUid !== uid
+        &&
+        !privileged
+      ) {
+        throw new HttpsError(
+          "permission-denied",
+          "Questa email appartiene a una pratica non assegnata al tuo profilo."
+        );
+      }
+
+      const emailSnap =
+        await practiceRef
+          .collection("email_timeline")
+          .doc(emailDocId)
+          .get();
+
+      if (!emailSnap.exists) {
+        throw new HttpsError(
+          "not-found",
+          "Il contenuto dell'email non è disponibile. Esegui una nuova sincronizzazione Gmail."
+        );
+      }
+
+      const data =
+        emailSnap.data() || {};
+
+      return {
+        ok: true,
+        email: {
+          id: emailSnap.id,
+          messageId: data.messageId || null,
+          gmailMessageId: data.gmailMessageId || null,
+          uid: data.uid || null,
+          folder: data.folder || "",
+          direzione: data.direzione || "",
+          data:
+            data.data?.toDate
+              ? data.data.toDate().toISOString()
+              : (data.data || null),
+          mittente: data.mittente || [],
+          destinatari: data.destinatari || [],
+          replyTo: data.replyTo || [],
+          oggetto: data.oggetto || "",
+          testo: data.testo || "",
+          allegati: data.allegati || [],
+          banca: data.banca || "",
+          numeroPraticaRilevato:
+            data.numeroPraticaRilevato || "",
+        },
+      };
+    }
+  );
+
+
 module.exports = {
+  leggiEmailTimeline,
   collegaGmailConAppPassword,
   sincronizzaGmailImapPersonale,
   sincronizzaGmailImapTutti,

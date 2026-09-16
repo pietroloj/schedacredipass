@@ -4526,32 +4526,39 @@ Cordiali saluti`
             "Caricamento email...";
 
         try {
-            const snap =
-                await db
-                    .collection(
-                        "pratiche_mutuo"
+            /*
+             * Lettura server-side: funziona sia con email acquisite
+             * via IMAP/App Password sia con Gmail OAuth2 e non dipende
+             * dalle regole Firestore della subcollection.
+             */
+            const callable =
+                firebase
+                    .app()
+                    .functions(
+                        "us-central1"
                     )
-                    .doc(
-                        idCliente
-                    )
-                    .collection(
-                        "email_timeline"
-                    )
-                    .doc(
-                        emailDocId
-                    )
-                    .get();
+                    .httpsCallable(
+                        "leggiEmailTimeline"
+                    );
 
-            if (!snap.exists) {
+            const result =
+                await callable({
+                    practiceId:
+                        idCliente,
+                    emailDocId:
+                        emailDocId
+                });
+
+            const d =
+                result.data?.email
+                ||
+                {};
+
+            if (!result.data?.ok) {
                 throw new Error(
                     "Email non trovata."
                 );
             }
-
-            const d =
-                snap.data()
-                ||
-                {};
 
             const mittente =
                 emailListText(
@@ -4608,12 +4615,24 @@ Cordiali saluti`
 
             const dataEmail =
                 d.data
-                    ?.toDate
-                    ? d.data
-                        .toDate()
-                        .toLocaleString(
-                            "it-IT"
-                        )
+                    ? (
+                        d.data?.toDate
+                            ? d.data
+                                .toDate()
+                                .toLocaleString(
+                                    "it-IT"
+                                )
+                            : (
+                                !Number.isNaN(
+                                    new Date(d.data).getTime()
+                                )
+                                    ? new Date(d.data)
+                                        .toLocaleString(
+                                            "it-IT"
+                                        )
+                                    : ""
+                              )
+                      )
                     : "";
 
             const attachments =
