@@ -191,7 +191,7 @@ td strong{color:var(--navy)}
             </tr>
           </thead>
           <tbody id="consultantBody">
-            <tr><td colspan="5" class="empty">La PATCH 032 prepara il cruscotto; la produttività per collaboratore sarà alimentata quando i dati consulente sono uniformi nelle pratiche.</td></tr>
+            <tr><td colspan="5" class="empty">Caricamento produttività...</td></tr>
           </tbody>
         </table>
       </div>
@@ -555,6 +555,39 @@ function renderSources() {
 }
 
 
+function renderConsultants() {
+  const consultants =
+    Array.isArray(
+      dashboardData?.consultants
+    )
+      ? dashboardData.consultants
+      : [];
+
+  const body =
+    document.getElementById(
+      "consultantBody"
+    );
+
+  if (!body) return;
+
+  body.innerHTML =
+    consultants.length
+      ? consultants.map(item => `
+          <tr>
+            <td>
+              <strong>${safe(item.nome || "Consulente")}</strong>
+              ${item.email ? `<small style="display:block;color:#7a8795;margin-top:3px">${safe(item.email)}</small>` : ""}
+            </td>
+            <td>${Number(item.pratiche || 0)}</td>
+            <td>${Number(item.delibere || 0)}</td>
+            <td>${Number(item.stipule || 0)}</td>
+            <td><strong>${pct(item.conversione || 0)}</strong></td>
+          </tr>
+        `).join("")
+      : `<tr><td colspan="5" class="empty">Nessuna pratica nel perimetro selezionato.</td></tr>`;
+}
+
+
 function renderAgencies() {
 
   const agencies =
@@ -806,6 +839,7 @@ function renderDashboard() {
 
   renderStates();
   renderSources();
+  renderConsultants();
   renderAgencies();
 
 }

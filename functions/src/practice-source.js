@@ -422,18 +422,128 @@ const listaAgenzieImmobiliari =
 function getState(
   practice = {}
 ) {
+  const candidates = [
+    practice.stato_pratica,
+    practice.stato,
+    practice.workflowStatus,
+  ];
 
-  return String(
-    practice.stato
-    ??
-    practice.stato_pratica
-    ??
-    practice.workflowStatus
-    ??
-    "non_definito"
-  )
-  .trim()
-  .toLowerCase();
+  for (const value of candidates) {
+    const clean = cleanText(value).toLowerCase();
+    if (clean) return clean;
+  }
+
+  return "non_definito";
+}
+
+
+function normalizePracticeSource(practice = {}) {
+  /*
+   * Fonte autorevole: i campi usati dalla Dashboard Consulente.
+   * Manteniamo l'oggetto provenienza come fallback per compatibilità.
+   */
+  const legacy = practice.provenienza || {};
+  const tipo = cleanText(practice.tipo_fonte_pratica).toUpperCase();
+
+  if (tipo === "AGENZIA_IMMOBILIARE") {
+    return {
+      categoria: "agenzia_immobiliare",
+      agenziaId: cleanText(legacy.agenziaId) || null,
+      agenziaNome:
+        cleanText(practice.segnalatore_riferimento)
+        || cleanText(legacy.agenziaNome)
+        || "Agenzia non specificata",
+      referenteId: cleanText(legacy.referenteId) || null,
+      referenteNome:
+        cleanText(legacy.referenteNome)
+        || cleanText(practice.segnalatore_riferimento)
+        || null,
+      email:
+        cleanText(practice.segnalatore_email)
+        || null,
+    };
+  }
+
+  if (tipo === "SEGNALATORE") {
+    return {
+      categoria: "passaparola",
+      segnalatoDa:
+        cleanText(practice.segnalatore_riferimento)
+        || cleanText(legacy.segnalatoDa)
+        || null,
+      email:
+        cleanText(practice.segnalatore_email)
+        || null,
+    };
+  }
+
+  if (tipo === "DIRETTA") {
+    return { categoria: "diretto" };
+  }
+
+  const legacyCategory =
+    SOURCE_CATEGORIES.includes(cleanText(legacy.categoria).toLowerCase())
+      ? cleanText(legacy.categoria).toLowerCase()
+      : "non_definito";
+
+  return {
+    categoria: legacyCategory,
+    ...legacy,
+  };
+}
+
+
+function latestPracticeActivityMillis(practice = {}) {
+  const values = [
+    practice.stato_pratica_aggiornato_il,
+    practice.provenienza_aggiornata_il,
+    practice.ultimo_aggiornamento_scheda,
+    practice.ultimoAggiornamentoIntegrazione,
+    practice.attivita_interna_aggiornata_il,
+    practice.documentReminderUltimaAttivitaClienteIl,
+    practice.documentReminderUltimoInvioIl,
+    practice.updatedAt,
+    practice.aggiornatoIl,
+    practice.createdAt,
+    practice.creatoIl,
+  ];
+
+  if (Array.isArray(practice.attivita_cliente_log)) {
+    for (const event of practice.attivita_cliente_log) {
+      if (event && event.data_ms) values.push(Number(event.data_ms));
+    }
+  }
+
+  if (Array.isArray(practice.attivita_interne)) {
+    for (const event of practice.attivita_interne) {
+      if (event && event.creato_il) values.push(event.creato_il);
+      if (event && event.data_ms) values.push(Number(event.data_ms));
+    }
+  }
+
+  return Math.max(
+    0,
+    ...values.map(dateMillis).filter(Boolean)
+  );
+}
+
+
+function practiceDocsIncomplete(practice = {}) {
+  const required =
+    Array.isArray(practice.documenti_richiesti_portale)
+      ? practice.documenti_richiesti_portale
+          .map(x => cleanText(x).replace(/^doc_/, ""))
+          .filter(Boolean)
+      : [];
+
+  if (required.length) {
+    return required.some(id => practice[`doc_${id}`] !== true);
+  }
+
+  if (practice.documentazioneCompleta === false) return true;
+  if (practice.documentiCompleti === false) return true;
+
+  return false;
 }
 
 
@@ -448,6 +558,14 @@ function dateMillis(
       "function"
   ) {
     return value.toMillis();
+  }
+
+  if (
+    typeof value === "number"
+    &&
+    Number.isFinite(value)
+  ) {
+    return value;
   }
 
   const parsed =
@@ -806,6 +924,9 @@ const dashboardGestionaleDati =
       let stipulated =
         0;
 
+      const consultantMap =
+        new Map();
+
 
       for (
         const practice of
@@ -853,14 +974,8 @@ const dashboardGestionaleDati =
         }
 
         const updated =
-          dateMillis(
-            practice.updatedAt
-            ??
-            practice.aggiornatoIl
-            ??
-            practice.createdAt
-            ??
-            practice.creatoIl
+          latestPracticeActivityMillis(
+            practice
           );
 
         if (
@@ -877,22 +992,18 @@ const dashboardGestionaleDati =
         }
 
         if (
-          practice
-            .documentazioneCompleta ===
-            false
-          ||
-          practice
-            .documentiCompleti ===
-            false
+          practiceDocsIncomplete(
+            practice
+          )
         ) {
           incompleteDocs +=
             1;
         }
 
         const source =
-          practice.provenienza
-          ||
-          {};
+          normalizePracticeSource(
+            practice
+          );
 
         const category =
           SOURCE_CATEGORIES
@@ -1003,7 +1114,129 @@ const dashboardGestionaleDati =
           );
         }
 
+        const practiceConsultantUid =
+          cleanText(
+            practice.consulente_uid
+            ||
+            practice.workspace_uid
+            ||
+            practice.owner_uid
+          );
+
+        if (practiceConsultantUid) {
+          const currentConsultant =
+            consultantMap.get(
+              practiceConsultantUid
+            )
+            ||
+            {
+              uid: practiceConsultantUid,
+              nome:
+                cleanText(practice.referente)
+                || cleanText(practice.consulente_nome)
+                || cleanText(practice.consulente_email)
+                || practiceConsultantUid,
+              email:
+                cleanText(practice.consulente_email),
+              pratiche: 0,
+              delibere: 0,
+              stipule: 0,
+            };
+
+          currentConsultant.pratiche += 1;
+
+          if (state.includes("deliber")) {
+            currentConsultant.delibere += 1;
+          }
+
+          if (
+            state.includes("stipul")
+            ||
+            state.includes("atto")
+          ) {
+            currentConsultant.stipule += 1;
+          }
+
+          consultantMap.set(
+            practiceConsultantUid,
+            currentConsultant
+          );
+        }
+
       }
+
+
+      /*
+       * Completiamo nome/email dai profili consulenti, quando disponibili.
+       */
+      const consultants = [];
+
+      for (const item of consultantMap.values()) {
+        let nome = item.nome;
+        let email = item.email;
+
+        try {
+          const consultantSnap =
+            await db
+              .collection("consulenti")
+              .doc(item.uid)
+              .get();
+
+          if (consultantSnap.exists) {
+            const consultantProfile =
+              consultantSnap.data() || {};
+
+            nome =
+              [
+                cleanText(consultantProfile.nome),
+                cleanText(consultantProfile.cognome),
+              ]
+                .filter(Boolean)
+                .join(" ")
+              ||
+              cleanText(consultantProfile.nome_completo)
+              ||
+              nome;
+
+            email =
+              cleanText(consultantProfile.email)
+              ||
+              email;
+          }
+        } catch (error) {
+          console.warn(
+            "Profilo consulente non disponibile:",
+            item.uid,
+            error
+          );
+        }
+
+        consultants.push({
+          ...item,
+          nome,
+          email,
+          conversione:
+            item.pratiche
+              ? (
+                  item.stipule
+                  /
+                  item.pratiche
+                  *
+                  100
+                )
+              : 0,
+        });
+      }
+
+      consultants.sort(
+        (a, b) =>
+          b.pratiche - a.pratiche
+          ||
+          String(a.nome).localeCompare(
+            String(b.nome),
+            "it"
+          )
+      );
 
 
       const agencies =
@@ -1086,6 +1319,8 @@ const dashboardGestionaleDati =
         countsBySource,
 
         agencies,
+
+        consultants,
       };
 
     }
