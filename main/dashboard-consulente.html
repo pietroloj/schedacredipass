@@ -1972,9 +1972,14 @@ document.addEventListener(
             </div>
 
             <div id="dashboardSourceContactFields" style="display:none;grid-template-columns:1fr 1fr;gap:12px;">
-                <div>
+                <div style="position:relative;">
                     <label style="display:block;font-size:8px;font-weight:800;color:#6c7782;text-transform:uppercase;margin-bottom:5px;">Nominativo / Agenzia</label>
-                    <input id="dashboardSegnalatoreRiferimento" type="text" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px;">
+                    <input id="dashboardSegnalatoreRiferimento" type="text" autocomplete="off"
+                        oninput="renderDashboardSourceSuggestions()"
+                        onfocus="renderDashboardSourceSuggestions()"
+                        style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px;">
+                    <div id="dashboardSourceSuggestions"
+                        style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #dfe5ec;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.14);max-height:210px;overflow:auto;z-index:100002;"></div>
                 </div>
                 <div>
                     <label style="display:block;font-size:8px;font-weight:800;color:#6c7782;text-transform:uppercase;margin-bottom:5px;">Email</label>
@@ -4938,6 +4943,156 @@ Cordiali saluti`
     }
 
 
+
+    let dashboardSourceRubricaCache = [];
+
+    async function caricaRubricaProvenienzaDashboard() {
+        try {
+            const snap = await db.collection("rubrica_segnalatori").get();
+            dashboardSourceRubricaCache = snap.docs.map(doc => ({
+                id: doc.id,
+                ...(doc.data() || {})
+            }));
+        } catch (error) {
+            console.error("Errore caricamento rubrica segnalatori:", error);
+            dashboardSourceRubricaCache = [];
+        }
+    }
+
+    function dashboardSourceTipoCorrente() {
+        return document.querySelector('input[name="dashboard_tipo_fonte"]:checked')?.value || "";
+    }
+
+    function dashboardSourceNomeVoce(item = {}) {
+        return String(
+            item.nome ||
+            item.nominativo ||
+            item.riferimento ||
+            item.ragione_sociale ||
+            item.agenzia ||
+            item.nome_agenzia ||
+            ""
+        ).trim();
+    }
+
+    function dashboardSourceEmailVoce(item = {}) {
+        return String(item.email || item.mail || "").trim();
+    }
+
+    function dashboardSourceTipoVoce(item = {}) {
+        const raw = String(
+            item.tipo ||
+            item.categoria ||
+            item.tipo_fonte ||
+            item.tipo_fonte_pratica ||
+            ""
+        ).trim().toUpperCase();
+
+        if (raw.includes("AGENZ")) return "AGENZIA_IMMOBILIARE";
+        if (raw.includes("SEGNAL")) return "SEGNALATORE";
+        return raw;
+    }
+
+    function renderDashboardSourceSuggestions() {
+        const box = document.getElementById("dashboardSourceSuggestions");
+        const input = document.getElementById("dashboardSegnalatoreRiferimento");
+        if (!box || !input) return;
+
+        const tipo = dashboardSourceTipoCorrente();
+        if (tipo !== "SEGNALATORE" && tipo !== "AGENZIA_IMMOBILIARE") {
+            box.style.display = "none";
+            box.innerHTML = "";
+            return;
+        }
+
+        const q = String(input.value || "").trim().toLowerCase();
+
+        const matches = dashboardSourceRubricaCache
+            .filter(item => {
+                const itemTipo = dashboardSourceTipoVoce(item);
+                const nome = dashboardSourceNomeVoce(item);
+                const email = dashboardSourceEmailVoce(item);
+
+                const tipoOk = !itemTipo || itemTipo === tipo;
+                const testoOk = !q || `${nome} ${email}`.toLowerCase().includes(q);
+                return tipoOk && testoOk && (nome || email);
+            })
+            .slice(0, 12);
+
+        if (!matches.length) {
+            box.innerHTML = '<div style="padding:10px 12px;font-size:9px;color:#7a838c;">Nessun contatto trovato in rubrica.</div>';
+            box.style.display = "block";
+            return;
+        }
+
+        box.innerHTML = matches.map((item, index) => {
+            const nome = dashboardSourceNomeVoce(item);
+            const email = dashboardSourceEmailVoce(item);
+            return `
+                <button type="button"
+                    data-dashboard-source-index="${index}"
+                    style="display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #edf0f3;background:#fff;padding:10px 12px;cursor:pointer;font-family:Poppins,sans-serif;">
+                    <div style="font-size:9px;font-weight:800;color:#002d72;">${escapeHtml(nome || email)}</div>
+                    ${email ? `<div style="font-size:8px;color:#7a838c;margin-top:2px;">${escapeHtml(email)}</div>` : ""}
+                </button>
+            `;
+        }).join("");
+
+        box.querySelectorAll("[data-dashboard-source-index]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const item = matches[Number(btn.dataset.dashboardSourceIndex)];
+                selezionaDashboardSourceRubrica(item);
+            });
+        });
+
+        box.style.display = "block";
+    }
+
+    function selezionaDashboardSourceRubrica(item = {}) {
+        const nome = dashboardSourceNomeVoce(item);
+        const email = dashboardSourceEmailVoce(item);
+
+        const refInput = document.getElementById("dashboardSegnalatoreRiferimento");
+        const emailInput = document.getElementById("dashboardSegnalatoreEmail");
+        const box = document.getElementById("dashboardSourceSuggestions");
+
+        if (refInput) refInput.value = nome;
+        if (emailInput) emailInput.value = email;
+        if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
+        }
+    }
+
+    async function salvaContattoProvenienzaInRubricaDashboard(tipo, riferimento, email) {
+        if (!riferimento || (tipo !== "SEGNALATORE" && tipo !== "AGENZIA_IMMOBILIARE")) return;
+
+        const nomeNorm = riferimento.trim().toLowerCase();
+        const emailNorm = String(email || "").trim().toLowerCase();
+
+        const esiste = dashboardSourceRubricaCache.some(item => {
+            const stessoTipo = dashboardSourceTipoVoce(item) === tipo;
+            const stessoNome = dashboardSourceNomeVoce(item).toLowerCase() === nomeNorm;
+            const stessaEmail = emailNorm && dashboardSourceEmailVoce(item).toLowerCase() === emailNorm;
+            return stessoTipo && (stessoNome || stessaEmail);
+        });
+
+        if (esiste) return;
+
+        try {
+            await db.collection("rubrica_segnalatori").add({
+                tipo: tipo,
+                nome: riferimento.trim(),
+                email: String(email || "").trim(),
+                creato_il: firebase.firestore.FieldValue.serverTimestamp(),
+                creato_da: firebase.auth().currentUser?.uid || ""
+            });
+            await caricaRubricaProvenienzaDashboard();
+        } catch (error) {
+            console.warn("Contatto non salvato in rubrica:", error);
+        }
+    }
+
     function tipoFontePraticaLabel(tipo) {
         const t = String(tipo || "").trim().toUpperCase();
         if (t === "DIRETTA") return "Diretta";
@@ -4968,6 +5123,7 @@ Cordiali saluti`
         if (!idCliente) return;
 
         try {
+            await caricaRubricaProvenienzaDashboard();
             const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
             const d = snap.exists ? (snap.data() || {}) : {};
             const tipo = String(d.tipo_fonte_pratica || "").trim().toUpperCase();
@@ -5005,6 +5161,12 @@ Cordiali saluti`
                 (tipo === "SEGNALATORE" || tipo === "AGENZIA_IMMOBILIARE")
                     ? "grid"
                     : "none";
+        }
+
+        const box = document.getElementById("dashboardSourceSuggestions");
+        if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
         }
     }
 
@@ -5046,6 +5208,12 @@ Cordiali saluti`
             await db.collection("pratiche_mutuo")
                 .doc(idCliente)
                 .set(update, { merge: true });
+
+            await salvaContattoProvenienzaInRubricaDashboard(
+                tipo,
+                riferimento,
+                email
+            );
 
             praticaEmailCorrente = {
                 ...(praticaEmailCorrente || {}),
@@ -8549,6 +8717,15 @@ Cordiali saluti`
         }
     });
 
+
+
+    document.addEventListener("click", (event) => {
+        const input = document.getElementById("dashboardSegnalatoreRiferimento");
+        const box = document.getElementById("dashboardSourceSuggestions");
+        if (!input || !box) return;
+        if (event.target === input || box.contains(event.target)) return;
+        box.style.display = "none";
+    });
 
 </script>
 
