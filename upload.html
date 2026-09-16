@@ -2360,6 +2360,10 @@ const documenti = [
             { code: "ricevute1", title: "Ricevute Telematiche Dichiarazioni", formato: "A4", ai: "Ricevuta telematica presentazione dichiarazione redditi" },
             { code: "iva1", title: "Ultime 2 Dichiarazioni IVA", desc: "Se presentate", formato: "A4", ai: "Dichiarazione IVA" },
             { code: "redditi_agrari1", title: "Documentazione Redditi Agrari e Dominicali", desc: "Documenti utili alla ricostruzione dei redditi dichiarati", formato: "A4", ai: "Documentazione redditi agrari e dominicali" },
+            { code: "pensione1", title: "Ultimo Cedolino Pensione", formato: "A4", ai: "Cedolino pensione" },
+            { code: "obis1", title: "Modello OBIS/M", desc: "O certificazione equivalente, se disponibile", formato: "A4", ai: "Modello OBIS M pensione" },
+            { code: "contratto_marittimo1", title: "Contratto di Arruolamento", desc: "O attestazione del rapporto di lavoro marittimo", formato: "A4", ai: "Contratto di arruolamento marittimo" },
+            { code: "libretto_navigazione1", title: "Libretto di Navigazione", desc: "O documentazione equivalente su imbarchi e continuità lavorativa", formato: "A4", ai: "Libretto di navigazione marittimo" },
             { code: "visura1", title: "Visura Camerale / Posizione Impresa", formato: "A4", ai: "Visura camerale o posizione impresa agricola" },
             { code: "f241", title: "Ultimi F24 Pagati", formato: "A4", ai: "Modello F24 pagato" },
             { code: "ec1", title: "Estratto Conto Trimestrale", desc: "Documento in PDF, tutti i conti personali/aziendali", formato: "A4", ai: "Estratto conto trimestrale", info: "Scarica il PDF ufficiale dall'Home Banking per l'ultimo trimestre chiuso. Devono essere visibili saldo iniziale e saldo finale." },
@@ -2379,6 +2383,10 @@ const documenti = [
             { code: "ricevute2", title: "Ricevute Telematiche Dichiarazioni", formato: "A4", ai: "Ricevuta telematica presentazione dichiarazione redditi" },
             { code: "iva2", title: "Ultime 2 Dichiarazioni IVA", desc: "Se presentate", formato: "A4", ai: "Dichiarazione IVA" },
             { code: "redditi_agrari2", title: "Documentazione Redditi Agrari e Dominicali", formato: "A4", ai: "Documentazione redditi agrari e dominicali" },
+            { code: "pensione2", title: "Ultimo Cedolino Pensione", formato: "A4", ai: "Cedolino pensione" },
+            { code: "obis2", title: "Modello OBIS/M", desc: "O certificazione equivalente, se disponibile", formato: "A4", ai: "Modello OBIS M pensione" },
+            { code: "contratto_marittimo2", title: "Contratto di Arruolamento", formato: "A4", ai: "Contratto di arruolamento marittimo" },
+            { code: "libretto_navigazione2", title: "Libretto di Navigazione", formato: "A4", ai: "Libretto di navigazione marittimo" },
             { code: "visura2", title: "Visura Camerale / Posizione Impresa", formato: "A4", ai: "Visura camerale o posizione impresa agricola" },
             { code: "f242", title: "Ultimi F24 Pagati", formato: "A4", ai: "Modello F24 pagato" },
             { code: "ec2", title: "Estratto Conto Trimestrale", formato: "A4", ai: "Estratto conto trimestrale", info: "Devono essere visibili saldo iniziale e finale dei conti personali ed eventuali conti aziendali/cointestati." },
@@ -3102,17 +3110,26 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 
     }
 
+    // documenti_richiesti_portale è la checklist AUTOREVOLE e modificabile
+    // anche dopo la creazione del link. Per le vecchie pratiche resta il fallback
+    // ai codici presenti nell'URL. Le integrazioni/versioni si sommano alla checklist.
+    const baseDB = Array.isArray(dati.documenti_richiesti_portale)
+        ? dati.documenti_richiesti_portale
+        : docsRichiesti;
     const richiestiDB = Array.isArray(dati.elencoDocRichiesti)
         ? dati.elencoDocRichiesti
         : [];
-
     const versioniDB = Array.isArray(dati.documenti_versione_richiesta)
         ? dati.documenti_versione_richiesta
         : [];
+    const visibili = new Set([...baseDB, ...richiestiDB, ...versioniDB].map(x => String(x || '').replace(/^doc_/, '')));
 
-    [...new Set([...richiestiDB, ...versioniDB])].forEach(code => {
-        mostraDocumentoNelPortale(code);
+    // Nasconde prima tutte le righe standard, poi mostra solo quelle richieste.
+    document.querySelectorAll('[id^="row_doc_"]').forEach(row => row.classList.remove('show-flex'));
+    document.querySelectorAll('.section-title').forEach(sec => {
+        if (sec.id && (sec.id.startsWith('sec_richiedente') || sec.id === 'sec_comuni')) sec.classList.remove('show-block');
     });
+    visibili.forEach(code => mostraDocumentoNelPortale(code));
 
     for (const gruppo of documenti) {
         for (const doc of gruppo.docs) {

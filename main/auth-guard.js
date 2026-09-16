@@ -1523,6 +1523,16 @@ if (
 }
 
 
+
+function can(permission, session) {
+    const current = session || sessionCache;
+    const profile = current?.profile || {};
+    if (current?.isAdmin) return true;
+    const custom = profile.permessi_effettivi || profile.permessi || {};
+    if (Object.prototype.hasOwnProperty.call(custom, permission)) return custom[permission] === true;
+    return false;
+}
+
 /* ============================================================
    API PUBBLICA
    ============================================================ */
@@ -1535,7 +1545,8 @@ window.CredipassAuth = {
             sessionCache ||
             guard(),
 
-    practiceIsAccessible
+    practiceIsAccessible,
+    can
 };
 
 })();

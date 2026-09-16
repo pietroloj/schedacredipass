@@ -208,6 +208,14 @@ function documentLabel(code) {
       "Documentazione redditi agrari e dominicali R1",
     redditi_agrari2:
       "Documentazione redditi agrari e dominicali R2",
+    pensione1: "Cedolino Pensione R1",
+    pensione2: "Cedolino Pensione R2",
+    obis1: "Modello OBIS/M R1",
+    obis2: "Modello OBIS/M R2",
+    contratto_marittimo1: "Contratto Arruolamento R1",
+    contratto_marittimo2: "Contratto Arruolamento R2",
+    libretto_navigazione1: "Libretto Navigazione R1",
+    libretto_navigazione2: "Libretto Navigazione R2",
     f241:
       "F24 R1",
     f242:

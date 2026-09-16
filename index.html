@@ -12275,6 +12275,31 @@ function getUploadDocumentCodes() {
 
         }
 
+        if (
+            applicant.lavoro === 'PENSIONATO'
+            ||
+            isPensionato(applicant.lavoro)
+        ) {
+            codes.add(`pensione${n}`);
+            codes.add(`cud${n}`);
+            codes.add(`obis${n}`);
+            codes.add(`ec${n}`);
+            codes.add(`mov${n}`);
+        }
+
+        if (
+            applicant.lavoro === 'MARITTIMO'
+            ||
+            isMarittimo(applicant.lavoro)
+        ) {
+            codes.add(`bustepaga${n}`);
+            codes.add(`cud${n}`);
+            codes.add(`contratto_marittimo${n}`);
+            codes.add(`libretto_navigazione${n}`);
+            codes.add(`ec${n}`);
+            codes.add(`mov${n}`);
+        }
+
     });
 
     if (snapshot.redditoFitto) {

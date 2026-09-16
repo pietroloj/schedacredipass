@@ -2077,6 +2077,12 @@ document.addEventListener(
             </div>
 
             <div class="sidebar-card">
+                <h3><i class="fas fa-list-check"></i> Documenti Portale Cliente</h3>
+                <div style="font-size:9px;color:#687686;line-height:1.5;margin-bottom:10px;">Modifica la checklist del portale già creato. Il link cliente resta invariato.</div>
+                <button class="btn-submit btn-primary" type="button" onclick="apriModificaDocumentiPortale()"><i class="fas fa-pen-to-square"></i> MODIFICA DOCUMENTI RICHIESTI</button>
+            </div>
+
+            <div class="sidebar-card">
                 <h3><i class="fas fa-plus-circle"></i> Richiedi Integrazione</h3>
 
                 <div class="filter-grid">
@@ -2105,6 +2111,19 @@ document.addEventListener(
     </div>
 </div>
 
+
+
+<div id="modalDocumentiPortale" class="status-email-modal">
+ <div class="status-email-card" style="max-width:760px;">
+  <div class="status-email-head"><h3><i class="fas fa-list-check" style="color:#C99700"></i> Documenti richiesti nel Portale Cliente</h3><span onclick="chiudiModificaDocumentiPortale()" style="cursor:pointer;font-size:26px">&times;</span></div>
+  <div class="status-email-body">
+   <input id="ricercaDocumentiPortale" class="status-email-input" placeholder="Cerca documento..." oninput="renderDocumentiPortaleEditor()">
+   <div id="listaDocumentiPortaleEditor" style="max-height:430px;overflow:auto;margin-top:10px;border:1px solid #e0e6ed;border-radius:8px;padding:8px"></div>
+   <div id="msgDocumentiPortale" style="font-size:10px;margin-top:8px"></div>
+   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-submit" style="width:auto;background:#eee;color:#333" onclick="chiudiModificaDocumentiPortale()">ANNULLA</button><button class="btn-submit btn-primary" style="width:auto" onclick="salvaDocumentiPortale()">SALVA CHECKLIST</button></div>
+  </div>
+ </div>
+</div>
 
 <div id="modalStatoEmail" class="status-email-modal">
     <div class="status-email-card">
@@ -5836,6 +5855,14 @@ Cordiali saluti`
         'iva2': "Dichiarazioni IVA R2",
         'redditi_agrari1': "Redditi Agrari/Dominicali R1",
         'redditi_agrari2': "Redditi Agrari/Dominicali R2",
+        'pensione1': "Cedolino Pensione R1",
+        'pensione2': "Cedolino Pensione R2",
+        'obis1': "Modello OBIS/M R1",
+        'obis2': "Modello OBIS/M R2",
+        'contratto_marittimo1': "Contratto Arruolamento R1",
+        'contratto_marittimo2': "Contratto Arruolamento R2",
+        'libretto_navigazione1': "Libretto Navigazione R1",
+        'libretto_navigazione2': "Libretto Navigazione R2",
         'f241': "F24 R1",
         'f242': "F24 R2",
         'visura1': "Visura Camerale R1",
@@ -5876,6 +5903,14 @@ Cordiali saluti`
             {id:'iva2', n:"Dichiarazioni IVA R2"},
             {id:'redditi_agrari1', n:"Redditi Agrari/Dominicali R1"},
             {id:'redditi_agrari2', n:"Redditi Agrari/Dominicali R2"},
+            {id:'pensione1', n:"Cedolino Pensione R1"},
+            {id:'pensione2', n:"Cedolino Pensione R2"},
+            {id:'obis1', n:"Modello OBIS/M R1"},
+            {id:'obis2', n:"Modello OBIS/M R2"},
+            {id:'contratto_marittimo1', n:"Contratto Arruolamento R1"},
+            {id:'contratto_marittimo2', n:"Contratto Arruolamento R2"},
+            {id:'libretto_navigazione1', n:"Libretto Navigazione R1"},
+            {id:'libretto_navigazione2', n:"Libretto Navigazione R2"},
             {id:'f241', n:"F24 R1"},
             {id:'f242', n:"F24 R2"},
             {id:'contratto', n:"Contratto di Lavoro"},
@@ -5906,6 +5941,38 @@ Cordiali saluti`
 
     let carrello = [];
     let emailCliente = "";
+
+
+    let documentiPortaleSelection = new Set();
+    function tuttiDocumentiConfigurabiliPortale(){
+        return Object.entries(DB_SELECT).flatMap(([cat,docs]) => docs.filter(x => !['integrazione1','extra1','extra2'].includes(x.id)).map(x => ({...x,cat})));
+    }
+    async function apriModificaDocumentiPortale(){
+        if(!idCliente) return;
+        const snap = await db.collection('pratiche_mutuo').doc(idCliente).get();
+        const d = snap.exists ? (snap.data()||{}) : {};
+        const base = Array.isArray(d.documenti_richiesti_portale) ? d.documenti_richiesti_portale : [];
+        documentiPortaleSelection = new Set(base.map(x=>String(x||'').replace(/^doc_/,'')));
+        document.getElementById('ricercaDocumentiPortale').value='';
+        document.getElementById('msgDocumentiPortale').textContent='';
+        renderDocumentiPortaleEditor();
+        document.getElementById('modalDocumentiPortale').style.display='flex';
+    }
+    function chiudiModificaDocumentiPortale(){ document.getElementById('modalDocumentiPortale').style.display='none'; }
+    function renderDocumentiPortaleEditor(){
+        const q=(document.getElementById('ricercaDocumentiPortale').value||'').toLowerCase();
+        const docs=tuttiDocumentiConfigurabiliPortale().filter(x=>!q||(`${x.n} ${x.cat}`).toLowerCase().includes(q));
+        document.getElementById('listaDocumentiPortaleEditor').innerHTML=docs.map(x=>`<label style="display:flex;align-items:center;gap:9px;padding:9px;border-bottom:1px solid #edf1f5;font-size:10px;cursor:pointer"><input type="checkbox" ${documentiPortaleSelection.has(x.id)?'checked':''} onchange="this.checked?documentiPortaleSelection.add('${x.id}'):documentiPortaleSelection.delete('${x.id}')"><span style="flex:1"><b>${x.n}</b><small style="display:block;color:#8290a0">${x.cat}</small></span></label>`).join('');
+    }
+    async function salvaDocumentiPortale(){
+        const msg=document.getElementById('msgDocumentiPortale');
+        try{
+            msg.style.color='#687686';msg.textContent='Salvataggio...';
+            await db.collection('pratiche_mutuo').doc(idCliente).set({documenti_richiesti_portale:Array.from(documentiPortaleSelection),documenti_richiesti_portale_aggiornati_il:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+            msg.style.color='#138a55';msg.textContent='✓ Checklist aggiornata. Il link del cliente resta lo stesso.';
+            setTimeout(chiudiModificaDocumentiPortale,700);
+        }catch(e){console.error(e);msg.style.color='#b42318';msg.textContent=e?.message||'Errore salvataggio';}
+    }
 
     function formatCurrencyIT(value) {
         if (value === null || value === undefined) return "";

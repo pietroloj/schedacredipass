@@ -3,6 +3,7 @@ const admin = require("firebase-admin");
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
+const { ROLE_DEFAULT_PERMISSIONS, mergePermissions } = require("../config/permissions");
 
 const clean = v => String(v || "").trim();
 
@@ -505,10 +506,10 @@ exports.updateConsultantPermissions = onCall(
     const allowedRoles = ["admin", "consulente", "responsabile", "segreteria"];
 
     if (!targetUid) throw new HttpsError("invalid-argument", "UID utente mancante.");
-    if (!allowedRoles.includes(requestedRole)) {
+    if (requestedRole && !allowedRoles.includes(requestedRole)) {
       throw new HttpsError("invalid-argument", "Ruolo non valido.");
     }
-    if (targetUid === request.auth.uid && requestedRole !== "admin") {
+    if (requestedRole && targetUid === request.auth.uid && requestedRole !== "admin") {
       throw new HttpsError(
         "failed-precondition",
         "Non puoi rimuovere il ruolo Admin dal tuo stesso account."
@@ -519,19 +520,34 @@ exports.updateConsultantPermissions = onCall(
     const targetSnap = await targetRef.get();
     if (!targetSnap.exists) throw new HttpsError("not-found", "Utente non trovato.");
 
+    const currentRole = clean(targetSnap.data()?.ruolo).toLowerCase() || "consulente";
+    const finalRole = requestedRole || currentRole;
     const payload = {
-      ruolo: requestedRole,
       ruolo_aggiornato_il: admin.firestore.FieldValue.serverTimestamp(),
       ruolo_aggiornato_da: request.auth.uid,
     };
+    if (requestedRole) payload.ruolo = requestedRole;
 
-    if (!["segreteria", "responsabile"].includes(requestedRole)) {
+    // Permessi personalizzati: accettiamo solo chiavi già previste dal sistema.
+    if (data.permessi && typeof data.permessi === "object") {
+      const defaults = ROLE_DEFAULT_PERMISSIONS[finalRole] || ROLE_DEFAULT_PERMISSIONS.consulente;
+      const custom = {};
+      for (const key of Object.keys(defaults)) {
+        if (Object.prototype.hasOwnProperty.call(data.permessi, key)) custom[key] = data.permessi[key] === true;
+      }
+      payload.permessi = custom;
+      payload.permessi_effettivi = mergePermissions(finalRole, custom);
+      payload.permessi_aggiornati_il = admin.firestore.FieldValue.serverTimestamp();
+      payload.permessi_aggiornati_da = request.auth.uid;
+    }
+
+    if (requestedRole && !["segreteria", "responsabile"].includes(requestedRole)) {
       payload.collaboratori_visibili = [];
       payload.collaboratori_visibili_dettagli = [];
     }
 
     await targetRef.set(payload, { merge: true });
-    return { ok: true, uid: targetUid, ruolo: requestedRole };
+    return { ok: true, uid: targetUid, ruolo: finalRole, permessi: payload.permessi || null };
   }
 );
 

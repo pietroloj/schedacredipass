@@ -85,6 +85,19 @@ tr:last-child td{border-bottom:0}.name{font-weight:800}.email{color:var(--muted)
  </div>
 </div>
 
+
+<div id="permissionsModal" class="modal">
+ <div class="modal-card" style="width:min(720px,96vw)">
+  <div class="modal-head"><h2 id="permissionsTitle">Permessi utente</h2><button class="close" onclick="closePermissionsModal()">&times;</button></div>
+  <div class="modal-body">
+   <div class="hint" style="margin-bottom:10px">I valori iniziali seguono il ruolo. Qui puoi personalizzare le singole funzioni del soggetto.</div>
+   <div id="permissionsList" class="checks" style="grid-template-columns:1fr 1fr"></div>
+   <div id="permissionsMsg" class="msg"></div>
+   <div class="modal-actions"><button class="btn gray" onclick="resetPermissionsToRole()">RIPRISTINA RUOLO</button><button class="btn gray" onclick="closePermissionsModal()">ANNULLA</button><button class="btn" onclick="savePermissionsModal()">SALVA PERMESSI</button></div>
+  </div>
+ </div>
+</div>
+
 <div id="roleModal" class="modal">
  <div class="modal-card" style="width:min(520px,96vw)">
   <div class="modal-head"><h2 id="roleTitle">Modifica ruolo</h2><button class="close" onclick="closeRoleModal()">&times;</button></div>
@@ -192,6 +205,7 @@ function renderUsers(){
  <td><div class="role-actions">
    ${role==="responsabile"||role==="segreteria"?`<button class="btn gold" onclick="openVisibilityModal('${esc(u.uid)}')"><i class="fas fa-users"></i> GESTISCI VISIBILITÀ</button>`:""}
    ${role==="consulente"?`<button class="btn gold" onclick="openManagerModal('${esc(u.uid)}')"><i class="fas fa-user-tie"></i> GESTITO DA</button>`:""}
+   <button class="icon-btn" onclick="openPermissionsModal('${esc(u.uid)}')"><i class="fas fa-key"></i> PERMESSI</button>
    <button class="icon-btn" onclick="openRoleModal('${esc(u.uid)}')"><i class="fas fa-pen"></i> MODIFICA RUOLO</button>
  </div><div class="msg" id="msg-${esc(u.uid)}"></div></td></tr>`}).join("")||'<tr><td colspan="5">Nessun utente trovato.</td></tr>';
 }
@@ -244,6 +258,24 @@ async function saveVisibilityModal(){
    await listUsers();setTimeout(closeVisibilityModal,450);
  }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore aggiornamento visibilità"}
 }
+
+
+const PERMISSION_LABELS={
+ crea_pratiche:'Crea pratiche',vede_rete:'Vede pratiche/rete assegnata',vede_scheda_consulenza:'Vede scheda di consulenza',modifica_scheda_consulenza:'Modifica scheda di consulenza',modifica_operazione_mutuo:'Modifica operazione mutuo',vede_documenti:'Vede documenti',carica_documenti:'Carica documenti',elimina_documenti:'Elimina documenti',richiede_integrazioni:'Richiede integrazioni',cambia_stato:'Cambia stato pratica',vede_timeline:'Vede timeline',modifica_timeline:'Modifica timeline',gestisce_reminder:'Gestisce reminder',invia_email:'Invia email',vede_ai:'Vede report AI',usa_ai:'Usa funzioni AI',vede_bank_matching:'Vede bank matching',gestisce_utenti:'Gestisce consulenti/utenti',vede_report_rete:'Vede report rete'
+};
+const ROLE_DEFAULTS={
+ admin:Object.fromEntries(Object.keys(PERMISSION_LABELS).map(k=>[k,true])),
+ responsabile:{crea_pratiche:true,vede_rete:true,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:false,vede_report_rete:true},
+ consulente:{crea_pratiche:true,vede_rete:false,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:false,vede_report_rete:false},
+ segreteria:{crea_pratiche:false,vede_rete:true,vede_scheda_consulenza:false,modifica_scheda_consulenza:false,modifica_operazione_mutuo:false,vede_documenti:true,carica_documenti:true,elimina_documenti:false,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:false,usa_ai:false,vede_bank_matching:false,gestisce_utenti:false,vede_report_rete:false}
+};
+let editingPermissionsUid='';
+function effectivePermissions(u){const r=String(u?.ruolo||'consulente').toLowerCase();return {...(ROLE_DEFAULTS[r]||ROLE_DEFAULTS.consulente),...(u?.permessi||{})};}
+function openPermissionsModal(uid){const u=getUser(uid);if(!u)return;editingPermissionsUid=uid;document.getElementById('permissionsTitle').textContent='Permessi — '+nameOf(u);document.getElementById('permissionsMsg').textContent='';renderPermissions(effectivePermissions(u));document.getElementById('permissionsModal').classList.add('open');}
+function closePermissionsModal(){document.getElementById('permissionsModal').classList.remove('open');editingPermissionsUid='';}
+function renderPermissions(values){document.getElementById('permissionsList').innerHTML=Object.entries(PERMISSION_LABELS).map(([k,label])=>`<label class="check" style="border:1px solid #e2e8f0;border-radius:8px;padding:9px;text-transform:none"><input type="checkbox" data-permission="${k}" ${values[k]?'checked':''}><span>${label}</span></label>`).join('');}
+function resetPermissionsToRole(){const u=getUser(editingPermissionsUid);const r=String(u?.ruolo||'consulente').toLowerCase();renderPermissions(ROLE_DEFAULTS[r]||ROLE_DEFAULTS.consulente);}
+async function savePermissionsModal(){const m=document.getElementById('permissionsMsg'),permessi={};document.querySelectorAll('#permissionsList [data-permission]').forEach(x=>permessi[x.dataset.permission]=x.checked);try{m.style.color='#687686';m.textContent='Salvataggio...';await fns.httpsCallable('updateConsultantPermissions')({uid:editingPermissionsUid,permessi});m.style.color='#138a55';m.textContent='✓ Permessi aggiornati';await listUsers();setTimeout(closePermissionsModal,450)}catch(e){console.error(e);m.style.color='#b42318';m.textContent=e?.message||'Errore aggiornamento permessi'}}
 
 function openRoleModal(uid){
  const u=getUser(uid);if(!u)return;editingRoleUid=uid;
