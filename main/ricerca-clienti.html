@@ -413,6 +413,29 @@
     }
 
 
+
+    async function contaDocumentiFascicolo(idPratica) {
+        const id = String(idPratica || "").trim();
+        if (!id) return 0;
+
+        const varianti = Array.from(new Set([
+            id,
+            id.replace(/_/g, " "),
+            id.replace(/_/g, "-")
+        ]));
+
+        for (const variante of varianti) {
+            try {
+                const res = await storage.ref(`Fascicoli/${variante}`).listAll();
+                if (res.items.length > 0) return res.items.length;
+            } catch (error) {
+                console.warn(`Conteggio documenti non disponibile per ${variante}:`, error);
+            }
+        }
+        return 0;
+    }
+
+
     async function caricaClientiDaDB() {
         document.getElementById('loadingIndicator').style.display = 'block';
         tuttiIClienti = [];
@@ -525,6 +548,13 @@
                 });
             });
 
+            await Promise.all(
+                tuttiIClienti.map(async cliente => {
+                    cliente.documentiReali =
+                        await contaDocumentiFascicolo(cliente.idOriginale);
+                })
+            );
+
             document.getElementById('loadingIndicator').style.display = 'none';
             mostraClienti(tuttiIClienti);
 
@@ -556,19 +586,12 @@
         lista.forEach(cliente => {
             const card = document.createElement('div');
             
-            const chiaviCaricate = Object.keys(cliente.dati).filter(k => k !== 'totaleRichiesti' && k !== 'nomeCliente' && k !== 'richiestaIntegrazioneAttiva' && k !== 'notaPerCliente' && k !== 'elencoDocRichiesti' && k !== 'ultimoInvioNotifica' && k !== 'ultimo_aggiornamento_scheda' && k !== 'importo_richiesto' && k !== 'valore_immobile' && k !== 'reddito_richiedente_1' && k !== 'reddito_richiedente_2' && k !== 'durata_mutuo' && k !== 'finalita' && k !== 'prodotto' && k !== 'tasso' && k !== 'cliente_email' && k !== 'cliente_cell' && k !== 'stato_pratica' && k !== 'stato_pratica_label' && k !== 'stato_pratica_aggiornato_il');
-            const fileCaricati = chiaviCaricate.length;
-            const fileRichiesti = cliente.dati.totaleRichiesti || 0; 
-            
-            let statoDocumenti = "Pratica inserita";
 
-            if (fileRichiesti > 0 && fileCaricati >= fileRichiesti) {
-                statoDocumenti = "Documenti acquisiti";
-            } else if (fileCaricati > 0) {
-                statoDocumenti = `${fileCaricati} documenti caricati`;
-            } else if (fileRichiesti > 0) {
-                statoDocumenti = `0/${fileRichiesti} documenti acquisiti`;
-            }
+            const fileCaricati = Number(cliente.documentiReali || 0);
+            const statoDocumenti =
+                fileCaricati > 0
+                    ? `${fileCaricati} ${fileCaricati === 1 ? "documento" : "documenti"} nel fascicolo`
+                    : "Nessun documento nel fascicolo";
 
 
             const ownerNames =

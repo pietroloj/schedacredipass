@@ -1928,6 +1928,20 @@ document.addEventListener(
                             <div id="practiceSourceText" class="gmail-sync-meta">
                                 Non definita
                             </div>
+
+                            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e7ebf0;">
+                                <div style="font-size:9px;font-weight:800;color:#002d72;text-transform:uppercase;margin-bottom:6px;">
+                                    <i class="fas fa-user-friends" style="color:#C99700;"></i> Collega segnalato
+                                </div>
+                                <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+                                    <select id="dashboardCollegaSegnalato" style="flex:1;min-width:190px;padding:8px 9px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:9px;background:#fff;">
+                                        <option value="">- Nessun collega associato -</option>
+                                    </select>
+                                    <button type="button" class="gmail-btn" onclick="salvaCollegaSegnalatoDashboard()">SALVA</button>
+                                    <button type="button" class="gmail-btn gray" onclick="rimuoviCollegaSegnalatoDashboard()">RIMUOVI</button>
+                                </div>
+                                <div id="dashboardCollegaSegnalatoInfo" class="gmail-sync-meta" style="margin-top:6px;"></div>
+                            </div>
                         </div>
 
                         <button
@@ -4780,6 +4794,114 @@ Cordiali saluti`
 
 
 
+
+    let dashboardColleghiCache = [];
+
+    async function caricaColleghiDashboard() {
+        const select = document.getElementById("dashboardCollegaSegnalato");
+        const info = document.getElementById("dashboardCollegaSegnalatoInfo");
+        if (!select || !idCliente) return;
+
+        try {
+            const [practiceSnap, res] = await Promise.all([
+                db.collection("pratiche_mutuo").doc(idCliente).get(),
+                firebase.app().functions("us-central1")
+                    .httpsCallable("listActiveConsultants")({})
+            ]);
+
+            const pratica = practiceSnap.exists ? (practiceSnap.data() || {}) : {};
+            dashboardColleghiCache = Array.isArray(res?.data?.users) ? res.data.users : [];
+
+            const myUid = firebase.auth().currentUser?.uid || "";
+            const currentUid = String(pratica.collega_segnalato_uid || "").trim();
+
+            select.innerHTML =
+                '<option value="">- Nessun collega associato -</option>' +
+                dashboardColleghiCache
+                    .filter(x => x?.uid && x.uid !== myUid)
+                    .map(x => {
+                        const nome = (`${x.nome || ""} ${x.cognome || ""}`).trim() || x.email || x.uid;
+                        return `<option value="${escapeHtml(x.uid)}">${escapeHtml(nome)}</option>`;
+                    }).join("");
+
+            if (currentUid) {
+                select.value = currentUid;
+                if (select.value !== currentUid) {
+                    const opt = document.createElement("option");
+                    opt.value = currentUid;
+                    opt.textContent = pratica.collega_segnalato_nome || currentUid;
+                    select.appendChild(opt);
+                    select.value = currentUid;
+                }
+            }
+
+            if (info) {
+                info.textContent = currentUid
+                    ? `Attualmente associato: ${pratica.collega_segnalato_nome || currentUid}`
+                    : "Nessun collega associato alla pratica.";
+            }
+        } catch (error) {
+            console.error("Errore caricamento colleghi:", error);
+            select.innerHTML = '<option value="">Elenco colleghi non disponibile</option>';
+            if (info) info.textContent = "Impossibile caricare l'elenco colleghi.";
+        }
+    }
+
+    async function salvaCollegaSegnalatoDashboard() {
+        const select = document.getElementById("dashboardCollegaSegnalato");
+        const info = document.getElementById("dashboardCollegaSegnalatoInfo");
+        if (!select || !idCliente) return;
+
+        const uid = String(select.value || "").trim();
+        if (!uid) {
+            await rimuoviCollegaSegnalatoDashboard();
+            return;
+        }
+
+        const selected = dashboardColleghiCache.find(x => x?.uid === uid);
+        const nome = selected
+            ? ((`${selected.nome || ""} ${selected.cognome || ""}`).trim() || selected.email || uid)
+            : (select.options[select.selectedIndex]?.textContent || uid);
+
+        try {
+            await db.collection("pratiche_mutuo").doc(idCliente).set({
+                collega_segnalato_uid: uid,
+                collega_segnalato_nome: nome,
+                collega_segnalato_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
+                collega_segnalato_aggiornato_da: firebase.auth().currentUser?.uid || ""
+            }, { merge: true });
+
+            if (info) info.textContent = `Attualmente associato: ${nome}`;
+            alert(`✅ Collega associato alla pratica: ${nome}`);
+        } catch (error) {
+            console.error("Errore salvataggio collega segnalato:", error);
+            alert("Errore durante il salvataggio del collega segnalato.");
+        }
+    }
+
+    async function rimuoviCollegaSegnalatoDashboard() {
+        const select = document.getElementById("dashboardCollegaSegnalato");
+        const info = document.getElementById("dashboardCollegaSegnalatoInfo");
+        if (!idCliente) return;
+
+        try {
+            await db.collection("pratiche_mutuo").doc(idCliente).update({
+                collega_segnalato_uid: firebase.firestore.FieldValue.delete(),
+                collega_segnalato_nome: firebase.firestore.FieldValue.delete(),
+                collega_segnalato_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
+                collega_segnalato_aggiornato_da: firebase.auth().currentUser?.uid || ""
+            });
+
+            if (select) select.value = "";
+            if (info) info.textContent = "Nessun collega associato alla pratica.";
+            alert("✅ Collega segnalato rimosso dalla pratica.");
+        } catch (error) {
+            console.error("Errore rimozione collega segnalato:", error);
+            alert("Errore durante la rimozione del collega segnalato.");
+        }
+    }
+
+
     function apriProvenienzaPratica() {
 
         if (!idCliente) {
@@ -5145,6 +5267,7 @@ Cordiali saluti`
                 aggiornaStatoGmailDashboard();
                 aggiornaContatoreNotifiche();
                 aggiornaProvenienzaPraticaDashboard();
+                caricaColleghiDashboard();
             }
 
         }
