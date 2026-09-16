@@ -696,6 +696,15 @@ const statoCollegamentoGmail =
           ||
           "",
 
+        provider:
+          data.provider
+          ||
+          (
+            data.refreshTokenEncrypted
+              ? "oauth2"
+              : ""
+          ),
+
         lastSyncAt:
           data.lastSyncAt
             ?.toDate?.()
@@ -724,11 +733,21 @@ const statoCollegamentoGmail =
 
         tokenEncrypted:
           Boolean(
-            data.refreshTokenEncrypted
-            &&
-            data.refreshTokenIv
-            &&
-            data.refreshTokenTag
+            (
+              data.refreshTokenEncrypted
+              &&
+              data.refreshTokenIv
+              &&
+              data.refreshTokenTag
+            )
+            ||
+            (
+              data.imapPasswordEncrypted
+              &&
+              data.imapPasswordIv
+              &&
+              data.imapPasswordTag
+            )
           ),
 
         tokenEncryption:

@@ -3372,6 +3372,23 @@ exports.sincronizzaGmailPersonale =
   sincronizzaGmailPersonale;
 
 
+const {
+  collegaGmailConAppPassword,
+  sincronizzaGmailImapPersonale,
+  sincronizzaGmailImapTutti,
+} = require("./mail-engine-imap-personal");
+
+
+exports.collegaGmailConAppPassword =
+  collegaGmailConAppPassword;
+
+exports.sincronizzaGmailImapPersonale =
+  sincronizzaGmailImapPersonale;
+
+exports.sincronizzaGmailImapTutti =
+  sincronizzaGmailImapTutti;
+
+
 /*
 |--------------------------------------------------------------------------
 | GESTIONE DOMINI BANCA / ASSOCIAZIONI MANUALI

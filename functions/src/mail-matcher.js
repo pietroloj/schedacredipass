@@ -392,6 +392,7 @@ async function findPracticeMatch({
   db,
   mail,
   bankDetection,
+  ownerUid = "",
 }) {
   const subject =
     String(mail.subject || "");
@@ -406,10 +407,24 @@ async function findPracticeMatch({
       mail
     );
 
+  let query =
+    db.collection("pratiche_mutuo");
+
+  /*
+   * Nel provider personale ogni casella può associare email
+   * esclusivamente alle pratiche del consulente autenticato.
+   */
+  if (ownerUid) {
+    query =
+      query.where(
+        "consulente_uid",
+        "==",
+        ownerUid
+      );
+  }
+
   const snap =
-    await db
-      .collection("pratiche_mutuo")
-      .get();
+    await query.get();
 
   const candidates = [];
 

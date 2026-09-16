@@ -65,6 +65,16 @@ body{
 }
 .ok{color:#198754;font-weight:bold}
 .ko{color:#b42318;font-weight:bold}
+
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.method-card{border:1px solid #dfe5ec;border-radius:12px;padding:16px;background:#fff}
+.method-card h3{margin:0 0 7px;color:#002d72;font-size:15px}
+.method-card.active{border:2px solid #C99700;background:#fffdf7}
+.field{margin:10px 0}
+.field label{display:block;font-size:11px;font-weight:bold;color:#52606d;margin-bottom:5px}
+.field input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d7dee7;border-radius:8px}
+.note{font-size:11px;line-height:1.55;color:#66717d}
+@media(max-width:650px){.method-grid{grid-template-columns:1fr}}
 </style>
 </head>
 
@@ -88,17 +98,39 @@ body{
     Verifica collegamento...
   </div>
 
-  <div>
-    <button id="connectBtn" class="btn" onclick="connectGmail()">
-      COLLEGA GMAIL
-    </button>
+  <div id="connectionMethods" class="method-grid">
+    <div class="method-card" id="imapMethodCard">
+      <h3>Metodo disponibile ora</h3>
+      <div class="note">Collega la tua casella Gmail con una Password per le app. Il collegamento è personale per il consulente autenticato.</div>
+      <div class="field">
+        <label>Email Gmail / Google Workspace</label>
+        <input id="imapEmail" type="email" autocomplete="username" placeholder="nome@azienda.it">
+      </div>
+      <div class="field">
+        <label>Password per le app Google</label>
+        <input id="imapPassword" type="password" autocomplete="new-password" placeholder="16 caratteri">
+      </div>
+      <button id="imapConnectBtn" class="btn" onclick="connectImap()">
+        COLLEGA CON APP PASSWORD
+      </button>
+    </div>
 
+    <div class="method-card" id="oauthMethodCard">
+      <h3>OAuth 2.0</h3>
+      <div class="note">È già predisposto. Quando Credipass abiliterà l'accesso OAuth potrai passare a questo metodo senza cambiare il gestionale.</div>
+      <button id="connectBtn" class="btn gray" onclick="connectGmail()">
+        COLLEGA CON OAUTH 2.0
+      </button>
+    </div>
+  </div>
+
+  <div>
     <button id="syncBtn" class="btn gray" onclick="syncNow()" style="display:none">
       SINCRONIZZA ORA
     </button>
 
-    <button id="changeBtn" class="btn" onclick="changeGmail()" style="display:none">
-      CAMBIA ACCOUNT
+    <button id="changeBtn" class="btn" onclick="showMethods()" style="display:none">
+      CAMBIA METODO / ACCOUNT
     </button>
 
     <button id="disconnectBtn" class="btn red" onclick="disconnectGmail()" style="display:none">
@@ -115,9 +147,10 @@ body{
   </div>
 
   <div class="small" style="margin-top:18px">
-    Ogni consulente collega personalmente la propria casella Google una sola volta.
-    Il gestionale non salva la password Gmail e non richiede Password per le app.
-    Il refresh token OAuth viene cifrato AES-256-GCM prima del salvataggio.
+    Il collegamento è associato all'utente del gestionale attualmente autenticato:
+    ogni consulente configura esclusivamente la propria casella. Una volta collegata,
+    la dashboard riconosce automaticamente la connessione e non richiede di associarla a ogni accesso.
+    Le credenziali sensibili vengono cifrate lato server.
   </div>
 
   <div id="securityBox" class="status" style="margin-top:18px;">
@@ -177,14 +210,21 @@ async function refreshStatus(){
 
     if(d.connected){
 
+      const providerLabel =
+        d.provider === "imap_app_password"
+          ? "Password per le app (IMAP)"
+          : "OAuth 2.0";
+
       box.innerHTML =
         `<div class="ok">● Gmail collegata</div>
          <div style="margin-top:6px">${esc(d.email||"")}</div>
          <div class="small" style="margin-top:7px">
+           Metodo: <strong>${esc(providerLabel)}</strong><br>
            Ultimo sync: ${esc(d.lastSyncAt||"Non ancora eseguito")}
            ${d.lastSyncOk === false ? "<br><span class='ko'>Ultimo sync con errore</span>" : ""}
          </div>`;
 
+      document.getElementById("connectionMethods").style.display="none";
       document.getElementById("connectBtn").style.display="none";
       document.getElementById("syncBtn").style.display="inline-block";
       document.getElementById("changeBtn").style.display="inline-block";
@@ -200,6 +240,7 @@ async function refreshStatus(){
            le comunicazioni relative alle tue pratiche.
          </div>`;
 
+      document.getElementById("connectionMethods").style.display="grid";
       document.getElementById("connectBtn").style.display="inline-block";
       document.getElementById("syncBtn").style.display="none";
       document.getElementById("changeBtn").style.display="none";
@@ -258,8 +299,8 @@ function renderSecurityStatus(d){
 
     <div class="small" style="margin-top:9px;line-height:1.8;">
       ${encrypted ? "✅" : "⚠️"}
-      Refresh token:
-      <strong>${encrypted ? "cifrato AES-256-GCM" : "da migrare/cifrare"}</strong>
+      Credenziale:
+      <strong>${encrypted ? "cifrata AES-256-GCM" : "da configurare/cifrare"}</strong>
       <br>
 
       ${readonly ? "✅" : "⚠️"}
@@ -369,40 +410,56 @@ async function loadGmailAudit(){
 }
 
 
-async function changeGmail(){
+function showMethods(){
+  document.getElementById("connectionMethods").style.display="grid";
+  document.getElementById("imapEmail")?.focus();
+}
 
-  if(
-    !confirm(
-      "Vuoi cambiare la casella Gmail collegata? La connessione attuale verrà rimossa e Google ti chiederà di scegliere un nuovo account."
-    )
-  ){
+async function connectImap(){
+  const email =
+    String(document.getElementById("imapEmail")?.value || "").trim();
+
+  const appPassword =
+    String(document.getElementById("imapPassword")?.value || "").trim();
+
+  if(!email || !appPassword){
+    alert("Inserisci email e Password per le app Google.");
     return;
   }
 
-  try{
+  const button =
+    document.getElementById("imapConnectBtn");
 
-    const disconnect =
+  button.disabled=true;
+  button.textContent="VERIFICA COLLEGAMENTO...";
+
+  try{
+    const callable =
       fn.httpsCallable(
-        "scollegaGmail"
+        "collegaGmailConAppPassword"
       );
 
-    await disconnect();
+    await callable({
+      email,
+      appPassword
+    });
 
-    await connectGmail();
-
+    document.getElementById("imapPassword").value="";
+    await refreshStatus();
+    alert("Casella Gmail collegata al tuo profilo.");
   }
   catch(error){
-
     alert(
       error.message
       ||
-      "Errore durante il cambio account Gmail."
+      "Impossibile collegare Gmail con la Password per le app."
     );
-
   }
-
+  finally{
+    button.disabled=false;
+    button.textContent="COLLEGA CON APP PASSWORD";
+  }
 }
-
 
 
 async function connectGmail(){
@@ -465,9 +522,20 @@ async function syncNow(){
 
   try{
 
+    const status =
+      await fn
+        .httpsCallable(
+          "statoCollegamentoGmail"
+        )();
+
+    const syncFunction =
+      status.data?.provider === "imap_app_password"
+        ? "sincronizzaGmailImapPersonale"
+        : "sincronizzaGmailPersonale";
+
     const callable =
       fn.httpsCallable(
-        "sincronizzaGmailPersonale"
+        syncFunction
       );
 
     const result =

@@ -18,7 +18,9 @@
     "openai": "^4.28.0",
     "xlsx": "^0.18.5",
     "nodemailer": "^7.0.6",
-    "googleapis": "^150.0.1"
+    "googleapis": "^150.0.1",
+    "imapflow": "^1.0.195",
+    "mailparser": "^3.7.4"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.4.1"

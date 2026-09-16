@@ -5335,6 +5335,8 @@ Cordiali saluti`
                     `
                         ${escapeHtml(data.email || "")}
                         <br>
+                        Metodo: ${data.provider === "imap_app_password" ? "Password per le app (IMAP)" : "OAuth 2.0"}
+                        <br>
                         Ultimo sync:
                         ${escapeHtml(data.lastSyncAt || "non ancora eseguito")}
                         ${
@@ -5380,15 +5382,6 @@ Cordiali saluti`
                         "none";
                 }
 
-                /*
-                 * Avviso discreto: una sola volta per sessione browser.
-                 * Il pulsante Gmail resta comunque sempre disponibile
-                 * sopra la timeline della pratica.
-                 */
-                setTimeout(
-                    mostraAvvisoGmailNonCollegata,
-                    350
-                );
 
             }
 
@@ -5428,6 +5421,24 @@ Cordiali saluti`
 
         try {
 
+            const statusCallable =
+                firebase
+                    .app()
+                    .functions(
+                        "us-central1"
+                    )
+                    .httpsCallable(
+                        "statoCollegamentoGmail"
+                    );
+
+            const statusResult =
+                await statusCallable();
+
+            const syncFunction =
+                statusResult.data?.provider === "imap_app_password"
+                    ? "sincronizzaGmailImapPersonale"
+                    : "sincronizzaGmailPersonale";
+
             const callable =
                 firebase
                     .app()
@@ -5435,7 +5446,7 @@ Cordiali saluti`
                         "us-central1"
                     )
                     .httpsCallable(
-                        "sincronizzaGmailPersonale"
+                        syncFunction
                     );
 
             const result =
