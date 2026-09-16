@@ -38,6 +38,8 @@ const {
   detectBank,
   findPracticeMatch,
   rememberPracticeNumber,
+  extractPracticeNumbers,
+  normalizePracticeNumber
 } = require("./mail-matcher");
 
 
@@ -884,6 +886,107 @@ function mailReferenceIds(mail) {
   )];
 }
 
+
+async function findPracticeByKnownNumber({ mail, consultantUid }) {
+  const text = [
+    mail.subject || "",
+    mail.text || "",
+  ].join("\n");
+
+  const incomingNumbers =
+    extractPracticeNumbers(text)
+      .map(normalizePracticeNumber)
+      .filter(Boolean);
+
+  if (!incomingNumbers.length) return null;
+
+  const practices =
+    await db.collection("pratiche_mutuo").get();
+
+  for (const practiceDoc of practices.docs) {
+    const data = practiceDoc.data() || {};
+    const owner = String(
+      data.consulente_uid
+      || data.workspace_uid
+      || data.owner_uid
+      || data.assegnato_a_uid
+      || ""
+    ).trim();
+
+    if (consultantUid && owner && owner !== consultantUid) continue;
+
+    const known = new Set(
+      [
+        ...(Array.isArray(data.mail_matching?.numeri_pratica)
+          ? data.mail_matching.numeri_pratica
+          : []),
+        ...(Array.isArray(data.numeri_pratica_banca)
+          ? data.numeri_pratica_banca
+          : []),
+        data.numero_pratica_banca,
+        data.numeroPraticaBanca,
+        data.mail_matching?.numero_pratica,
+      ]
+        .map(normalizePracticeNumber)
+        .filter(Boolean)
+    );
+
+    /*
+     * Se il numero non è ancora stato memorizzato nel fascicolo,
+     * impariamo anche dalle email già correttamente associate.
+     */
+    const timeline =
+      await practiceDoc.ref
+        .collection("email_timeline")
+        .limit(150)
+        .get();
+
+    for (const emailDoc of timeline.docs) {
+      const ed = emailDoc.data() || {};
+      const values = [
+        ed.numeroPraticaRilevato,
+        ...extractPracticeNumbers(
+          `${ed.oggetto || ""}\n${ed.testo || ""}`
+        ),
+      ];
+
+      for (const value of values) {
+        const n = normalizePracticeNumber(value);
+        if (n) known.add(n);
+      }
+    }
+
+    const hit =
+      incomingNumbers.find(n => known.has(n));
+
+    if (hit) {
+      await rememberPracticeNumber({
+        db,
+        practiceRef: practiceDoc.ref,
+        number: hit,
+        bankDetection: null,
+      });
+
+      return {
+        matched: true,
+        best: {
+          id: practiceDoc.id,
+          ref: practiceDoc.ref,
+          data,
+          score: 2000,
+          method: "known_practice_number",
+          practiceNumber: hit,
+        },
+        candidates: [],
+        extractedNumbers: incomingNumbers,
+      };
+    }
+  }
+
+  return null;
+}
+
+
 async function findPracticeByMailThread({ mail, consultantUid }) {
   const refs = mailReferenceIds(mail);
   if (!refs.length) return null;
@@ -1085,13 +1188,29 @@ async function syncFolder({
           mail
         );
 
-      const threadMatch =
-        await findPracticeByMailThread({
+      /*
+       * Priorità:
+       * 1) numero pratica già noto / imparato dalle email associate;
+       * 2) thread In-Reply-To / References;
+       * 3) matcher tradizionale.
+       */
+      const numberMatch =
+        await findPracticeByKnownNumber({
           mail,
           consultantUid,
         });
 
+      const threadMatch =
+        numberMatch
+          ? null
+          : await findPracticeByMailThread({
+              mail,
+              consultantUid,
+            });
+
       const match =
+        numberMatch
+        ||
         threadMatch
         ||
         await findPracticeMatch({
@@ -2029,7 +2148,93 @@ const leggiEmailTimeline =
   );
 
 
+
+const gestisciNumeroPraticaBanca =
+  onCall(
+    { region: "us-central1" },
+    async request => {
+      const uid = request.auth?.uid;
+      if (!uid) {
+        throw new HttpsError("unauthenticated", "Accesso richiesto.");
+      }
+
+      const practiceId =
+        String(request.data?.practiceId || "").trim();
+      const action =
+        String(request.data?.action || "add").trim().toLowerCase();
+      const number =
+        normalizePracticeNumber(request.data?.number || "");
+
+      if (!practiceId || !number) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Pratica e numero pratica sono obbligatori."
+        );
+      }
+
+      const ref =
+        db.collection("pratiche_mutuo").doc(practiceId);
+      const snap = await ref.get();
+
+      if (!snap.exists) {
+        throw new HttpsError("not-found", "Pratica non trovata.");
+      }
+
+      if (!(await canReadTimelinePractice(uid, snap.data() || {}))) {
+        throw new HttpsError(
+          "permission-denied",
+          "Non puoi modificare questo fascicolo."
+        );
+      }
+
+      const data = snap.data() || {};
+      const current =
+        Array.isArray(data.mail_matching?.numeri_pratica)
+          ? data.mail_matching.numeri_pratica
+              .map(normalizePracticeNumber)
+              .filter(Boolean)
+          : [];
+
+      let numbers =
+        [...new Set(current)];
+
+      if (action === "remove") {
+        numbers =
+          numbers.filter(x => x !== number);
+      }
+      else {
+        if (!numbers.includes(number)) {
+          numbers.push(number);
+        }
+      }
+
+      await ref.set(
+        {
+          mail_matching: {
+            ...(data.mail_matching || {}),
+            numeri_pratica: numbers,
+            numero_pratica:
+              numbers.length
+                ? numbers[numbers.length - 1]
+                : null,
+            aggiornatoIl:
+              admin.firestore.FieldValue.serverTimestamp(),
+          },
+          numeri_pratica_banca: numbers,
+        },
+        { merge: true }
+      );
+
+      return {
+        ok: true,
+        numbers,
+      };
+    }
+  );
+
+
 module.exports = {
+  gestisciNumeroPraticaBanca,
   leggiEmailTimeline,
   collegaGmailConAppPassword,
   sincronizzaGmailImapPersonale,

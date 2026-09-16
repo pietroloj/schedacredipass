@@ -1995,6 +1995,32 @@ document.addEventListener(
     </div>
 </div>
 
+
+<div class="gmail-integration-card gmail-integration-card-timeline" id="practiceBankNumbersCard" style="margin-bottom:14px;">
+  <div class="gmail-integration-head">
+    <div>
+      <div class="gmail-integration-title">
+        <i class="fas fa-hashtag"></i>
+        Numeri pratica banca
+      </div>
+      <div class="gmail-sync-meta">
+        Inserisci manualmente il numero pratica assegnato dalla banca. I numeri rilevati nelle email associate vengono appresi automaticamente.
+      </div>
+    </div>
+  </div>
+
+  <div id="practiceBankNumbersList" style="display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 12px;"></div>
+
+  <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+    <input id="practiceBankNumberInput"
+      type="text"
+      placeholder="Es. 18969473"
+      style="flex:1;min-width:190px;padding:9px 10px;border:1px solid #dfe5ec;border-radius:7px;font-family:Poppins,sans-serif;font-size:10px;">
+    <button type="button" class="gmail-btn primary" onclick="aggiungiNumeroPraticaBanca()">+ AGGIUNGI NUMERO</button>
+  </div>
+  <div id="practiceBankNumberMessage" class="gmail-sync-meta" style="margin-top:7px;"></div>
+</div>
+
 <div class="gmail-integration-card gmail-integration-card-timeline" id="gmailIntegrationCard">
                 <div class="gmail-integration-head">
                     <div>
@@ -5075,6 +5101,99 @@ Cordiali saluti`
     }
 
 
+
+    function normalizzaNumeroPraticaUI(value) {
+        return String(value || "")
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, "")
+            .replace(/[.,;:]+$/g, "");
+    }
+
+    async function caricaNumeriPraticaBanca() {
+        const box = document.getElementById("practiceBankNumbersList");
+        if (!box || !idCliente) return;
+
+        try {
+            const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
+            const d = snap.exists ? (snap.data() || {}) : {};
+            const values = [
+                ...(Array.isArray(d.mail_matching?.numeri_pratica) ? d.mail_matching.numeri_pratica : []),
+                ...(Array.isArray(d.numeri_pratica_banca) ? d.numeri_pratica_banca : []),
+                d.numero_pratica_banca,
+                d.numeroPraticaBanca
+            ]
+              .map(normalizzaNumeroPraticaUI)
+              .filter(Boolean);
+
+            const numbers = [...new Set(values)];
+
+            box.innerHTML = numbers.length
+              ? numbers.map(n => `
+                  <span style="display:inline-flex;align-items:center;gap:7px;background:#eef4fb;border:1px solid #cdd9e8;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:800;color:#002d72;">
+                    ${escapeHtml(n)}
+                    <button type="button"
+                      title="Rimuovi"
+                      onclick="rimuoviNumeroPraticaBanca('${encodeURIComponent(n)}')"
+                      style="border:0;background:transparent;color:#b42318;font-weight:900;cursor:pointer;padding:0;">×</button>
+                  </span>
+                `).join("")
+              : `<span class="gmail-sync-meta">Nessun numero pratica banca ancora associato.</span>`;
+        } catch (error) {
+            console.error("Errore caricamento numeri pratica banca:", error);
+            box.innerHTML = `<span style="color:#b42318;font-size:10px;">Impossibile caricare i numeri pratica.</span>`;
+        }
+    }
+
+    async function aggiornaNumeroPraticaBanca(action, number) {
+        const callable = firebase.app()
+            .functions("us-central1")
+            .httpsCallable("gestisciNumeroPraticaBanca");
+
+        const result = await callable({
+            practiceId: idCliente,
+            action,
+            number
+        });
+
+        await caricaNumeriPraticaBanca();
+        return result.data || {};
+    }
+
+    async function aggiungiNumeroPraticaBanca() {
+        const input = document.getElementById("practiceBankNumberInput");
+        const msg = document.getElementById("practiceBankNumberMessage");
+        const number = normalizzaNumeroPraticaUI(input?.value);
+
+        if (!number) {
+            if (msg) msg.textContent = "Inserisci un numero pratica.";
+            return;
+        }
+
+        try {
+            if (msg) msg.textContent = "Salvataggio...";
+            await aggiornaNumeroPraticaBanca("add", number);
+            if (input) input.value = "";
+            if (msg) msg.textContent = `Numero ${number} associato al fascicolo.`;
+        } catch (error) {
+            console.error(error);
+            if (msg) msg.textContent = error?.message || "Errore durante il salvataggio.";
+        }
+    }
+
+    async function rimuoviNumeroPraticaBanca(encodedNumber) {
+        const number = decodeURIComponent(encodedNumber || "");
+        if (!number) return;
+        if (!confirm(`Rimuovere il numero pratica ${number} da questo fascicolo?`)) return;
+
+        try {
+            await aggiornaNumeroPraticaBanca("remove", number);
+        } catch (error) {
+            alert(error?.message || "Errore durante la rimozione.");
+        }
+    }
+
+
     function apriPaginaCollegamentoGmail() {
         window.location.href =
             "/main/gmail-connection.html";
@@ -5311,6 +5430,7 @@ Cordiali saluti`
 
             if (user) {
                 aggiornaStatoGmailDashboard();
+                caricaNumeriPraticaBanca();
                 aggiornaContatoreNotifiche();
                 aggiornaProvenienzaPraticaDashboard();
                 caricaColleghiDashboard();

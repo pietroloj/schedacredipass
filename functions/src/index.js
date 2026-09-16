@@ -3377,6 +3377,7 @@ const {
   sincronizzaGmailImapPersonale,
   sincronizzaGmailImapTutti,
   leggiEmailTimeline,
+  gestisciNumeroPraticaBanca,
 } = require("./mail-engine-imap-personal");
 
 
@@ -3392,6 +3393,9 @@ exports.sincronizzaGmailImapTutti =
 
 exports.leggiEmailTimeline =
   leggiEmailTimeline;
+
+exports.gestisciNumeroPraticaBanca =
+  gestisciNumeroPraticaBanca;
 
 
 /*
