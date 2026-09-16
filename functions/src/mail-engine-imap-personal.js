@@ -1095,6 +1095,34 @@ async function syncFolder({
             consultantUid,
         });
 
+      const direction =
+        emailDirection(
+          mail,
+          mailboxUser,
+          folderName
+        );
+
+      messageDiagnostics.push({
+        uid: msg.uid,
+        direction,
+        subject: String(mail.subject || "").slice(0, 300),
+        from: safeArrayAddress(mail.from).slice(0, 5),
+        inReplyTo: mail.inReplyTo || null,
+        references: mailReferenceIds(mail).slice(0, 10),
+        extractedNumbers: match?.extractedNumbers || [],
+        matched: !!match?.matched,
+        practiceId: match?.best?.id || null,
+        method: match?.best?.method || null,
+        score: Number(match?.best?.score || 0),
+        reason: match?.matched
+          ? "associata"
+          : (
+              match?.best
+                ? "candidato sotto soglia"
+                : "nessuna pratica candidata"
+            ),
+      });
+
       await proposeUnknownDomain({
         mail,
         bankDetection,
@@ -1185,7 +1213,8 @@ async function syncFolder({
       matched,
       lastUid:
         maxUid,
-    };
+    diagnostics: messageDiagnostics.slice(-50),
+  };
   }
   finally {
     lock.release();
@@ -1226,39 +1255,6 @@ async function requireActiveConsultant(uid) {
   }
 
   return snap.data() || {};
-}
-
-
-
-async function syncFolderSafe(args) {
-  try {
-    const result = await syncFolder(args);
-    return {
-      ...result,
-      ok: true,
-      error: null,
-    };
-  }
-  catch(error) {
-    console.error(
-      "Errore sincronizzazione cartella IMAP:",
-      args.folderName,
-      error
-    );
-
-    return {
-      folderName: args.folderName,
-      ok: false,
-      skipped: false,
-      processed: 0,
-      matched: 0,
-      error: String(
-        error?.stack
-        || error?.message
-        || error
-      ).slice(0, 4000),
-    };
-  }
 }
 
 
@@ -1332,7 +1328,7 @@ async function runMailSyncForConsultant(consultantUid) {
     const results = [];
 
     results.push(
-      await syncFolderSafe({
+      await syncFolder({
         client,
         folderName: "INBOX",
         mailboxUser: user,
@@ -1358,7 +1354,7 @@ async function runMailSyncForConsultant(consultantUid) {
 
     if (sent?.path && sent.path !== "INBOX") {
       results.push(
-        await syncFolderSafe({
+        await syncFolder({
           client,
           folderName: sent.path,
           mailboxUser: user,
@@ -1381,79 +1377,25 @@ async function runMailSyncForConsultant(consultantUid) {
         0
       );
 
-    const failedFolders =
-      results.filter(
-        x => x.ok === false
-      );
-
-    const diagnostics = {
-      executedAt:
-        new Date().toISOString(),
-      mailbox:
-        user,
-      folders:
-        results.map(x => ({
-          folderName:
-            x.folderName || "",
-          ok:
-            x.ok !== false,
-          skipped:
-            x.skipped === true,
-          processed:
-            Number(x.processed || 0),
-          matched:
-            Number(x.matched || 0),
-          lastUid:
-            Number(x.lastUid || 0),
-          error:
-            x.error || null,
-        })),
-    };
-
     await connectionRef.set(
       {
         lastSyncAt:
           admin.firestore.FieldValue.serverTimestamp(),
-        lastSyncOk:
-          failedFolders.length === 0,
-        lastError:
-          failedFolders.length
-            ? failedFolders
-                .map(
-                  x =>
-                    `${x.folderName}: ${x.error || "errore sconosciuto"}`
-                )
-                .join("\n")
-                .slice(0, 4000)
-            : null,
-        lastDiagnostics:
-          diagnostics,
-        reconnectRequired:
-          false,
+        lastSyncOk: true,
+        lastError: null,
+        oauthLastError: null,
+        reconnectRequired: false,
       },
       { merge: true }
     );
 
     return {
-      ok:
-        failedFolders.length === 0,
-      provider:
-        "imap_app_password",
-      email:
-        user,
+      ok: true,
+      provider: "imap_app_password",
+      email: user,
       processed,
       matched,
-      results:
-        diagnostics.folders,
-      errors:
-        failedFolders.map(
-          x => ({
-            folderName:
-              x.folderName,
-            error:
-              x.error || "errore sconosciuto",
-          })
-        ),
+      results,
     };
   }
   catch(error) {
