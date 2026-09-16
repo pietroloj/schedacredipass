@@ -5154,7 +5154,12 @@ Cordiali saluti`
                             data.lastSyncOk === false
                                 ? `<br><span style="color:#b42318;font-weight:800;">
                                     Ultimo sync con errore
-                                   </span>`
+                                   </span>
+                                   ${
+                                     data.lastError
+                                       ? `<br><span style="color:#b42318;font-size:12px;line-height:1.35;display:inline-block;margin-top:5px;max-width:760px;white-space:pre-wrap;">${escapeHtml(data.lastError)}</span>`
+                                       : ""
+                                   }`
                                 : ""
                         }
                     `;
@@ -5268,8 +5273,18 @@ Cordiali saluti`
                 ||
                 {};
 
+            const folderReport =
+                Array.isArray(data.results)
+                    ? data.results
+                        .map(
+                            x =>
+                                `${x.folderName}: ${x.ok === false ? "ERRORE" : "OK"} — analizzate ${x.processed || 0}, associate ${x.matched || 0}${x.error ? `\n${x.error}` : ""}`
+                        )
+                        .join("\n\n")
+                    : "";
+
             alert(
-                `Sincronizzazione Gmail completata.\nEmail analizzate: ${data.processed || 0}\nAssociate: ${data.matched || 0}`
+                `${data.ok === false ? "Sincronizzazione completata con errori." : "Sincronizzazione Gmail completata."}\n\nEmail analizzate: ${data.processed || 0}\nAssociate: ${data.matched || 0}${folderReport ? `\n\n${folderReport}` : ""}`
             );
 
             await aggiornaStatoGmailDashboard();

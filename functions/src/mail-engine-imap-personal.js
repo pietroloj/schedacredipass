@@ -1229,6 +1229,39 @@ async function requireActiveConsultant(uid) {
 }
 
 
+
+async function syncFolderSafe(args) {
+  try {
+    const result = await syncFolder(args);
+    return {
+      ...result,
+      ok: true,
+      error: null,
+    };
+  }
+  catch(error) {
+    console.error(
+      "Errore sincronizzazione cartella IMAP:",
+      args.folderName,
+      error
+    );
+
+    return {
+      folderName: args.folderName,
+      ok: false,
+      skipped: false,
+      processed: 0,
+      matched: 0,
+      error: String(
+        error?.stack
+        || error?.message
+        || error
+      ).slice(0, 4000),
+    };
+  }
+}
+
+
 async function runMailSyncForConsultant(consultantUid) {
   await ensureBankSeed();
 
@@ -1299,7 +1332,7 @@ async function runMailSyncForConsultant(consultantUid) {
     const results = [];
 
     results.push(
-      await syncFolder({
+      await syncFolderSafe({
         client,
         folderName: "INBOX",
         mailboxUser: user,
@@ -1325,7 +1358,7 @@ async function runMailSyncForConsultant(consultantUid) {
 
     if (sent?.path && sent.path !== "INBOX") {
       results.push(
-        await syncFolder({
+        await syncFolderSafe({
           client,
           folderName: sent.path,
           mailboxUser: user,
@@ -1348,24 +1381,79 @@ async function runMailSyncForConsultant(consultantUid) {
         0
       );
 
+    const failedFolders =
+      results.filter(
+        x => x.ok === false
+      );
+
+    const diagnostics = {
+      executedAt:
+        new Date().toISOString(),
+      mailbox:
+        user,
+      folders:
+        results.map(x => ({
+          folderName:
+            x.folderName || "",
+          ok:
+            x.ok !== false,
+          skipped:
+            x.skipped === true,
+          processed:
+            Number(x.processed || 0),
+          matched:
+            Number(x.matched || 0),
+          lastUid:
+            Number(x.lastUid || 0),
+          error:
+            x.error || null,
+        })),
+    };
+
     await connectionRef.set(
       {
         lastSyncAt:
           admin.firestore.FieldValue.serverTimestamp(),
-        lastSyncOk: true,
-        lastError: null,
-        reconnectRequired: false,
+        lastSyncOk:
+          failedFolders.length === 0,
+        lastError:
+          failedFolders.length
+            ? failedFolders
+                .map(
+                  x =>
+                    `${x.folderName}: ${x.error || "errore sconosciuto"}`
+                )
+                .join("\n")
+                .slice(0, 4000)
+            : null,
+        lastDiagnostics:
+          diagnostics,
+        reconnectRequired:
+          false,
       },
       { merge: true }
     );
 
     return {
-      ok: true,
-      provider: "imap_app_password",
-      email: user,
+      ok:
+        failedFolders.length === 0,
+      provider:
+        "imap_app_password",
+      email:
+        user,
       processed,
       matched,
-      results,
+      results:
+        diagnostics.folders,
+      errors:
+        failedFolders.map(
+          x => ({
+            folderName:
+              x.folderName,
+            error:
+              x.error || "errore sconosciuto",
+          })
+        ),
     };
   }
   catch(error) {
