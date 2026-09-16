@@ -27,6 +27,10 @@ const {
 } = require("./mail-bank-domains.seed");
 
 const {
+  analyzeEmailWithAI,
+} = require("./mail-intelligence");
+
+const {
   GMAIL_TOKEN_ENCRYPTION_KEY,
   encryptRefreshToken,
   decryptRefreshToken,
@@ -144,25 +148,149 @@ function htmlToPlain(html = "") {
 }
 
 
-function cleanBody(mail) {
-  const text =
-    String(
-      mail.text
-      ||
-      ""
-    )
+function normalizeMailText(value = "") {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
 
-  if (text) {
-    return text.slice(0, 50000);
+
+function splitCurrentMessage(value = "") {
+  const full =
+    normalizeMailText(value);
+
+  if (!full) {
+    return {
+      current: "",
+      quoted: "",
+    };
   }
 
-  return htmlToPlain(
-    mail.html
-    ||
-    ""
-  )
-  .slice(0, 50000);
+  /*
+   * Separatori tipici prodotti da Gmail, Apple Mail e Outlook
+   * quando una risposta contiene il thread precedente.
+   */
+  const separators = [
+    /^\s*>+\s/m,
+    /^\s*Il giorno .+ ha scritto:\s*$/mi,
+    /^\s*On .+ wrote:\s*$/mi,
+    /^\s*Da:\s.+$/mi,
+    /^\s*From:\s.+$/mi,
+    /^\s*-{2,}\s*Original Message\s*-{2,}\s*$/mi,
+    /^\s*-{2,}\s*Messaggio originale\s*-{2,}\s*$/mi,
+  ];
+
+  let cut =
+    full.length;
+
+  for (const rx of separators) {
+    const match =
+      rx.exec(full);
+
+    if (
+      match
+      &&
+      match.index >= 0
+      &&
+      match.index < cut
+    ) {
+      cut = match.index;
+    }
+  }
+
+  let current =
+    full.slice(0, cut).trim();
+
+  const quoted =
+    cut < full.length
+      ? full.slice(cut).trim()
+      : "";
+
+  /*
+   * Compattiamo la firma aziendale nel messaggio corrente.
+   * Manteniamo il saluto/nome, ma togliamo recapiti, link,
+   * rating e disclaimer che rendono il testo illeggibile.
+   */
+  const signatureStops = [
+    /^\s*Credipass S\.?r\.?l\.?\s*$/mi,
+    /^\s*Sede leg:/mi,
+    /^\s*I nostri clienti dicono/mi,
+    /^\s*L['’]Autorità Garante/mi,
+    /^\s*This message is for the designated recipient/mi,
+    /^\s*ATTENTION:/mi,
+  ];
+
+  let signatureCut =
+    current.length;
+
+  for (const rx of signatureStops) {
+    const match =
+      rx.exec(current);
+
+    if (
+      match
+      &&
+      match.index >= 0
+      &&
+      match.index < signatureCut
+    ) {
+      signatureCut = match.index;
+    }
+  }
+
+  current =
+    current
+      .slice(0, signatureCut)
+      .replace(/<mailto:[^>]+>/gi, "")
+      .replace(/<tel:[^>]+>/gi, "")
+      .replace(/<https?:\/\/[^>]+>/gi, "")
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/\n[ \t]*￼[ \t]*/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+  return {
+    current,
+    quoted,
+  };
+}
+
+
+function cleanBodyParts(mail) {
+  const rawText =
+    String(mail.text || "").trim();
+
+  const raw =
+    rawText
+      ||
+      htmlToPlain(
+        mail.html || ""
+      );
+
+  const split =
+    splitCurrentMessage(raw);
+
+  return {
+    current:
+      (split.current || raw)
+        .slice(0, 50000),
+
+    quoted:
+      split.quoted
+        .slice(0, 50000),
+
+    full:
+      normalizeMailText(raw)
+        .slice(0, 100000),
+  };
+}
+
+
+function cleanBody(mail) {
+  return cleanBodyParts(mail).current;
 }
 
 
@@ -650,10 +778,13 @@ async function saveMatchedMail({
       mail,
     });
 
-  const bodyText =
-    cleanBody(
+  const bodyParts =
+    cleanBodyParts(
       mail
     );
+
+  const bodyText =
+    bodyParts.current;
 
   await emailRef.set({
     messageId:
@@ -705,6 +836,12 @@ async function saveMatchedMail({
 
     testo:
       bodyText,
+
+    testoCompleto:
+      bodyParts.full,
+
+    conversazionePrecedente:
+      bodyParts.quoted,
 
     allegati:
       attachments,
@@ -957,6 +1094,11 @@ async function syncFolder({
     let matched =
       0;
 
+    const fetchOptions =
+      lastUid > 0
+        ? { uid: true }
+        : {};
+
     for await (
       const msg of client.fetch(
         range,
@@ -969,7 +1111,8 @@ async function syncFolder({
             true,
           internalDate:
             true,
-        }
+        },
+        fetchOptions
       )
     ) {
       if (!msg?.source) {
@@ -1072,6 +1215,53 @@ async function syncFolder({
 
       if (saved) {
         matched++;
+
+        /*
+         * Le ricevute vengono analizzate sul SOLO messaggio corrente.
+         * Il thread precedente resta disponibile nella mail-view ma non
+         * viene scambiato per una nuova richiesta documentale.
+         */
+        const direction =
+          emailDirection(
+            mail,
+            mailboxUser,
+            folderName
+          );
+
+        if (direction === "ricevuta") {
+          const emailDocId =
+            messageKey(
+              folderName,
+              msg.uid,
+              mail.messageId
+            );
+
+          try {
+            await analyzeEmailWithAI({
+              practiceId:
+                match.best.id,
+              emailId:
+                emailDocId,
+              uid:
+                consultantUid,
+              bank:
+                bankDetection?.bank?.bancaNome || null,
+              subject:
+                mail.subject || "",
+              body:
+                cleanBody(mail),
+              from:
+                safeArrayAddress(mail.from),
+            });
+          }
+          catch(error) {
+            console.error(
+              "Analisi AI email ricevuta non riuscita:",
+              emailDocId,
+              error?.message || error
+            );
+          }
+        }
       }
     }
 

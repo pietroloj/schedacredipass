@@ -275,6 +275,13 @@ body{
       </div>
 
       <div id="mailBody" class="mail-body"></div>
+        <div id="previousConversationWrap" style="display:none;margin-top:14px">
+          <button class="btn soft" type="button" onclick="togglePreviousConversation()">
+            Mostra / nascondi conversazione precedente
+          </button>
+          <div id="previousConversation" class="mail-body" style="display:none;margin-top:10px;background:#f7f9fb;border-left:4px solid #cbd5df"></div>
+        </div>
+
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -626,6 +633,22 @@ function renderPractice(){
   }
 }
 
+
+function togglePreviousConversation(){
+  const box =
+    document.getElementById(
+      "previousConversation"
+    );
+
+  if(!box) return;
+
+  box.style.display =
+    box.style.display === "none"
+      ? "block"
+      : "none";
+}
+
+
 function renderEmail(){
   document.getElementById("mailSubject").textContent =
     currentEmail?.oggetto || "(senza oggetto)";
@@ -641,6 +664,29 @@ function renderEmail(){
 
   document.getElementById("mailBody").textContent =
     currentEmail?.testo || "(testo non disponibile)";
+
+  const previous =
+    String(
+      currentEmail?.conversazionePrecedente || ""
+    ).trim();
+
+  const previousWrap =
+    document.getElementById(
+      "previousConversationWrap"
+    );
+
+  const previousBox =
+    document.getElementById(
+      "previousConversation"
+    );
+
+  if(previous){
+    previousWrap.style.display = "block";
+    previousBox.textContent = previous;
+  }else{
+    previousWrap.style.display = "none";
+    previousBox.textContent = "";
+  }
 
   document.getElementById("autoBadge").textContent =
     currentEmail?.autoAssociata === false
