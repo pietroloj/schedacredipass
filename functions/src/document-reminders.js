@@ -200,6 +200,14 @@ function documentLabel(code) {
       "Ricevuta dichiarazione R1",
     ricevute2:
       "Ricevuta dichiarazione R2",
+    iva1:
+      "Dichiarazioni IVA R1",
+    iva2:
+      "Dichiarazioni IVA R2",
+    redditi_agrari1:
+      "Documentazione redditi agrari e dominicali R1",
+    redditi_agrari2:
+      "Documentazione redditi agrari e dominicali R2",
     f241:
       "F24 R1",
     f242:

@@ -10964,6 +10964,10 @@ function segnalatoreDocumentLabel(codice) {
         unici2: "Ultimo Modello Redditi R2",
         ricevute1: "Ricevuta presentazione dichiarazione R1",
         ricevute2: "Ricevuta presentazione dichiarazione R2",
+        iva1: "Dichiarazioni IVA R1",
+        iva2: "Dichiarazioni IVA R2",
+        redditi_agrari1: "Documentazione redditi agrari e dominicali R1",
+        redditi_agrari2: "Documentazione redditi agrari e dominicali R2",
         f241: "F24 R1",
         f242: "F24 R2",
         visura1: "Visura Camerale R1",
@@ -12249,6 +12253,23 @@ function getUploadDocumentCodes() {
             codes.add(`ricevute${n}`);
             codes.add(`f24${n}`);
             codes.add(`visura${n}`);
+            codes.add(`ec${n}`);
+            codes.add(`mov${n}`);
+
+        }
+
+        if (
+            applicant.lavoro === 'AGRARIO'
+            ||
+            isAgrario(applicant.lavoro)
+        ) {
+
+            codes.add(`unici${n}`);
+            codes.add(`ricevute${n}`);
+            codes.add(`iva${n}`);
+            codes.add(`f24${n}`);
+            codes.add(`visura${n}`);
+            codes.add(`redditi_agrari${n}`);
             codes.add(`ec${n}`);
             codes.add(`mov${n}`);
 

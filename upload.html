@@ -2356,8 +2356,11 @@ const documenti = [
             { code: "residenza1", title: "Certificato Cumulativo", formato: "A4", ai: "Certificato cumulativo di residenza e stato di famiglia", info: "Puoi scaricarlo gratis dal sito ANPR accedendo con SPID. Comprende Stato di Famiglia e Residenza." },
             { code: "bustepaga1", title: "Ultime 2 Buste Paga", formato: "A4", ai: "Busta paga" },
             { code: "cud1", title: "Ultimo CUD / CU disponibile", formato: "A4", ai: "Certificazione Unica o CUD" },
-            { code: "unici1", title: "Ultimi Modelli Unici / Redditi", desc: "Con ricevute telematiche", formato: "A4", ai: "Modello Redditi o Modello Unico con ricevuta telematica" },
-            { code: "visura1", title: "Visura Camerale", formato: "A4", ai: "Visura camerale" },
+            { code: "unici1", title: "Ultimi 2 Modelli Redditi / Unici", desc: "Completi", formato: "A4", ai: "Modello Redditi o Modello Unico" },
+            { code: "ricevute1", title: "Ricevute Telematiche Dichiarazioni", formato: "A4", ai: "Ricevuta telematica presentazione dichiarazione redditi" },
+            { code: "iva1", title: "Ultime 2 Dichiarazioni IVA", desc: "Se presentate", formato: "A4", ai: "Dichiarazione IVA" },
+            { code: "redditi_agrari1", title: "Documentazione Redditi Agrari e Dominicali", desc: "Documenti utili alla ricostruzione dei redditi dichiarati", formato: "A4", ai: "Documentazione redditi agrari e dominicali" },
+            { code: "visura1", title: "Visura Camerale / Posizione Impresa", formato: "A4", ai: "Visura camerale o posizione impresa agricola" },
             { code: "f241", title: "Ultimi F24 Pagati", formato: "A4", ai: "Modello F24 pagato" },
             { code: "ec1", title: "Estratto Conto Trimestrale", desc: "Documento in PDF, tutti i conti personali/aziendali", formato: "A4", ai: "Estratto conto trimestrale", info: "Scarica il PDF ufficiale dall'Home Banking per l'ultimo trimestre chiuso. Devono essere visibili saldo iniziale e saldo finale." },
             { code: "mov1", title: "Lista Movimenti Aggiornata", desc: "Dal 1 gennaio ad oggi", formato: "A4", ai: "Lista movimenti conto corrente aggiornata", info: "Scarica la lista movimenti dell'anno in corso. Deve mostrare chiaramente il saldo disponibile attuale." }
@@ -2372,8 +2375,11 @@ const documenti = [
             { code: "ts2", title: "Tessera Sanitaria / C.Fiscale", formato: "ID", ai: "Tessera sanitaria o codice fiscale italiano" },
             { code: "bustepaga2", title: "Ultime 2 Buste Paga", formato: "A4", ai: "Busta paga" },
             { code: "cud2", title: "Ultimo CUD / CU", formato: "A4", ai: "Certificazione Unica o CUD" },
-            { code: "unici2", title: "Ultimi Modelli Unici / Redditi", formato: "A4", ai: "Modello Redditi o Modello Unico con ricevuta telematica" },
-            { code: "visura2", title: "Visura Camerale", formato: "A4", ai: "Visura camerale" },
+            { code: "unici2", title: "Ultimi 2 Modelli Redditi / Unici", formato: "A4", ai: "Modello Redditi o Modello Unico" },
+            { code: "ricevute2", title: "Ricevute Telematiche Dichiarazioni", formato: "A4", ai: "Ricevuta telematica presentazione dichiarazione redditi" },
+            { code: "iva2", title: "Ultime 2 Dichiarazioni IVA", desc: "Se presentate", formato: "A4", ai: "Dichiarazione IVA" },
+            { code: "redditi_agrari2", title: "Documentazione Redditi Agrari e Dominicali", formato: "A4", ai: "Documentazione redditi agrari e dominicali" },
+            { code: "visura2", title: "Visura Camerale / Posizione Impresa", formato: "A4", ai: "Visura camerale o posizione impresa agricola" },
             { code: "f242", title: "Ultimi F24 Pagati", formato: "A4", ai: "Modello F24 pagato" },
             { code: "ec2", title: "Estratto Conto Trimestrale", formato: "A4", ai: "Estratto conto trimestrale", info: "Devono essere visibili saldo iniziale e finale dei conti personali ed eventuali conti aziendali/cointestati." },
             { code: "mov2", title: "Lista Movimenti Aggiornata", formato: "A4", ai: "Lista movimenti conto corrente aggiornata", info: "Lista movimenti dal 1 gennaio ad oggi. Saldo disponibile in evidenza." }
@@ -2385,12 +2391,23 @@ const documenti = [
         container: "docs_comuni",
         docs: [
             { code: "matrimonio", title: "Atto di Matrimonio", formato: "A4", ai: "Atto di matrimonio" },
+            { code: "separazione", title: "Documentazione Separazione", formato: "A4", ai: "Omologa o provvedimento di separazione" },
+            { code: "divorzio", title: "Sentenza di Divorzio", formato: "A4", ai: "Sentenza di divorzio" },
+            { code: "mantenimento", title: "Documentazione Mantenimento", formato: "A4", ai: "Documentazione assegno di mantenimento" },
+            { code: "locazioni", title: "Contratti di Locazione Registrati", formato: "A4", ai: "Contratto di locazione registrato" },
+            { code: "redditi_locazione", title: "Redditi da Locazione", formato: "A4", ai: "Dichiarazione redditi con redditi da locazione" },
+            { code: "accrediti_locazione", title: "Accrediti Canoni di Locazione", formato: "A4", ai: "Evidenza accrediti canoni di locazione" },
             { code: "atto", title: "Atto di Provenienza Immobile", formato: "A4", ai: "Atto di provenienza immobile" },
-            { code: "planimetria", title: "Planimetria e Visura Catastale", formato: "A4", ai: "Planimetria e visura catastale" },
+            { code: "planimetria", title: "Planimetria Catastale", formato: "A4", ai: "Planimetria catastale" },
+            { code: "visura_catastale", title: "Visura Catastale Aggiornata", formato: "A4", ai: "Visura catastale" },
+            { code: "titoli_edilizi", title: "Titoli Edilizi Disponibili", formato: "A4", ai: "Titoli edilizi immobile" },
+            { code: "agibilita", title: "Agibilità", desc: "Se disponibile", formato: "A4", ai: "Certificato di agibilità" },
             { code: "preliminare", title: "Preliminare / Proposta di Acquisto", formato: "A4", ai: "Preliminare o proposta di acquisto" },
-            { code: "preventivo", title: "Preventivo Lavori / Computo", formato: "A4", ai: "Preventivo lavori o computo metrico" },
-            { code: "mutuo_pre", title: "Atto Mutuo in Corso - Surroga", formato: "A4", ai: "Atto mutuo in corso per surroga" },
-            { code: "prestiti", title: "Conteggi Estintivi / Finanziamenti", formato: "A4", ai: "Conteggi estintivi o finanziamenti" }
+            { code: "computo_metrico", title: "Computo Metrico Estimativo", formato: "A4", ai: "Computo metrico estimativo" },
+            { code: "mutuo_pre", title: "Documentazione Mutuo in Essere", formato: "A4", ai: "Documentazione mutuo in essere" },
+            { code: "prestiti", title: "Contratti Finanziamenti in Corso", formato: "A4", ai: "Contratti finanziamenti in corso" },
+            { code: "conteggi_estintivi", title: "Conteggi Estintivi Aggiornati", formato: "A4", ai: "Conteggi estintivi aggiornati" },
+            { code: "ctc", title: "CTC Online", formato: "A4", ai: "CTC online" }
         ]
     }
 ];
