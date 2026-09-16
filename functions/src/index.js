@@ -93,6 +93,7 @@ const {
   updateConsultantPermissions,
   listActiveConsultants,
   assignConsultantManager,
+  assignPracticeOwner,
 } = require("./services/authConsultants");
 
 const {
@@ -1484,6 +1485,9 @@ exports.listActiveConsultants =
 
 exports.assignConsultantManager =
   assignConsultantManager;
+
+exports.assignPracticeOwner =
+  assignPracticeOwner;
 
 exports.analizzaDocumentoAI =
   onCall(

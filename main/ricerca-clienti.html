@@ -179,6 +179,26 @@
         }
     }
 
+    .btn-assign { color:#8a6500; background:#fff7df; border:1px solid #ead59a; font-size:12px; font-weight:800; cursor:pointer; padding:8px 11px; border-radius:6px; font-family:'Poppins',sans-serif; }
+    .btn-assign:hover { background:#C99700; color:#002d72; }
+    .admin-owner { margin-top:4px; color:#8a6500; font-size:9px; font-weight:800; }
+
+    .assign-modal { position:fixed; inset:0; z-index:99999; background:rgba(0,20,50,.55); display:none; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
+    .assign-modal.open { display:flex; }
+    .assign-panel { width:min(560px,100%); max-height:82vh; overflow:hidden; background:#fff; border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .assign-head { padding:18px 20px; background:#002d72; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:15px; }
+    .assign-head h3 { margin:0; font-size:16px; }
+    .assign-close { border:0; background:transparent; color:#fff; font-size:22px; cursor:pointer; }
+    .assign-body { padding:18px 20px; }
+    .assign-search { width:100%; box-sizing:border-box; border:1px solid #dfe5eb; border-radius:8px; padding:12px 13px; font-family:'Poppins',sans-serif; outline:none; }
+    .assign-list { margin-top:12px; max-height:420px; overflow:auto; border:1px solid #edf0f3; border-radius:8px; }
+    .assign-user { width:100%; border:0; border-bottom:1px solid #edf0f3; background:#fff; padding:12px 14px; text-align:left; cursor:pointer; font-family:'Poppins',sans-serif; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .assign-user:last-child { border-bottom:0; }
+    .assign-user:hover { background:#f5f8fc; }
+    .assign-user strong { color:#002d72; font-size:12px; display:block; }
+    .assign-user small { color:#7b8794; font-size:9px; display:block; margin-top:2px; }
+    .assign-role { font-size:8px; font-weight:800; text-transform:uppercase; color:#8a6500; background:#fff7df; padding:4px 7px; border-radius:999px; white-space:nowrap; }
+
 </style>
 </head>
 <body>
@@ -222,6 +242,25 @@
     </div>
 </div>
 
+
+<div id="assignPracticeModal" class="assign-modal" onclick="if(event.target===this) chiudiAssegnaPratica()">
+    <div class="assign-panel">
+        <div class="assign-head">
+            <div>
+                <h3><i class="fas fa-user-check"></i> Assegna pratica</h3>
+                <div id="assignPracticeName" style="font-size:10px;opacity:.8;margin-top:3px;"></div>
+            </div>
+            <button class="assign-close" onclick="chiudiAssegnaPratica()" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="assign-body">
+            <input id="assignUserSearch" class="assign-search" type="text"
+                   placeholder="Cerca utente per nome, cognome o email..."
+                   oninput="renderAssignUsers()">
+            <div id="assignUserList" class="assign-list"></div>
+        </div>
+    </div>
+</div>
+
 <script>
     var firebaseConfig = {
         apiKey: "AIzaSyDDRWJpEhFb2zBB9MlkbEel_9cXOTTKBJ4",
@@ -237,6 +276,8 @@
     var tuttiIClienti = [];
     var sessioneConsulente = null;
     var expandedCollaboratorNames = {};
+    var adminActiveUsers = [];
+    var practiceToAssign = null;
 
     const STATO_PRATICA_CONFIG = {
         da_istruire: { label: "Da istruire", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
@@ -372,6 +413,70 @@
 
         ids.delete("");
         return { ids: Array.from(ids), names };
+    }
+
+
+    async function loadAdminActiveUsers() {
+        if (!sessioneConsulente?.isAdmin) return [];
+
+        if (adminActiveUsers.length) return adminActiveUsers;
+
+        const callable =
+            functionsFirebase.httpsCallable("listActiveConsultants");
+
+        const result = await callable();
+        adminActiveUsers =
+            Array.isArray(result?.data?.consultants)
+                ? result.data.consultants
+                : (Array.isArray(result?.data?.consulenti) ? result.data.consulenti : []);
+
+        return adminActiveUsers;
+    }
+
+    async function setupAdminPracticeFilter() {
+        if (!sessioneConsulente?.isAdmin) return;
+
+        const wrapper = document.getElementById("collaboratorFilter");
+        const select = document.getElementById("collaboratorSelect");
+        if (!wrapper || !select) return;
+
+        const users = await loadAdminActiveUsers();
+        const myUid = String(sessioneConsulente.user.uid || "").trim();
+
+        expandedCollaboratorNames = {};
+        users.forEach(u => {
+            expandedCollaboratorNames[u.uid] =
+                `${u.nome || ""} ${u.cognome || ""}`.trim()
+                || u.email
+                || u.uid;
+        });
+
+        wrapper.classList.add("visible");
+        select.innerHTML =
+            `<option value="">Tutte le pratiche</option>` +
+            `<option value="__mine__">Le mie pratiche</option>` +
+            users
+                .filter(u => String(u.uid || "") !== myUid)
+                .map(u => {
+                    const label =
+                        `${u.nome || ""} ${u.cognome || ""}`.trim()
+                        || u.email
+                        || u.uid;
+                    return `<option value="${escapeHtmlAttr(u.uid)}">${escapeHtml(label)} — ${escapeHtml(String(u.ruolo || ""))}</option>`;
+                }).join("");
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function escapeHtmlAttr(value) {
+        return escapeHtml(value);
     }
 
     async function setupCollaboratorFilter() {
@@ -524,6 +629,8 @@
                 snap.forEach(doc =>
                     docs.push(doc)
                 );
+
+                await setupAdminPracticeFilter();
             }
             else if (
                 ["segreteria","responsabile"].includes(role)
@@ -701,9 +808,14 @@
                         <p>ID: ${cliente.idOriginale}</p>
                         <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
                         ${cliente.dati.collega_segnalato_uid ? `<div class="client-progress-info"><i class="fas fa-user-friends"></i> Collega associato: ${String(cliente.dati.collega_segnalato_nome || cliente.dati.collega_segnalato_uid).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>` : ""}
-                        ${["segreteria","responsabile"].includes(roleSession()) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${ownerLabel}</div>` : ""}
+                        ${(sessioneConsulente?.isAdmin || ["segreteria","responsabile"].includes(roleSession())) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${ownerLabel}</div>` : ""}
                     </div>
                     <div class="client-actions">
+                        ${sessioneConsulente?.isAdmin ? `
+                        <button class="btn-assign" title="Assegna pratica a un utente"
+                                onclick="apriAssegnaPratica('${cliente.idOriginale}', ${JSON.stringify(cliente.nomeRicerca).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-user-check"></i> Assegna
+                        </button>` : ""}
                         <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
                             <i class="fas fa-trash-alt"></i>
                         </button>
@@ -716,6 +828,116 @@
             container.appendChild(card);
         });
     }
+
+
+    async function apriAssegnaPratica(practiceId, practiceName) {
+        if (!sessioneConsulente?.isAdmin) return;
+
+        practiceToAssign = {
+            id: String(practiceId || "").trim(),
+            nome: String(practiceName || "").trim()
+        };
+
+        document.getElementById("assignPracticeName").textContent =
+            practiceToAssign.nome || practiceToAssign.id;
+
+        document.getElementById("assignUserSearch").value = "";
+        document.getElementById("assignPracticeModal").classList.add("open");
+
+        try {
+            await loadAdminActiveUsers();
+            renderAssignUsers();
+            setTimeout(() => document.getElementById("assignUserSearch")?.focus(), 50);
+        } catch (error) {
+            console.error(error);
+            alert("Errore caricamento utenti: " + (error?.message || error));
+            chiudiAssegnaPratica();
+        }
+    }
+
+    function chiudiAssegnaPratica() {
+        document.getElementById("assignPracticeModal")?.classList.remove("open");
+        practiceToAssign = null;
+    }
+
+    function renderAssignUsers() {
+        const list = document.getElementById("assignUserList");
+        if (!list) return;
+
+        const q =
+            String(document.getElementById("assignUserSearch")?.value || "")
+                .trim()
+                .toLowerCase();
+
+        const current =
+            tuttiIClienti.find(x => x.idOriginale === practiceToAssign?.id);
+        const currentOwner = String(current?.ownerUid || "");
+
+        const users = adminActiveUsers.filter(u => {
+            const haystack =
+                `${u.nome || ""} ${u.cognome || ""} ${u.email || ""} ${u.ruolo || ""}`
+                    .toLowerCase();
+            return (!q || haystack.includes(q)) && String(u.uid || "") !== currentOwner;
+        });
+
+        list.innerHTML = users.length
+            ? users.map(u => {
+                const name =
+                    `${u.nome || ""} ${u.cognome || ""}`.trim()
+                    || u.email
+                    || u.uid;
+                return `
+                    <button class="assign-user" onclick="confermaAssegnaPratica('${escapeHtmlAttr(u.uid)}')">
+                        <span>
+                            <strong>${escapeHtml(name)}</strong>
+                            <small>${escapeHtml(u.email || u.uid)}</small>
+                        </span>
+                        <span class="assign-role">${escapeHtml(u.ruolo || "utente")}</span>
+                    </button>`;
+              }).join("")
+            : `<div style="padding:18px;text-align:center;color:#7b8794;font-size:11px;">Nessun utente trovato.</div>`;
+    }
+
+    async function confermaAssegnaPratica(targetUid) {
+        if (!sessioneConsulente?.isAdmin || !practiceToAssign?.id) return;
+
+        const user = adminActiveUsers.find(u => String(u.uid) === String(targetUid));
+        if (!user) return;
+
+        const targetName =
+            `${user.nome || ""} ${user.cognome || ""}`.trim()
+            || user.email
+            || user.uid;
+
+        if (!confirm(
+            `Assegnare la pratica "${practiceToAssign.nome}" a ${targetName}?\n\n` +
+            `La pratica non risulterà più tra "Le mie pratiche" dell'attuale titolare.`
+        )) return;
+
+        const practiceId = practiceToAssign.id;
+
+        try {
+            const callable =
+                functionsFirebase.httpsCallable("assignPracticeOwner");
+
+            await callable({
+                practice_id: practiceId,
+                target_uid: targetUid
+            });
+
+            chiudiAssegnaPratica();
+            await caricaClientiDaDB();
+
+            alert(`Pratica assegnata a ${targetName}.`);
+        } catch (error) {
+            console.error("assignPracticeOwner:", error);
+            alert(
+                "Errore assegnazione pratica:\n" +
+                (error?.message || error?.details || String(error))
+            );
+        }
+    }
+
 
     function filtraClienti() {
         const filtro =
@@ -733,8 +955,18 @@
 
         const filtrati =
             tuttiIClienti.filter(cliente => {
+                const ownerText =
+                    String(
+                        expandedCollaboratorNames[cliente.ownerUid] ||
+                        collaboratorNameMap()[cliente.ownerUid] ||
+                        ""
+                    ).toUpperCase();
+
+                const searchable =
+                    `${cliente.nomeRicerca} ${cliente.idOriginale} ${ownerText}`.toUpperCase();
+
                 const matchesName =
-                    cliente.nomeRicerca.includes(
+                    searchable.includes(
                         filtro
                     );
 

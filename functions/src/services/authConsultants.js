@@ -768,3 +768,134 @@ exports.assignConsultantManager = onCall(
   }
 );
 
+/* ============================================================
+   TRASFERISCI TITOLARITA' PRATICA - SOLO ADMIN
+   ============================================================ */
+exports.assignPracticeOwner = onCall(
+  { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+  async request => {
+    try {
+      const adminUid = request.auth?.uid;
+
+      if (!adminUid) {
+        throw new HttpsError("unauthenticated", "Accesso richiesto.");
+      }
+
+      if (!(await isAdmin(adminUid))) {
+        throw new HttpsError(
+          "permission-denied",
+          "Funzione riservata all'amministratore."
+        );
+      }
+
+      const data = request.data || {};
+      const practiceId = clean(data.practice_id);
+      const targetUid = clean(data.target_uid);
+
+      if (!practiceId || !targetUid) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Pratica o utente destinatario mancante."
+        );
+      }
+
+      const practiceRef =
+        db.collection("pratiche_mutuo").doc(practiceId);
+
+      const targetRef =
+        db.collection("consulenti").doc(targetUid);
+
+      const [practiceSnap, targetSnap] =
+        await Promise.all([
+          practiceRef.get(),
+          targetRef.get(),
+        ]);
+
+      if (!practiceSnap.exists) {
+        throw new HttpsError("not-found", "Pratica non trovata.");
+      }
+
+      if (!targetSnap.exists) {
+        throw new HttpsError("not-found", "Utente destinatario non trovato.");
+      }
+
+      const target = targetSnap.data() || {};
+
+      if (target.attivo === false) {
+        throw new HttpsError(
+          "failed-precondition",
+          "L'utente destinatario non è attivo."
+        );
+      }
+
+      const targetRole =
+        clean(target.ruolo).toLowerCase();
+
+      if (!["admin", "consulente", "responsabile", "segreteria"].includes(targetRole)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Ruolo destinatario non valido."
+        );
+      }
+
+      const practice = practiceSnap.data() || {};
+      const previousUid =
+        clean(
+          practice.consulente_uid ||
+          practice.workspace_uid ||
+          practice.owner_uid
+        );
+
+      const targetName =
+        `${clean(target.nome)} ${clean(target.cognome)}`.trim()
+        || clean(target.email)
+        || targetUid;
+
+      const now =
+        admin.firestore.FieldValue.serverTimestamp();
+
+      /*
+       * Trasferimento reale della titolarità:
+       * consulente_uid e workspace_uid diventano il nuovo assegnatario.
+       * Non tocchiamo provenienza pratica né collega_segnalato_uid.
+       */
+      await practiceRef.set(
+        {
+          consulente_uid: targetUid,
+          workspace_uid: targetUid,
+
+          assegnato_a_uid: targetUid,
+          assegnato_a_nome: targetName,
+          assegnato_a_email: clean(target.email).toLowerCase(),
+          assegnato_a_ruolo: targetRole,
+
+          precedente_consulente_uid: previousUid || null,
+          assegnato_da_uid: adminUid,
+          assegnato_il: now,
+        },
+        { merge: true }
+      );
+
+      return {
+        ok: true,
+        practice_id: practiceId,
+        precedente_consulente_uid: previousUid,
+        consulente_uid: targetUid,
+        assegnato_a_nome: targetName,
+        assegnato_a_ruolo: targetRole,
+      };
+    } catch (error) {
+      console.error("assignPracticeOwner error:", error);
+
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      throw new HttpsError(
+        "internal",
+        `Errore assegnazione pratica: ${error?.message || String(error)}`
+      );
+    }
+  }
+);
+
