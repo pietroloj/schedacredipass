@@ -36,6 +36,14 @@ tr:last-child td{border-bottom:0}.name{font-weight:800}.email{color:var(--muted)
 .modal-body{padding:20px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}label{display:block;font-size:8px;font-weight:800;color:#687686;text-transform:uppercase;margin-bottom:5px}
 .hint{font-size:8px;color:var(--muted);margin-top:5px;line-height:1.5}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 .team-box{display:none;margin-top:9px;padding:10px;background:#f7f9fb;border:1px solid var(--line);border-radius:8px}.team-box.show{display:block}.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}.check{display:flex;align-items:center;gap:6px;font-size:9px}.check input{width:auto}
+.icon-btn{border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:8px;font-weight:800;cursor:pointer}
+.icon-btn:hover{background:#f3f7fc}.role-actions{display:flex;gap:6px;flex-wrap:wrap}
+.search-results{border:1px solid var(--line);border-radius:8px;max-height:330px;overflow:auto;background:#fff}
+.result-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid #edf1f5;cursor:pointer}.result-row:last-child{border-bottom:0}.result-row:hover{background:#f7faff}
+.result-row input{width:17px;height:17px;accent-color:var(--blue);flex:0 0 auto}.result-info{flex:1}.result-name{font-size:10px;font-weight:800}.result-email{font-size:8px;color:var(--muted)}
+.result-meta{text-align:right}.inherit{font-size:7px;color:#8a6800;margin-top:3px}.selected-count{font-size:8px;color:var(--muted);margin:8px 0}
+.role-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}.role-option{border:1px solid var(--line);border-radius:9px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:8px}.role-option:hover{background:#f7faff}.role-option input{width:auto}
+.manager-result{display:flex;align-items:center;gap:10px;padding:11px;border-bottom:1px solid #edf1f5;cursor:pointer}.manager-result:hover{background:#f7faff}.manager-result input{width:auto}
 @media(max-width:850px){body{padding:8px}.content{padding:14px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{overflow:auto}table{min-width:950px}.checks{grid-template-columns:1fr}}
 </style>
 </head>
@@ -59,6 +67,53 @@ tr:last-child td{border-bottom:0}.name{font-weight:800}.email{color:var(--muted)
       </table>
     </div>
   </div>
+</div>
+
+
+<div id="visibilityModal" class="modal">
+ <div class="modal-card">
+  <div class="modal-head"><h2 id="visibilityTitle">Gestisci visibilità</h2><button class="close" onclick="closeVisibilityModal()">&times;</button></div>
+  <div class="modal-body">
+   <label>Cerca collaboratore o responsabile</label>
+   <div style="position:relative"><i class="fas fa-search" style="position:absolute;left:12px;top:12px;color:#8493a4"></i><input id="visibilitySearch" class="field" style="padding-left:34px" placeholder="Cerca per nome, email o ruolo..." oninput="renderVisibilityResults()"></div>
+   <div id="selectedCount" class="selected-count"></div>
+   <div id="visibilityResults" class="search-results"></div>
+   <div class="hint" style="margin-top:9px"><i class="fas fa-circle-info"></i> Per la Segreteria, selezionando un Responsabile viene ereditata automaticamente la visibilità del suo team.</div>
+   <div id="visibilityMsg" class="msg"></div>
+   <div class="modal-actions"><button class="btn gray" onclick="closeVisibilityModal()">ANNULLA</button><button class="btn" onclick="saveVisibilityModal()">SALVA VISIBILITÀ</button></div>
+  </div>
+ </div>
+</div>
+
+<div id="roleModal" class="modal">
+ <div class="modal-card" style="width:min(520px,96vw)">
+  <div class="modal-head"><h2 id="roleTitle">Modifica ruolo</h2><button class="close" onclick="closeRoleModal()">&times;</button></div>
+  <div class="modal-body">
+   <label>Seleziona nuovo ruolo</label>
+   <div class="role-options">
+    <label class="role-option"><input type="radio" name="newRole" value="consulente"><span class="badge consulente">CONSULENTE</span></label>
+    <label class="role-option"><input type="radio" name="newRole" value="responsabile"><span class="badge responsabile">RESPONSABILE</span></label>
+    <label class="role-option"><input type="radio" name="newRole" value="segreteria"><span class="badge segreteria">SEGRETERIA</span></label>
+    <label class="role-option"><input type="radio" name="newRole" value="admin"><span class="badge admin">ADMIN</span></label>
+   </div>
+   <div id="roleMsg" class="msg"></div>
+   <div class="modal-actions"><button class="btn gray" onclick="closeRoleModal()">ANNULLA</button><button class="btn" onclick="saveRoleModal()">SALVA RUOLO</button></div>
+  </div>
+ </div>
+</div>
+
+<div id="managerModal" class="modal">
+ <div class="modal-card" style="width:min(560px,96vw)">
+  <div class="modal-head"><h2 id="managerTitle">Assegna Responsabile</h2><button class="close" onclick="closeManagerModal()">&times;</button></div>
+  <div class="modal-body">
+   <label>Cerca Responsabile</label>
+   <div style="position:relative"><i class="fas fa-search" style="position:absolute;left:12px;top:12px;color:#8493a4"></i><input id="managerSearch" class="field" style="padding-left:34px" placeholder="Cerca per nome o email..." oninput="renderManagerResults()"></div>
+   <div id="managerResults" class="search-results" style="margin-top:10px"></div>
+   <div class="hint" style="margin-top:9px">La Segreteria che vede il Responsabile eredita automaticamente anche questo consulente.</div>
+   <div id="managerMsg" class="msg"></div>
+   <div class="modal-actions"><button class="btn gray" onclick="closeManagerModal()">ANNULLA</button><button class="btn" onclick="saveManagerModal()">SALVA RESPONSABILE</button></div>
+  </div>
+ </div>
 </div>
 
 <div id="createModal" class="modal">
@@ -132,35 +187,108 @@ function renderUsers(){
  const list=allUsers.filter(u=>{const r=String(u.ruolo||"consulente").toLowerCase();return(!rf||r===rf)&&(!q||`${nameOf(u)} ${u.email||""} ${r}`.toLowerCase().includes(q))});
  tbody.innerHTML=list.map(u=>{const role=String(u.ruolo||"consulente").toLowerCase();return `<tr>
  <td><div class="person"><span class="avatar">${esc((u.nome||u.email||"?")[0].toUpperCase())}</span><div><div class="name">${esc(nameOf(u))}</div><div class="email">${esc(u.email||"")}</div></div></div></td>
- <td><select class="field role-select" data-uid="${esc(u.uid)}"><option value="consulente" ${role==="consulente"?"selected":""}>Consulente</option><option value="responsabile" ${role==="responsabile"?"selected":""}>Responsabile</option><option value="segreteria" ${role==="segreteria"?"selected":""}>Segreteria</option><option value="admin" ${role==="admin"?"selected":""}>Admin</option></select><div style="margin-top:5px"><span class="badge ${role}">${esc(roleLabel(role).toUpperCase())}</span></div></td>
+ <td><span class="badge ${role}">${esc(roleLabel(role).toUpperCase())}</span></td>
  <td>${visibilityText(u)}</td><td>${u.attivo===false?'<span style="color:#b42318">● Disattivo</span>':'<span style="color:#138a55">● Attivo</span>'}</td>
- <td><div class="actions"><button class="btn" onclick="saveRole('${esc(u.uid)}')">SALVA RUOLO</button>${role==="responsabile"||role==="segreteria"?`<button class="btn gold" onclick="editVisibility('${esc(u.uid)}')">GESTISCI</button>`:""}</div><div class="msg" id="msg-${esc(u.uid)}"></div></td></tr>`}).join("")||'<tr><td colspan="5">Nessun utente trovato.</td></tr>';
+ <td><div class="role-actions">
+   ${role==="responsabile"||role==="segreteria"?`<button class="btn gold" onclick="openVisibilityModal('${esc(u.uid)}')"><i class="fas fa-users"></i> GESTISCI VISIBILITÀ</button>`:""}
+   ${role==="consulente"?`<button class="btn gold" onclick="openManagerModal('${esc(u.uid)}')"><i class="fas fa-user-tie"></i> GESTITO DA</button>`:""}
+   <button class="icon-btn" onclick="openRoleModal('${esc(u.uid)}')"><i class="fas fa-pen"></i> MODIFICA RUOLO</button>
+ </div><div class="msg" id="msg-${esc(u.uid)}"></div></td></tr>`}).join("")||'<tr><td colspan="5">Nessun utente trovato.</td></tr>';
 }
-async function saveRole(uid){
- const sel=document.querySelector(`.role-select[data-uid="${CSS.escape(uid)}"]`),m=document.getElementById("msg-"+uid);
- try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantPermissions")({uid,ruolo:sel.value});m.style.color="#138a55";m.textContent="✓ Ruolo aggiornato";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore"}
+
+let editingVisibilityUid="";
+let editingRoleUid="";
+let editingManagerUid="";
+let visibilitySelection=new Set();
+
+function openVisibilityModal(uid){
+ const u=getUser(uid); if(!u)return;
+ editingVisibilityUid=uid;
+ visibilitySelection=new Set(Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili:[]);
+ document.getElementById("visibilityTitle").textContent="Gestisci visibilità — "+nameOf(u);
+ document.getElementById("visibilitySearch").value="";
+ document.getElementById("visibilityMsg").textContent="";
+ renderVisibilityResults();
+ document.getElementById("visibilityModal").classList.add("open");
 }
-function editVisibility(uid){
- const u=getUser(uid),role=String(u?.ruolo||"").toLowerCase();
- const candidates=allUsers.filter(x =>
-   x.uid !== uid &&
-   x.attivo !== false &&
-   (
-     role === "segreteria"
-       ? ["responsabile","consulente"].includes(String(x.ruolo || "").toLowerCase())
-       : String(x.ruolo || "").toLowerCase() === "consulente"
-   )
- );
- const selected=new Set(Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili:[]);
- const names=candidates.map((x,i)=>`${selected.has(x.uid)?"☑":"☐"} ${i+1}. ${nameOf(x)} (${roleLabel(String(x.ruolo||"").toLowerCase())})`).join("\n");
- const raw=prompt(`Inserisci i numeri separati da virgola degli utenti/team visibili per ${nameOf(u)}:\n\n${names}\n\nPer la Segreteria, selezionando un Responsabile viene ereditato automaticamente tutto il suo team.`,candidates.map((x,i)=>selected.has(x.uid)?i+1:null).filter(Boolean).join(","));
- if(raw===null)return;
- const ids=raw.split(",").map(x=>parseInt(x.trim(),10)).filter(n=>n>=1&&n<=candidates.length).map(n=>candidates[n-1].uid);
- saveVisibility(uid,ids);
+function closeVisibilityModal(){document.getElementById("visibilityModal").classList.remove("open");editingVisibilityUid=""}
+function visibilityCandidates(){
+ const u=getUser(editingVisibilityUid),role=String(u?.ruolo||"").toLowerCase();
+ return allUsers.filter(x=>x.uid!==editingVisibilityUid&&x.attivo!==false&&(
+   role==="segreteria"
+     ? ["responsabile","consulente"].includes(String(x.ruolo||"").toLowerCase())
+     : String(x.ruolo||"").toLowerCase()==="consulente"
+ ));
 }
-async function saveVisibility(uid,ids){
- const m=document.getElementById("msg-"+uid);
- try{m.textContent="Salvataggio...";await fns.httpsCallable("updateConsultantVisibility")({uid,collaboratori_visibili:ids});m.style.color="#138a55";m.textContent="✓ Visibilità aggiornata";await listUsers()}catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore"}
+function renderVisibilityResults(){
+ const q=document.getElementById("visibilitySearch").value.trim().toLowerCase();
+ const list=visibilityCandidates().filter(x=>!q||`${nameOf(x)} ${x.email||""} ${x.ruolo||""}`.toLowerCase().includes(q));
+ const box=document.getElementById("visibilityResults");
+ box.innerHTML=list.map(x=>{
+   const r=String(x.ruolo||"consulente").toLowerCase();
+   const team=r==="responsabile"?allUsers.filter(c=>String(c.responsabile_uid||c.gestito_da_uid||"")===x.uid&&c.attivo!==false).length:0;
+   return `<label class="result-row"><input type="checkbox" value="${esc(x.uid)}" ${visibilitySelection.has(x.uid)?"checked":""} onchange="toggleVisibility('${esc(x.uid)}',this.checked)">
+   <span class="avatar">${esc((x.nome||x.email||"?")[0].toUpperCase())}</span>
+   <span class="result-info"><span class="result-name">${esc(nameOf(x))}</span><br><span class="result-email">${esc(x.email||"")}</span></span>
+   <span class="result-meta"><span class="badge ${r}">${esc(roleLabel(r).toUpperCase())}</span>${r==="responsabile"?`<div class="inherit"><i class="fas fa-diagram-project"></i> include automaticamente ${team} collaborator${team===1?"e":"i"}</div>`:""}</span></label>`;
+ }).join("")||'<div style="padding:18px;text-align:center;color:#718096;font-size:9px">Nessun risultato.</div>';
+ document.getElementById("selectedCount").textContent=visibilitySelection.size+" selezionati";
+}
+function toggleVisibility(uid,checked){checked?visibilitySelection.add(uid):visibilitySelection.delete(uid);document.getElementById("selectedCount").textContent=visibilitySelection.size+" selezionati"}
+async function saveVisibilityModal(){
+ const m=document.getElementById("visibilityMsg");
+ try{
+   m.style.color="#687686";m.textContent="Salvataggio...";
+   await fns.httpsCallable("updateConsultantVisibility")({uid:editingVisibilityUid,collaboratori_visibili:Array.from(visibilitySelection)});
+   m.style.color="#138a55";m.textContent="✓ Visibilità aggiornata";
+   await listUsers();setTimeout(closeVisibilityModal,450);
+ }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore aggiornamento visibilità"}
+}
+
+function openRoleModal(uid){
+ const u=getUser(uid);if(!u)return;editingRoleUid=uid;
+ document.getElementById("roleTitle").textContent="Modifica ruolo — "+nameOf(u);
+ const current=String(u.ruolo||"consulente").toLowerCase();
+ document.querySelectorAll('input[name="newRole"]').forEach(x=>x.checked=x.value===current);
+ document.getElementById("roleMsg").textContent="";
+ document.getElementById("roleModal").classList.add("open");
+}
+function closeRoleModal(){document.getElementById("roleModal").classList.remove("open");editingRoleUid=""}
+async function saveRoleModal(){
+ const role=document.querySelector('input[name="newRole"]:checked')?.value,m=document.getElementById("roleMsg");
+ if(!role)return;
+ try{
+   m.style.color="#687686";m.textContent="Salvataggio...";
+   await fns.httpsCallable("updateConsultantPermissions")({uid:editingRoleUid,ruolo:role});
+   m.style.color="#138a55";m.textContent="✓ Ruolo aggiornato";
+   await listUsers();setTimeout(closeRoleModal,450);
+ }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore modifica ruolo"}
+}
+
+function openManagerModal(uid){
+ const u=getUser(uid);if(!u)return;editingManagerUid=uid;
+ document.getElementById("managerTitle").textContent="Responsabile — "+nameOf(u);
+ document.getElementById("managerSearch").value="";
+ document.getElementById("managerMsg").textContent="";
+ renderManagerResults();
+ document.getElementById("managerModal").classList.add("open");
+}
+function closeManagerModal(){document.getElementById("managerModal").classList.remove("open");editingManagerUid=""}
+function renderManagerResults(){
+ const u=getUser(editingManagerUid),current=String(u?.responsabile_uid||u?.gestito_da_uid||""),q=document.getElementById("managerSearch").value.trim().toLowerCase();
+ const managers=allUsers.filter(x=>x.attivo!==false&&String(x.ruolo||"").toLowerCase()==="responsabile"&&(!q||`${nameOf(x)} ${x.email||""}`.toLowerCase().includes(q)));
+ document.getElementById("managerResults").innerHTML=
+ `<label class="manager-result"><input type="radio" name="managerChoice" value="" ${!current?"checked":""}><span><b>Nessun responsabile</b><div class="result-email">Consulente autonomo</div></span></label>`+
+ managers.map(x=>`<label class="manager-result"><input type="radio" name="managerChoice" value="${esc(x.uid)}" ${current===x.uid?"checked":""}><span class="avatar">${esc((x.nome||"?")[0].toUpperCase())}</span><span><b>${esc(nameOf(x))}</b><div class="result-email">${esc(x.email||"")}</div></span></label>`).join("");
+}
+async function saveManagerModal(){
+ const choice=document.querySelector('input[name="managerChoice"]:checked')?.value??"",m=document.getElementById("managerMsg");
+ try{
+   m.style.color="#687686";m.textContent="Salvataggio...";
+   await fns.httpsCallable("assignConsultantManager")({uid:editingManagerUid,responsabile_uid:choice});
+   m.style.color="#138a55";m.textContent="✓ Responsabile aggiornato";
+   await listUsers();setTimeout(closeManagerModal,450);
+ }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore assegnazione responsabile"}
 }
 document.getElementById("create").onclick=async()=>{
  const d={nome:document.getElementById("nome").value.trim(),cognome:document.getElementById("cognome").value.trim(),email:document.getElementById("email").value.trim(),password:document.getElementById("password").value,ruolo:document.getElementById("ruolo").value,responsabile_uid:document.getElementById("ruolo").value==="consulente"?document.getElementById("responsabile_uid").value:""};
