@@ -5174,7 +5174,10 @@ Cordiali saluti`
             if (msg) msg.textContent = "Salvataggio...";
             await aggiornaNumeroPraticaBanca("add", number);
             if (input) input.value = "";
-            if (msg) msg.textContent = `Numero ${number} associato al fascicolo.`;
+            if (msg) {
+                msg.textContent =
+                    `Numero ${number} associato. Alla prossima sincronizzazione verrà riesaminata anche la posta INBOX già letta.`;
+            }
         } catch (error) {
             console.error(error);
             if (msg) msg.textContent = error?.message || "Errore durante il salvataggio.";
@@ -5387,8 +5390,55 @@ Cordiali saluti`
                 ||
                 {};
 
+            const details =
+                Array.isArray(data.results)
+                    ? data.results.map(folder => {
+                        const rows =
+                            Array.isArray(folder.diagnostics)
+                                ? folder.diagnostics
+                                : [];
+
+                        const messages =
+                            rows.length
+                                ? rows.map(d => {
+                                    const from =
+                                        Array.isArray(d.from)
+                                            ? d.from
+                                                .map(x => x.address || x.name || "")
+                                                .filter(Boolean)
+                                                .join(", ")
+                                            : "";
+
+                                    return [
+                                        `• ${String(d.direction || "email").toUpperCase()}`,
+                                        `  Oggetto: ${d.subject || "(senza oggetto)"}`,
+                                        `  Da: ${from || "-"}`,
+                                        `  Numeri rilevati: ${
+                                            Array.isArray(d.extractedNumbers)
+                                                && d.extractedNumbers.length
+                                                    ? d.extractedNumbers.join(", ")
+                                                    : "-"
+                                        }`,
+                                        `  In-Reply-To: ${d.inReplyTo || "-"}`,
+                                        d.matched
+                                            ? `  ESITO: ASSOCIATA → ${d.practiceId || "-"} (${d.method || "matcher"})`
+                                            : `  ESITO: NON ASSOCIATA → ${d.reason || "motivo non disponibile"}`
+                                    ].join("\\n");
+                                }).join("\\n\\n")
+                                : "  Nessun dettaglio messaggio restituito.";
+
+                        return [
+                            `${folder.folderName || "CARTELLA"}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}`,
+                            messages
+                        ].join("\\n");
+                    }).join("\\n\\n")
+                    : "Il backend non ha restituito il dettaglio delle cartelle.";
+
             alert(
-                `Sincronizzazione Gmail completata.\nEmail analizzate: ${data.processed || 0}\nAssociate: ${data.matched || 0}`
+                `Sincronizzazione Gmail completata.\\n\\n` +
+                `Email analizzate: ${data.processed || 0}\\n` +
+                `Associate: ${data.matched || 0}\\n\\n` +
+                details
             );
 
             await aggiornaStatoGmailDashboard();

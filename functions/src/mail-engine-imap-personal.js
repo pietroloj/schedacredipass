@@ -1228,6 +1228,11 @@ async function syncFolder({
           folderName
         );
 
+      const diagnosticNumbers =
+        extractPracticeNumbers(
+          `${mail.subject || ""}\n${mail.text || ""}`
+        );
+
       messageDiagnostics.push({
         uid: msg.uid,
         direction,
@@ -1235,7 +1240,8 @@ async function syncFolder({
         from: safeArrayAddress(mail.from).slice(0, 5),
         inReplyTo: mail.inReplyTo || null,
         references: mailReferenceIds(mail).slice(0, 10),
-        extractedNumbers: match?.extractedNumbers || [],
+        extractedNumbers:
+          diagnosticNumbers,
         matched: !!match?.matched,
         practiceId: match?.best?.id || null,
         method: match?.best?.method || null,
@@ -1243,9 +1249,13 @@ async function syncFolder({
         reason: match?.matched
           ? "associata"
           : (
-              match?.best
-                ? "candidato sotto soglia"
-                : "nessuna pratica candidata"
+              diagnosticNumbers.length
+                ? "numero rilevato ma nessun fascicolo corrispondente"
+                : (
+                    match?.best
+                      ? "candidato sotto soglia"
+                      : "nessuna pratica candidata"
+                  )
             ),
       });
 
@@ -2225,9 +2235,37 @@ const gestisciNumeroPraticaBanca =
         { merge: true }
       );
 
+      /*
+       * Se aggiungiamo un nuovo numero pratica, una ricevuta che era già
+       * stata letta da INBOX in una sincronizzazione precedente non verrebbe
+       * più riesaminata perché il cursore UID è già avanzato.
+       *
+       * Reset solo di INBOX: al prossimo "Sincronizza ora" vengono
+       * riesaminate le ultime email ricevute. saveMatchedMail è idempotente,
+       * quindi le email già presenti non vengono duplicate.
+       */
+      if (action !== "remove") {
+        const imapStateRef =
+          db.collection("gmail_connections")
+            .doc(uid)
+            .collection("sync")
+            .doc("imap");
+
+        await imapStateRef.set(
+          {
+            "folders.INBOX.lastUid": 0,
+            "folders.INBOX.aggiornatoIl":
+              admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+
       return {
         ok: true,
         numbers,
+        inboxWillBeReprocessed:
+          action !== "remove",
       };
     }
   );
