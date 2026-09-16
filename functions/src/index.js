@@ -3453,6 +3453,7 @@ const {
   salvaProvenienzaPratica,
   listaAgenzieImmobiliari,
   dashboardGestionaleDati,
+  dashboardPraticaSuggerimentoAI,
 } = require("./practice-source");
 
 
@@ -3464,3 +3465,6 @@ exports.listaAgenzieImmobiliari =
 
 exports.dashboardGestionaleDati =
   dashboardGestionaleDati;
+
+exports.dashboardPraticaSuggerimentoAI =
+  dashboardPraticaSuggerimentoAI;

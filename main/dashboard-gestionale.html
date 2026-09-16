@@ -134,6 +134,32 @@ td strong{color:var(--navy)}
   .kpis{grid-template-columns:repeat(2,1fr)}
   .topbar{flex-direction:column;align-items:flex-start}
 }
+
+.kpi.clickable,.alert.clickable,.status-row.clickable{cursor:pointer;transition:.18s ease}
+.kpi.clickable:hover,.alert.clickable:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(11,42,91,.12);border-color:#c9d5e3}
+.status-row.clickable:hover{background:#f6f8fb;border-radius:8px}
+.attention-modal{position:fixed;inset:0;background:rgba(5,20,45,.58);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}
+.attention-modal.open{display:flex}
+.attention-panel{width:min(1050px,100%);max-height:90vh;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+.attention-head{background:linear-gradient(135deg,#08224b,#0b2a5b);color:#fff;padding:17px 20px;display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:4px solid var(--gold)}
+.attention-head h3{margin:0;font-size:17px}
+.attention-close{border:0;background:transparent;color:#fff;font-size:24px;cursor:pointer}
+.attention-body{padding:16px 18px;overflow:auto;max-height:calc(90vh - 72px);background:#f5f7fa}
+.practice-alert-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
+.practice-alert-top{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}
+.practice-alert-card h4{margin:0;color:var(--navy);font-size:14px}
+.practice-meta{font-size:10px;color:var(--muted);margin-top:4px}
+.practice-reasons{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.reason-chip{font-size:9px;font-weight:800;border-radius:999px;padding:5px 8px;background:#fff3d3;color:#8a6500}
+.reason-chip.red{background:#fde9e6;color:var(--red)}
+.ai-box{margin-top:10px;padding:11px 12px;border-radius:9px;background:#f2f6fb;border-left:4px solid var(--blue);font-size:11px;line-height:1.55;color:#43515e}
+.ai-result{margin-top:10px;padding:12px;border-radius:9px;background:#f7fbf8;border:1px solid #dbeee2;font-size:11px;line-height:1.6;white-space:pre-wrap}
+.practice-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.mini-btn{border:0;border-radius:8px;padding:8px 10px;font-size:10px;font-weight:800;cursor:pointer}
+.mini-btn.open{background:var(--navy);color:#fff}
+.mini-btn.ai{background:var(--gold);color:#fff}
+.modal-empty{padding:35px;text-align:center;color:var(--muted);font-size:12px}
+
 </style>
 </head>
 <body>
@@ -153,13 +179,13 @@ td strong{color:var(--navy)}
 <div class="wrap">
 
   <div class="kpis">
-    <div class="kpi"><small>Pratiche totali</small><strong id="kTotal">—</strong><div class="delta">Database attuale</div></div>
-    <div class="kpi"><small>Da istruire</small><strong id="kToProcess">—</strong><div class="delta">Stato iniziale</div></div>
-    <div class="kpi"><small>In istruttoria</small><strong id="kProcessing">—</strong><div class="delta">In lavorazione</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('all')"><small>Pratiche totali</small><strong id="kTotal">—</strong><div class="delta">Database attuale</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('to_process')"><small>Da istruire</small><strong id="kToProcess">—</strong><div class="delta">Clicca per vedere le pratiche</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('processing')"><small>In istruttoria</small><strong id="kProcessing">—</strong><div class="delta">Clicca per vedere le pratiche</div></div>
     <div class="kpi"><small>Deliberate</small><strong id="kDeliberate">—</strong><div class="delta">Esiti deliberativi</div></div>
     <div class="kpi"><small>Stipulate</small><strong id="kStipulated">—</strong><div class="delta">Completate</div></div>
-    <div class="kpi"><small>Ferme &gt; 7 giorni</small><strong id="kStale">—</strong><div class="delta" style="color:var(--red)">Da attenzionare</div></div>
-    <div class="kpi"><small>Doc. incomplete</small><strong id="kIncomplete">—</strong><div class="delta" style="color:var(--amber)">Da integrare</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('stale')"><small>Ferme &gt; 7 giorni</small><strong id="kStale">—</strong><div class="delta" style="color:var(--red)">Clicca per attenzionare</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('incomplete')"><small>Doc. incomplete</small><strong id="kIncomplete">—</strong><div class="delta" style="color:var(--amber)">Clicca per vedere le integrazioni</div></div>
   </div>
 
   <div class="grid">
@@ -293,6 +319,20 @@ td strong{color:var(--navy)}
 
 </div>
 
+
+<div id="attentionModal" class="attention-modal" onclick="if(event.target===this) closeAttentionModal()">
+  <div class="attention-panel">
+    <div class="attention-head">
+      <div>
+        <h3 id="attentionModalTitle">Pratiche da attenzionare</h3>
+        <div id="attentionModalSubtitle" style="font-size:10px;opacity:.8;margin-top:3px"></div>
+      </div>
+      <button class="attention-close" onclick="closeAttentionModal()" aria-label="Chiudi">&times;</button>
+    </div>
+    <div id="attentionModalBody" class="attention-body"></div>
+  </div>
+</div>
+
 <script src="/main/config/app.js"></script>
 <script src="/main/config/firebase.js"></script>
 
@@ -402,6 +442,180 @@ function stateSum(
 }
 
 
+function humanState(value) {
+  const s = String(value || "").trim().toLowerCase();
+
+  const map = {
+    "da_istruire": "Da istruire",
+    "non_definito": "Da istruire",
+    "in_istruttoria": "In istruttoria",
+    "deliberata": "Deliberata",
+    "stipulata": "Stipulata",
+  };
+
+  return map[s]
+    || s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+
+function dashboardPractices() {
+  return Array.isArray(dashboardData?.attentionPractices)
+    ? dashboardData.attentionPractices
+    : [];
+}
+
+
+function filterAttentionPractices(type, stateName = "") {
+  const items = dashboardPractices();
+
+  if (type === "all") return items;
+  if (type === "to_process") return items.filter(x => x.da_istruire);
+  if (type === "processing") {
+    return items.filter(x => {
+      const s = String(x.stato || "").toLowerCase();
+      return s.includes("istruttor") || s.includes("lavoraz") || s.includes("caricat") || s.includes("banca");
+    });
+  }
+  if (type === "stale") return items.filter(x => x.ferma_oltre_7_giorni);
+  if (type === "incomplete") return items.filter(x => x.documentazione_incompleta);
+  if (type === "state") return items.filter(x => String(x.stato || "") === String(stateName || ""));
+
+  return items;
+}
+
+
+function openAttentionModal(type = "all", stateName = "") {
+  const modal = document.getElementById("attentionModal");
+  const body = document.getElementById("attentionModalBody");
+  const title = document.getElementById("attentionModalTitle");
+  const subtitle = document.getElementById("attentionModalSubtitle");
+
+  const titles = {
+    all: "Pratiche che richiedono attenzione",
+    to_process: "Pratiche da istruire",
+    processing: "Pratiche in istruttoria",
+    stale: "Pratiche ferme da oltre 7 giorni",
+    incomplete: "Pratiche con documentazione incompleta",
+    state: `Pratiche — ${humanState(stateName)}`,
+  };
+
+  const items = filterAttentionPractices(type, stateName);
+
+  title.textContent = titles[type] || titles.all;
+  subtitle.textContent = `${items.length} pratiche nel tuo perimetro`;
+
+  body.innerHTML = items.length
+    ? items.map(renderAttentionPracticeCard).join("")
+    : `<div class="modal-empty">Nessuna pratica in questa categoria.</div>`;
+
+  modal.classList.add("open");
+}
+
+
+function closeAttentionModal() {
+  document.getElementById("attentionModal")?.classList.remove("open");
+}
+
+
+function renderAttentionPracticeCard(item) {
+  const reasons =
+    (item.motivi || []).map((reason, index) =>
+      `<span class="reason-chip ${item.ferma_oltre_7_giorni && index === 0 ? "red" : ""}">${safe(reason)}</span>`
+    ).join("");
+
+  const missing =
+    Array.isArray(item.documenti_mancanti) && item.documenti_mancanti.length
+      ? `<div class="practice-meta"><strong>Documenti mancanti:</strong> ${safe(item.documenti_mancanti.join(", "))}</div>`
+      : "";
+
+  return `
+    <div class="practice-alert-card">
+      <div class="practice-alert-top">
+        <div>
+          <h4>${safe(item.cliente || item.id)}</h4>
+          <div class="practice-meta">
+            Stato: <strong>${safe(humanState(item.stato))}</strong>
+            ${item.giorni_inattivita != null ? ` · Ultima attività: ${Number(item.giorni_inattivita)} giorni fa` : ""}
+          </div>
+        </div>
+      </div>
+
+      <div class="practice-reasons">${reasons}</div>
+      ${missing}
+
+      <div class="ai-box">
+        <strong>Indicazione operativa automatica</strong><br>
+        ${safe(item.suggerimento_automatico || "")}
+      </div>
+
+      <div id="ai_${safeId(item.id)}"></div>
+
+      <div class="practice-actions">
+        <button class="mini-btn open" onclick="openPractice('${jsString(item.id)}')">
+          <i class="fas fa-folder-open"></i> Apri pratica
+        </button>
+        <button class="mini-btn ai" onclick="generateAiSuggestion('${jsString(item.id)}')">
+          <i class="fas fa-wand-magic-sparkles"></i> Analisi AI
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+
+function safeId(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+
+function jsString(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
+}
+
+
+function openPractice(practiceId) {
+  window.location.href =
+    `/main/dashboard-consulente.html?clienteId=${encodeURIComponent(practiceId)}`;
+}
+
+
+async function generateAiSuggestion(practiceId) {
+  const target =
+    document.getElementById(`ai_${safeId(practiceId)}`);
+
+  if (!target) return;
+
+  target.innerHTML =
+    `<div class="ai-result"><i class="fas fa-spinner fa-spin"></i> Analisi AI della pratica in corso...</div>`;
+
+  try {
+    const callable =
+      fn.httpsCallable(
+        "dashboardPraticaSuggerimentoAI"
+      );
+
+    const result =
+      await callable({
+        practiceId
+      });
+
+    target.innerHTML =
+      `<div class="ai-result"><strong>Analisi AI</strong><br>${safe(result.data?.text || "Nessun suggerimento disponibile.")}</div>`;
+  }
+  catch(error) {
+    console.error(error);
+
+    target.innerHTML =
+      `<div class="ai-result" style="background:#fff8f7;border-color:#f2d1cc;color:#8a3025">
+        <strong>Analisi AI non disponibile</strong><br>
+        ${safe(error.message || "Errore durante la generazione del suggerimento.")}
+      </div>`;
+  }
+}
+
+
 function renderStates() {
 
   const counts =
@@ -445,8 +659,8 @@ function renderStates() {
         ? entries
             .map(
               ([name,count]) => `
-                <div class="status-row">
-                  <span>${safe(name)}</span>
+                <div class="status-row clickable" onclick="openAttentionModal('state', '${safe(name)}')">
+                  <span>${safe(humanState(name))}</span>
                   <div class="bar">
                     <i style="width:${Math.max(3,count/max*100)}%"></i>
                   </div>
@@ -758,21 +972,17 @@ function renderDashboard() {
     );
 
   const toProcess =
-    stateSum(
-      name =>
-        name.includes("richiest")
-        ||
-        name.includes("istruire")
-        ||
-        name.includes("nuova")
+    Number(
+      d.toProcess
+      ||
+      0
     );
 
   const processing =
-    stateSum(
-      name =>
-        name.includes("istruttor")
-        ||
-        name.includes("lavoraz")
+    Number(
+      d.processing
+      ||
+      0
     );
 
   document.getElementById("kTotal").textContent =
@@ -821,14 +1031,14 @@ function renderDashboard() {
     );
 
   document.getElementById("attentionList").innerHTML = `
-    <div class="alert red">
+    <div class="alert red clickable" onclick="openAttentionModal('stale')">
       <strong>${d.staleOver7Days || 0} pratiche ferme da oltre 7 giorni</strong>
-      <p>Pratiche che non risultano aggiornate da più di una settimana.</p>
+      <p>Clicca per vedere quali sono, il motivo e le azioni consigliate.</p>
     </div>
 
-    <div class="alert">
+    <div class="alert clickable" onclick="openAttentionModal('incomplete')">
       <strong>${d.incompleteDocs || 0} pratiche con documentazione incompleta</strong>
-      <p>Dato disponibile quando la pratica espone il flag documentazioneCompleta/documentiCompleti.</p>
+      <p>Clicca per vedere la checklist mancante e aprire la pratica.</p>
     </div>
 
     <div class="alert green">

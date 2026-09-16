@@ -338,6 +338,25 @@ const salvaProvenienzaPratica =
       }
 
 
+      attentionPractices.sort(
+        (a, b) => {
+          const scoreA =
+            (a.ferma_oltre_7_giorni ? 100 : 0)
+            + (a.documentazione_incompleta ? 50 : 0)
+            + (a.da_istruire ? 20 : 0)
+            + Number(a.giorni_inattivita || 0);
+
+          const scoreB =
+            (b.ferma_oltre_7_giorni ? 100 : 0)
+            + (b.documentazione_incompleta ? 50 : 0)
+            + (b.da_istruire ? 20 : 0)
+            + Number(b.giorni_inattivita || 0);
+
+          return scoreB - scoreA;
+        }
+      );
+
+
       return {
         ok:
           true,
@@ -433,7 +452,7 @@ function getState(
     if (clean) return clean;
   }
 
-  return "non_definito";
+  return "da_istruire";
 }
 
 
@@ -581,6 +600,167 @@ function dateMillis(
   )
     ? parsed
     : 0;
+}
+
+
+function practiceDisplayName(practice = {}) {
+  const direct =
+    cleanText(practice.nome_cliente)
+    || cleanText(practice.cliente_nome)
+    || cleanText(practice.nominativo)
+    || cleanText(practice.nomeRichiedente)
+    || cleanText(practice.nome_ricerca);
+
+  if (direct) return direct;
+
+  const full =
+    [
+      cleanText(practice.nome),
+      cleanText(practice.cognome),
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+  return full || cleanText(practice.id) || "Pratica";
+}
+
+
+function missingPracticeDocuments(practice = {}) {
+  const required =
+    Array.isArray(practice.documenti_richiesti_portale)
+      ? practice.documenti_richiesti_portale
+          .map(x => cleanText(x).replace(/^doc_/, ""))
+          .filter(Boolean)
+      : [];
+
+  return required
+    .filter(id => practice[`doc_${id}`] !== true)
+    .map(id => id.replace(/_/g, " "));
+}
+
+
+function stateIsToProcess(state = "") {
+  const s = cleanText(state).toLowerCase();
+
+  return (
+    !s
+    || s === "non_definito"
+    || s === "da_istruire"
+    || s.includes("richiest")
+    || s.includes("istruire")
+    || s.includes("nuova")
+    || s.includes("nuovo")
+  );
+}
+
+
+function stateIsProcessing(state = "") {
+  const s = cleanText(state).toLowerCase();
+
+  return (
+    s.includes("istruttor")
+    || s.includes("lavoraz")
+    || s.includes("caricat")
+    || s.includes("banca")
+  );
+}
+
+
+function buildAutomaticSuggestion({
+  state,
+  daysInactive,
+  missingDocs = [],
+  isStale = false,
+  isIncomplete = false,
+}) {
+  const actions = [];
+
+  if (stateIsToProcess(state)) {
+    actions.push(
+      "Avviare l'istruttoria: verificare anagrafica, finalità, importo richiesto e documentazione minima necessaria."
+    );
+  }
+
+  if (isIncomplete) {
+    if (missingDocs.length) {
+      actions.push(
+        `Richiedere o verificare i documenti mancanti: ${missingDocs.slice(0, 6).join(", ")}${missingDocs.length > 6 ? "…" : ""}.`
+      );
+    } else {
+      actions.push(
+        "Verificare la checklist documentale e richiedere le integrazioni ancora necessarie."
+      );
+    }
+  }
+
+  if (isStale) {
+    actions.push(
+      `La pratica non registra attività utile da ${daysInactive} giorni: contattare cliente/banca e registrare il prossimo passo nella timeline.`
+    );
+  }
+
+  if (stateIsProcessing(state) && !isIncomplete) {
+    actions.push(
+      "Verificare se ci sono richieste pendenti della banca, esiti da sollecitare o passaggi successivi da pianificare."
+    );
+  }
+
+  if (!actions.length) {
+    actions.push(
+      "Controllare lo stato corrente, l'ultima attività e definire il prossimo passaggio operativo."
+    );
+  }
+
+  return actions.join(" ");
+}
+
+
+async function userCanAccessPractice(uid, profile, practice = {}) {
+  const role =
+    cleanText(profile?.ruolo).toLowerCase();
+
+  if (role === "admin") return true;
+
+  const ownerUid =
+    cleanText(practice.consulente_uid)
+    || cleanText(practice.workspace_uid)
+    || cleanText(practice.owner_uid);
+
+  if (!ownerUid) return false;
+  if (ownerUid === uid) return true;
+
+  const directVisible =
+    Array.isArray(profile?.collaboratori_visibili)
+      ? profile.collaboratori_visibili.map(x => cleanText(x)).filter(Boolean)
+      : [];
+
+  if (role === "responsabile") {
+    if (directVisible.includes(ownerUid)) return true;
+
+    const ownerSnap =
+      await db.collection("consulenti").doc(ownerUid).get();
+
+    return (
+      ownerSnap.exists
+      && cleanText(ownerSnap.data()?.responsabile_uid) === uid
+    );
+  }
+
+  if (role === "segreteria") {
+    if (directVisible.includes(ownerUid)) return true;
+
+    const ownerSnap =
+      await db.collection("consulenti").doc(ownerUid).get();
+
+    if (!ownerSnap.exists) return false;
+
+    const managerUid =
+      cleanText(ownerSnap.data()?.responsabile_uid);
+
+    return !!managerUid && directVisible.includes(managerUid);
+  }
+
+  return false;
 }
 
 
@@ -927,6 +1107,10 @@ const dashboardGestionaleDati =
       const consultantMap =
         new Map();
 
+      const attentionPractices = [];
+      let toProcess = 0;
+      let processing = 0;
+
 
       for (
         const practice of
@@ -991,13 +1175,93 @@ const dashboardGestionaleDati =
             1;
         }
 
-        if (
+        const isIncomplete =
           practiceDocsIncomplete(
             practice
-          )
-        ) {
+          );
+
+        if (isIncomplete) {
           incompleteDocs +=
             1;
+        }
+
+        if (stateIsToProcess(state)) {
+          toProcess += 1;
+        }
+
+        if (stateIsProcessing(state)) {
+          processing += 1;
+        }
+
+        const daysInactive =
+          updated
+            ? Math.max(
+                0,
+                Math.floor(
+                  (now - updated)
+                  /
+                  (24 * 60 * 60 * 1000)
+                )
+              )
+            : null;
+
+        const isStale =
+          !!updated
+          &&
+          now - updated > sevenDays;
+
+        const missingDocs =
+          missingPracticeDocuments(
+            practice
+          );
+
+        const reasons = [];
+
+        if (stateIsToProcess(state)) {
+          reasons.push("Pratica da istruire");
+        }
+
+        if (isStale) {
+          reasons.push(
+            `Nessuna attività utile da ${daysInactive} giorni`
+          );
+        }
+
+        if (isIncomplete) {
+          reasons.push(
+            missingDocs.length
+              ? `${missingDocs.length} documenti richiesti risultano mancanti`
+              : "Documentazione incompleta"
+          );
+        }
+
+        if (reasons.length) {
+          attentionPractices.push({
+            id: practice.id,
+            cliente: practiceDisplayName(practice),
+            stato: state,
+            consulente_uid:
+              cleanText(practice.consulente_uid)
+              || cleanText(practice.workspace_uid)
+              || cleanText(practice.owner_uid),
+            consulente_email:
+              cleanText(practice.consulente_email),
+            giorni_inattivita: daysInactive,
+            ultima_attivita_ms: updated || null,
+            ferma_oltre_7_giorni: isStale,
+            documentazione_incompleta: isIncomplete,
+            da_istruire: stateIsToProcess(state),
+            documenti_mancanti: missingDocs,
+            motivi: reasons,
+            suggerimento_automatico:
+              buildAutomaticSuggestion({
+                state,
+                daysInactive,
+                missingDocs,
+                isStale,
+                isIncomplete,
+              }),
+          });
         }
 
         const source =
@@ -1306,6 +1570,10 @@ const dashboardGestionaleDati =
         totalPractices:
           practices.length,
 
+        toProcess,
+
+        processing,
+
         deliberate,
 
         stipulated,
@@ -1321,8 +1589,210 @@ const dashboardGestionaleDati =
         agencies,
 
         consultants,
+
+        attentionPractices,
       };
 
+    }
+  );
+
+
+const dashboardPraticaSuggerimentoAI =
+  onCall(
+    {
+      region: "us-central1",
+      secrets: ["OPENAI_API_KEY"],
+      timeoutSeconds: 60,
+      memory: "256MiB",
+    },
+
+    async request => {
+      const uid = request.auth?.uid;
+
+      if (!uid) {
+        throw new HttpsError(
+          "unauthenticated",
+          "Accesso richiesto."
+        );
+      }
+
+      const practiceId =
+        cleanText(request.data?.practiceId);
+
+      if (!practiceId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "practiceId mancante."
+        );
+      }
+
+      const [profileSnap, practiceSnap] =
+        await Promise.all([
+          db.collection("consulenti").doc(uid).get(),
+          db.collection("pratiche_mutuo").doc(practiceId).get(),
+        ]);
+
+      if (!profileSnap.exists) {
+        throw new HttpsError(
+          "permission-denied",
+          "Profilo utente non trovato."
+        );
+      }
+
+      if (!practiceSnap.exists) {
+        throw new HttpsError(
+          "not-found",
+          "Pratica non trovata."
+        );
+      }
+
+      const profile = profileSnap.data() || {};
+      const practice = {
+        id: practiceSnap.id,
+        ...(practiceSnap.data() || {}),
+      };
+
+      if (
+        !(await userCanAccessPractice(
+          uid,
+          profile,
+          practice
+        ))
+      ) {
+        throw new HttpsError(
+          "permission-denied",
+          "Non puoi analizzare questa pratica."
+        );
+      }
+
+      const state = getState(practice);
+      const updated =
+        latestPracticeActivityMillis(practice);
+      const now = Date.now();
+      const daysInactive =
+        updated
+          ? Math.max(
+              0,
+              Math.floor(
+                (now - updated)
+                /
+                (24 * 60 * 60 * 1000)
+              )
+            )
+          : null;
+
+      const missingDocs =
+        missingPracticeDocuments(practice);
+
+      const context = {
+        id: practice.id,
+        cliente: practiceDisplayName(practice),
+        stato: state,
+        giorniInattivita: daysInactive,
+        documentiMancanti: missingDocs,
+        documentazioneIncompleta:
+          practiceDocsIncomplete(practice),
+        provenienza:
+          normalizePracticeSource(practice),
+        note:
+          cleanText(
+            practice.note_pratica
+            || practice.note
+            || practice.notePratica,
+            1500
+          ),
+        ultimaAttivitaCliente:
+          Array.isArray(practice.attivita_cliente_log)
+            ? practice.attivita_cliente_log.slice(-5)
+            : [],
+        ultimeAttivitaInterne:
+          Array.isArray(practice.attivita_interne)
+            ? practice.attivita_interne.slice(-5)
+            : [],
+      };
+
+      const apiKey =
+        process.env.OPENAI_API_KEY;
+
+      if (!apiKey) {
+        throw new HttpsError(
+          "failed-precondition",
+          "OPENAI_API_KEY non configurata."
+        );
+      }
+
+      const response =
+        await fetch(
+          "https://api.openai.com/v1/responses",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "gpt-5.6-luna",
+              store: false,
+              input: [
+                {
+                  role: "developer",
+                  content:
+                    "Sei un assistente operativo per pratiche di mutuo. Analizza esclusivamente i dati forniti. Non inventare documenti, esiti bancari o informazioni mancanti. Rispondi in italiano, in modo concreto e sintetico. Indica: 1) criticità rilevate; 2) prossime azioni consigliate in ordine pratico; 3) cosa verificare prima di contattare banca o cliente. Non dare garanzie di delibera o approvazione.",
+                },
+                {
+                  role: "user",
+                  content:
+                    `Analizza questa pratica e suggerisci come portarla avanti:\\n${JSON.stringify(context, null, 2)}`,
+                },
+              ],
+              max_output_tokens: 700,
+            }),
+          }
+        );
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        console.error(
+          "OpenAI dashboard suggestion:",
+          response.status,
+          errorText
+        );
+
+        throw new HttpsError(
+          "internal",
+          "Errore durante la generazione del suggerimento AI."
+        );
+      }
+
+      const data =
+        await response.json();
+
+      const text =
+        cleanText(
+          data.output_text
+          ||
+          (Array.isArray(data.output)
+            ? data.output
+                .flatMap(item => item.content || [])
+                .map(item => item.text || "")
+                .filter(Boolean)
+                .join("\\n")
+            : ""),
+          8000
+        );
+
+      return {
+        ok: true,
+        practiceId,
+        generatedAt:
+          new Date().toISOString(),
+        text:
+          text
+          ||
+          "Nessun suggerimento AI disponibile.",
+      };
     }
   );
 
@@ -1332,4 +1802,5 @@ module.exports = {
   salvaProvenienzaPratica,
   listaAgenzieImmobiliari,
   dashboardGestionaleDati,
+  dashboardPraticaSuggerimentoAI,
 };
