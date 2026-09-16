@@ -1827,153 +1827,88 @@ const associaEmailAPratica =
 
 
 
+async function canReadTimelinePractice(uid, practice = {}) {
+  const profileSnap = await db.collection("consulenti").doc(uid).get();
+  if (!profileSnap.exists) return false;
+  const profile = profileSnap.data() || {};
+  const role = String(profile.ruolo || "").trim().toLowerCase();
+  if (role === "admin") return true;
+
+  const ownerUid = String(
+    practice.consulente_uid || practice.workspace_uid || practice.owner_uid || ""
+  ).trim();
+  if (!ownerUid) return false;
+  if (ownerUid === uid) return true;
+
+  const visible = Array.isArray(profile.collaboratori_visibili)
+    ? profile.collaboratori_visibili.map(x => String(x || "").trim())
+    : [];
+
+  if (visible.includes(ownerUid)) return true;
+
+  if (role === "responsabile" || role === "segreteria") {
+    const ownerSnap = await db.collection("consulenti").doc(ownerUid).get();
+    if (!ownerSnap.exists) return false;
+    const managerUid = String(ownerSnap.data()?.responsabile_uid || "").trim();
+    return !!managerUid && visible.includes(managerUid);
+  }
+  return false;
+}
+
+function serializeTimelineEmail(doc) {
+  const d = doc.data() || {};
+  return {
+    id: doc.id,
+    ...d,
+    data: d.data?.toDate ? d.data.toDate().toISOString() : (d.data || null),
+    createdAt: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : (d.createdAt || null),
+    updatedAt: d.updatedAt?.toDate ? d.updatedAt.toDate().toISOString() : (d.updatedAt || null),
+  };
+}
+
 const leggiEmailTimeline =
   onCall(
-    {
-      region: "us-central1",
-      timeoutSeconds: 60,
-      memory: "256MiB",
-    },
-
+    { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
     async request => {
-      const uid =
-        request.auth?.uid;
+      const uid = request.auth?.uid;
+      if (!uid) throw new HttpsError("unauthenticated", "Accesso richiesto.");
 
-      if (!uid) {
-        throw new HttpsError(
-          "unauthenticated",
-          "Accesso richiesto."
-        );
+      const practiceId = String(request.data?.practiceId || "").trim();
+      const emailDocId = String(request.data?.emailDocId || "").trim();
+
+      if (!practiceId) {
+        throw new HttpsError("invalid-argument", "Pratica non specificata.");
       }
 
-      const practiceId =
-        String(
-          request.data?.practiceId
-          ||
-          ""
-        ).trim();
+      const practiceRef = db.collection("pratiche_mutuo").doc(practiceId);
+      const practiceSnap = await practiceRef.get();
+      if (!practiceSnap.exists) throw new HttpsError("not-found", "Pratica non trovata.");
 
-      const emailDocId =
-        String(
-          request.data?.emailDocId
-          ||
-          ""
-        ).trim();
-
-      if (!practiceId || !emailDocId) {
-        throw new HttpsError(
-          "invalid-argument",
-          "Pratica o email non specificata."
-        );
+      if (!(await canReadTimelinePractice(uid, practiceSnap.data() || {}))) {
+        throw new HttpsError("permission-denied", "Non puoi visualizzare le email di questa pratica.");
       }
 
-      const practiceRef =
-        db.collection("pratiche_mutuo")
-          .doc(practiceId);
-
-      const practiceSnap =
-        await practiceRef.get();
-
-      if (!practiceSnap.exists) {
-        throw new HttpsError(
-          "not-found",
-          "Pratica non trovata."
-        );
+      let selected = null;
+      if (emailDocId) {
+        const emailSnap = await practiceRef.collection("email_timeline").doc(emailDocId).get();
+        if (!emailSnap.exists) throw new HttpsError("not-found", "Email non trovata.");
+        selected = serializeTimelineEmail(emailSnap);
       }
 
-      /*
-       * Il controllo applicativo usa lo stesso proprietario della pratica
-       * quando presente. Admin/responsabili restano compatibili con le
-       * autorizzazioni già gestite dal progetto.
-       */
-      const practice =
-        practiceSnap.data() || {};
-
-      const consultantSnap =
-        await db.collection("consulenti")
-          .doc(uid)
-          .get();
-
-      const me =
-        consultantSnap.exists
-          ? (consultantSnap.data() || {})
-          : {};
-
-      const role =
-        String(me.ruolo || "")
-          .trim()
-          .toLowerCase();
-
-      const ownerUid =
-        String(
-          practice.consulente_uid
-          ||
-          practice.consulenteUid
-          ||
-          practice.uidConsulente
-          ||
-          ""
-        ).trim();
-
-      const privileged =
-        role === "admin"
-        ||
-        role === "responsabile"
-        ||
-        role === "segreteria";
-
-      if (
-        ownerUid
-        &&
-        ownerUid !== uid
-        &&
-        !privileged
-      ) {
-        throw new HttpsError(
-          "permission-denied",
-          "Questa email appartiene a una pratica non assegnata al tuo profilo."
-        );
-      }
-
-      const emailSnap =
-        await practiceRef
-          .collection("email_timeline")
-          .doc(emailDocId)
-          .get();
-
-      if (!emailSnap.exists) {
-        throw new HttpsError(
-          "not-found",
-          "Il contenuto dell'email non è disponibile. Esegui una nuova sincronizzazione Gmail."
-        );
-      }
-
-      const data =
-        emailSnap.data() || {};
+      const threadSnap = await practiceRef
+        .collection("email_timeline")
+        .orderBy("data", "asc")
+        .limit(50)
+        .get();
 
       return {
         ok: true,
-        email: {
-          id: emailSnap.id,
-          messageId: data.messageId || null,
-          gmailMessageId: data.gmailMessageId || null,
-          uid: data.uid || null,
-          folder: data.folder || "",
-          direzione: data.direzione || "",
-          data:
-            data.data?.toDate
-              ? data.data.toDate().toISOString()
-              : (data.data || null),
-          mittente: data.mittente || [],
-          destinatari: data.destinatari || [],
-          replyTo: data.replyTo || [],
-          oggetto: data.oggetto || "",
-          testo: data.testo || "",
-          allegati: data.allegati || [],
-          banca: data.banca || "",
-          numeroPraticaRilevato:
-            data.numeroPraticaRilevato || "",
+        practice: {
+          id: practiceSnap.id,
+          ...(practiceSnap.data() || {}),
         },
+        email: selected,
+        thread: threadSnap.docs.map(serializeTimelineEmail),
       };
     }
   );

@@ -402,12 +402,15 @@ function qs(name){
 function formatDate(value){
   if(!value) return "";
   try{
-    if(value.toDate){
+    if(value?.toDate){
       return value.toDate().toLocaleString("it-IT");
     }
-    return new Date(value).toLocaleString("it-IT");
-  }catch(error){
-    return String(value);
+    const d = new Date(value);
+    return Number.isNaN(d.getTime())
+      ? ""
+      : d.toLocaleString("it-IT");
+  }catch(_){
+    return "";
   }
 }
 
@@ -524,15 +527,10 @@ async function renderThread(){
   const box = document.getElementById("thread");
 
   try{
-    const snap = await db
-      .collection("pratiche_mutuo")
-      .doc(currentPracticeId)
-      .collection("email_timeline")
-      .orderBy("data","asc")
-      .limit(50)
-      .get();
-
-    const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const docs =
+      Array.isArray(currentThread)
+        ? currentThread
+        : [];
 
     if(!docs.length){
       box.innerHTML='<div class="empty">Nessun thread disponibile.</div>';
@@ -661,21 +659,26 @@ async function loadData(){
   }
 
   try{
-    const [practiceSnap,emailSnap] = await Promise.all([
-      db.collection("pratiche_mutuo").doc(currentPracticeId).get(),
-      db.collection("pratiche_mutuo")
-        .doc(currentPracticeId)
-        .collection("email_timeline")
-        .doc(currentEmailId)
-        .get()
-    ]);
+    const callable =
+      fn.httpsCallable(
+        "leggiEmailTimeline"
+      );
 
-    if(!emailSnap.exists){
+    const result =
+      await callable({
+        practiceId: currentPracticeId,
+        emailDocId: currentEmailId
+      });
+
+    if(!result.data?.ok || !result.data?.email){
       throw new Error("Email non trovata.");
     }
 
-    currentPractice = practiceSnap.exists ? (practiceSnap.data() || {}) : {};
-    currentEmail = emailSnap.data() || {};
+    currentPractice = result.data.practice || {};
+    currentEmail = result.data.email || {};
+    currentThread = Array.isArray(result.data.thread)
+      ? result.data.thread
+      : [];
 
     renderEmail();
     renderPractice();
