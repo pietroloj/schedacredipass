@@ -484,11 +484,11 @@ function normalizePracticeSource(practice = {}) {
   const legacyCategory =
     SOURCE_CATEGORIES.includes(cleanText(legacy.categoria).toLowerCase())
       ? cleanText(legacy.categoria).toLowerCase()
-      : "non_definito";
+      : "diretto";
 
   return {
-    categoria: legacyCategory,
     ...legacy,
+    categoria: legacyCategory,
   };
 }
 
