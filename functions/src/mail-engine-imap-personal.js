@@ -1025,6 +1025,13 @@ async function syncFolder({
     let matched =
       0;
 
+    /*
+     * Diagnostica locale alla singola cartella IMAP.
+     * Deve essere inizializzata dentro syncFolder, prima del ciclo fetch.
+     */
+    const messageDiagnostics =
+      [];
+
     const fetchOptions =
       lastUid > 0
         ? { uid: true }
