@@ -1397,9 +1397,9 @@ async function guard(options = {}) {
     }
 
     /*
-     * Dashboard gestionale disponibile a tutti gli utenti autenticati attivi.
-     * I dati/pratiche visibili restano comunque limitati da practiceIsAccessible
-     * e dalla gerarchia dell'utente.
+     * La Dashboard gestionale è disponibile a tutti gli utenti
+     * autenticati e attivi. La visibilità della singola pratica
+     * viene stabilita esclusivamente da practiceIsAccessible().
      */
 
     if (
@@ -1433,78 +1433,117 @@ async function practiceIsAccessible(data = {}) {
 
     if (session.isAdmin) return true;
 
-    const owner = String(
-        data.consulente_uid ||
-        data.workspace_uid ||
-        data.owner_uid ||
-        ""
-    ).trim();
+    const myUid = String(session.user?.uid || "").trim();
 
-    // Tutti vedono sempre le proprie pratiche.
-    if (owner && owner === session.user.uid) return true;
+    /*
+     * Il proprietario operativo della pratica è consulente_uid.
+     * workspace_uid / owner_uid restano fallback SOLO per pratiche legacy
+     * prive di consulente_uid.
+     */
+    const consultantUid =
+        String(data.consulente_uid || "").trim();
 
-    // Collega esplicitamente segnalato/associato.
-    const sharedColleagueUid =
-        String(data.collega_segnalato_uid || "").trim();
+    const legacyOwnerUid =
+        !consultantUid
+            ? String(data.workspace_uid || data.owner_uid || "").trim()
+            : "";
 
-    if (
-        sharedColleagueUid &&
-        sharedColleagueUid === session.user.uid
-    ) return true;
+    const ownerUid =
+        consultantUid || legacyOwnerUid;
 
-    const directVisible = Array.isArray(
-        session.profile?.collaboratori_visibili
-    )
-        ? session.profile.collaboratori_visibili
-            .map(x => String(x || "").trim())
-            .filter(Boolean)
-        : [];
+    // CONSULENTE: esclusivamente le proprie pratiche.
+    // collega_segnalato_uid NON concede accesso.
+    if (session.isConsulente) {
+        return !!ownerUid && ownerUid === myUid;
+    }
 
-    // Responsabile: proprie pratiche + collaboratori assegnati.
+    // Tutti gli altri ruoli vedono sempre le proprie pratiche.
+    if (ownerUid && ownerUid === myUid) {
+        return true;
+    }
+
+    const directVisible =
+        Array.isArray(session.profile?.collaboratori_visibili)
+            ? session.profile.collaboratori_visibili
+                .map(x => String(x || "").trim())
+                .filter(Boolean)
+            : [];
+
+    // RESPONSABILE: proprie pratiche + pratiche dei consulenti assegnati.
     if (session.isResponsabile) {
-        if (owner && directVisible.includes(owner)) return true;
+        if (ownerUid && directVisible.includes(ownerUid)) {
+            return true;
+        }
 
-        // Compatibilità con la nuova gerarchia responsabile_uid:
-        // se la lista legacy non è aggiornata, controlliamo il profilo owner.
-        if (owner) {
+        if (ownerUid) {
             try {
-                const snap = await firebase.firestore()
-                    .collection("consulenti")
-                    .doc(owner)
-                    .get();
+                const ownerSnap =
+                    await firebase.firestore()
+                        .collection("consulenti")
+                        .doc(ownerUid)
+                        .get();
 
                 if (
-                    snap.exists &&
-                    String(snap.data()?.responsabile_uid || "").trim()
-                        === session.user.uid
-                ) return true;
-            } catch (e) {
-                console.warn("Verifica gerarchia Responsabile:", e);
+                    ownerSnap.exists &&
+                    String(
+                        ownerSnap.data()?.responsabile_uid || ""
+                    ).trim() === myUid
+                ) {
+                    return true;
+                }
+            } catch (error) {
+                console.warn(
+                    "Verifica gerarchia Responsabile:",
+                    error
+                );
             }
         }
+
         return false;
     }
 
-    // Segreteria: utenti assegnati direttamente + team dei Responsabili assegnati.
+    /*
+     * SEGRETERIA:
+     * - pratiche dei soggetti assegnati direttamente;
+     * - pratiche dei consulenti appartenenti ai Responsabili assegnati.
+     */
     if (session.isSegreteria) {
-        if (owner && directVisible.includes(owner)) return true;
-        if (!owner) return false;
+        if (
+            ownerUid &&
+            directVisible.includes(ownerUid)
+        ) {
+            return true;
+        }
+
+        if (!ownerUid) {
+            return false;
+        }
 
         try {
-            const ownerSnap = await firebase.firestore()
-                .collection("consulenti")
-                .doc(owner)
-                .get();
+            const ownerSnap =
+                await firebase.firestore()
+                    .collection("consulenti")
+                    .doc(ownerUid)
+                    .get();
 
-            if (!ownerSnap.exists) return false;
+            if (!ownerSnap.exists) {
+                return false;
+            }
 
-            const ownerProfile = ownerSnap.data() || {};
             const managerUid =
-                String(ownerProfile.responsabile_uid || "").trim();
+                String(
+                    ownerSnap.data()?.responsabile_uid || ""
+                ).trim();
 
-            return !!managerUid && directVisible.includes(managerUid);
-        } catch (e) {
-            console.warn("Verifica gerarchia Segreteria:", e);
+            return (
+                !!managerUid &&
+                directVisible.includes(managerUid)
+            );
+        } catch (error) {
+            console.warn(
+                "Verifica gerarchia Segreteria:",
+                error
+            );
             return false;
         }
     }

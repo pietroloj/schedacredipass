@@ -550,18 +550,26 @@
                 await setupCollaboratorFilter();
             }
             else {
-                const result = new Map();
-                const [ownSnap, sharedSnap] = await Promise.all([
-                    db.collection("pratiche_mutuo")
-                        .where("consulente_uid", "==", sessioneConsulente.user.uid)
-                        .get(),
-                    db.collection("pratiche_mutuo")
-                        .where("collega_segnalato_uid", "==", sessioneConsulente.user.uid)
-                        .get()
-                ]);
-                ownSnap.forEach(doc => result.set(doc.id, doc));
-                sharedSnap.forEach(doc => result.set(doc.id, doc));
-                docs = Array.from(result.values());
+                /*
+                 * CONSULENTE:
+                 * visualizza esclusivamente le pratiche assegnate a lui.
+                 *
+                 * collega_segnalato_uid è un'informazione di segnalazione
+                 * e NON attribuisce visibilità/proprietà sulla pratica.
+                 */
+                const ownSnap =
+                    await db.collection("pratiche_mutuo")
+                        .where(
+                            "consulente_uid",
+                            "==",
+                            sessioneConsulente.user.uid
+                        )
+                        .get();
+
+                docs = [];
+                ownSnap.forEach(doc =>
+                    docs.push(doc)
+                );
             }
 
             docs.forEach(doc => {
