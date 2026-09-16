@@ -207,11 +207,11 @@
     <div id="collaboratorFilter" class="collaborator-filter">
         <label for="collaboratorSelect">
             <i class="fas fa-users"></i>
-            Collaboratore
+            Visualizza pratiche
         </label>
 
         <select id="collaboratorSelect" onchange="filtraClienti()">
-            <option value="">Tutti i collaboratori</option>
+            <option value="">Tutte le pratiche del gruppo</option>
         </select>
     </div>
 
@@ -345,17 +345,24 @@
             "visible"
         );
 
+        const myUid =
+            String(sessioneConsulente?.user?.uid || "").trim();
+
         select.innerHTML =
-            `<option value="">Tutti i collaboratori</option>`
+            `<option value="">Tutte le pratiche del gruppo</option>`
             +
-            ids.map(uid =>
-                `<option value="${uid}">${
-                    String(names[uid] || uid)
-                        .replace(/&/g, "&amp;")
-                        .replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;")
-                }</option>`
-            ).join("");
+            `<option value="__mine__">Le mie pratiche</option>`
+            +
+            ids
+                .filter(uid => uid !== myUid)
+                .map(uid =>
+                    `<option value="${uid}">${
+                        String(names[uid] || uid)
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                    }</option>`
+                ).join("");
     }
 
     async function loadPracticeDocsByOwners(ownerUids) {
@@ -663,10 +670,16 @@
                         filtro
                     );
 
+                const myUid =
+                    String(sessioneConsulente?.user?.uid || "").trim();
+
                 const matchesOwner =
                     !ownerFilter ||
-                    cliente.ownerUid ===
-                        ownerFilter;
+                    (
+                        ownerFilter === "__mine__"
+                            ? cliente.ownerUid === myUid
+                            : cliente.ownerUid === ownerFilter
+                    );
 
                 return (
                     matchesName &&
