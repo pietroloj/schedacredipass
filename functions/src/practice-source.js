@@ -475,15 +475,64 @@ const dashboardGestionaleDati =
 
     async request => {
 
-      if (
-        !request.auth?.uid
-      ) {
+      const uid =
+        request.auth?.uid;
+
+      if (!uid) {
         throw new HttpsError(
           "unauthenticated",
           "Accesso richiesto."
         );
       }
 
+      /*
+       * Recupera il profilo dell'utente autenticato.
+       * Il report viene calcolato SOLO sul perimetro di pratiche
+       * che il ruolo può effettivamente vedere.
+       */
+      const profileSnap =
+        await db
+          .collection("consulenti")
+          .doc(uid)
+          .get();
+
+      if (!profileSnap.exists) {
+        throw new HttpsError(
+          "permission-denied",
+          "Profilo consulente non trovato."
+        );
+      }
+
+      const profile =
+        profileSnap.data() || {};
+
+      if (profile.attivo === false) {
+        throw new HttpsError(
+          "permission-denied",
+          "Profilo consulente non attivo."
+        );
+      }
+
+      const role =
+        cleanText(
+          profile.ruolo
+        )
+          .toLowerCase();
+
+      const directVisible =
+        Array.isArray(
+          profile.collaboratori_visibili
+        )
+          ? profile.collaboratori_visibili
+              .map(x => cleanText(x))
+              .filter(Boolean)
+          : [];
+
+      /*
+       * Carichiamo le pratiche e applichiamo il perimetro lato backend.
+       * In questo modo NON basta modificare l'HTML per vedere dati
+       * appartenenti ad altri consulenti.
+       */
       const snap =
         await db
           .collection(
@@ -494,7 +543,7 @@ const dashboardGestionaleDati =
           )
           .get();
 
-      const practices =
+      const allPractices =
         snap.docs
           .map(
             doc => ({
@@ -508,6 +557,202 @@ const dashboardGestionaleDati =
               ),
             })
           );
+
+      let practices = [];
+
+      if (role === "admin") {
+        practices =
+          allPractices;
+      }
+
+      else if (role === "consulente") {
+        /*
+         * CONSULENTE:
+         * esclusivamente pratiche assegnate tramite consulente_uid.
+         *
+         * Per vecchie pratiche che non hanno ancora consulente_uid,
+         * usiamo workspace_uid/owner_uid solo come fallback legacy.
+         *
+         * collega_segnalato_uid NON attribuisce visibilità.
+         */
+        practices =
+          allPractices.filter(
+            practice => {
+              const consultantUid =
+                cleanText(
+                  practice.consulente_uid
+                );
+
+              const legacyOwnerUid =
+                !consultantUid
+                  ? cleanText(
+                      practice.workspace_uid
+                      ||
+                      practice.owner_uid
+                    )
+                  : "";
+
+              return (
+                consultantUid
+                ||
+                legacyOwnerUid
+              ) === uid;
+            }
+          );
+      }
+
+      else if (role === "responsabile") {
+        /*
+         * RESPONSABILE:
+         * proprie pratiche + pratiche dei consulenti assegnati.
+         *
+         * Oltre a collaboratori_visibili leggiamo anche responsabile_uid
+         * dai profili, così la nuova gerarchia resta la fonte autorevole.
+         */
+        const managedSnap =
+          await db
+            .collection("consulenti")
+            .where(
+              "responsabile_uid",
+              "==",
+              uid
+            )
+            .get();
+
+        const managedUids =
+          new Set(
+            [
+              uid,
+              ...directVisible,
+              ...managedSnap.docs.map(
+                doc => doc.id
+              ),
+            ]
+              .map(x => cleanText(x))
+              .filter(Boolean)
+          );
+
+        practices =
+          allPractices.filter(
+            practice => {
+              const consultantUid =
+                cleanText(
+                  practice.consulente_uid
+                );
+
+              const ownerUid =
+                consultantUid
+                ||
+                cleanText(
+                  practice.workspace_uid
+                  ||
+                  practice.owner_uid
+                );
+
+              return (
+                !!ownerUid &&
+                managedUids.has(ownerUid)
+              );
+            }
+          );
+      }
+
+      else if (role === "segreteria") {
+        /*
+         * SEGRETERIA / BACKOFFICE:
+         * - utenti assegnati direttamente;
+         * - Responsabili assegnati;
+         * - tutti i consulenti dei Responsabili assegnati.
+         */
+        const visibleUids =
+          new Set(
+            [
+              uid,
+              ...directVisible,
+            ]
+              .map(x => cleanText(x))
+              .filter(Boolean)
+          );
+
+        const assignedManagers =
+          new Set();
+
+        for (const visibleUid of directVisible) {
+          const visibleProfileSnap =
+            await db
+              .collection("consulenti")
+              .doc(visibleUid)
+              .get();
+
+          if (!visibleProfileSnap.exists) {
+            continue;
+          }
+
+          const visibleProfile =
+            visibleProfileSnap.data() || {};
+
+          if (
+            cleanText(
+              visibleProfile.ruolo
+            ).toLowerCase() ===
+            "responsabile"
+          ) {
+            assignedManagers.add(
+              visibleUid
+            );
+          }
+        }
+
+        for (const managerUid of assignedManagers) {
+          const teamSnap =
+            await db
+              .collection("consulenti")
+              .where(
+                "responsabile_uid",
+                "==",
+                managerUid
+              )
+              .get();
+
+          teamSnap.docs.forEach(
+            doc =>
+              visibleUids.add(
+                doc.id
+              )
+          );
+        }
+
+        practices =
+          allPractices.filter(
+            practice => {
+              const consultantUid =
+                cleanText(
+                  practice.consulente_uid
+                );
+
+              const ownerUid =
+                consultantUid
+                ||
+                cleanText(
+                  practice.workspace_uid
+                  ||
+                  practice.owner_uid
+                );
+
+              return (
+                !!ownerUid &&
+                visibleUids.has(ownerUid)
+              );
+            }
+          );
+      }
+
+      else {
+        throw new HttpsError(
+          "permission-denied",
+          "Ruolo non autorizzato alla dashboard gestionale."
+        );
+      }
 
       const now =
         Date.now();
@@ -654,8 +899,8 @@ const dashboardGestionaleDati =
             .includes(
               source.categoria
             )
-            ? source.categoria
-            : "non_definito";
+              ? source.categoria
+              : "non_definito";
 
         countsBySource[
           category
@@ -813,6 +1058,17 @@ const dashboardGestionaleDati =
       return {
         ok:
           true,
+
+        /*
+         * Utile anche per verificare dal browser quale perimetro
+         * è stato applicato senza esporre pratiche non autorizzate.
+         */
+        scope: {
+          role,
+          uid,
+          practiceCount:
+            practices.length,
+        },
 
         totalPractices:
           practices.length,
