@@ -4487,7 +4487,7 @@ Cordiali saluti`
     }
 
 
-    async function apriEmailTimeline(emailDocId) {
+    function apriEmailTimeline(emailDocId) {
         if (
             !emailDocId
             ||
@@ -4496,236 +4496,28 @@ Cordiali saluti`
             return;
         }
 
-        const modal =
-            document.getElementById(
-                "emailTimelineModal"
+        /*
+         * Il visualizzatore completo delle email esiste già nel progetto:
+         * mail-view.html gestisce corpo email, analisi AI, allegati,
+         * documenti richiesti vs fascicolo e risposta suggerita.
+         */
+        const url =
+            "/main/mail-view.html"
+            +
+            "?practiceId="
+            +
+            encodeURIComponent(
+                idCliente
+            )
+            +
+            "&emailId="
+            +
+            encodeURIComponent(
+                emailDocId
             );
 
-        const title =
-            document.getElementById(
-                "emailTimelineModalTitle"
-            );
-
-        const body =
-            document.getElementById(
-                "emailTimelineModalBody"
-            );
-
-        if (
-            !modal
-            ||
-            !body
-        ) {
-            return;
-        }
-
-        modal.style.display =
-            "flex";
-
-        body.innerHTML =
-            "Caricamento email...";
-
-        try {
-            /*
-             * Lettura server-side: funziona sia con email acquisite
-             * via IMAP/App Password sia con Gmail OAuth2 e non dipende
-             * dalle regole Firestore della subcollection.
-             */
-            const callable =
-                firebase
-                    .app()
-                    .functions(
-                        "us-central1"
-                    )
-                    .httpsCallable(
-                        "leggiEmailTimeline"
-                    );
-
-            const result =
-                await callable({
-                    practiceId:
-                        idCliente,
-                    emailDocId:
-                        emailDocId
-                });
-
-            const d =
-                result.data?.email
-                ||
-                {};
-
-            if (!result.data?.ok) {
-                throw new Error(
-                    "Email non trovata."
-                );
-            }
-
-            const mittente =
-                emailListText(
-                    d.mittente
-                );
-
-            const destinatari =
-                emailListText(
-                    d.destinatari
-                );
-
-            const direzione =
-                d.direzione
-                ||
-                "";
-
-            const replyAddress =
-                direzione ===
-                "ricevuta"
-                    ? (
-                        Array.isArray(d.replyTo)
-                        &&
-                        d.replyTo[0]
-                            ? d.replyTo[0]
-                            : (
-                                Array.isArray(d.mittente)
-                                &&
-                                d.mittente[0]
-                                    ? d.mittente[0]
-                                    : ""
-                              )
-                      )
-                    : (
-                        Array.isArray(d.destinatari)
-                        &&
-                        d.destinatari[0]
-                            ? d.destinatari[0]
-                            : ""
-                      );
-
-            const subject =
-                String(
-                    d.oggetto
-                    ||
-                    ""
-                );
-
-            if (title) {
-                title.textContent =
-                    subject
-                    ||
-                    "Email";
-            }
-
-            const dataEmail =
-                d.data
-                    ? (
-                        d.data?.toDate
-                            ? d.data
-                                .toDate()
-                                .toLocaleString(
-                                    "it-IT"
-                                )
-                            : (
-                                !Number.isNaN(
-                                    new Date(d.data).getTime()
-                                )
-                                    ? new Date(d.data)
-                                        .toLocaleString(
-                                            "it-IT"
-                                        )
-                                    : ""
-                              )
-                      )
-                    : "";
-
-            const attachments =
-                Array.isArray(
-                    d.allegati
-                )
-                    ? d.allegati
-                    : [];
-
-            body.innerHTML = `
-                <div class="email-meta-row">
-                    <div class="email-meta-label">Direzione</div>
-                    <div>${escapeHtml(direzione || "-")}</div>
-                </div>
-
-                <div class="email-meta-row">
-                    <div class="email-meta-label">Data</div>
-                    <div>${escapeHtml(dataEmail || "-")}</div>
-                </div>
-
-                <div class="email-meta-row">
-                    <div class="email-meta-label">Da</div>
-                    <div>${escapeHtml(mittente || "-")}</div>
-                </div>
-
-                <div class="email-meta-row">
-                    <div class="email-meta-label">A</div>
-                    <div>${escapeHtml(destinatari || "-")}</div>
-                </div>
-
-                <div class="email-meta-row">
-                    <div class="email-meta-label">Banca</div>
-                    <div>${escapeHtml(d.banca || "-")}</div>
-                </div>
-
-                <div class="email-meta-row">
-                    <div class="email-meta-label">Pratica rilevata</div>
-                    <div>${escapeHtml(d.numeroPraticaRilevato || "-")}</div>
-                </div>
-
-                <div class="email-message-box">${escapeHtml(d.testo || "(nessun testo disponibile)")}</div>
-
-                ${
-                    attachments.length
-                        ? `
-                            <div style="margin-top:14px;font-size:10px;font-weight:800;color:#002d72;">
-                                ALLEGATI
-                            </div>
-                            <div style="margin-top:6px;font-size:10px;color:#58636c;">
-                                ${attachments
-                                    .map(a => `📎 ${escapeHtml(a.nome || "Allegato")}`)
-                                    .join("<br>")}
-                            </div>
-                          `
-                        : ""
-                }
-
-                <div class="email-modal-actions">
-                    ${
-                        replyAddress
-                            ? `
-                                <button
-                                    type="button"
-                                    class="email-modal-action"
-                                    onclick='apriRispostaClientPosta(${JSON.stringify(replyAddress)}, ${JSON.stringify(subject)})'
-                                >
-                                    <i class="fas fa-reply"></i>
-                                    RISPONDI
-                                </button>
-                              `
-                            : ""
-                    }
-
-                    <button
-                        type="button"
-                        class="email-modal-action"
-                        style="background:#6c757d;"
-                        onclick="chiudiEmailTimelineModal()"
-                    >
-                        CHIUDI
-                    </button>
-                </div>
-
-                <div style="margin-top:10px;color:#8a949e;font-size:9px;line-height:1.5;">
-                    Il pulsante Rispondi apre il gestore di posta associato ai link mailto sul dispositivo.
-                    Dopo l'invio, il Mail Engine leggerà anche la cartella Posta inviata e registrerà la risposta nella timeline al prossimo sincronismo.
-                </div>
-            `;
-        }
-        catch(error) {
-            body.innerHTML =
-                `<div style="color:#b42318;font-size:11px;">${escapeHtml(error?.message || "Errore apertura email")}</div>`;
-        }
+        window.location.href =
+            url;
     }
 
 
