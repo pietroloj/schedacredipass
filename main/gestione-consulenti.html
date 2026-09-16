@@ -142,7 +142,15 @@ async function saveRole(uid){
 }
 function editVisibility(uid){
  const u=getUser(uid),role=String(u?.ruolo||"").toLowerCase();
- const candidates=allUsers.filter(x=>x.uid!==uid&&x.attivo!==false&&(role==="segreteria"?["responsabile","consulente"].includes(String(x.ruolo||"").toLowerCase()):String(x.ruolo||"").toLowerCase()==="consulente");
+ const candidates=allUsers.filter(x =>
+   x.uid !== uid &&
+   x.attivo !== false &&
+   (
+     role === "segreteria"
+       ? ["responsabile","consulente"].includes(String(x.ruolo || "").toLowerCase())
+       : String(x.ruolo || "").toLowerCase() === "consulente"
+   )
+ );
  const selected=new Set(Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili:[]);
  const names=candidates.map((x,i)=>`${selected.has(x.uid)?"☑":"☐"} ${i+1}. ${nameOf(x)} (${roleLabel(String(x.ruolo||"").toLowerCase())})`).join("\n");
  const raw=prompt(`Inserisci i numeri separati da virgola degli utenti/team visibili per ${nameOf(u)}:\n\n${names}\n\nPer la Segreteria, selezionando un Responsabile viene ereditato automaticamente tutto il suo team.`,candidates.map((x,i)=>selected.has(x.uid)?i+1:null).filter(Boolean).join(","));
@@ -168,7 +176,21 @@ document.getElementById("create").onclick=async()=>{
    setTimeout(()=>{closeCreate();m.textContent=""},700);await listUsers();
  }catch(e){console.error(e);m.style.color="#b42318";m.textContent=e?.message||"Errore creazione."}
 };
-(async()=>{await CredipassAuth.guard({adminOnly:true});await listUsers()})();
+(async()=>{
+ try{
+   await CredipassAuth.guard({adminOnly:true});
+   await listUsers();
+ }catch(e){
+   console.error("Errore inizializzazione Gestione Consulenti:",e);
+   const tbody=document.getElementById("users");
+   if(tbody){
+     tbody.innerHTML=`<tr><td colspan="5" style="color:#b42318;padding:18px">
+       <b>Errore caricamento utenti.</b><br>
+       ${esc(e?.message || String(e))}
+     </td></tr>`;
+   }
+ }
+})();
 </script>
 </body>
 </html>
