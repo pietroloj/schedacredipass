@@ -573,13 +573,13 @@ async function saveUnmatched({
           null,
 
         numeriPraticaRilevati:
-          match?.extractedNumbers
+          (match?.extractedNumbers || [])
           ||
           [],
 
         candidati:
           (
-            match?.candidates
+            (match?.candidates || [])
             ||
             []
           )
@@ -738,7 +738,7 @@ async function saveMatchedMail({
     numeroPraticaRilevato:
       match?.best?.practiceNumber
       ||
-      match?.extractedNumbers?.[0]
+      (match?.extractedNumbers || [])?.[0]
       ||
       null,
 
@@ -771,7 +771,7 @@ async function saveMatchedMail({
   const number =
     match?.best?.practiceNumber
     ||
-    match?.extractedNumbers?.[0];
+    (match?.extractedNumbers || [])?.[0];
 
   if (number) {
     await rememberPracticeNumber({
@@ -929,6 +929,42 @@ function strictSubject(subject,data={}) {
   }
   return {matched:false,method:null,practiceNumber:"",score:0};
 }
+function extractLabeledPracticeNumbersFromSubject(subject = "") {
+  const raw = String(subject || "");
+  const patterns = [
+    /\b(?:n(?:umero)?\.?\s*)?pratica\s*(?:n(?:umero)?\.?\s*)?[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+    /\brif(?:erimento)?\.?\s*(?:pratica)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+    /\bid\s*pratica\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+  ];
+  const out=[];
+  for(const pattern of patterns){
+    let m;
+    while((m=pattern.exec(raw))!==null){
+      const v=normalizePracticeNumber(m[1]);
+      if(v&&v.length>=5&&!out.includes(v))out.push(v);
+    }
+  }
+  return out;
+}
+async function learnPracticeNumberAfterNameMatch({practiceRef,practiceData,subject,method}) {
+  if(method!=="subject_full_name"&&method!=="subject_surname_initial")return [];
+  const learned=extractLabeledPracticeNumbersFromSubject(subject);
+  if(!learned.length)return [];
+  const merged=[...new Set([...trustedNumbers(practiceData),...learned])];
+  await practiceRef.set({
+    mail_matching:{
+      ...(practiceData.mail_matching||{}),
+      numeri_pratica_manual:merged,
+      numero_pratica_manual:learned[learned.length-1],
+      numero_pratica_auto:learned[learned.length-1],
+      numero_pratica_auto_metodo:method,
+      numero_pratica_auto_aggiornatoIl:admin.firestore.FieldValue.serverTimestamp(),
+    },
+    numeri_pratica_banca_manual:merged,
+  },{merge:true});
+  return learned;
+}
+
 async function findPracticeByStrictSubject({mail,consultantUid}) {
   const subject=String(mail.subject||""); if(!subject.trim())return null;
   const snap=await db.collection("pratiche_mutuo").get(), matches=[];
@@ -1135,11 +1171,26 @@ async function syncFolder({
           mail
         );
 
-      const match =
+      const rawMatch =
         await findPracticeByStrictSubject({
           mail,
           consultantUid,
         });
+
+      /*
+       * Il matcher restrittivo può non trovare nulla.
+       * Da qui in avanti usiamo SEMPRE un oggetto stabile, così nessun
+       * ramo legacy può più leggere proprietà da null.
+       */
+      const match =
+        rawMatch || {
+          matched: false,
+          best: null,
+          candidates: [],
+          extractedNumbers: [],
+          reason:
+            "oggetto senza numero pratica o nominativo compatibile",
+        };
 
       const direction =
         emailDirection(
@@ -1199,9 +1250,9 @@ async function syncFolder({
         if (
           bankDetection.verified
           ||
-          match?.candidates?.length
+          (match?.candidates || [])?.length
           ||
-          match.extractedNumbers?.length
+          (match.extractedNumbers || [])?.length
         ) {
           await saveUnmatched({
             mail,
@@ -1233,6 +1284,22 @@ async function syncFolder({
         });
 
       if (saved) {
+        const learnedPracticeNumbers =
+          await learnPracticeNumberAfterNameMatch({
+            practiceRef: match.best.ref,
+            practiceData: match.best.data || {},
+            subject: mail.subject || "",
+            method: match.best.method,
+          });
+
+        if (learnedPracticeNumbers.length) {
+          match.extractedNumbers =
+            [...new Set([
+              ...(match.extractedNumbers || []),
+              ...learnedPracticeNumbers,
+            ])];
+        }
+
         matched++;
       }
     }
