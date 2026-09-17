@@ -1186,7 +1186,7 @@ async function syncFolder({
       });
 
       if (
-        !match.matched
+        !match?.matched
         ||
         !match.best?.ref
       ) {
