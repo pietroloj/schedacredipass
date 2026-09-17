@@ -5382,13 +5382,58 @@ Cordiali saluti`
                         syncFunction
                     );
 
-            const result =
-                await callable();
+            let data;
 
-            const data =
-                result.data
-                ||
-                {};
+            if (syncFunction === "sincronizzaGmailImapPersonale") {
+                const batchResults = [];
+
+                for (let backfillPage = 0; backfillPage < 5; backfillPage++) {
+                    if (button) {
+                        button.textContent =
+                            `SINCRONIZZAZIONE ${backfillPage + 1}/5...`;
+                    }
+
+                    const result =
+                        await callable({ backfillPage });
+
+                    batchResults.push(
+                        result.data || {}
+                    );
+                }
+
+                data = {
+                    ok:
+                        batchResults.every(x => x.ok !== false),
+                    processed:
+                        batchResults.reduce(
+                            (sum, x) => sum + Number(x.processed || 0),
+                            0
+                        ),
+                    matched:
+                        batchResults.reduce(
+                            (sum, x) => sum + Number(x.matched || 0),
+                            0
+                        ),
+                    results:
+                        batchResults.flatMap(
+                            (x, batchIndex) =>
+                                (Array.isArray(x.results) ? x.results : [])
+                                    .map(folder => ({
+                                        ...folder,
+                                        batchIndex
+                                    }))
+                        )
+                };
+            }
+            else {
+                const result =
+                    await callable();
+
+                data =
+                    result.data
+                    ||
+                    {};
+            }
 
             const details =
                 Array.isArray(data.results)
@@ -5428,7 +5473,7 @@ Cordiali saluti`
                                 : "  Nessun dettaglio messaggio restituito.";
 
                         return [
-                            `${folder.folderName || "CARTELLA"}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}${folder.backfill ? " — BACKFILL ULTIME 250" : ""}`,
+                            `${folder.folderName || "CARTELLA"}${folder.backfill ? ` — BLOCCO ${(folder.backfillPage ?? folder.batchIndex ?? 0) + 1}/5` : ""}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}`,
                             messages
                         ].join("\\n");
                     }).join("\\n\\n")

@@ -1063,6 +1063,7 @@ async function syncFolder({
   stateRef,
   consultantUid,
   forceRecent = false,
+  backfillPage = 0,
 }) {
   let lock;
 
@@ -1131,12 +1132,22 @@ async function syncFolder({
      * usando i sequence number IMAP, indipendentemente dal cursore UID.
      * La schedulata continua invece a usare il cursore incrementale.
      */
-    if (forceRecent || lastUid <= 0) {
+    if (forceRecent) {
+      const page =
+        Math.max(0, Math.min(4, Number(backfillPage || 0)));
+
+      const end =
+        Math.max(1, exists - (page * 50));
+
       const first =
-        Math.max(
-          1,
-          exists - 249
-        );
+        Math.max(1, end - 49);
+
+      range =
+        `${first}:${end}`;
+    }
+    else if (lastUid <= 0) {
+      const first =
+        Math.max(1, exists - 99);
 
       range =
         `${first}:*`;
@@ -1378,6 +1389,8 @@ async function syncFolder({
         maxUid,
       backfill:
         forceRecent === true,
+      backfillPage:
+        forceRecent ? Number(backfillPage || 0) : null,
       mailboxExists:
         exists,
       diagnostics: messageDiagnostics.slice(-50),
@@ -1425,7 +1438,10 @@ async function requireActiveConsultant(uid) {
 }
 
 
-async function runMailSyncForConsultant(consultantUid, { manualBackfill = false } = {}) {
+async function runMailSyncForConsultant(
+  consultantUid,
+  { manualBackfill = false, backfillPage = 0 } = {}
+) {
   await ensureBankSeed();
 
   const connectionRef =
@@ -1503,6 +1519,7 @@ async function runMailSyncForConsultant(consultantUid, { manualBackfill = false 
         stateRef,
         consultantUid,
         forceRecent: manualBackfill,
+        backfillPage,
       })
     );
 
@@ -1752,7 +1769,13 @@ const sincronizzaGmailImapPersonale =
       await requireActiveConsultant(uid);
 
       try {
-        return await runMailSyncForConsultant(uid, { manualBackfill: true });
+        const backfillPage =
+        Math.max(0, Math.min(4, Number(request.data?.backfillPage || 0)));
+
+      return await runMailSyncForConsultant(
+        uid,
+        { manualBackfill: true, backfillPage }
+      );
       }
       catch(error) {
         throw new HttpsError(
