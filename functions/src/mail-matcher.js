@@ -126,22 +126,12 @@ function extractPracticeNumbers(subject = "") {
   }
 
   /*
-   * Fallback: sequenze numeriche lunghe nell'oggetto.
+   * Niente fallback su sequenze numeriche generiche:
+   * telefoni, fax, P.IVA, timestamp e codici HTML NON sono numeri pratica.
+   * Un nuovo numero viene estratto automaticamente solo se etichettato
+   * come pratica/riferimento/mutuo/istruttoria.
    */
-  const numeric =
-    text.match(
-      /\b\d{6,20}\b/g
-    )
-    ||
-    [];
 
-  for (const value of numeric) {
-    candidates.add(
-      normalizePracticeNumber(
-        value
-      )
-    );
-  }
 
   return Array.from(
     candidates

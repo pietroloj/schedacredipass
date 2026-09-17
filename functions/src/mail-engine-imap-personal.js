@@ -888,17 +888,18 @@ function mailReferenceIds(mail) {
 
 
 async function findPracticeByKnownNumber({ mail, consultantUid }) {
-  const text = [
+  const rawText = [
     mail.subject || "",
     mail.text || "",
   ].join("\n");
 
-  const incomingNumbers =
-    extractPracticeNumbers(text)
+  const normalizedText =
+    String(rawText || "").toUpperCase();
+
+  const labeledIncoming =
+    extractPracticeNumbers(rawText)
       .map(normalizePracticeNumber)
       .filter(Boolean);
-
-  if (!incomingNumbers.length) return null;
 
   const practices =
     await db.collection("pratiche_mutuo").get();
@@ -915,25 +916,32 @@ async function findPracticeByKnownNumber({ mail, consultantUid }) {
 
     if (consultantUid && owner && owner !== consultantUid) continue;
 
-    const known = new Set(
+    /*
+     * Identificativi affidabili:
+     * - inseriti manualmente;
+     * - campi espliciti del fascicolo.
+     *
+     * NON usiamo più il vecchio array "numeri_pratica" appreso
+     * automaticamente, perché può contenere telefoni/P.IVA/fax.
+     */
+    const trusted = new Set(
       [
-        ...(Array.isArray(data.mail_matching?.numeri_pratica)
-          ? data.mail_matching.numeri_pratica
+        ...(Array.isArray(data.mail_matching?.numeri_pratica_manual)
+          ? data.mail_matching.numeri_pratica_manual
           : []),
-        ...(Array.isArray(data.numeri_pratica_banca)
-          ? data.numeri_pratica_banca
+        ...(Array.isArray(data.numeri_pratica_banca_manual)
+          ? data.numeri_pratica_banca_manual
           : []),
         data.numero_pratica_banca,
         data.numeroPraticaBanca,
-        data.mail_matching?.numero_pratica,
       ]
         .map(normalizePracticeNumber)
         .filter(Boolean)
     );
 
     /*
-     * Se il numero non è ancora stato memorizzato nel fascicolo,
-     * impariamo anche dalle email già correttamente associate.
+     * Possiamo imparare dalle email già associate SOLO numeri
+     * etichettati esplicitamente come "Pratica ...", "Rif. ...", ecc.
      */
     const timeline =
       await practiceDoc.ref
@@ -943,30 +951,34 @@ async function findPracticeByKnownNumber({ mail, consultantUid }) {
 
     for (const emailDoc of timeline.docs) {
       const ed = emailDoc.data() || {};
-      const values = [
-        ed.numeroPraticaRilevato,
-        ...extractPracticeNumbers(
-          `${ed.oggetto || ""}\n${ed.testo || ""}`
-        ),
-      ];
-
-      for (const value of values) {
+      for (const value of extractPracticeNumbers(
+        `${ed.oggetto || ""}\n${ed.testo || ""}`
+      )) {
         const n = normalizePracticeNumber(value);
-        if (n) known.add(n);
+        if (n) trusted.add(n);
       }
     }
 
-    const hit =
-      incomingNumbers.find(n => known.has(n));
-
-    if (hit) {
-      await rememberPracticeNumber({
-        db,
-        practiceRef: practiceDoc.ref,
-        number: hit,
-        bankDetection: null,
+    /*
+     * Se un numero è già affidabile, basta che compaia esattamente
+     * nella nuova email: non serve che sia nuovamente preceduto da "Pratica".
+     */
+    const exactHit =
+      [...trusted].find(number => {
+        const escaped =
+          number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp(
+          `(^|[^A-Z0-9])${escaped}([^A-Z0-9]|$)`,
+          "i"
+        ).test(normalizedText);
       });
 
+    const labeledHit =
+      labeledIncoming.find(n => trusted.has(n));
+
+    const hit = exactHit || labeledHit;
+
+    if (hit) {
       return {
         matched: true,
         best: {
@@ -978,7 +990,7 @@ async function findPracticeByKnownNumber({ mail, consultantUid }) {
           practiceNumber: hit,
         },
         candidates: [],
-        extractedNumbers: incomingNumbers,
+        extractedNumbers: labeledIncoming,
       };
     }
   }
@@ -2199,8 +2211,8 @@ const gestisciNumeroPraticaBanca =
 
       const data = snap.data() || {};
       const current =
-        Array.isArray(data.mail_matching?.numeri_pratica)
-          ? data.mail_matching.numeri_pratica
+        Array.isArray(data.mail_matching?.numeri_pratica_manual)
+          ? data.mail_matching.numeri_pratica_manual
               .map(normalizePracticeNumber)
               .filter(Boolean)
           : [];
@@ -2222,15 +2234,15 @@ const gestisciNumeroPraticaBanca =
         {
           mail_matching: {
             ...(data.mail_matching || {}),
-            numeri_pratica: numbers,
-            numero_pratica:
+            numeri_pratica_manual: numbers,
+            numero_pratica_manual:
               numbers.length
                 ? numbers[numbers.length - 1]
                 : null,
             aggiornatoIl:
               admin.firestore.FieldValue.serverTimestamp(),
           },
-          numeri_pratica_banca: numbers,
+          numeri_pratica_banca_manual: numbers,
         },
         { merge: true }
       );
@@ -2253,8 +2265,8 @@ const gestisciNumeroPraticaBanca =
 
         await imapStateRef.set(
           {
-            "folders.INBOX.lastUid": 0,
-            "folders.INBOX.aggiornatoIl":
+            "folders.inbox.lastUid": 0,
+            "folders.inbox.aggiornatoIl":
               admin.firestore.FieldValue.serverTimestamp(),
           },
           { merge: true }

@@ -5118,8 +5118,8 @@ Cordiali saluti`
             const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
             const d = snap.exists ? (snap.data() || {}) : {};
             const values = [
-                ...(Array.isArray(d.mail_matching?.numeri_pratica) ? d.mail_matching.numeri_pratica : []),
-                ...(Array.isArray(d.numeri_pratica_banca) ? d.numeri_pratica_banca : []),
+                ...(Array.isArray(d.mail_matching?.numeri_pratica_manual) ? d.mail_matching.numeri_pratica_manual : []),
+                ...(Array.isArray(d.numeri_pratica_banca_manual) ? d.numeri_pratica_banca_manual : []),
                 d.numero_pratica_banca,
                 d.numeroPraticaBanca
             ]
