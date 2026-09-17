@@ -1188,7 +1188,7 @@ async function syncFolder({
       if (
         !match?.matched
         ||
-        !match.best?.ref
+        !match?.best?.ref
       ) {
         /*
          * Conserviamo solo email che hanno almeno:
@@ -1199,7 +1199,7 @@ async function syncFolder({
         if (
           bankDetection.verified
           ||
-          match.candidates?.length
+          match?.candidates?.length
           ||
           match.extractedNumbers?.length
         ) {
@@ -1219,9 +1219,9 @@ async function syncFolder({
       const saved =
         await saveMatchedMail({
           practiceRef:
-            match.best.ref,
+            match?.best.ref,
           practiceId:
-            match.best.id,
+            match?.best.id,
           folderName,
           uid:
             msg.uid,
