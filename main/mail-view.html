@@ -126,7 +126,8 @@ body{
 .badge.gold{background:var(--amber-bg);color:var(--amber)}
 .badge.blue{background:var(--blue-bg);color:#174f94}
 .mail-body{
-  padding:22px;
+  padding:0;
+  height:560px;max-height:65vh;overflow:auto;overscroll-behavior:contain;
   line-height:1.68;
   font-size:14px;
   white-space:pre-wrap;
@@ -272,6 +273,8 @@ body{
         </div>
       </div>
 
+      <div id="mailReadStatus" class="sender-meta" role="status" style="padding:10px 22px"></div>
+      <button class="btn soft" onclick="loadData(true)">Ricarica originale HTML</button>
       <div id="mailBody" class="mail-body"></div>
         <div id="previousConversationWrap" style="display:none;margin-top:14px">
           <button class="btn soft" type="button" onclick="togglePreviousConversation()">
@@ -349,11 +352,13 @@ body{
     <div class="card" style="margin-top:16px">
       <div class="card-body">
         <h3 class="section-title">💬 Risposta suggerita</h3>
-        <div id="suggestedReply" class="reply"></div>
+        <label for="suggestedReply" class="sender-meta">Modifica direttamente la risposta prima di inviarla.</label>
+        <textarea id="suggestedReply" class="reply" rows="12" oninput="updateReplyDraft()" style="width:100%;resize:vertical;font:inherit"></textarea>
+        <p id="replyRecipient" class="sender-meta"></p><p id="replyStatus" role="status"></p>
 
         <div class="quick-actions" style="margin-top:10px">
           
-          <button class="btn soft" onclick="editSuggestedReply()">Modifica</button>
+          <button id="sendReplyBtn" class="btn gold" onclick="sendReply()">Invia risposta</button>
         </div>
       </div>
     </div>
@@ -395,6 +400,7 @@ let currentPractice = null;
 let currentThread = [];
 let loadVersion = 0;
 let threadNext = null;
+const replyDrafts = new Map();
 const aiPending = new Set();
 
 function esc(v){
@@ -566,8 +572,12 @@ function renderAI(){
     `).join("");
   }
 
-  document.getElementById("suggestedReply").textContent =
-    buildSuggestedReply();
+  const draft=replyDrafts.get(currentEmailId);
+  document.getElementById("suggestedReply").disabled=!!draft?.sending;
+  document.getElementById("suggestedReply").value=draft?.text ?? buildSuggestedReply();
+  document.getElementById("replyRecipient").textContent="A: "+replyRecipient();
+  document.getElementById("sendReplyBtn").disabled=!!draft?.sending || !!draft?.sent;
+  document.getElementById("replyStatus").textContent=draft?.sent?"Risposta inviata.":"";
 }
 
 function renderPractice(){
@@ -625,7 +635,8 @@ function renderEmail(){
     ${esc(formatDate(currentEmail?.data))}
   `;
 
-  renderSafeMail(document.getElementById("mailBody"),currentEmail?.html || currentEmail?.testoHtml,currentEmail?.testo);
+  renderSafeMail(document.getElementById("mailBody"),currentEmail?.html || currentEmail?.testoHtml,currentEmail?.testo,currentEmail?.allegati||[]);
+  document.getElementById("mailReadStatus").textContent=currentEmail?.bodyLoadError ? "Originale HTML non recuperato: "+currentEmail.bodyLoadError : (currentEmail?.html ? "Messaggio originale · scorri nel riquadro per leggere tutto" : "L'originale disponibile contiene solo testo");
   const handled=document.getElementById("handledBtn");
   handled.disabled=currentEmail?.gestita===true;
   handled.textContent=currentEmail?.gestita ? "✓ Gestita" : "Segna come gestita";
@@ -673,7 +684,7 @@ async function selectEmail(id){
   const url=new URL(location.href);url.searchParams.set("emailId",id);history.replaceState(null,"",url);
   await loadData();
 }
-async function loadData(){
+async function loadData(refreshOriginal=false){
   const version=++loadVersion;
   currentPracticeId = qs("practiceId") || qs("id");
   currentEmailId = qs("emailId");
@@ -690,13 +701,14 @@ async function loadData(){
   try{
     const callable =
       fn.httpsCallable(
-        "leggiEmailTimeline"
+        "leggiEmailTimeline", {timeout:120000}
       );
 
     const result =
       await callable({
         practiceId: currentPracticeId,
-        emailDocId: currentEmailId
+        emailDocId: currentEmailId,
+        refreshOriginal
       });
 
     if(!result.data?.ok || !result.data?.email){
@@ -720,7 +732,7 @@ async function loadData(){
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "grid";
-    if(currentEmail.aiAnalysis?.version!==2) analyzeSelectedEmail(false);
+    if(currentEmail.aiAnalysis?.version!==3) analyzeSelectedEmail(false);
 
   }catch(error){
     if(version!==loadVersion)return;
@@ -758,18 +770,33 @@ function openWhatsApp(){
   );
 }
 
-function replyEmail(){
-  const to = (currentEmail?.direzione === "inviata" ? currentEmail?.destinatari : (currentEmail?.replyTo?.length ? currentEmail.replyTo : currentEmail?.mittente))?.[0] || "";
-  if(!to){alert("Indirizzo destinatario non disponibile.");return;}
-
-  const subject =
-    currentEmail?.oggetto || "";
-
-  const body =
-    document.getElementById("suggestedReply").textContent || "";
-
-  location.href =
-    `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent("Re: " + subject)}&body=${encodeURIComponent(body)}`;
+function replyRecipient(){return (currentEmail?.direzione === "inviata" ? currentEmail?.destinatari : (currentEmail?.replyTo?.length ? currentEmail.replyTo : currentEmail?.mittente))?.[0] || "";}
+function replyEmail(){document.getElementById("suggestedReply").scrollIntoView({behavior:"smooth",block:"center"});document.getElementById("suggestedReply").focus();}
+function updateReplyDraft(){
+ const previous=replyDrafts.get(currentEmailId);
+ if(previous?.sending)return;
+ replyDrafts.set(currentEmailId,{text:document.getElementById("suggestedReply").value,requestId:crypto.randomUUID()});
+ document.getElementById("sendReplyBtn").disabled=false;
+ document.getElementById("replyStatus").textContent="";
+}
+async function sendReply(){
+ const id=currentEmailId,practiceId=currentPracticeId,editor=document.getElementById("suggestedReply");
+ if(!editor.value.trim()){document.getElementById("replyStatus").textContent="Scrivi la risposta prima di inviare.";return;}
+ if(!replyDrafts.has(id))updateReplyDraft();
+ const draft=replyDrafts.get(id);if(draft.sending||draft.sent)return;
+ draft.sending=true;editor.disabled=true;document.getElementById("sendReplyBtn").disabled=true;
+ document.getElementById("replyStatus").textContent="Invio in corso...";
+ try{
+   const result=await fn.httpsCallable("inviaRispostaEmailPratica",{timeout:120000})({practiceId,emailId:id,requestId:draft.requestId,text:draft.text});
+   if(!result.data?.sent)throw new Error("Invio non confermato.");
+   draft.sent=true;
+   if(id===currentEmailId)document.getElementById("replyStatus").textContent=result.data.timelineWarning||"Risposta inviata a "+result.data.to;
+   try {
+     const refreshed=await fn.httpsCallable("leggiEmailTimeline")({practiceId});
+     if(id===currentEmailId){currentThread=refreshed.data.thread||[];threadNext=refreshed.data.threadNext||null;await renderThread();}
+   } catch(_) { /* Sending succeeded; a conversation refresh must never trigger another send. */ }
+ }catch(e){if(id===currentEmailId)document.getElementById("replyStatus").textContent=e.message||"Invio non riuscito.";}
+ finally{draft.sending=false;if(id===currentEmailId){editor.disabled=false;document.getElementById("sendReplyBtn").disabled=!!draft.sent;}}
 }
 
 function openMailClient(){
@@ -778,14 +805,7 @@ function openMailClient(){
 }
 
 function requestDocuments(){
-  const docs=aiData().requestedDocuments||[];
-  if(!docs.length){alert("Analizza la mail: non sono ancora stati rilevati documenti richiesti.");return;}
-  const email=currentPractice?.cliente_email||currentPractice?.email_cliente||currentPractice?.r1_email;
-  const link=`${location.origin}/upload.html?id=${encodeURIComponent(currentPracticeId)}`;
-  const body=`Buongiorno ${clientName()},\n\nper la pratica di mutuo sono richiesti:\n${docs.map(d=>"- "+d).join("\n")}\n\nPuoi caricare i documenti qui: ${link}\n\nGrazie.`;
-  if(email){ location.href=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Documenti richiesti - "+clientName())}&body=${encodeURIComponent(body)}`; }
-  else if(clientPhone()){window.open(`https://wa.me/${normalizePhone(clientPhone()).replace(/^\+/,"")}?text=${encodeURIComponent(body)}`,"_blank","noopener");}
-  else {alert("Email e telefono del cliente non disponibili nel fascicolo.");}
+ location.href=`/main/dashboard-consulente.html?id=${encodeURIComponent(currentPracticeId)}&integrazioneDaEmail=${encodeURIComponent(currentEmailId)}`;
 }
 
 async function markHandled(){
@@ -811,15 +831,6 @@ async function analyzeSelectedEmail(force=true){
   }finally{
     aiPending.delete(emailId);
     document.getElementById("analyzeBtn").disabled=aiPending.has(currentEmailId);
-  }
-}
-
-function editSuggestedReply(){
-  const el = document.getElementById("suggestedReply");
-  const updated = prompt("Modifica risposta:", el.textContent);
-
-  if(updated !== null){
-    el.textContent = updated;
   }
 }
 

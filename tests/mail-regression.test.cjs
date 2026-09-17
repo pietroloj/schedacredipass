@@ -20,12 +20,13 @@ function snap(key){return {id:key.split('/').at(-1),exists:records.has(key),data
 const db={collection:n=>({doc:id=>ref(n+'/'+id),get:async()=>({docs:[...records.keys()].filter(k=>k.split('/').length===2&&k.startsWith(n+'/')).map(snap)})}),runTransaction:async fn=>fn({get:r=>r.get(),set:(r,v)=>r.set(v),update:(r,v)=>r.update(v)})};
 const firestore=()=>db;firestore.FieldValue={serverTimestamp:()=>123,arrayUnion:(...union)=>({union}),arrayRemove:(...remove)=>({remove})};
 const admin={apps:[{}],firestore,storage:()=>({})};
-function load(file,additional={}){const sandbox={module:{exports:{}},exports:{},console,require:n=>{
+function load(file,additional={}){const sandbox={Buffer,module:{exports:{}},exports:{},console,require:n=>{
 if(additional[n])return additional[n];if(n==='firebase-admin')return admin;
 if(n==='firebase-functions/v2/https')return {onCall:(o,f)=>f,HttpsError:class extends Error{constructor(code,message){super(message);this.code=code;}}};
 if(n==='firebase-functions/v2/scheduler')return {onSchedule:(o,f)=>f};
 if(n==='firebase-functions/params')return {defineSecret:()=>({value:()=> 'test'})};
 if(n==='./mail-policy')return policy;
+if(n==='./mail-bank-names')return require(root+'/functions/src/mail-bank-names');
 if(n==='./mail-matcher')return {normalizePracticeNumber:x=>x};
 return {};
 }};vm.runInNewContext(fs.readFileSync(root+'/functions/src/'+file,'utf8'),sandbox);return sandbox.module.exports;}
@@ -40,6 +41,12 @@ check('cleanup removes document AND activity, preserves notes',()=>{assert(!reco
 check('valid timeline email retained',()=>assert(records.has('pratiche_mutuo/molino/email_timeline/good')));
 await engine.learnPracticeNumberAfterNameMatch({practiceRef:ref('pratiche_mutuo/molino'),practiceData:molino,subject:'Giuseppe Molino n° 4487136',method:'subject_full_name'});
 check('learned separate from manual',()=>{const m=records.get('pratiche_mutuo/molino').mail_matching;assert.deepEqual([...m.numeri_pratica_appresi],['4487136']);assert(!m.numeri_pratica_manual);});
+records.get('pratiche_mutuo/molino/email_timeline/good').oggetto='Pratica 18969473, Molino Giuseppe';
+await engine.repairStoredNumbers('molino',records.get('pratiche_mutuo/molino'));
+check('18969473 learned from existing email without IMAP',()=>assert(records.get('pratiche_mutuo/molino').mail_matching.numeri_pratica_appresi.includes('18969473')));
+const bankName=require(root+'/functions/src/mail-bank-names').bankName;
+check('ING domain maps to name',()=>assert.equal(bankName({mittente:['info.it@ing.com'],dominio:'ing.com'}),'ING'));
+check('domain suffix spoof rejected',()=>assert.equal(bankName({mittente:['x@ing.com.evil.test']}),''));
 records.set('pratiche_mutuo/duplicate',molino);
 check('ambiguity rejected',()=>{});
 assert.equal((await engine.findPracticeByStrictSubject({mail:{subject:'Giuseppe Molino'},consultantUid:'owner'})).matched,false);
@@ -54,5 +61,14 @@ check('AI receives selected subject body and real client',()=>{assert(prompt.inc
 check('contextual reply is model output',()=>assert.equal(result.analysis.suggestedReply,'Invieremo la CU 2025 richiesta.'));
 await assert.rejects(ai.analizzaEmailPraticaAI({auth:{uid:'stranger'},data:{practiceId:'molino',emailId:'good'}}));
 console.log('PASS AI access denied for stranger');
-console.log(`Backend: ${count+2} checks passed`);
+let sends=0,sentPayload;
+records.set('gmail_connections/owner',{connected:true,provider:'imap_app_password',email:'owner@example.com'});
+const reply=load('mail-reply.js',{'node:crypto':require('node:crypto'),'./mail-engine-imap-personal':engine,'./gmail-token-crypto':{GMAIL_TOKEN_ENCRYPTION_KEY:'key',decryptRefreshToken:()=>({token:'mock-password'})},nodemailer:{createTransport:()=>({sendMail:async p=>{sends++;sentPayload=p;return {accepted:[p.to]}},close:()=>{}})}});
+const sendRequest={auth:{uid:'owner'},data:{practiceId:'molino',emailId:'good',requestId:'test-operation-123456',text:'Risposta modificata direttamente',to:'injected@evil.test'}};
+const sent=await reply.inviaRispostaEmailPratica(sendRequest);
+check('send uses edited text and original recipient',()=>{assert(sent.sent);assert.equal(sentPayload.text,sendRequest.data.text);assert.equal(sentPayload.to,'bank@example.com');});
+await reply.inviaRispostaEmailPratica(sendRequest);
+check('same send request never sends twice',()=>assert.equal(sends,1));
+await assert.rejects(reply.inviaRispostaEmailPratica({...sendRequest,auth:{uid:'stranger'}}));
+console.log(`Backend: ${count+3} checks passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

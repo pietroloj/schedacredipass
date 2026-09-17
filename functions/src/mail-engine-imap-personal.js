@@ -1,3 +1,4 @@
+const {bankName}=require("./mail-bank-names");
 const {
   onSchedule,
 } = require("firebase-functions/v2/scheduler");
@@ -155,6 +156,9 @@ function cleanBody(mail) {
     )
     .trim();
 
+  const visibleHtml=mail.html ? htmlToPlain(mail.html) : "";
+  // Some banks send a minimal plain-text alternative and the actual request in HTML.
+  if(visibleHtml.length>text.length*1.2)return visibleHtml.slice(0,50000);
   if (text) {
     return text.slice(0, 50000);
   }
@@ -240,6 +244,7 @@ async function saveAttachments({
     const file =
       bucket.file(path);
 
+    try {
     await file.save(
       att.content,
       {
@@ -254,6 +259,10 @@ async function saveAttachments({
       }
     );
 
+    } catch(error) {
+      saved.push({nome:safeName,contentType:att.contentType||"",size:att.size||0,downloadError:String(error.message||error).slice(0,300)});
+      continue;
+    }
     saved.push({
       nome:
         safeName,
@@ -267,6 +276,7 @@ async function saveAttachments({
         att.content?.length
         ||
         0,
+      contentId: att.cid || String(att.contentId||"").replace(/^<|>$/g,""),
       storagePath:
         path,
     });
@@ -617,6 +627,7 @@ async function saveMatchedMail({
   mailboxUser,
   bankDetection,
   match,
+  consultantUid,
 }) {
   const emailDocId =
     messageKey(
@@ -637,9 +648,17 @@ async function saveMatchedMail({
   const existing =
     await emailRef.get();
 
+  await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
+  const attachments =
+    await saveAttachments({
+      practiceId,
+      emailDocId,
+      mail,
+    });
+
   if (existing.exists) {
     // Backfill repairs existing messages too, without resetting analysis/handled state.
-    await emailRef.set({html: String(mail.html || "").slice(0,300000), testo:cleanBody(mail)}, {merge:true});
+    await emailRef.set({html: String(mail.html || "").slice(0,600000), testo:cleanBody(mail),bodyVersion:3,allegati:attachments}, {merge:true});
     await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
     return false;
   }
@@ -650,13 +669,6 @@ async function saveMatchedMail({
       mailboxUser,
       folderName
     );
-
-  const attachments =
-    await saveAttachments({
-      practiceId,
-      emailDocId,
-      mail,
-    });
 
   const bodyText =
     cleanBody(
@@ -670,7 +682,9 @@ async function saveMatchedMail({
       null,
 
     uid,
-
+    consultantUid: consultantUid || null,
+    casella: mailboxUser,
+    bodyVersion: 3,
     folder:
       folderName,
 
@@ -711,7 +725,7 @@ async function saveMatchedMail({
         ""
       ),
 
-    html: String(mail.html || "").slice(0,300000),
+    html: String(mail.html || "").slice(0,600000),
     autoAssociata: true,
     testo:
       bodyText,
@@ -805,6 +819,10 @@ async function ensureBankSeed() {
     &&
     meta.data()?.version >= 1
   ) {
+    if(Number(meta.data()?.version||0)<2){
+      await db.collection("mail_banche").doc("ing").set({bancaKey:"ing",bancaNome:"ING",domini:admin.firestore.FieldValue.arrayUnion("ing.it","ing.com","ingdirect.it")},{merge:true});
+      await metaRef.set({version:2},{merge:true});
+    }
     return;
   }
 
@@ -855,7 +873,7 @@ async function ensureBankSeed() {
     metaRef,
     {
       version:
-        1,
+        2,
 
       aggiornatoIl:
         admin.firestore
@@ -985,7 +1003,7 @@ async function syncFolder({
   try {
     lock =
       await client.getMailboxLock(
-        folderName
+        folderName, {readOnly:true}
       );
   }
   catch(error) {
@@ -1047,6 +1065,8 @@ async function syncFolder({
      * usando i sequence number IMAP, indipendentemente dal cursore UID.
      * La schedulata continua invece a usare il cursore incrementale.
      */
+    if (!exists || (forceRecent && exists <= Number(backfillPage)*50))
+      return {folderName,processed:0,matched:0,backfill:forceRecent,backfillPage,diagnostics:[]};
     if (forceRecent) {
       const page =
         Math.max(0, Math.min(4, Number(backfillPage || 0)));
@@ -1122,7 +1142,7 @@ async function syncFolder({
       try {
         mail =
           await simpleParser(
-            msg.source
+            msg.source, {skipImageLinks:true}
           );
       }
       catch(error) {
@@ -2104,9 +2124,74 @@ function serializeTimelineEmail(doc) {
   };
 }
 
+async function repairStoredNumbers(practiceId, practice) {
+  const owner=practice.consulente_uid||practice.workspace_uid||practice.owner_uid||practice.assegnato_a_uid;
+  const all=await db.collection("pratiche_mutuo").get();
+  const candidates=all.docs.filter(x=>{const d=x.data();return (d.consulente_uid||d.workspace_uid||d.owner_uid||d.assegnato_a_uid)===owner;});
+  const emails=await db.collection("pratiche_mutuo").doc(practiceId).collection("email_timeline").get();
+  const learned=new Set();
+  for(const email of emails.docs){
+    const d=email.data();if(excludedSender(d.mittente||d.from))continue;
+    const matches=candidates.map(x=>({id:x.id,...strictSubject(d.oggetto||d.subject,x.data())})).filter(x=>x.matched).sort((a,b)=>b.score-a.score);
+    if(matches[0]?.id!==practiceId || (matches[1]&&matches[0].score===matches[1].score))continue;
+    // Require a name match even when the same subject also contains a known number.
+    const nameOnly={...practice,mail_matching:{},numeri_pratica_banca_manual:[],numero_pratica_banca:null,numeroPraticaBanca:null};
+    if(!strictSubject(d.oggetto||d.subject,nameOnly).matched)continue;
+    for(const n of extractLabeledPracticeNumbersFromSubject(d.oggetto||d.subject))learned.add(n);
+  }
+  if(learned.size)await db.collection("pratiche_mutuo").doc(practiceId).set({mail_matching:{numeri_pratica_appresi:admin.firestore.FieldValue.arrayUnion(...learned)}},{merge:true});
+  return [...learned];
+}
+const riparaNumeriPraticaDaEmail=onCall({region:"us-central1",timeoutSeconds:120},async request=>{
+ const uid=request.auth?.uid,id=String(request.data?.practiceId||"");
+ if(!uid)throw new HttpsError("unauthenticated","Accesso richiesto.");
+ if(!id)throw new HttpsError("invalid-argument","Pratica mancante.");
+ const snap=await db.collection("pratiche_mutuo").doc(id).get();
+ if(!snap.exists||!(await canReadTimelinePractice(uid,snap.data())))throw new HttpsError("permission-denied","Pratica non accessibile.");
+ return {ok:true,learned:await repairStoredNumbers(id,snap.data())};
+});
+
+async function hydrateOriginalEmail(practiceId,emailDocId,data,practice) {
+ const owner=data.consultantUid||practice.consulente_uid||practice.workspace_uid||practice.owner_uid||practice.assegnato_a_uid;
+ const connectionSnap=await db.collection("gmail_connections").doc(owner).get();
+ const connection=connectionSnap.data()||{};
+ if(connection.provider!=="imap_app_password"||!connection.connected)throw new Error("Collegamento IMAP del titolare non disponibile per recuperare l'originale.");
+ const user=String(connection.email||"");
+ const password=decryptRefreshToken(imapCredentialPayload(connection)).token;
+ const client=new ImapFlow({host:"imap.gmail.com",port:993,secure:true,auth:{user,pass:String(password).replace(/\s+/g,"")},connectionTimeout:20000,greetingTimeout:15000,socketTimeout:60000,logger:false});
+ await client.connect();let lock;
+ try{
+   lock=await client.getMailboxLock(data.folder||"INBOX",{readOnly:true});
+   let message=data.uid?await client.fetchOne(Number(data.uid),{source:true},{uid:true}):null;
+   let mail=message?.source?await simpleParser(message.source,{skipImageLinks:true}):null;
+   if(!mail || normalizeMessageId(mail.messageId)!==normalizeMessageId(data.messageId)){
+     if(!data.messageId)throw new Error("Identificativo originale Gmail mancante.");
+     const ids=await client.search({header:{"message-id":data.messageId}},{uid:true});
+     if(!ids?.length)throw new Error("Originale non trovato nella cartella Gmail: potrebbe essere stato spostato.");
+     message=await client.fetchOne(ids[0],{source:true},{uid:true});
+     mail=await simpleParser(message.source,{skipImageLinks:true});
+   }
+   if(normalizeMessageId(mail.messageId)!==normalizeMessageId(data.messageId))throw new Error("L'originale non corrisponde alla mail selezionata.");
+   let attachments=data.allegati||[],attachmentError=null;
+   try{attachments=await saveAttachments({practiceId,emailDocId,mail});}catch(e){attachmentError="Allegati non recuperati: "+e.message;}
+   const update={html:String(mail.html||"").slice(0,600000),testo:cleanBody(mail),bodyVersion:3,allegati:attachments,attachmentError};
+   await db.collection("pratiche_mutuo").doc(practiceId).collection("email_timeline").doc(emailDocId).set({...update,aiAnalysis:admin.firestore.FieldValue.delete()},{merge:true});
+   return {...data,...update,aiAnalysis:null};
+ }finally{lock?.release();await client.logout().catch(()=>{});}
+}
+async function emailForDisplay(data,practice){
+ const result={...data,banca:bankName(data,practice)||null};
+ result.allegati=await Promise.all((data.allegati||[]).map(async a=>{
+   if(!a.storagePath)return a;
+   try{const [url]=await storage.bucket().file(a.storagePath).getSignedUrl({action:"read",expires:Date.now()+3600000});return {...a,url};}
+   catch(_){return a;}
+ }));
+ return result;
+}
+
 const leggiEmailTimeline =
   onCall(
-    { region: "us-central1", timeoutSeconds: 60, memory: "256MiB" },
+    { region: "us-central1", timeoutSeconds: 120, memory: "1GiB", secrets:[GMAIL_TOKEN_ENCRYPTION_KEY] },
     async request => {
       const uid = request.auth?.uid;
       if (!uid) throw new HttpsError("unauthenticated", "Accesso richiesto.");
@@ -2131,6 +2216,11 @@ const leggiEmailTimeline =
         const emailSnap = await practiceRef.collection("email_timeline").doc(emailDocId).get();
         if (!emailSnap.exists) throw new HttpsError("not-found", "Email non trovata.");
         selected = serializeTimelineEmail(emailSnap);
+        if(selected.bodyVersion!==3 || request.data?.refreshOriginal===true){
+          try{selected=await hydrateOriginalEmail(practiceId,emailDocId,selected,practiceSnap.data());}
+          catch(e){selected.bodyLoadError=e.message;}
+        }
+        selected=await emailForDisplay(selected,practiceSnap.data());
       }
 
       let threadQuery=practiceRef.collection("email_timeline").orderBy("data","desc");
@@ -2293,6 +2383,10 @@ const segnaEmailGestita = onCall({region:"us-central1"}, async request=>{
 });
 
 module.exports = {
+  imapCredentialPayload,
+  riparaNumeriPraticaDaEmail,
+  repairStoredNumbers,
+  hydrateOriginalEmail,
   findPracticeByStrictSubject,
   learnPracticeNumberAfterNameMatch,
   segnaEmailGestita,

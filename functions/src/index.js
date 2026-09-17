@@ -3496,3 +3496,7 @@ exports.dashboardPraticaSuggerimentoAI =
   dashboardPraticaSuggerimentoAI;
 
 exports.segnaEmailGestita = require("./mail-engine-imap-personal").segnaEmailGestita;
+
+exports.riparaNumeriPraticaDaEmail = require("./mail-engine-imap-personal").riparaNumeriPraticaDaEmail;
+
+exports.inviaRispostaEmailPratica = require("./mail-reply").inviaRispostaEmailPratica;

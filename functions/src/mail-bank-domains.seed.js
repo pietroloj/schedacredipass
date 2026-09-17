@@ -18,7 +18,7 @@ const BANK_DOMAIN_SEED = [
   { bancaKey: "credem", bancaNome: "Credem", domains: ["credem.it"] },
   { bancaKey: "banca_sella", bancaNome: "Banca Sella", domains: ["sella.it", "bancapatrimoni.it"] },
   { bancaKey: "fineco", bancaNome: "FinecoBank", domains: ["finecobank.com"] },
-  { bancaKey: "ing", bancaNome: "ING Italia", domains: ["ing.it"] },
+  { bancaKey: "ing", bancaNome: "ING", domains: ["ing.it", "ing.com", "ingdirect.it"] },
   { bancaKey: "illimity", bancaNome: "Illimity Bank", domains: ["illimity.com"] },
   { bancaKey: "mediobanca_premier", bancaNome: "Mediobanca Premier", domains: [
       "mediobancapremier.com",

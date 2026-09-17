@@ -5115,6 +5115,8 @@ Cordiali saluti`
         if (!box || !idCliente) return;
 
         try {
+            try { await firebase.app().functions("us-central1").httpsCallable("riparaNumeriPraticaDaEmail")({practiceId:idCliente}); }
+            catch(e) { console.warn("Riparazione numeri:",e); box.textContent="Recupero numeri dalle email non riuscito: "+e.message; return; }
             const snap = await db.collection("pratiche_mutuo").doc(idCliente).get();
             const d = snap.exists ? (snap.data() || {}) : {};
             const values = [
@@ -5276,7 +5278,7 @@ Cordiali saluti`
                         ${
                             data.lastSyncOk === false
                                 ? `<br><span style="color:#b42318;font-weight:800;">
-                                    Ultimo sync con errore
+                                    Ultimo sync con errore: ${escapeHtml(data.lastError || "dettaglio non disponibile")}
                                    </span>`
                                 : ""
                         }
@@ -6104,6 +6106,7 @@ Cordiali saluti`
             caricaIdentikitCompleto();
             caricaTimelineInternaPratica();
             cambiaCategoria('ANAGRAFICA', document.querySelector('.filter-btn'));
+            await preparaIntegrazioneDaEmail();
         } else {
             document.getElementById('documentiArea').innerHTML = '<div class="empty-state">Cliente non specificato nell’URL.</div>';
             document.getElementById('identikitDinamico').innerHTML = '<div class="empty-state">Cliente non specificato.</div>';
@@ -7350,6 +7353,19 @@ Cordiali saluti`
                 console.error("Errore file:", item.name, err);
             }
         }
+    }
+
+    async function preparaIntegrazioneDaEmail(){
+        const emailId=new URLSearchParams(location.search).get("integrazioneDaEmail");
+        if(!emailId)return;
+        try {
+            const result=await firebase.app().functions("us-central1").httpsCallable("leggiEmailTimeline")({practiceId:idCliente,emailDocId:emailId});
+            const email=result.data.email||{},docs=email.aiAnalysis?.requestedDocuments||[];
+            document.getElementById("notaIntegrazione").value=["Riferimento: "+(email.oggetto||""),...docs.map(x=>"• "+x)].join("\n");
+            // Use the very same dashboard cart, document codes, reminders and send routine.
+            document.getElementById("selectIntegrazione").scrollIntoView({behavior:"smooth",block:"center"});
+            document.getElementById("selectIntegrazione").focus();
+        } catch(e){alert("Impossibile preparare l'integrazione dalla mail: "+e.message);}
     }
 
     function cambiaCategoria(cat, btn) {
