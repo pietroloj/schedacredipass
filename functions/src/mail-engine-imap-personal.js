@@ -963,20 +963,30 @@ async function findPracticeByKnownNumber({ mail, consultantUid }) {
      * Se un numero è già affidabile, basta che compaia esattamente
      * nella nuova email: non serve che sia nuovamente preceduto da "Pratica".
      */
-    const exactHit =
+    const normalizedSubject =
+      String(mail.subject || "").toUpperCase();
+
+    /*
+     * Un numero manuale è forte se compare nell'OGGETTO.
+     * Nel corpo, invece, deve essere esplicitamente etichettato come
+     * pratica/riferimento: così una lunga catena quotata non trascina
+     * PARENTE-PAGANO dentro un altro fascicolo.
+     */
+    const exactSubjectHit =
       [...trusted].find(number => {
         const escaped =
           number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         return new RegExp(
           `(^|[^A-Z0-9])${escaped}([^A-Z0-9]|$)`,
           "i"
-        ).test(normalizedText);
+        ).test(normalizedSubject);
       });
 
     const labeledHit =
       labeledIncoming.find(n => trusted.has(n));
 
-    const hit = exactHit || labeledHit;
+    const hit =
+      exactSubjectHit || labeledHit;
 
     if (hit) {
       return {
@@ -1052,6 +1062,7 @@ async function syncFolder({
   bankCatalog,
   stateRef,
   consultantUid,
+  forceRecent = false,
 }) {
   let lock;
 
@@ -1108,27 +1119,31 @@ async function syncFolder({
      */
     let range;
 
-    if (lastUid > 0) {
-      range =
-        `${lastUid + 1}:*`;
-    }
-    else {
-      const exists =
-        Number(
-          client.mailbox?.exists
-          ||
-          0
-        );
+    const exists =
+      Number(
+        client.mailbox?.exists
+        ||
+        0
+      );
 
+    /*
+     * Sincronizzazione manuale: backfill reale delle ultime 250 email
+     * usando i sequence number IMAP, indipendentemente dal cursore UID.
+     * La schedulata continua invece a usare il cursore incrementale.
+     */
+    if (forceRecent || lastUid <= 0) {
       const first =
         Math.max(
           1,
-          exists -
-          99
+          exists - 249
         );
 
       range =
         `${first}:*`;
+    }
+    else {
+      range =
+        `${lastUid + 1}:*`;
     }
 
     let maxUid =
@@ -1148,7 +1163,7 @@ async function syncFolder({
       [];
 
     const fetchOptions =
-      lastUid > 0
+      (!forceRecent && lastUid > 0)
         ? { uid: true }
         : {};
 
@@ -1361,7 +1376,11 @@ async function syncFolder({
       matched,
       lastUid:
         maxUid,
-    diagnostics: messageDiagnostics.slice(-50),
+      backfill:
+        forceRecent === true,
+      mailboxExists:
+        exists,
+      diagnostics: messageDiagnostics.slice(-50),
   };
   }
   finally {
@@ -1406,7 +1425,7 @@ async function requireActiveConsultant(uid) {
 }
 
 
-async function runMailSyncForConsultant(consultantUid) {
+async function runMailSyncForConsultant(consultantUid, { manualBackfill = false } = {}) {
   await ensureBankSeed();
 
   const connectionRef =
@@ -1483,6 +1502,7 @@ async function runMailSyncForConsultant(consultantUid) {
         bankCatalog: catalog,
         stateRef,
         consultantUid,
+        forceRecent: manualBackfill,
       })
     );
 
@@ -1732,7 +1752,7 @@ const sincronizzaGmailImapPersonale =
       await requireActiveConsultant(uid);
 
       try {
-        return await runMailSyncForConsultant(uid);
+        return await runMailSyncForConsultant(uid, { manualBackfill: true });
       }
       catch(error) {
         throw new HttpsError(

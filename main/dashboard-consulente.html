@@ -5428,7 +5428,7 @@ Cordiali saluti`
                                 : "  Nessun dettaglio messaggio restituito.";
 
                         return [
-                            `${folder.folderName || "CARTELLA"}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}`,
+                            `${folder.folderName || "CARTELLA"}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}${folder.backfill ? " — BACKFILL ULTIME 250" : ""}`,
                             messages
                         ].join("\\n");
                     }).join("\\n\\n")
