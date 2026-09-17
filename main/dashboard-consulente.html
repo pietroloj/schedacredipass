@@ -5394,7 +5394,7 @@ Cordiali saluti`
                     }
 
                     const result =
-                        await callable({ backfillPage });
+                        await callable({ backfillPage, practiceId: idCliente || null });
 
                     batchResults.push(
                         result.data || {}

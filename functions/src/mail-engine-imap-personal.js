@@ -887,171 +887,80 @@ function mailReferenceIds(mail) {
 }
 
 
-async function findPracticeByKnownNumber({ mail, consultantUid }) {
-  const rawText = [
-    mail.subject || "",
-    mail.text || "",
-  ].join("\n");
 
-  const normalizedText =
-    String(rawText || "").toUpperCase();
-
-  const labeledIncoming =
-    extractPracticeNumbers(rawText)
-      .map(normalizePracticeNumber)
-      .filter(Boolean);
-
-  const practices =
-    await db.collection("pratiche_mutuo").get();
-
-  for (const practiceDoc of practices.docs) {
-    const data = practiceDoc.data() || {};
-    const owner = String(
-      data.consulente_uid
-      || data.workspace_uid
-      || data.owner_uid
-      || data.assegnato_a_uid
-      || ""
-    ).trim();
-
-    if (consultantUid && owner && owner !== consultantUid) continue;
-
-    /*
-     * Identificativi affidabili:
-     * - inseriti manualmente;
-     * - campi espliciti del fascicolo.
-     *
-     * NON usiamo più il vecchio array "numeri_pratica" appreso
-     * automaticamente, perché può contenere telefoni/P.IVA/fax.
-     */
-    const trusted = new Set(
-      [
-        ...(Array.isArray(data.mail_matching?.numeri_pratica_manual)
-          ? data.mail_matching.numeri_pratica_manual
-          : []),
-        ...(Array.isArray(data.numeri_pratica_banca_manual)
-          ? data.numeri_pratica_banca_manual
-          : []),
-        data.numero_pratica_banca,
-        data.numeroPraticaBanca,
-      ]
-        .map(normalizePracticeNumber)
-        .filter(Boolean)
-    );
-
-    /*
-     * Possiamo imparare dalle email già associate SOLO numeri
-     * etichettati esplicitamente come "Pratica ...", "Rif. ...", ecc.
-     */
-    const timeline =
-      await practiceDoc.ref
-        .collection("email_timeline")
-        .limit(150)
-        .get();
-
-    for (const emailDoc of timeline.docs) {
-      const ed = emailDoc.data() || {};
-      for (const value of extractPracticeNumbers(
-        `${ed.oggetto || ""}\n${ed.testo || ""}`
-      )) {
-        const n = normalizePracticeNumber(value);
-        if (n) trusted.add(n);
-      }
-    }
-
-    /*
-     * Se un numero è già affidabile, basta che compaia esattamente
-     * nella nuova email: non serve che sia nuovamente preceduto da "Pratica".
-     */
-    const normalizedSubject =
-      String(mail.subject || "").toUpperCase();
-
-    /*
-     * Un numero manuale è forte se compare nell'OGGETTO.
-     * Nel corpo, invece, deve essere esplicitamente etichettato come
-     * pratica/riferimento: così una lunga catena quotata non trascina
-     * PARENTE-PAGANO dentro un altro fascicolo.
-     */
-    const exactSubjectHit =
-      [...trusted].find(number => {
-        const escaped =
-          number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        return new RegExp(
-          `(^|[^A-Z0-9])${escaped}([^A-Z0-9]|$)`,
-          "i"
-        ).test(normalizedSubject);
-      });
-
-    const labeledHit =
-      labeledIncoming.find(n => trusted.has(n));
-
-    const hit =
-      exactSubjectHit || labeledHit;
-
-    if (hit) {
-      return {
-        matched: true,
-        best: {
-          id: practiceDoc.id,
-          ref: practiceDoc.ref,
-          data,
-          score: 2000,
-          method: "known_practice_number",
-          practiceNumber: hit,
-        },
-        candidates: [],
-        extractedNumbers: labeledIncoming,
-      };
-    }
-  }
-
-  return null;
+function normSubject(v="") {
+  return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toUpperCase().replace(/[^A-Z0-9]+/g," ").replace(/\s+/g," ").trim();
 }
-
-
-async function findPracticeByMailThread({ mail, consultantUid }) {
-  const refs = mailReferenceIds(mail);
-  if (!refs.length) return null;
-
-  const practices = await db.collection("pratiche_mutuo").get();
-
-  for (const practiceDoc of practices.docs) {
-    const data = practiceDoc.data() || {};
-    const owner = String(
-      data.consulente_uid
-      || data.workspace_uid
-      || data.owner_uid
-      || data.assegnato_a_uid
-      || ""
-    ).trim();
-
-    if (consultantUid && owner && owner !== consultantUid) continue;
-
-    const timeline = await practiceDoc.ref
-      .collection("email_timeline")
-      .limit(100)
-      .get();
-
-    for (const emailDoc of timeline.docs) {
-      const messageId = normalizeMessageId(emailDoc.data()?.messageId);
-      if (messageId && refs.includes(messageId)) {
-        return {
-          matched: true,
-          best: {
-            id: practiceDoc.id,
-            ref: practiceDoc.ref,
-            data,
-            score: 200,
-            method: "thread_reply",
-            practiceNumber: "",
-          },
-          candidates: [],
-          extractedNumbers: [],
-        };
-      }
-    }
+function whole(subject,value) {
+  const s=` ${normSubject(subject)} `, v=normSubject(value);
+  return !!v && s.includes(` ${v} `);
+}
+function subjects(data={}) {
+  const out=[], add=(n,c)=>{n=String(n||"").trim();c=String(c||"").trim();if(n&&c)out.push({n,c});};
+  add(data.nome,data.cognome); add(data.nome_cliente,data.cognome_cliente);
+  add(data.nomeCliente,data.cognomeCliente); add(data.richiedente_nome,data.richiedente_cognome);
+  add(data.richiedenteNome,data.richiedenteCognome); add(data.nome_richiedente,data.cognome_richiedente);
+  for(const arr of [data.soggetti,data.richiedenti,data.intestatari,data.clienti]){
+    if(!Array.isArray(arr))continue;
+    for(const p of arr) if(p&&typeof p==="object") add(p.nome||p.firstName||p.nome_cliente,p.cognome||p.lastName||p.cognome_cliente);
   }
-  return null;
+  const seen=new Set();
+  return out.filter(p=>{const k=`${normSubject(p.n)}|${normSubject(p.c)}`;if(seen.has(k))return false;seen.add(k);return true;});
+}
+function trustedNumbers(data={}) {
+  return [...new Set([...(Array.isArray(data.mail_matching?.numeri_pratica_manual)?data.mail_matching.numeri_pratica_manual:[]),
+    ...(Array.isArray(data.numeri_pratica_banca_manual)?data.numeri_pratica_banca_manual:[]),
+    data.numero_pratica_banca,data.numeroPraticaBanca].map(normalizePracticeNumber).filter(Boolean))];
+}
+function strictSubject(subject,data={}) {
+  for(const number of trustedNumbers(data)) if(whole(subject,number))
+    return {matched:true,method:"subject_practice_number",practiceNumber:number,score:3000};
+  const s=` ${normSubject(subject)} `;
+  for(const p of subjects(data)){
+    const n=normSubject(p.n),c=normSubject(p.c);
+    if(s.includes(` ${n} ${c} `)||s.includes(` ${c} ${n} `))
+      return {matched:true,method:"subject_full_name",practiceNumber:"",score:2000};
+  }
+  for(const p of subjects(data)){
+    const n=normSubject(p.n),c=normSubject(p.c),i=n.charAt(0);
+    if(i&&(s.includes(` ${c} ${i} `)||s.includes(` ${i} ${c} `)))
+      return {matched:true,method:"subject_surname_initial",practiceNumber:"",score:1500};
+  }
+  return {matched:false,method:null,practiceNumber:"",score:0};
+}
+async function findPracticeByStrictSubject({mail,consultantUid}) {
+  const subject=String(mail.subject||""); if(!subject.trim())return null;
+  const snap=await db.collection("pratiche_mutuo").get(), matches=[];
+  for(const doc of snap.docs){
+    const data=doc.data()||{};
+    const owner=String(data.consulente_uid||data.workspace_uid||data.owner_uid||data.assegnato_a_uid||"").trim();
+    if(consultantUid&&owner&&owner!==consultantUid)continue;
+    const r=strictSubject(subject,data);
+    if(r.matched)matches.push({id:doc.id,ref:doc.ref,data,...r});
+  }
+  if(!matches.length)return null;
+  matches.sort((x,y)=>y.score-x.score);
+  if(matches.length>1&&matches[0].score===matches[1].score)
+    return {matched:false,best:null,candidates:matches.slice(0,5),extractedNumbers:[],reason:"corrispondenza oggetto ambigua"};
+  return {matched:true,best:matches[0],candidates:matches.slice(1,5),
+    extractedNumbers:matches[0].practiceNumber?[matches[0].practiceNumber]:[]};
+}
+async function cleanupPracticeTimeline({consultantUid,practiceId}) {
+  if(!practiceId)return 0;
+  const doc=await db.collection("pratiche_mutuo").doc(practiceId).get();
+  if(!doc.exists)return 0;
+  const data=doc.data()||{};
+  const owner=String(data.consulente_uid||data.workspace_uid||data.owner_uid||data.assegnato_a_uid||"").trim();
+  if(consultantUid&&owner&&owner!==consultantUid)return 0;
+  const tl=await doc.ref.collection("email_timeline").get();
+  let removed=0, refs=[];
+  for(const e of tl.docs){
+    const d=e.data()||{}, subject=String(d.oggetto||d.subject||"");
+    if(!strictSubject(subject,data).matched){refs.push(e.ref);removed++;}
+  }
+  for(let i=0;i<refs.length;i+=25) await Promise.all(refs.slice(i,i+25).map(r=>r.delete()));
+  return removed;
 }
 
 
@@ -1226,37 +1135,10 @@ async function syncFolder({
           mail
         );
 
-      /*
-       * Priorità:
-       * 1) numero pratica già noto / imparato dalle email associate;
-       * 2) thread In-Reply-To / References;
-       * 3) matcher tradizionale.
-       */
-      const numberMatch =
-        await findPracticeByKnownNumber({
+      const match =
+        await findPracticeByStrictSubject({
           mail,
           consultantUid,
-        });
-
-      const threadMatch =
-        numberMatch
-          ? null
-          : await findPracticeByMailThread({
-              mail,
-              consultantUid,
-            });
-
-      const match =
-        numberMatch
-        ||
-        threadMatch
-        ||
-        await findPracticeMatch({
-          db,
-          mail,
-          bankDetection,
-          ownerUid:
-            consultantUid,
         });
 
       const direction =
@@ -1772,10 +1654,27 @@ const sincronizzaGmailImapPersonale =
         const backfillPage =
         Math.max(0, Math.min(4, Number(request.data?.backfillPage || 0)));
 
-      return await runMailSyncForConsultant(
+      const practiceId =
+        String(request.data?.practiceId || "").trim();
+
+      const removedWrongAssociations =
+        backfillPage === 0
+          ? await cleanupPracticeTimeline({
+              consultantUid: uid,
+              practiceId,
+            })
+          : 0;
+
+      const syncResult =
+        await runMailSyncForConsultant(
         uid,
         { manualBackfill: true, backfillPage }
       );
+
+      return {
+        ...syncResult,
+        removedWrongAssociations,
+      };
       }
       catch(error) {
         throw new HttpsError(
