@@ -45,7 +45,7 @@ body{
 }
 .top-left{display:flex;gap:14px;align-items:center;min-width:0}
 .back{
-  width:38px;height:38px;border-radius:10px;
+  color:white;border:0;width:38px;height:38px;border-radius:10px;
   background:rgba(255,255,255,.1);
   display:flex;align-items:center;justify-content:center;
   font-size:20px;cursor:pointer;flex:0 0 auto;
@@ -192,7 +192,7 @@ body{
   line-height:1.6
 }
 .thread{display:flex;flex-direction:column;gap:14px}
-.thread-item{display:grid;grid-template-columns:90px 1fr;gap:12px}
+.thread-item{width:100%;background:white;border:1px solid #ddd;border-radius:8px;padding:12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:90px 1fr;gap:12px}
 .thread-date{color:var(--muted);font-size:11px}
 .thread-content{border-left:3px solid #d7dfe8;padding-left:12px}
 .thread-content.active{border-left-color:var(--gold)}
@@ -228,7 +228,7 @@ body{
 
 <div class="topbar">
   <div class="top-left">
-    <div class="back" onclick="goBack()">←</div>
+    <button class="back" aria-label="Torna alla pratica" onclick="goBack()">&#8592;</button>
 
     <div class="brand">
       <small id="practiceLabel">Pratica</small>
@@ -237,9 +237,7 @@ body{
   </div>
 
   <div class="top-actions">
-    <button id="waTopBtn" class="btn whatsapp" onclick="openWhatsApp()" style="display:none">
-      WhatsApp cliente
-    </button>
+
 
     <button class="btn primary" onclick="openPractice()">
       Apri fascicolo
@@ -294,18 +292,16 @@ body{
     <div class="card" style="margin-top:16px">
       <div class="card-body">
         <h3 class="section-title">🧵 Conversazione</h3>
-        <div id="thread" class="thread"></div>
+        <div id="thread" class="thread"></div><button id="moreThread" class="btn soft" style="display:none" onclick="loadMoreThread()">Messaggi precedenti</button>
       </div>
     </div>
 
     <div class="footer-actions">
       <div class="footer-actions-inner">
-        <button class="btn gold" onclick="replyEmail()">Rispondi</button>
-        <button id="waBottomBtn" class="btn whatsapp" onclick="openWhatsApp()" style="display:none">
-          WhatsApp cliente
-        </button>
+        
+
         <button class="btn primary" onclick="requestDocuments()">Richiedi documenti al cliente</button>
-        <button class="btn soft" onclick="markHandled()">Segna come gestita</button>
+        <button id="handledBtn" class="btn soft" onclick="markHandled()">Segna come gestita</button>
         <button class="btn soft" onclick="openMailClient()">Apri posta</button>
       </div>
     </div>
@@ -315,6 +311,7 @@ body{
     <div class="card ai-card">
       <div class="card-body">
         <h3 class="section-title">🤖 AI Mail Intelligence</h3>
+<button id="analyzeBtn" class="btn soft" onclick="analyzeSelectedEmail()">Analizza / aggiorna</button>
 
         <div id="aiSummary" class="ai-summary"></div>
 
@@ -344,8 +341,8 @@ body{
 
     <div class="card" style="margin-top:16px">
       <div class="card-body">
-        <h3 class="section-title">📂 Documenti richiesti vs fascicolo</h3>
-        <div id="documentChecklist" class="checklist"></div>
+        <h3 class="section-title">📂 Documenti richiesti dalla mail</h3>
+        <div id="documentChecklist" class="checklist"></div><p id="detectedDocuments" class="sender-meta"></p>
       </div>
     </div>
 
@@ -355,7 +352,7 @@ body{
         <div id="suggestedReply" class="reply"></div>
 
         <div class="quick-actions" style="margin-top:10px">
-          <button class="btn gold" onclick="useSuggestedReply()">Usa risposta</button>
+          
           <button class="btn soft" onclick="editSuggestedReply()">Modifica</button>
         </div>
       </div>
@@ -383,6 +380,7 @@ body{
 </div>
 </div>
 
+<script src="/main/js/mail-html.js"></script>
 <script src="/main/config/app.js"></script>
 <script src="/main/config/firebase.js"></script>
 
@@ -394,6 +392,10 @@ let currentPracticeId = "";
 let currentEmailId = "";
 let currentEmail = null;
 let currentPractice = null;
+let currentThread = [];
+let loadVersion = 0;
+let threadNext = null;
+const aiPending = new Set();
 
 function esc(v){
   return String(v ?? "")
@@ -430,7 +432,7 @@ function normalizePhone(phone){
 function clientName(){
   const p = currentPractice || {};
 
-  return [
+  return p.cliente_nome_completo || [p.cliente_nome,p.cliente_cognome].filter(Boolean).join(" ") || [
     p.nome,
     p.cognome
   ].filter(Boolean).join(" ")
@@ -448,7 +450,7 @@ function clientName(){
 function clientPhone(){
   const p = currentPractice || {};
 
-  return p.telefono
+  return p.cliente_telefono || p.cliente_cellulare || p.telefono
     || p.cellulare
     || p.r1_telefono
     || p.r1_cellulare
@@ -472,62 +474,20 @@ function buildWhatsAppText(){
   return `Ciao ${name}, ti contatto per un aggiornamento relativo alla pratica di mutuo. Appena puoi sentiamoci. Grazie.`;
 }
 
-function buildSuggestedReply(){
-  const ai = aiData();
-  const docs = ai.requestedDocuments || [];
-
-  if(ai.positiveOutcome){
-    return `Buongiorno,
-
-grazie per l'aggiornamento.
-
-Prendiamo atto dell'esito comunicato e restiamo a disposizione per i prossimi adempimenti.
-
-Cordiali saluti.`;
-  }
-
-  if(docs.length){
-    return `Buongiorno,
-
-abbiamo preso in carico la richiesta di integrazione.
-
-Provvederemo a trasmettere la documentazione richiesta non appena disponibile.
-
-Cordiali saluti.`;
-  }
-
-  return `Buongiorno,
-
-grazie per l'aggiornamento.
-
-Restiamo a disposizione per ogni ulteriore necessità.
-
-Cordiali saluti.`;
-}
+function buildSuggestedReply(){ return aiData().suggestedReply || ""; }
 
 function renderAttachments(){
-  const box = document.getElementById("attachments");
-  const attachments = currentEmail?.allegati || [];
-
-  if(!attachments.length){
-    box.innerHTML='<div class="empty">Nessun allegato.</div>';
-    return;
-  }
-
-  box.innerHTML = attachments.map(a => {
-    const name = a.nome || a.filename || "Allegato";
-    const url = a.url || a.downloadUrl || "";
-
-    return `
-      <div class="attachment" ${url ? `onclick="window.open('${esc(url)}','_blank')"` : ""}>
-        <div class="icon">FILE</div>
-        <div>
-          <strong>${esc(name)}</strong>
-          <div class="sender-meta">${esc(a.size || "")}</div>
-        </div>
-      </div>
-    `;
-  }).join("");
+  const box=document.getElementById("attachments"); box.replaceChildren();
+  const attachments=currentEmail?.allegati||[];
+  if(!attachments.length){box.textContent="Nessun allegato.";return;}
+  attachments.forEach(a=>{
+    const link=document.createElement("a");link.className="attachment";
+    link.textContent=a.nome||a.filename||"Allegato";
+    try {const u=new URL(a.url||a.downloadUrl);if(u.protocol==="https:"){
+      link.href=u.href;link.target="_blank";link.rel="noopener noreferrer";
+    }}catch(_){}
+    box.append(link);
+  });
 }
 
 async function renderThread(){
@@ -547,15 +507,16 @@ async function renderThread(){
     box.innerHTML = docs.map(item => {
       const active = item.id === currentEmailId ? "active" : "";
       return `
-        <div class="thread-item">
+        <button type="button" class="thread-item" data-index="${docs.indexOf(item)}" aria-pressed="${item.id===currentEmailId}">
           <div class="thread-date">${esc(formatDate(item.data))}</div>
           <div class="thread-content ${active}">
             <strong>${esc(item.oggetto || "(senza oggetto)")}</strong>
             <div class="sender-meta">${esc((item.mittente || []).join(", "))}</div>
           </div>
-        </div>
+        </button>
       `;
     }).join("");
+    box.querySelectorAll("button").forEach(button=>button.onclick=()=>selectEmail(docs[Number(button.dataset.index)].id));
 
   }catch(error){
     box.innerHTML='<div class="empty">Thread non disponibile.</div>';
@@ -564,6 +525,7 @@ async function renderThread(){
 
 function renderAI(){
   const ai = aiData();
+  document.getElementById("analyzeBtn").disabled=aiPending.has(currentEmailId);
 
   document.getElementById("aiSummary").textContent =
     ai.summary || "Analisi AI non ancora disponibile.";
@@ -581,7 +543,7 @@ function renderAI(){
 
   document.getElementById("aiActionRequired").textContent =
     ai.requiresAction === true
-      ? "Sì"
+      ? ((ai.suggestedActions || []).join("; ") || "Sì")
       : ai.requiresAction === false
       ? "No"
       : "N/D";
@@ -589,6 +551,7 @@ function renderAI(){
   const priorityBadge = document.getElementById("priorityBadge");
   priorityBadge.textContent = `Priorità ${ai.priority || "normale"}`;
 
+  document.getElementById("detectedDocuments").textContent="Documenti menzionati: "+((ai.detectedDocuments||[]).join(", ")||"nessuno rilevato");
   const docs = ai.requestedDocuments || [];
   const checklist = document.getElementById("documentChecklist");
 
@@ -618,9 +581,9 @@ function renderPractice(){
 
   document.getElementById("practiceInfo").innerHTML = `
     <strong>Cliente:</strong> ${esc(clientName())}<br>
-    <strong>Banca:</strong> ${esc(currentEmail?.banca || "N/D")}<br>
-    <strong>Consulente:</strong> ${esc(p.consulenteNome || p.consulente || "N/D")}<br>
-    <strong>Stato:</strong> ${esc(p.stato || p.stato_pratica || "N/D")}
+    <strong>Banca:</strong> ${esc(currentEmail?.banca || p.banca_nome || p.banca || currentEmail?.dominio || "N/D")}<br>
+    <strong>Consulente:</strong> ${esc(p.consulente_nome || p.assegnato_a_nome || p.consulenteNome || p.consulente_email || "N/D")}<br>
+    <strong>Stato:</strong> ${esc(p.stato_pratica_label || (p.stato_pratica || "N/D").replace(/_/g," "))}
   `;
 
   const phone = clientPhone();
@@ -628,8 +591,8 @@ function renderPractice(){
   if(phone){
     document.getElementById("clientContact").style.display = "block";
     document.getElementById("clientPhone").textContent = phone;
-    document.getElementById("waTopBtn").style.display = "inline-block";
-    document.getElementById("waBottomBtn").style.display = "inline-block";
+
+
   }
 }
 
@@ -662,8 +625,10 @@ function renderEmail(){
     ${esc(formatDate(currentEmail?.data))}
   `;
 
-  document.getElementById("mailBody").textContent =
-    currentEmail?.testo || "(testo non disponibile)";
+  renderSafeMail(document.getElementById("mailBody"),currentEmail?.html || currentEmail?.testoHtml,currentEmail?.testo);
+  const handled=document.getElementById("handledBtn");
+  handled.disabled=currentEmail?.gestita===true;
+  handled.textContent=currentEmail?.gestita ? "✓ Gestita" : "Segna come gestita";
 
   const previous =
     String(
@@ -694,9 +659,27 @@ function renderEmail(){
       : "✓ Associata automaticamente";
 }
 
+async function loadMoreThread(){
+  if(!threadNext)return;
+  const version=loadVersion,button=document.getElementById("moreThread");button.disabled=true;
+  try {
+    const result=await fn.httpsCallable("leggiEmailTimeline")({practiceId:currentPracticeId,threadAfter:threadNext});
+    if(version!==loadVersion)return;
+    currentThread=[...new Map([...currentThread,...result.data.thread].map(x=>[x.id,x])).values()];
+    threadNext=result.data.threadNext||null;await renderThread();button.style.display=threadNext?"block":"none";
+  }catch(e){alert(e.message||"Impossibile caricare i messaggi.");}finally{button.disabled=false;}
+}
+async function selectEmail(id){
+  const url=new URL(location.href);url.searchParams.set("emailId",id);history.replaceState(null,"",url);
+  await loadData();
+}
 async function loadData(){
+  const version=++loadVersion;
   currentPracticeId = qs("practiceId") || qs("id");
   currentEmailId = qs("emailId");
+  document.getElementById("content").style.display="none";
+  document.getElementById("loading").style.display="block";
+  document.getElementById("loading").textContent="Caricamento email...";
 
   if(!currentPracticeId || !currentEmailId){
     document.getElementById("loading").textContent =
@@ -720,12 +703,15 @@ async function loadData(){
       throw new Error("Email non trovata.");
     }
 
+    if(version!==loadVersion)return;
     currentPractice = result.data.practice || {};
     currentEmail = result.data.email || {};
     currentThread = Array.isArray(result.data.thread)
       ? result.data.thread
       : [];
 
+    threadNext=result.data.threadNext||null;
+    document.getElementById("moreThread").style.display=threadNext?"block":"none";
     renderEmail();
     renderPractice();
     renderAI();
@@ -734,20 +720,16 @@ async function loadData(){
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "grid";
+    if(currentEmail.aiAnalysis?.version!==2) analyzeSelectedEmail(false);
 
   }catch(error){
+    if(version!==loadVersion)return;
     document.getElementById("loading").textContent =
       error.message || "Errore caricamento email.";
   }
 }
 
-function goBack(){
-  if(history.length > 1){
-    history.back();
-  }else{
-    openPractice();
-  }
-}
+function goBack(){ openPractice(); }
 
 function openPractice(){
   if(!currentPracticeId) return;
@@ -777,8 +759,8 @@ function openWhatsApp(){
 }
 
 function replyEmail(){
-  const to =
-    (currentEmail?.mittente || [])[0] || "";
+  const to = (currentEmail?.direzione === "inviata" ? currentEmail?.destinatari : (currentEmail?.replyTo?.length ? currentEmail.replyTo : currentEmail?.mittente))?.[0] || "";
+  if(!to){alert("Indirizzo destinatario non disponibile.");return;}
 
   const subject =
     currentEmail?.oggetto || "";
@@ -791,19 +773,45 @@ function replyEmail(){
 }
 
 function openMailClient(){
-  replyEmail();
+  const id=String(currentEmail?.messageId||"").replace(/[<>]/g,"");
+  window.open(id ? `https://mail.google.com/mail/u/0/#search/${encodeURIComponent("rfc822msgid:"+id)}` : "https://mail.google.com/mail/u/0/#inbox","_blank","noopener,noreferrer");
 }
 
 function requestDocuments(){
-  openWhatsApp();
+  const docs=aiData().requestedDocuments||[];
+  if(!docs.length){alert("Analizza la mail: non sono ancora stati rilevati documenti richiesti.");return;}
+  const email=currentPractice?.cliente_email||currentPractice?.email_cliente||currentPractice?.r1_email;
+  const link=`${location.origin}/upload.html?id=${encodeURIComponent(currentPracticeId)}`;
+  const body=`Buongiorno ${clientName()},\n\nper la pratica di mutuo sono richiesti:\n${docs.map(d=>"- "+d).join("\n")}\n\nPuoi caricare i documenti qui: ${link}\n\nGrazie.`;
+  if(email){ location.href=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Documenti richiesti - "+clientName())}&body=${encodeURIComponent(body)}`; }
+  else if(clientPhone()){window.open(`https://wa.me/${normalizePhone(clientPhone()).replace(/^\+/,"")}?text=${encodeURIComponent(body)}`,"_blank","noopener");}
+  else {alert("Email e telefono del cliente non disponibili nel fascicolo.");}
 }
 
 async function markHandled(){
-  alert("Email segnata come gestita nella demo UI. La funzione può essere collegata al centro notifiche.");
+  const practiceId=currentPracticeId,emailId=currentEmailId;
+  try {
+    await fn.httpsCallable("segnaEmailGestita")({practiceId,emailId});
+    if(emailId===currentEmailId){currentEmail.gestita=true;renderEmail();}
+  }catch(error){alert(error.message||"Salvataggio non riuscito.");}
 }
 
-function useSuggestedReply(){
-  replyEmail();
+async function analyzeSelectedEmail(force=true){
+  const practiceId=currentPracticeId,emailId=currentEmailId;
+  if(aiPending.has(emailId))return;
+  aiPending.add(emailId);
+  document.getElementById("analyzeBtn").disabled=true;
+  document.getElementById("aiSummary").textContent="Analisi della mail in corso...";
+  try {
+    const result=await fn.httpsCallable("analizzaEmailPraticaAI",{timeout:180000})({practiceId,emailId,force});
+    if(emailId!==currentEmailId)return;
+    currentEmail.aiAnalysis=result.data.analysis;renderAI();
+  }catch(error){
+    if(emailId===currentEmailId)document.getElementById("aiSummary").textContent="Analisi non riuscita: "+(error.message||"riprova");
+  }finally{
+    aiPending.delete(emailId);
+    document.getElementById("analyzeBtn").disabled=aiPending.has(currentEmailId);
+  }
 }
 
 function editSuggestedReply(){

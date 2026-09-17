@@ -4707,7 +4707,7 @@ Cordiali saluti`
             ]);
 
             const pratica = practiceSnap.exists ? (practiceSnap.data() || {}) : {};
-            dashboardColleghiCache = Array.isArray(res?.data?.users) ? res.data.users : [];
+            dashboardColleghiCache = Array.isArray(res?.data?.consultants) ? res.data.consultants : (res?.data?.consulenti || res?.data?.users || []);
 
             const myUid = firebase.auth().currentUser?.uid || "";
             const currentUid = String(pratica.collega_segnalato_uid || "").trim();
@@ -5119,6 +5119,7 @@ Cordiali saluti`
             const d = snap.exists ? (snap.data() || {}) : {};
             const values = [
                 ...(Array.isArray(d.mail_matching?.numeri_pratica_manual) ? d.mail_matching.numeri_pratica_manual : []),
+                ...(Array.isArray(d.mail_matching?.numeri_pratica_appresi) ? d.mail_matching.numeri_pratica_appresi : []),
                 ...(Array.isArray(d.numeri_pratica_banca_manual) ? d.numeri_pratica_banca_manual : []),
                 d.numero_pratica_banca,
                 d.numeroPraticaBanca
@@ -5414,6 +5415,7 @@ Cordiali saluti`
                             (sum, x) => sum + Number(x.matched || 0),
                             0
                         ),
+                    removedWrongAssociations: batchResults.reduce((sum,x)=>sum+Number(x.removedWrongAssociations||0),0),
                     results:
                         batchResults.flatMap(
                             (x, batchIndex) =>
@@ -5427,7 +5429,7 @@ Cordiali saluti`
             }
             else {
                 const result =
-                    await callable();
+                    await callable({practiceId:idCliente});
 
                 data =
                     result.data
@@ -5449,7 +5451,7 @@ Cordiali saluti`
                                     const from =
                                         Array.isArray(d.from)
                                             ? d.from
-                                                .map(x => x.address || x.name || "")
+                                                .map(x => typeof x === "string" ? x : (x.address || x.name || ""))
                                                 .filter(Boolean)
                                                 .join(", ")
                                             : "";
@@ -5468,24 +5470,25 @@ Cordiali saluti`
                                         d.matched
                                             ? `  ESITO: ASSOCIATA → ${d.practiceId || "-"} (${d.method || "matcher"})`
                                             : `  ESITO: NON ASSOCIATA → ${d.reason || "motivo non disponibile"}`
-                                    ].join("\\n");
-                                }).join("\\n\\n")
+                                    ].join("\n");
+                                }).join("\n\n")
                                 : "  Nessun dettaglio messaggio restituito.";
 
                         return [
                             `${folder.folderName || "CARTELLA"}${folder.backfill ? ` — BLOCCO ${(folder.backfillPage ?? folder.batchIndex ?? 0) + 1}/5` : ""}: analizzate ${folder.processed || 0}, associate ${folder.matched || 0}`,
                             messages
-                        ].join("\\n");
-                    }).join("\\n\\n")
+                        ].join("\n");
+                    }).join("\n\n")
                     : "Il backend non ha restituito il dettaglio delle cartelle.";
 
             alert(
-                `Sincronizzazione Gmail completata.\\n\\n` +
-                `Email analizzate: ${data.processed || 0}\\n` +
-                `Associate: ${data.matched || 0}\\n\\n` +
+                `Sincronizzazione Gmail completata.\n\n` +
+                `Email analizzate: ${data.processed || 0}\n` +
+                `Associate: ${data.matched || 0}\nAssociazioni errate rimosse: ${data.removedWrongAssociations || 0}\n\n` +
                 details
             );
 
+            await caricaNumeriPraticaBanca();
             await aggiornaStatoGmailDashboard();
 
             if (
@@ -6096,6 +6099,7 @@ Cordiali saluti`
 
         if (idCliente) {
             document.getElementById('labelCliente').innerText = prettyClientLabel(idCliente);
+            await caricaStatoPratica();
             caricaDocumenti();
             caricaIdentikitCompleto();
             caricaTimelineInternaPratica();

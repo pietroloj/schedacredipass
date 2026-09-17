@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const html=fs.readFileSync(require('path').join(__dirname,'../main/mail-view.html'),'utf8');
+const script=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1];
+let opened,edited;const location={origin:'https://example.com',href:'',search:''};
+const sandbox={console,URL,URLSearchParams,location,window:{CREDIPASS_FIREBASE:{db:{},functions:{}},open:(...x)=>opened=x},firebase:{auth:()=>({onAuthStateChanged:()=>{}})},document:{getElementById:()=>({textContent:'Bozza concreta'})},alert:x=>{throw Error(x)},prompt:()=> 'Risposta modificata'};
+vm.createContext(sandbox);vm.runInContext(script,sandbox);
+vm.runInContext(`currentPracticeId='molino';currentEmailId='mail1';currentPractice={cliente_nome:'Giuseppe',cliente_cognome:'Molino',cliente_email:'cliente@example.com',cliente_telefono:'+393331234567'};currentEmail={mittente:['bank@example.com'],replyTo:['referente@example.com'],destinatari:['consulente@example.com'],oggetto:'CU 2025',messageId:'<bank123@example.com>',aiAnalysis:{requestedDocuments:['CU 2025'],suggestedReply:'Grazie per la richiesta CU'}}`,sandbox);
+sandbox.requestDocuments();assert(location.href.startsWith('mailto:cliente%40example.com'));assert(decodeURIComponent(location.href).includes('CU 2025'));assert(decodeURIComponent(location.href).includes('/upload.html?id=molino'));
+sandbox.replyEmail();assert(location.href.startsWith('mailto:referente%40example.com'));assert(decodeURIComponent(location.href).includes('Bozza concreta'));
+sandbox.openMailClient();assert(opened[0].startsWith('https://mail.google.com/'));assert(decodeURIComponent(opened[0]).includes('rfc822msgid:bank123@example.com'));
+sandbox.openWhatsApp();assert(opened[0].startsWith('https://wa.me/393331234567'));
+sandbox.openPractice();assert.equal(location.href,'/main/dashboard-consulente.html?id=molino');
+const el={textContent:'Originale'};sandbox.document.getElementById=()=>el;sandbox.editSuggestedReply();assert.equal(el.textContent,'Risposta modificata');
+console.log('PASS actions: document email with upload link, reply-to, Gmail original, WhatsApp, fascicolo, editable draft');

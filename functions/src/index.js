@@ -3494,3 +3494,5 @@ exports.dashboardGestionaleDati =
 
 exports.dashboardPraticaSuggerimentoAI =
   dashboardPraticaSuggerimentoAI;
+
+exports.segnaEmailGestita = require("./mail-engine-imap-personal").segnaEmailGestita;

@@ -638,6 +638,9 @@ async function saveMatchedMail({
     await emailRef.get();
 
   if (existing.exists) {
+    // Backfill repairs existing messages too, without resetting analysis/handled state.
+    await emailRef.set({html: String(mail.html || "").slice(0,300000), testo:cleanBody(mail)}, {merge:true});
+    await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
     return false;
   }
 
@@ -708,6 +711,8 @@ async function saveMatchedMail({
         ""
       ),
 
+    html: String(mail.html || "").slice(0,300000),
+    autoAssociata: true,
     testo:
       bodyText,
 
@@ -888,168 +893,30 @@ function mailReferenceIds(mail) {
 
 
 
-function normSubject(v="") {
-  return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .toUpperCase().replace(/[^A-Z0-9]+/g," ").replace(/\s+/g," ").trim();
-}
-function whole(subject,value) {
-  const s=` ${normSubject(subject)} `, v=normSubject(value);
-  return !!v && s.includes(` ${v} `);
-}
-function subjects(data = {}) {
-  const out = [];
+const {strictSubject, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender} = require("./mail-policy");
 
-  const add = (nome, cognome, nomeCompleto = "") => {
-    let n = String(nome || "").trim();
-    let c = String(cognome || "").trim();
-    const full = String(nomeCompleto || "").trim();
-
-    /*
-     * MAIN-17 salva i richiedenti soprattutto in cliente_* / cliente2_*
-     * e in soggetti_pratica. Se abbiamo solo nome_completo, proviamo a
-     * ricostruire nome/cognome senza usare il document-id.
-     */
-    if ((!n || !c) && full) {
-      const parts = full.split(/\s+/).filter(Boolean);
-      if (parts.length >= 2) {
-        if (!n) n = parts[0];
-        if (!c) c = parts.slice(1).join(" ");
-      }
-    }
-
-    if (n && c) out.push({ n, c });
-  };
-
-  add(data.cliente_nome, data.cliente_cognome, data.cliente_nome_completo);
-  add(data.cliente2_nome, data.cliente2_cognome, data.cliente2_nome_completo);
-
-  // Compatibilità con eventuali pratiche legacy.
-  add(data.nome, data.cognome, data.nome_completo);
-  add(data.nome_cliente, data.cognome_cliente, data.nomeCliente);
-  add(data.richiedente_nome, data.richiedente_cognome);
-  add(data.richiedenteNome, data.richiedenteCognome);
-  add(data.nome_richiedente, data.cognome_richiedente);
-
-  for (const arr of [
-    data.soggetti_pratica,
-    data.soggetti,
-    data.richiedenti,
-    data.intestatari,
-    data.clienti,
-  ]) {
-    if (!Array.isArray(arr)) continue;
-
-    for (const person of arr) {
-      if (!person || typeof person !== "object") continue;
-      if (person.attivo === false) continue;
-
-      add(
-        person.nome || person.firstName || person.nome_cliente,
-        person.cognome || person.lastName || person.cognome_cliente,
-        person.nome_completo || person.fullName
-      );
-    }
-  }
-
-  const seen = new Set();
-
-  return out.filter(person => {
-    const key =
-      `${normSubject(person.n)}|${normSubject(person.c)}`;
-
-    if (!key || seen.has(key)) return false;
-
-    seen.add(key);
-    return true;
-  });
-}
-function trustedNumbers(data={}) {
-  return [...new Set([...(Array.isArray(data.mail_matching?.numeri_pratica_manual)?data.mail_matching.numeri_pratica_manual:[]),
-    ...(Array.isArray(data.numeri_pratica_banca_manual)?data.numeri_pratica_banca_manual:[]),
-    data.numero_pratica_banca,data.numeroPraticaBanca].map(normalizePracticeNumber).filter(Boolean))];
-}
-function strictSubject(subject,data={}) {
-  for(const number of trustedNumbers(data)) if(whole(subject,number))
-    return {matched:true,method:"subject_practice_number",practiceNumber:number,score:3000};
-  const s=` ${normSubject(subject)} `;
-  for(const p of subjects(data)){
-    const n=normSubject(p.n),c=normSubject(p.c);
-    if(s.includes(` ${n} ${c} `)||s.includes(` ${c} ${n} `))
-      return {matched:true,method:"subject_full_name",practiceNumber:"",score:2000};
-  }
-  for(const p of subjects(data)){
-    const n=normSubject(p.n),c=normSubject(p.c),i=n.charAt(0);
-    if(i&&(s.includes(` ${c} ${i} `)||s.includes(` ${i} ${c} `)))
-      return {matched:true,method:"subject_surname_initial",practiceNumber:"",score:1500};
-  }
-  return {matched:false,method:null,practiceNumber:"",score:0};
-}
-function extractLabeledPracticeNumbersFromSubject(subject = "") {
-  const raw = String(subject || "");
-  const out = [];
-
-  const add = value => {
-    const normalized = normalizePracticeNumber(value);
-
-    /*
-     * Deve contenere almeno una cifra: così HTTPS, AMANUEL,
-     * ISTRUTTORIA, ROSSETTI ecc. non potranno mai essere numeri pratica.
-     */
-    if (
-      normalized
-      && normalized.length >= 5
-      && /\d/.test(normalized)
-      && !out.includes(normalized)
-    ) {
-      out.push(normalized);
-    }
-  };
-
-  const patterns = [
-    // "numero pratica 12345", "pratica n. 12345", "ID pratica ABC123"
-    /\b(?:numero\s+pratica|id\s+pratica|rif(?:erimento)?\.?\s+pratica)\s*[:#\-]?\s*(?:n(?:umero)?\.?|n[°º])?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
-
-    // Dopo il nominativo: "... - n° 4487136 - ..."
-    /\bn\s*[°º]\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
-    /\bn\.\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-
-    while ((match = pattern.exec(raw)) !== null) {
-      add(match[1]);
-    }
-  }
-
-  return out;
-}
 async function learnPracticeNumberAfterNameMatch({practiceRef,practiceData,subject,method}) {
   if(method!=="subject_full_name"&&method!=="subject_surname_initial")return [];
   const learned=extractLabeledPracticeNumbersFromSubject(subject);
   if(!learned.length)return [];
-  const merged=[...new Set([...trustedNumbers(practiceData),...learned])];
-  await practiceRef.set({
-    mail_matching:{
-      ...(practiceData.mail_matching||{}),
-      numeri_pratica_manual:merged,
-      numero_pratica_manual:learned[learned.length-1],
-      numero_pratica_auto:learned[learned.length-1],
-      numero_pratica_auto_metodo:method,
-      numero_pratica_auto_aggiornatoIl:admin.firestore.FieldValue.serverTimestamp(),
-    },
-    numeri_pratica_banca_manual:merged,
-  },{merge:true});
+  // Atomic union preserves concurrent learning and never overwrites manual identifiers.
+  await practiceRef.set({mail_matching:{
+    numeri_pratica_appresi: admin.firestore.FieldValue.arrayUnion(...learned),
+    numero_pratica_auto: learned[learned.length-1],
+    numero_pratica_auto_metodo: method,
+    numero_pratica_auto_aggiornatoIl: admin.firestore.FieldValue.serverTimestamp(),
+  }},{merge:true});
   return learned;
 }
 
 async function findPracticeByStrictSubject({mail,consultantUid}) {
+  if(excludedSender(mail.from)) return null;
   const subject=String(mail.subject||""); if(!subject.trim())return null;
   const snap=await db.collection("pratiche_mutuo").get(), matches=[];
   for(const doc of snap.docs){
     const data=doc.data()||{};
     const owner=String(data.consulente_uid||data.workspace_uid||data.owner_uid||data.assegnato_a_uid||"").trim();
-    if(consultantUid&&owner&&owner!==consultantUid)continue;
+    if(consultantUid&&owner!==consultantUid)continue;
     const r=strictSubject(subject,data);
     if(r.matched)matches.push({id:doc.id,ref:doc.ref,data,...r});
   }
@@ -1062,19 +929,44 @@ async function findPracticeByStrictSubject({mail,consultantUid}) {
 }
 async function cleanupPracticeTimeline({consultantUid,practiceId}) {
   if(!practiceId)return 0;
-  const doc=await db.collection("pratiche_mutuo").doc(practiceId).get();
+  const ref=db.collection("pratiche_mutuo").doc(practiceId);
+  const doc=await ref.get();
   if(!doc.exists)return 0;
-  const data=doc.data()||{};
-  const owner=String(data.consulente_uid||data.workspace_uid||data.owner_uid||data.assegnato_a_uid||"").trim();
-  if(consultantUid&&owner&&owner!==consultantUid)return 0;
-  const tl=await doc.ref.collection("email_timeline").get();
-  let removed=0, refs=[];
-  for(const e of tl.docs){
-    const d=e.data()||{}, subject=String(d.oggetto||d.subject||"");
-    if(!strictSubject(subject,data).matched){refs.push(e.ref);removed++;}
+  if(!(await canReadTimelinePractice(consultantUid,doc.data())))
+    throw new HttpsError("permission-denied","Non puoi ripulire questa pratica.");
+  const practices=await db.collection("pratiche_mutuo").get();
+  const candidates=practices.docs.filter(x=>{
+    const d=x.data(); const owner=d.consulente_uid||d.workspace_uid||d.owner_uid||d.assegnato_a_uid;
+    const target=doc.data(); return owner===(target.consulente_uid||target.workspace_uid||target.owner_uid||target.assegnato_a_uid);
+  });
+  function valid(subject,from) {
+    if(excludedSender(from))return false;
+    const matches=candidates.map(x=>({id:x.id,...strictSubject(subject,x.data())})).filter(x=>x.matched).sort((a,b)=>b.score-a.score);
+    return matches[0]?.id===practiceId && (!matches[1] || matches[0].score>matches[1].score);
   }
-  for(let i=0;i<refs.length;i+=25) await Promise.all(refs.slice(i,i+25).map(r=>r.delete()));
-  return removed;
+  const tl=await ref.collection("email_timeline").get();
+  const removedIds=new Set(), validIds=new Set();
+  for(const e of tl.docs){
+    const d=e.data();
+    if(d.autoAssociata===false || d.matchMethod==="manual" || valid(d.oggetto||d.subject,d.mittente||d.from)) validIds.add(e.id);
+    else removedIds.add(e.id);
+  }
+  // Remove both materialized representations; never issue any Gmail deletion.
+  for(const id of removedIds) await ref.collection("email_timeline").doc(id).delete();
+  let orphanCount=0;
+  await db.runTransaction(async tx=>{
+    const fresh=await tx.get(ref); const entries=fresh.data()?.attivita_interne||[];
+    const kept=entries.filter(e=>{
+      const id=e.meta?.email_doc_id || (String(e.id||"").startsWith("email_")?e.id.slice(6):"");
+      if(!id)return true;
+      if(removedIds.has(id))return false;
+      if(validIds.has(id))return true;
+      return valid(e.descrizione,e.autore);
+    });
+    orphanCount=entries.length-kept.length;
+    tx.set(ref,{attivita_interne:kept},{merge:true});
+  });
+  return Math.max(removedIds.size,orphanCount);
 }
 
 
@@ -1243,6 +1135,10 @@ async function syncFolder({
         continue;
       }
 
+      if (excludedSender(mail.from)) {
+        messageDiagnostics.push({subject:mail.subject,from:safeArrayAddress(mail.from),matched:false,reason:"mittente escluso"});
+        continue;
+      }
       const bankDetection =
         detectBank(
           bankCatalog,
@@ -1278,9 +1174,7 @@ async function syncFolder({
         );
 
       const diagnosticNumbers =
-        extractLabeledPracticeNumbersFromSubject(
-          mail.subject || ""
-        );
+        extractLabeledPracticeNumbersFromSubject(mail.subject || "");
 
       messageDiagnostics.push({
         uid: msg.uid,
@@ -1298,12 +1192,13 @@ async function syncFolder({
         reason: match?.matched
           ? "associata"
           : (
-              match?.reason
-              || (
-                diagnosticNumbers.length
-                  ? "numero pratica nell'oggetto non ancora associato"
-                  : "oggetto senza numero pratica noto o nominativo compatibile"
-              )
+              diagnosticNumbers.length
+                ? "numero rilevato ma nessun fascicolo corrispondente"
+                : (
+                    match?.best
+                      ? "candidato sotto soglia"
+                      : "nessuna pratica candidata"
+                  )
             ),
       });
 
@@ -2174,10 +2069,11 @@ async function canReadTimelinePractice(uid, practice = {}) {
   if (!profileSnap.exists) return false;
   const profile = profileSnap.data() || {};
   const role = String(profile.ruolo || "").trim().toLowerCase();
+  if (profile.attivo === false) return false;
   if (role === "admin") return true;
 
   const ownerUid = String(
-    practice.consulente_uid || practice.workspace_uid || practice.owner_uid || ""
+    practice.consulente_uid || practice.workspace_uid || practice.owner_uid || practice.assegnato_a_uid || ""
   ).trim();
   if (!ownerUid) return false;
   if (ownerUid === uid) return true;
@@ -2237,20 +2133,27 @@ const leggiEmailTimeline =
         selected = serializeTimelineEmail(emailSnap);
       }
 
-      const threadSnap = await practiceRef
-        .collection("email_timeline")
-        .orderBy("data", "asc")
-        .limit(50)
-        .get();
-
+      let threadQuery=practiceRef.collection("email_timeline").orderBy("data","desc");
+      const after=String(request.data?.threadAfter||"");
+      if(after){const cursor=await practiceRef.collection("email_timeline").doc(after).get();
+        if(cursor.exists)threadQuery=threadQuery.startAfter(cursor);}
+      const threadSnap=await threadQuery.limit(51).get();
+      const page=threadSnap.docs.slice(0,50);
+      const practiceData=practiceSnap.data() || {};
+      const owner=practiceData.consulente_uid||practiceData.workspace_uid||practiceData.owner_uid||practiceData.assegnato_a_uid;
+      let consultantName=practiceData.assegnato_a_nome||practiceData.consulente_nome||"";
+      if(owner){const profile=await db.collection("consulenti").doc(owner).get();
+        if(profile.exists)consultantName=[profile.data().nome,profile.data().cognome].filter(Boolean).join(" ");}
       return {
         ok: true,
         practice: {
           id: practiceSnap.id,
-          ...(practiceSnap.data() || {}),
+          ...practiceData,
+          consulente_nome: consultantName,
         },
         email: selected,
-        thread: threadSnap.docs.map(serializeTimelineEmail),
+        thread: page.map(doc=>{const d=serializeTimelineEmail(doc);return {id:doc.id,oggetto:d.oggetto||"",mittente:d.mittente||[],data:d.data,direzione:d.direzione||""};}),
+        threadNext: threadSnap.docs.length>50 ? page[page.length-1].id : null,
       };
     }
   );
@@ -2321,6 +2224,7 @@ const gestisciNumeroPraticaBanca =
           mail_matching: {
             ...(data.mail_matching || {}),
             numeri_pratica_manual: numbers,
+            ...(action === "remove" ? {numeri_pratica_appresi: admin.firestore.FieldValue.arrayRemove(number)} : {}),
             numero_pratica_manual:
               numbers.length
                 ? numbers[numbers.length - 1]
@@ -2369,7 +2273,31 @@ const gestisciNumeroPraticaBanca =
   );
 
 
+const segnaEmailGestita = onCall({region:"us-central1"}, async request=>{
+  const uid=request.auth?.uid;
+  if(!uid)throw new HttpsError("unauthenticated","Accesso richiesto.");
+  const practiceId=String(request.data?.practiceId||"").trim();
+  const emailId=String(request.data?.emailId||"").trim();
+  if(!practiceId||!emailId)throw new HttpsError("invalid-argument","Pratica ed email obbligatorie.");
+  const ref=db.collection("pratiche_mutuo").doc(practiceId);
+  const practice=await ref.get();
+  if(!practice.exists||!(await canReadTimelinePractice(uid,practice.data())))
+    throw new HttpsError("permission-denied","Pratica non accessibile.");
+  const email=ref.collection("email_timeline").doc(emailId);
+  await db.runTransaction(async tx=>{
+    const snap=await tx.get(email);
+    if(!snap.exists)throw new HttpsError("not-found","Email non trovata.");
+    tx.update(email,{gestita:true,gestitaDa:uid,gestitaIl:admin.firestore.FieldValue.serverTimestamp()});
+  });
+  return {ok:true};
+});
+
 module.exports = {
+  findPracticeByStrictSubject,
+  learnPracticeNumberAfterNameMatch,
+  segnaEmailGestita,
+  canReadTimelinePractice,
+  cleanupPracticeTimeline,
   gestisciNumeroPraticaBanca,
   leggiEmailTimeline,
   collegaGmailConAppPassword,

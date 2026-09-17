@@ -1,3 +1,10 @@
+const {excludedSender} = require("./mail-policy");
+const {findPracticeByStrictSubject,learnPracticeNumberAfterNameMatch,cleanupPracticeTimeline} = require("./mail-engine-imap-personal");
+function extractHtmlPayload(payload) {
+  if(payload?.mimeType==="text/html" && payload.body?.data)return decodeBase64Url(payload.body.data);
+  for(const part of payload?.parts||[]){const html=extractHtmlPayload(part);if(html)return html;}
+  return "";
+}
 const {
   onSchedule,
 } = require("firebase-functions/v2/scheduler");
@@ -421,6 +428,7 @@ function toMatcherMail(
         ),
     },
 
+    html: extractHtmlPayload(message.payload).slice(0,300000),
     text:
       extractBodyFromPayload(
         message.payload
@@ -1276,7 +1284,9 @@ async function saveMatched({
   const existing =
     await emailRef.get();
 
+  await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
   if (existing.exists) {
+    await emailRef.set({html:mail.html||"",testo:mail.text||""},{merge:true});
     return false;
   }
 
@@ -1394,6 +1404,8 @@ async function saveMatched({
       ||
       "",
 
+    html: mail.html || "",
+    autoAssociata: true,
     testo:
       mail.text
       ||
@@ -1784,20 +1796,14 @@ async function syncConnection(
           millis;
       }
 
+      if(excludedSender(mail.from))continue;
       const bankDetection =
         detectBank(
           bankCatalog,
           mail
         );
 
-      const match =
-        await findPracticeMatch({
-          db,
-
-          mail,
-
-          bankDetection,
-        });
+      const match = await findPracticeByStrictSubject({mail,consultantUid:connection.uid}) || {matched:false,best:null,candidates:[],extractedNumbers:[]};
 
       await proposeUnknownDomain({
         mail,
@@ -2277,6 +2283,7 @@ const sincronizzaGmailPersonale =
 
       try {
 
+        const removedWrongAssociations=await cleanupPracticeTimeline({consultantUid:request.auth.uid,practiceId:String(request.data?.practiceId||"")});
         const result =
           await syncConnection(
             connection,
@@ -2322,6 +2329,7 @@ const sincronizzaGmailPersonale =
             true,
 
           ...result,
+          removedWrongAssociations,
         };
 
       }
