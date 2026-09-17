@@ -896,17 +896,72 @@ function whole(subject,value) {
   const s=` ${normSubject(subject)} `, v=normSubject(value);
   return !!v && s.includes(` ${v} `);
 }
-function subjects(data={}) {
-  const out=[], add=(n,c)=>{n=String(n||"").trim();c=String(c||"").trim();if(n&&c)out.push({n,c});};
-  add(data.nome,data.cognome); add(data.nome_cliente,data.cognome_cliente);
-  add(data.nomeCliente,data.cognomeCliente); add(data.richiedente_nome,data.richiedente_cognome);
-  add(data.richiedenteNome,data.richiedenteCognome); add(data.nome_richiedente,data.cognome_richiedente);
-  for(const arr of [data.soggetti,data.richiedenti,data.intestatari,data.clienti]){
-    if(!Array.isArray(arr))continue;
-    for(const p of arr) if(p&&typeof p==="object") add(p.nome||p.firstName||p.nome_cliente,p.cognome||p.lastName||p.cognome_cliente);
+function subjects(data = {}) {
+  const out = [];
+
+  const add = (nome, cognome, nomeCompleto = "") => {
+    let n = String(nome || "").trim();
+    let c = String(cognome || "").trim();
+    const full = String(nomeCompleto || "").trim();
+
+    /*
+     * MAIN-17 salva i richiedenti soprattutto in cliente_* / cliente2_*
+     * e in soggetti_pratica. Se abbiamo solo nome_completo, proviamo a
+     * ricostruire nome/cognome senza usare il document-id.
+     */
+    if ((!n || !c) && full) {
+      const parts = full.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        if (!n) n = parts[0];
+        if (!c) c = parts.slice(1).join(" ");
+      }
+    }
+
+    if (n && c) out.push({ n, c });
+  };
+
+  add(data.cliente_nome, data.cliente_cognome, data.cliente_nome_completo);
+  add(data.cliente2_nome, data.cliente2_cognome, data.cliente2_nome_completo);
+
+  // Compatibilità con eventuali pratiche legacy.
+  add(data.nome, data.cognome, data.nome_completo);
+  add(data.nome_cliente, data.cognome_cliente, data.nomeCliente);
+  add(data.richiedente_nome, data.richiedente_cognome);
+  add(data.richiedenteNome, data.richiedenteCognome);
+  add(data.nome_richiedente, data.cognome_richiedente);
+
+  for (const arr of [
+    data.soggetti_pratica,
+    data.soggetti,
+    data.richiedenti,
+    data.intestatari,
+    data.clienti,
+  ]) {
+    if (!Array.isArray(arr)) continue;
+
+    for (const person of arr) {
+      if (!person || typeof person !== "object") continue;
+      if (person.attivo === false) continue;
+
+      add(
+        person.nome || person.firstName || person.nome_cliente,
+        person.cognome || person.lastName || person.cognome_cliente,
+        person.nome_completo || person.fullName
+      );
+    }
   }
-  const seen=new Set();
-  return out.filter(p=>{const k=`${normSubject(p.n)}|${normSubject(p.c)}`;if(seen.has(k))return false;seen.add(k);return true;});
+
+  const seen = new Set();
+
+  return out.filter(person => {
+    const key =
+      `${normSubject(person.n)}|${normSubject(person.c)}`;
+
+    if (!key || seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
 }
 function trustedNumbers(data={}) {
   return [...new Set([...(Array.isArray(data.mail_matching?.numeri_pratica_manual)?data.mail_matching.numeri_pratica_manual:[]),
@@ -931,19 +986,42 @@ function strictSubject(subject,data={}) {
 }
 function extractLabeledPracticeNumbersFromSubject(subject = "") {
   const raw = String(subject || "");
+  const out = [];
+
+  const add = value => {
+    const normalized = normalizePracticeNumber(value);
+
+    /*
+     * Deve contenere almeno una cifra: così HTTPS, AMANUEL,
+     * ISTRUTTORIA, ROSSETTI ecc. non potranno mai essere numeri pratica.
+     */
+    if (
+      normalized
+      && normalized.length >= 5
+      && /\d/.test(normalized)
+      && !out.includes(normalized)
+    ) {
+      out.push(normalized);
+    }
+  };
+
   const patterns = [
-    /\b(?:n(?:umero)?\.?\s*)?pratica\s*(?:n(?:umero)?\.?\s*)?[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
-    /\brif(?:erimento)?\.?\s*(?:pratica)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
-    /\bid\s*pratica\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+    // "numero pratica 12345", "pratica n. 12345", "ID pratica ABC123"
+    /\b(?:numero\s+pratica|id\s+pratica|rif(?:erimento)?\.?\s+pratica)\s*[:#\-]?\s*(?:n(?:umero)?\.?|n[°º])?\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+
+    // Dopo il nominativo: "... - n° 4487136 - ..."
+    /\bn\s*[°º]\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
+    /\bn\.\s*([A-Z0-9][A-Z0-9._\/-]{4,30})\b/gi,
   ];
-  const out=[];
-  for(const pattern of patterns){
-    let m;
-    while((m=pattern.exec(raw))!==null){
-      const v=normalizePracticeNumber(m[1]);
-      if(v&&v.length>=5&&!out.includes(v))out.push(v);
+
+  for (const pattern of patterns) {
+    let match;
+
+    while ((match = pattern.exec(raw)) !== null) {
+      add(match[1]);
     }
   }
+
   return out;
 }
 async function learnPracticeNumberAfterNameMatch({practiceRef,practiceData,subject,method}) {
@@ -1200,8 +1278,8 @@ async function syncFolder({
         );
 
       const diagnosticNumbers =
-        extractPracticeNumbers(
-          `${mail.subject || ""}\n${mail.text || ""}`
+        extractLabeledPracticeNumbersFromSubject(
+          mail.subject || ""
         );
 
       messageDiagnostics.push({
@@ -1220,13 +1298,12 @@ async function syncFolder({
         reason: match?.matched
           ? "associata"
           : (
-              diagnosticNumbers.length
-                ? "numero rilevato ma nessun fascicolo corrispondente"
-                : (
-                    match?.best
-                      ? "candidato sotto soglia"
-                      : "nessuna pratica candidata"
-                  )
+              match?.reason
+              || (
+                diagnosticNumbers.length
+                  ? "numero pratica nell'oggetto non ancora associato"
+                  : "oggetto senza numero pratica noto o nominativo compatibile"
+              )
             ),
       });
 
