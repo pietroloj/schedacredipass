@@ -244,9 +244,8 @@ body{
       Apri fascicolo
     </button>
 
-    <button class="btn gold" onclick="replyEmail()">
-      Rispondi
-    </button>
+    <button class="btn gold" onclick="replyEmail(false)">Rispondi</button>
+    <button class="btn gold" onclick="replyEmail(true)">Rispondi a tutti</button>
   </div>
 </div>
 
@@ -352,6 +351,11 @@ body{
     <div class="card" style="margin-top:16px">
       <div class="card-body">
         <h3 class="section-title">💬 Risposta suggerita</h3>
+        <label for="replyMode">Modalità</label>
+        <select id="replyMode" onchange="applyReplyMode(this.value==='all')"><option value="single">Rispondi</option><option value="all">Rispondi a tutti</option></select>
+        <label for="replyTo">A</label><input id="replyTo" type="text" oninput="updateReplyDraft()" autocomplete="off" style="width:100%;padding:10px;margin:5px 0" aria-label="Destinatari A">
+        <label for="replyCc">CC</label><input id="replyCc" type="text" oninput="updateReplyDraft()" autocomplete="off" style="width:100%;padding:10px;margin:5px 0" aria-label="Destinatari CC">
+        <p id="recipientWarning" class="sender-meta"></p>
         <label for="suggestedReply" class="sender-meta">Modifica direttamente la risposta prima di inviarla.</label>
         <textarea id="suggestedReply" class="reply" rows="12" oninput="updateReplyDraft()" style="width:100%;resize:vertical;font:inherit"></textarea>
         <p id="replyRecipient" class="sender-meta"></p><p id="replyStatus" role="status"></p>
@@ -385,6 +389,11 @@ body{
 </div>
 </div>
 
+<dialog id="attachmentDialog" style="width:min(1000px,95vw);height:85vh;border:0;border-radius:14px;padding:18px">
+  <header style="display:flex;justify-content:space-between;gap:16px"><strong id="attachmentTitle"></strong><button class="btn soft" onclick="closeAttachment()">Chiudi</button></header>
+  <div id="attachmentPreview" style="height:calc(100% - 90px);overflow:auto;margin:12px 0"></div>
+  <a id="attachmentDownload" target="_blank" rel="noopener noreferrer">Apri / scarica originale</a>
+</dialog>
 <script src="/main/js/mail-html.js"></script>
 <script src="/main/config/app.js"></script>
 <script src="/main/config/firebase.js"></script>
@@ -482,18 +491,29 @@ function buildWhatsAppText(){
 
 function buildSuggestedReply(){ return aiData().suggestedReply || ""; }
 
+function closeAttachment(){
+ document.getElementById("attachmentPreview").replaceChildren();
+ document.getElementById("attachmentDialog").close();
+}
+function previewAttachment(a){
+ let url;try{url=new URL(a.url||a.downloadUrl);if(url.protocol!=="https:")throw Error();}catch(_){alert("Allegato non disponibile: ricarica l'originale della mail.");return;}
+ const box=document.getElementById("attachmentPreview");box.replaceChildren();
+ document.getElementById("attachmentTitle").textContent=a.nome||a.filename||"Allegato";
+ document.getElementById("attachmentDownload").href=url.href;
+ const type=String(a.contentType||"").toLowerCase();
+ if(["image/jpeg","image/png","image/gif","image/webp"].includes(type)){
+   const img=document.createElement("img");img.src=url.href;img.alt=a.nome||"Allegato";img.style.maxWidth="100%";img.referrerPolicy="no-referrer";box.append(img);
+ }else if(type==="application/pdf"){
+   const frame=document.createElement("iframe");frame.src=url.href;frame.title="Anteprima PDF";frame.setAttribute("sandbox","allow-scripts allow-downloads");frame.style.cssText="width:100%;height:100%;border:0";frame.referrerPolicy="no-referrer";box.append(frame);
+ }else {box.textContent="Anteprima non disponibile per questo formato. Puoi aprire o scaricare l'originale dal collegamento qui sotto.";}
+ document.getElementById("attachmentDialog").showModal();
+}
 function renderAttachments(){
-  const box=document.getElementById("attachments"); box.replaceChildren();
-  const attachments=currentEmail?.allegati||[];
-  if(!attachments.length){box.textContent="Nessun allegato.";return;}
-  attachments.forEach(a=>{
-    const link=document.createElement("a");link.className="attachment";
-    link.textContent=a.nome||a.filename||"Allegato";
-    try {const u=new URL(a.url||a.downloadUrl);if(u.protocol==="https:"){
-      link.href=u.href;link.target="_blank";link.rel="noopener noreferrer";
-    }}catch(_){}
-    box.append(link);
-  });
+ const box=document.getElementById("attachments");box.replaceChildren();
+ const attachments=currentEmail?.allegati||[];
+ if(!attachments.length){box.textContent="Nessun allegato.";return;}
+ attachments.forEach(a=>{const button=document.createElement("button");button.type="button";button.className="attachment";
+   button.textContent=a.nome||a.filename||"Allegato";button.onclick=()=>previewAttachment(a);box.append(button);});
 }
 
 async function renderThread(){
@@ -575,7 +595,13 @@ function renderAI(){
   const draft=replyDrafts.get(currentEmailId);
   document.getElementById("suggestedReply").disabled=!!draft?.sending;
   document.getElementById("suggestedReply").value=draft?.text ?? buildSuggestedReply();
-  document.getElementById("replyRecipient").textContent="A: "+replyRecipient();
+  const preset=currentEmail?.replyDefaults?.[draft?.replyAll?"all":"single"] || {to:[replyRecipient()].filter(Boolean),cc:[]};
+  document.getElementById("replyTo").value=draft?.to ?? preset.to.join(", ");
+  document.getElementById("replyCc").value=draft?.cc ?? preset.cc.join(", ");
+  document.getElementById("replyMode").value=draft?.replyAll?"all":"single";
+  for(const id of ["replyTo","replyCc","replyMode"])document.getElementById(id).disabled=!!draft?.sending;
+  document.getElementById("recipientWarning").textContent=currentEmail?.recipientWarning||"Separa più indirizzi con una virgola. Il tuo indirizzo e i duplicati vengono esclusi.";
+  document.getElementById("replyRecipient").textContent="";
   document.getElementById("sendReplyBtn").disabled=!!draft?.sending || !!draft?.sent;
   document.getElementById("replyStatus").textContent=draft?.sent?"Risposta inviata.":"";
 }
@@ -632,6 +658,7 @@ function renderEmail(){
   document.getElementById("senderMeta").innerHTML = `
     <strong>Da:</strong> ${esc((currentEmail?.mittente || []).join(", "))}<br>
     <strong>A:</strong> ${esc((currentEmail?.destinatari || []).join(", "))}<br>
+    <strong>CC:</strong> ${esc((currentEmail?.cc || []).join(", "))}<br>
     ${esc(formatDate(currentEmail?.data))}
   `;
 
@@ -718,6 +745,7 @@ async function loadData(refreshOriginal=false){
     if(version!==loadVersion)return;
     currentPractice = result.data.practice || {};
     currentEmail = result.data.email || {};
+    if(currentEmail.id && currentEmail.id!==currentEmailId){currentEmailId=currentEmail.id;const url=new URL(location.href);url.searchParams.set("emailId",currentEmailId);history.replaceState(null,"",url);}
     currentThread = Array.isArray(result.data.thread)
       ? result.data.thread
       : [];
@@ -738,6 +766,7 @@ async function loadData(refreshOriginal=false){
     if(version!==loadVersion)return;
     document.getElementById("loading").textContent =
       error.message || "Errore caricamento email.";
+    document.getElementById("mailSubject").textContent="Email non disponibile";
   }
 }
 
@@ -771,11 +800,18 @@ function openWhatsApp(){
 }
 
 function replyRecipient(){return (currentEmail?.direzione === "inviata" ? currentEmail?.destinatari : (currentEmail?.replyTo?.length ? currentEmail.replyTo : currentEmail?.mittente))?.[0] || "";}
-function replyEmail(){document.getElementById("suggestedReply").scrollIntoView({behavior:"smooth",block:"center"});document.getElementById("suggestedReply").focus();}
+function applyReplyMode(all){
+ if(replyDrafts.get(currentEmailId)?.sending)return;
+ const preset=currentEmail?.replyDefaults?.[all?"all":"single"] || {to:[replyRecipient()].filter(Boolean),cc:[]};
+ document.getElementById("replyMode").value=all?"all":"single";
+ document.getElementById("replyTo").value=preset.to.join(", ");document.getElementById("replyCc").value=preset.cc.join(", ");
+ updateReplyDraft();
+}
+function replyEmail(all=false){applyReplyMode(all);document.getElementById("suggestedReply").scrollIntoView({behavior:"smooth",block:"center"});document.getElementById("suggestedReply").focus();}
 function updateReplyDraft(){
  const previous=replyDrafts.get(currentEmailId);
  if(previous?.sending)return;
- replyDrafts.set(currentEmailId,{text:document.getElementById("suggestedReply").value,requestId:crypto.randomUUID()});
+ replyDrafts.set(currentEmailId,{text:document.getElementById("suggestedReply").value,to:document.getElementById("replyTo").value,cc:document.getElementById("replyCc").value,replyAll:document.getElementById("replyMode").value==="all",requestId:crypto.randomUUID()});
  document.getElementById("sendReplyBtn").disabled=false;
  document.getElementById("replyStatus").textContent="";
 }
@@ -784,10 +820,11 @@ async function sendReply(){
  if(!editor.value.trim()){document.getElementById("replyStatus").textContent="Scrivi la risposta prima di inviare.";return;}
  if(!replyDrafts.has(id))updateReplyDraft();
  const draft=replyDrafts.get(id);if(draft.sending||draft.sent)return;
- draft.sending=true;editor.disabled=true;document.getElementById("sendReplyBtn").disabled=true;
+ draft.sending=true;editor.disabled=true;
+ for(const key of ["replyTo","replyCc","replyMode"])document.getElementById(key).disabled=true;document.getElementById("sendReplyBtn").disabled=true;
  document.getElementById("replyStatus").textContent="Invio in corso...";
  try{
-   const result=await fn.httpsCallable("inviaRispostaEmailPratica",{timeout:120000})({practiceId,emailId:id,requestId:draft.requestId,text:draft.text});
+   const result=await fn.httpsCallable("inviaRispostaEmailPratica",{timeout:120000})({practiceId,emailId:id,requestId:draft.requestId,text:draft.text,to:draft.to,cc:draft.cc,replyAll:draft.replyAll});
    if(!result.data?.sent)throw new Error("Invio non confermato.");
    draft.sent=true;
    if(id===currentEmailId)document.getElementById("replyStatus").textContent=result.data.timelineWarning||"Risposta inviata a "+result.data.to;
@@ -796,7 +833,7 @@ async function sendReply(){
      if(id===currentEmailId){currentThread=refreshed.data.thread||[];threadNext=refreshed.data.threadNext||null;await renderThread();}
    } catch(_) { /* Sending succeeded; a conversation refresh must never trigger another send. */ }
  }catch(e){if(id===currentEmailId)document.getElementById("replyStatus").textContent=e.message||"Invio non riuscito.";}
- finally{draft.sending=false;if(id===currentEmailId){editor.disabled=false;document.getElementById("sendReplyBtn").disabled=!!draft.sent;}}
+ finally{draft.sending=false;if(id===currentEmailId){editor.disabled=false;for(const key of ["replyTo","replyCc","replyMode"])document.getElementById(key).disabled=false;document.getElementById("sendReplyBtn").disabled=!!draft.sent;}}
 }
 
 function openMailClient(){

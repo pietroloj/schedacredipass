@@ -976,6 +976,7 @@ async function addTimelineEntry({
                 .toISOString(),
 
         meta: {
+          message_id: mail.messageId || null,
           email_doc_id:
             emailDocId,
 
@@ -1286,7 +1287,7 @@ async function saveMatched({
 
   await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
   if (existing.exists) {
-    await emailRef.set({html:mail.html||"",testo:mail.text||""},{merge:true});
+    await emailRef.set({html:mail.html||"",testo:mail.text||"",destinatari:(mail.to?.value||[]).map(x=>x.address),cc:(mail.cc?.value||[]).map(x=>x.address),recipientsVersion:1},{merge:true});
     return false;
   }
 
@@ -1394,9 +1395,9 @@ async function saveMatched({
     mittente:
       from,
 
-    destinatari:
-      to,
-
+    destinatari: (mail.to?.value||[]).map(x=>x.address),
+    cc: (mail.cc?.value||[]).map(x=>x.address),
+    recipientsVersion: 1,
     replyTo,
 
     oggetto:
@@ -2167,7 +2168,7 @@ const sincronizzaGmailPratiche =
   onSchedule(
     {
       schedule:
-        "every 5 minutes",
+        "every 10 minutes",
 
       timeZone:
         "Europe/Rome",

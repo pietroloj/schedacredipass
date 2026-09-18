@@ -1,3 +1,4 @@
+const {replyRecipients}=require("./mail-recipients");
 const {bankName}=require("./mail-bank-names");
 const {
   onSchedule,
@@ -364,6 +365,7 @@ async function addTimelineEntry({
           ),
 
         meta: {
+          message_id: mail.messageId || null,
           email_doc_id:
             emailDocId,
 
@@ -658,7 +660,7 @@ async function saveMatchedMail({
 
   if (existing.exists) {
     // Backfill repairs existing messages too, without resetting analysis/handled state.
-    await emailRef.set({html: String(mail.html || "").slice(0,600000), testo:cleanBody(mail),bodyVersion:3,allegati:attachments}, {merge:true});
+    await emailRef.set({html: String(mail.html || "").slice(0,600000), testo:cleanBody(mail),bodyVersion:3,allegati:attachments,destinatari:safeArrayAddress(mail.to),cc:safeArrayAddress(mail.cc),recipientsVersion:1,replyTo:safeArrayAddress(mail.replyTo)}, {merge:true});
     await learnPracticeNumberAfterNameMatch({practiceRef,practiceData:match.best.data||{},subject:mail.subject,method:match.best.method});
     return false;
   }
@@ -703,15 +705,9 @@ async function saveMatchedMail({
         mail.from
       ),
 
-    destinatari:
-      unique([
-        ...safeArrayAddress(
-          mail.to
-        ),
-        ...safeArrayAddress(
-          mail.cc
-        ),
-      ]),
+    destinatari: safeArrayAddress(mail.to),
+    cc: safeArrayAddress(mail.cc),
+    recipientsVersion: 1,
 
     replyTo:
       safeArrayAddress(
@@ -2161,22 +2157,41 @@ async function hydrateOriginalEmail(practiceId,emailDocId,data,practice) {
  const client=new ImapFlow({host:"imap.gmail.com",port:993,secure:true,auth:{user,pass:String(password).replace(/\s+/g,"")},connectionTimeout:20000,greetingTimeout:15000,socketTimeout:60000,logger:false});
  await client.connect();let lock;
  try{
-   lock=await client.getMailboxLock(data.folder||"INBOX",{readOnly:true});
-   let message=data.uid?await client.fetchOne(Number(data.uid),{source:true},{uid:true}):null;
-   let mail=message?.source?await simpleParser(message.source,{skipImageLinks:true}):null;
-   if(!mail || normalizeMessageId(mail.messageId)!==normalizeMessageId(data.messageId)){
-     if(!data.messageId)throw new Error("Identificativo originale Gmail mancante.");
-     const ids=await client.search({header:{"message-id":data.messageId}},{uid:true});
-     if(!ids?.length)throw new Error("Originale non trovato nella cartella Gmail: potrebbe essere stato spostato.");
-     message=await client.fetchOne(ids[0],{source:true},{uid:true});
-     mail=await simpleParser(message.source,{skipImageLinks:true});
+   const folders=await client.list();
+   const special=tag=>folders.find(f=>String(f.specialUse||"").toLowerCase()===tag)?.path;
+   const paths=[...new Set([data.folder,data.direzione==="inviata"?special("\\sent"):null,special("\\all"),"INBOX",special("\\sent")].filter(Boolean))];
+   let mail=null,message=null,foundFolder=null;const folderErrors=[];
+   for(const folder of paths){
+     try{
+       lock=await client.getMailboxLock(folder,{readOnly:true});
+       message=(data.uid && folder===data.folder)?await client.fetchOne(Number(data.uid),{source:true},{uid:true}):null;
+       mail=message?.source?await simpleParser(message.source,{skipImageLinks:true}):null;
+       if(!mail || normalizeMessageId(mail.messageId)!==normalizeMessageId(data.messageId)){
+         if(!data.messageId)throw new Error("Identificativo originale Gmail mancante.");
+         const ids=await client.search({header:{"message-id":data.messageId}},{uid:true});
+         if(!ids?.length){mail=null;continue;}
+         message=await client.fetchOne(ids[0],{source:true},{uid:true});
+         mail=await simpleParser(message.source,{skipImageLinks:true});
+       }
+       if(normalizeMessageId(mail.messageId)===normalizeMessageId(data.messageId)){foundFolder=folder;break;}
+       mail=null;
+     }catch(e){mail=null;folderErrors.push(folder+": "+e.message);}
+     finally{lock?.release();lock=null;}
    }
-   if(normalizeMessageId(mail.messageId)!==normalizeMessageId(data.messageId))throw new Error("L'originale non corrisponde alla mail selezionata.");
+   if(!mail||!foundFolder)throw new Error("Originale non trovato in Posta inviata, Tutti i messaggi o INBOX. Nessuna email Gmail è stata cancellata."+(folderErrors.length?" Dettaglio: "+folderErrors.join("; "):""));
+   if(data.recoverMissing){
+     const ownerId=practice.consulente_uid||practice.workspace_uid||practice.owner_uid||practice.assegnato_a_uid;
+     const match=await findPracticeByStrictSubject({mail,consultantUid:ownerId});
+     if(!match?.matched||match.best.id!==practiceId)throw new Error("L'originale non rispetta i filtri di associazione a questa pratica.");
+   }
    let attachments=data.allegati||[],attachmentError=null;
    try{attachments=await saveAttachments({practiceId,emailDocId,mail});}catch(e){attachmentError="Allegati non recuperati: "+e.message;}
-   const update={html:String(mail.html||"").slice(0,600000),testo:cleanBody(mail),bodyVersion:3,allegati:attachments,attachmentError};
+   const update={html:String(mail.html||"").slice(0,600000),testo:cleanBody(mail),bodyVersion:3,allegati:attachments,attachmentError,
+     messageId:mail.messageId,oggetto:mail.subject||"",mittente:safeArrayAddress(mail.from),destinatari:safeArrayAddress(mail.to),cc:safeArrayAddress(mail.cc),replyTo:safeArrayAddress(mail.replyTo),recipientsVersion:1,
+     uid:message.uid||data.uid||null,folder:foundFolder,consultantUid:owner,casella:user,direzione:emailDirection(mail,user,foundFolder),
+     data:mail.date&&!Number.isNaN(new Date(mail.date).getTime())?admin.firestore.Timestamp.fromDate(new Date(mail.date)):admin.firestore.FieldValue.serverTimestamp()};
    await db.collection("pratiche_mutuo").doc(practiceId).collection("email_timeline").doc(emailDocId).set({...update,aiAnalysis:admin.firestore.FieldValue.delete()},{merge:true});
-   return {...data,...update,aiAnalysis:null};
+   return {...data,...update,data:mail.date&&!Number.isNaN(new Date(mail.date).getTime())?new Date(mail.date).toISOString():new Date().toISOString(),aiAnalysis:null};
  }finally{lock?.release();await client.logout().catch(()=>{});}
 }
 async function emailForDisplay(data,practice){
@@ -2187,6 +2202,28 @@ async function emailForDisplay(data,practice){
    catch(_){return a;}
  }));
  return result;
+}
+
+async function resolveTimelineEmail(practiceRef,emailId,practice){
+ const emails=practiceRef.collection("email_timeline");
+ let snap=await emails.doc(emailId).get();
+ if(snap.exists)return serializeTimelineEmail(snap);
+ const entries=practice.attivita_interne||[];
+ const entry=entries.find(e=>e.meta?.email_doc_id===emailId||e.id===emailId);
+ const aliases=[entry?.meta?.email_doc_id,emailId.startsWith("email_")?emailId.slice(6):null].filter(x=>x&&x!==emailId);
+ for(const alias of aliases){snap=await emails.doc(alias).get();if(snap.exists)return serializeTimelineEmail(snap);}
+ if(!entry)throw new HttpsError("not-found","Questa email non è più associata alla pratica. Aggiorna la timeline e sincronizza Gmail.");
+ let messageId=entry.meta?.message_id||"";
+ if(!messageId){
+   const decoded=Buffer.from(entry.meta?.email_doc_id||emailId,"base64url").toString("utf8");
+   if(/^<[^<>\r\n\s]+@[^<>\r\n\s]+>$/.test(decoded))messageId=decoded;
+ }
+ if(!messageId)throw new HttpsError("not-found","La voce in timeline non ha più la copia dell'email né un identificativo originale recuperabile. Esegui Sincronizza ora dalla pratica.");
+ const same=await emails.where("messageId","==",messageId).limit(1).get();
+ if(same.docs.length)return serializeTimelineEmail(same.docs[0]);
+ const id=entry.meta?.email_doc_id||emailId;
+ const restored=await hydrateOriginalEmail(practiceRef.id,id,{messageId,direzione:entry.meta?.direzione|| (entry.tipo==="email_inviata"?"inviata":"ricevuta"),recoverMissing:true},practice);
+ return {id,...restored};
 }
 
 const leggiEmailTimeline =
@@ -2213,14 +2250,16 @@ const leggiEmailTimeline =
 
       let selected = null;
       if (emailDocId) {
-        const emailSnap = await practiceRef.collection("email_timeline").doc(emailDocId).get();
-        if (!emailSnap.exists) throw new HttpsError("not-found", "Email non trovata.");
-        selected = serializeTimelineEmail(emailSnap);
-        if(selected.bodyVersion!==3 || request.data?.refreshOriginal===true){
-          try{selected=await hydrateOriginalEmail(practiceId,emailDocId,selected,practiceSnap.data());}
+        selected = await resolveTimelineEmail(practiceRef,emailDocId,practiceSnap.data());
+        if(selected.bodyVersion!==3 || selected.recipientsVersion!==1 || request.data?.refreshOriginal===true){
+          try{selected=await hydrateOriginalEmail(practiceId,selected.id,selected,practiceSnap.data());}
           catch(e){selected.bodyLoadError=e.message;}
         }
         selected=await emailForDisplay(selected,practiceSnap.data());
+        const ownConnection=await db.collection("gmail_connections").doc(uid).get();
+        const self=[request.auth.token?.email,ownConnection.data()?.email].filter(Boolean);
+        selected.replyDefaults={single:replyRecipients(selected,self,false),all:replyRecipients(selected,self,true)};
+        selected.recipientWarning=selected.recipientsVersion!==1?"Gli indirizzi originali A/CC non sono stati recuperati: controlla i campi prima dell'invio.":null;
       }
 
       let threadQuery=practiceRef.collection("email_timeline").orderBy("data","desc");
@@ -2383,6 +2422,7 @@ const segnaEmailGestita = onCall({region:"us-central1"}, async request=>{
 });
 
 module.exports = {
+  resolveTimelineEmail,
   imapCredentialPayload,
   riparaNumeriPraticaDaEmail,
   repairStoredNumbers,
