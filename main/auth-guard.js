@@ -509,6 +509,12 @@ function injectBadge(session) {
                 </div>
             </div>
 
+            <a href="/main/area-operativa.html" class="credipass-user-menu-item"
+               style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#ffffff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13);transition:background .15s ease,color .15s ease;">
+                <i class="fas fa-columns" style="width:15px;text-align:center;"></i>
+                Area operativa
+            </a>
+
             <a
                 href="/main/ricerca-clienti.html"
                 class="credipass-user-menu-item"
