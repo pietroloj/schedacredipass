@@ -18,6 +18,7 @@ class Publishers:
         if connection.get('platform')!=platform(job['channel']):raise ValueError('Account di piattaforma diversa')
         if not self.vault.read('connection-'+connection['id']):raise ValueError('Token account mancante')
         media=job.get('media',[]);channel=job['channel']
+        if channel=='Instagram Reel' and (len(media)!=1 or not re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I)):raise ValueError('Per un Reel serve un video MP4 o MOV; una copertina non basta')
         if channel=='TikTok':raise ValueError('TikTok: usare esportazione assistita; Direct Post non è abilitato per questo strumento interno')
         if channel.startswith('Instagram'):
             if not media:raise ValueError('Instagram richiede almeno un’immagine o video')

@@ -21,5 +21,7 @@ jobs:
       - run: pip install -r social_hub/requirements.txt
       - run: python -m unittest discover -s social_hub/tests -p test_hub.py
       - run: python -m unittest discover -s social_hub/tests -p test_cloud_http.py
+      - run: python -m unittest discover -s social_hub/tests -p test_planner.py
+      - run: node social_hub/tests/test_planner_import.cjs
       - run: node social_hub/tests/test_shared_auth.cjs
       - run: node --check social_hub/web/app.js

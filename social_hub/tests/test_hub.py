@@ -223,7 +223,7 @@ class ExtendedTests(HubCase):
     @patch('publishers.public_url',side_effect=lambda url:url)
     def test_reel_and_story_payloads(self,_):
         for channel,field in [('Instagram Reel','video_url'),('Instagram Story','image_url')]:
-            key=self.due('Instagram',['https://example.com/asset']);job=self.hub.get('jobs',key);job['channel']=channel;self.hub.store.put('jobs',job,key)
+            key=self.due('Instagram',['https://example.com/asset.mp4' if channel=='Instagram Reel' else 'https://example.com/asset.jpg']);job=self.hub.get('jobs',key);job['channel']=channel;self.hub.store.put('jobs',job,key)
             self.http.request.reset_mock();self.http.request.side_effect=[{'id':'c'},{'status_code':'FINISHED'},{'id':'published'}]
             self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published');self.assertIn(field,self.http.request.call_args_list[0].args[2])
     @patch('publishers.public_url',side_effect=lambda url:url)
