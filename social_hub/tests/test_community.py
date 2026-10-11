@@ -73,3 +73,14 @@ class CommunityTests(HubCase):
             base=parse_qs(urlsplit(oauth.start(ADMIN,{'office_id':'1'})['url']).query)['scope'][0]
             extended=parse_qs(urlsplit(oauth.start(ADMIN,{'office_id':'1','community':True})['url']).query)['scope'][0]
             self.assertNotIn(scope,base);self.assertIn(scope,extended)
+
+    def test_facebook_community_does_not_request_instagram(self):
+        from oauth import MetaOAuth
+        from urllib.parse import parse_qs,urlsplit
+        self.settings.base_url='https://example.com/social-hub'
+        self.hub.vault.save('meta_app_id','123');self.hub.vault.save('meta_app_secret','secret')
+        oauth=MetaOAuth(self.hub)
+        scope=parse_qs(urlsplit(oauth.start(ADMIN,{'office_id':'1','community':True,'platform':'Facebook'})['url']).query)['scope'][0]
+        self.assertNotIn('instagram',scope);self.assertIn('pages_messaging',scope)
+        scope=parse_qs(urlsplit(oauth.start(ADMIN,{'office_id':'1','community':True,'platform':'Instagram'})['url']).query)['scope'][0]
+        self.assertIn('instagram_manage_messages',scope)
