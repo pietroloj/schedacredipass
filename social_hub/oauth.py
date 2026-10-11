@@ -18,7 +18,7 @@ class MetaOAuth:
         state=secrets.token_urlsafe(32)
         self.hub.store.put('operations',{'type':'oauth','uid':actor['uid'],'office_id':office['id'],'expires':time.time()+600,'used':False},state)
         query=urllib.parse.urlencode({'client_id':app_id,'redirect_uri':self.redirect_uri(),'state':state,'response_type':'code',
-              'scope':'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish'+(',read_insights,pages_messaging,instagram_manage_insights,instagram_manage_messages' if d.get('community') is True else '')})
+              'scope':('pages_show_list,pages_read_engagement,pages_manage_posts,read_insights,pages_messaging'+(',instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_manage_messages' if d.get('platform')=='Instagram' else '')) if d.get('community') is True else 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish'})
         return {'url':'https://www.facebook.com/'+self.hub.settings.graph_version+'/dialog/oauth?'+query}
     def callback(self,params):
         state=params.get('state',[''])[0];code=params.get('code',[''])[0]
