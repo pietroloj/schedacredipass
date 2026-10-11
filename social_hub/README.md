@@ -55,13 +55,29 @@ formati suggeriti per il pacchetto editoriale, non tutti i formati accettati dai
 Ogni slot ha immagine e testo propri. Le dimensioni diverse sono segnalate senza ritaglio.
 
 L’importazione ZIP riconosce `giorno/contenuto/social/immagine` e i file
-`TESTO_DA_COPIARE.txt`, creando soltanto contenuti in libreria. Limiti: 150 MB
-compressi, 250 MB estratti, 600 file, 15 MB per file; nessuna estrazione nel filesystem.
-Le cartelle riconosciute sono Facebook, Instagram, LinkedIn, Stories_FB_IG,
-Reel_FB_IG e TikTok. Gli script video e le istruzioni restano nel pacchetto originale.
-Le date si scelgono esplicitamente; il nome LUNEDI non imposta una data da solo.
-Un errore di importazione può essere ritentato nella stessa sessione senza ricaricare
-gli asset già riusciti. Ricaricare lo stesso ZIP in una nuova sessione crea nuove bozze.
+`TESTO_DA_COPIARE.txt`. L’opzione di approvazione automatica è attiva all’apertura
+ed è visibile prima del pulsante finale di importazione. I post diventano preapprovati;
+le righe riconosciute con data, ora, account valido e sede abilitata entrano in programma.
+Senza orari il contenuto resta preapprovato in libreria. Modificare testo o media revoca
+la preapprovazione. I problemi sono mostrati nell’esito; nessun invio reale viene
+eseguito dai test.
+
+Legge piani TXT/CSV e istruzioni locali, per esempio:
+`Lunedì 12/10/2026 - 13:00 - La casa dei tuoi sogni` nel PIANO_EDITORIALE.txt,
+e `Facebook e Instagram: orario di prova 13:00 (Italia).` nel file
+ISTRUZIONI_CONTENUTO.txt della relativa cartella. Sono supportate date GG/MM/AAAA
+o AAAA-MM-GG e orari HH:MM. Senza data viene usata la settimana scelta all’importazione
+(il lunedì della settimana che contiene il giorno selezionato). Fuso Europe/Rome;
+orari ambigui o inesistenti al cambio ora vengono bloccati. Testi non riconosciuti,
+scelte alternative e conflitti vengono segnalati senza inventare date o destinazioni.
+
+Limiti: 150 MB compressi, 250 MB estratti, 600 file, 15 MB per file; nessuna
+estrazione nel filesystem. Cartelle: Facebook, Instagram, LinkedIn, Stories_FB_IG,
+Reel_FB_IG e TikTok. Una copertina non viene inviata come Reel.
+Il digest dello ZIP, la sede e la cartella identificano stabilmente il contenuto;
+post/account/canale/data identificano l’invio. Ripetere lo stesso import non duplica
+né riattiva invii già annullati. Se il contenuto è stato modificato in libreria,
+l’importazione viene fermata per non approvare accidentalmente una versione diversa.
 
 Il calendario mensile/settimanale filtra per social e stato. Un clic sul giorno
 apre la programmazione; un clic sul post apre modifica e approvazione. Le immagini
@@ -124,3 +140,19 @@ Supportati fino a dieci immagini oppure un video HTTPS MP4/MOV/WebM, senza
 mescolare immagini e video. Gli upload locali restano immagini; i video si
 forniscono tramite URL. Musica/effetti aggiunti nell’app richiedono il percorso
 assistito. Nessun test automatico pubblica su un account reale.
+
+## Più account e riuso delle autorizzazioni
+
+Una sede può avere più account della stessa piattaforma. Ricollegare la stessa identità
+aggiorna la connessione mantenendone l’ID; aggiungere un’altra identità non sovrascrive
+la precedente. La programmazione richiede la scelta dell’account quando ce n’è più di uno.
+L’app Meta/LinkedIn rimane unica. Dopo una autorizzazione Facebook si possono associare
+le altre pagine restituite nella medesima sessione, valida dieci minuti, senza rifare
+l’app. Servono comunque ruoli e permessi ufficiali per ogni account.
+Per TikTok, la selezione “Riusa Buffer già collegato” usa la chiave cifrata solo sul
+server per cercare altri canali dello stesso account Buffer; non la restituisce al
+browser. Restano validi i limiti del piano Buffer.
+
+Gli invii TikTok normali usano `needsApproval:false`, `saveToDraft:false` e
+`schedulingType:automatic`. Il calendario resta nel Social Hub; la trasmissione a
+Buffer avviene all’orario programmato. Solo il pulsante di collaudo usa una bozza.
