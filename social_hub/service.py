@@ -18,6 +18,7 @@ from storage import make_store
 from vault import Vault
 
 CHANNELS=('Facebook post','Instagram post','Instagram carosello','Instagram Reel','Instagram Story','LinkedIn','TikTok')
+SLOT_CHANNELS={'facebook':'Facebook post','instagram':'Instagram post','linkedin':'LinkedIn','story':'Instagram Story','reel':'Instagram Reel','tiktok':'TikTok'}
 EDITABLE=('draft','scheduled','error','cancelled')
 
 def now():return time.time()
@@ -74,9 +75,12 @@ class Service:
         result={'actor':actor,'offices':[o for o in self.store.list('offices') if actor['role']=='admin' or o['id'] in actor['offices']]}
         for collection in ['posts','jobs','plans','connections']:
             result[collection]=[d for d in self.store.list(collection) if visible(actor,d)]
-        for post in result['posts']:
+        for post in result['posts']+result['jobs']:
             try:post['previews']=[self.assets.url(m) for m in post.get('media',[])]
             except Exception:post['previews']=[]
+            for slot in post.get('slots',{}).values():
+                try:slot['preview']=self.assets.url(slot['media']) if slot.get('media') else ''
+                except Exception:slot['preview']=''
         result['consultants']=self.auth.consultants(actor) if actor['role']=='admin' else []
         result['members']=self.store.list('members') if actor['role']=='admin' else []
         result['status']={'auth':self.settings.auth,'database':self.settings.store,'project':self.settings.project,
@@ -112,14 +116,30 @@ class Service:
         value={**(old or {}),'office_id':office['id'],'title':text(d,'title',required=True,maximum=500),
              'body':text(d,'body',required=True),'media':media_list(d.get('media',[])),
              'created_at':(old or {}).get('created_at',now()),'sources':(old or {}).get('sources',[])}
+        slots=d.get('slots',(old or {}).get('slots',{}))
+        if not isinstance(slots,dict) or any(k not in SLOT_CHANNELS for k in slots):raise ValueError('Formato social non valido')
+        clean={}
+        for k,v in slots.items():
+            if not isinstance(v,dict):raise ValueError('Slot non valido')
+            media=media_list([v['media']]) if v.get('media') else []
+            clean[k]={'media':media[0] if media else '', 'body':text(v,'body'),
+                      'width':int(v.get('width',0)), 'height':int(v.get('height',0))}
+            if not 0<=clean[k]['width']<=30000 or not 0<=clean[k]['height']<=30000:raise ValueError('Dimensioni non valide')
+        value['slots']=clean
+        value['day_label']=text(d,'day_label',(old or {}).get('day_label',''),maximum=80)
         value['category']=category(value['title']+' '+value['body'])
         self.store.put('posts',value,key);return {'ok':True,'id':key}
     def make_job(self,post,office,channel,when,mode='approvazione'):
         if channel not in CHANNELS:raise ValueError('Canale non valido')
         if when<=now():raise ValueError('Inserire date future')
         connection=self.connection(office['id'],channel)
+        slot=next((post.get('slots',{}).get(k) for k,c in SLOT_CHANNELS.items() if c==channel),None)
+        if slot and not slot.get('media'):raise ValueError('Carica l’immagine nello slot del social scelto')
+        if slot and channel=='Instagram Reel':raise ValueError('La copertina Reel è un’immagine: per pubblicare serve un video, non la copertina')
+        media=[slot['media']] if slot else post.get('media',[])
+        body=(slot.get('body') or post['body']) if slot else post['body']
         return {'office_id':office['id'],'post_id':post['id'],'title':post['title'],
-           'body':personalize(post['body'],office),'media':post.get('media',[]),'channel':channel,
+           'body':personalize(body,office),'media':media,'channel':channel,
            'scheduled_at':when,'created_at':now(),'status':'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection and channel!='TikTok' else 'draft',
            'connection_id':connection['id'] if connection else '', 'account_target':connection['external_id'] if connection else '', 'attempts':0,'last_error':'','remote':{}}
     def create_job(self,actor,d):

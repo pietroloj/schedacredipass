@@ -44,3 +44,32 @@ fittizio `demo-credipass-social` e rifiutano gli endpoint di produzione.
 
 Gli esiti incerti di pubblicazione vengono fermati per evitare duplicazioni:
 si controlla il social prima di programmare un nuovo invio.
+
+
+## Libreria visiva e calendario
+
+La navigazione distingue Panoramica, Libreria, Crea contenuto, Assistente AI e Calendario.
+Ogni contenuto può conservare sei slot: Facebook 1200×628, Instagram 1080×1350,
+LinkedIn 1200×1200, Storie, copertina Reel e copertina TikTok 1080×1920. Sono
+formati suggeriti per il pacchetto editoriale, non tutti i formati accettati dai social.
+Ogni slot ha immagine e testo propri. Le dimensioni diverse sono segnalate senza ritaglio.
+
+L’importazione ZIP riconosce `giorno/contenuto/social/immagine` e i file
+`TESTO_DA_COPIARE.txt`, creando soltanto contenuti in libreria. Limiti: 150 MB
+compressi, 250 MB estratti, 600 file, 15 MB per file; nessuna estrazione nel filesystem.
+Le cartelle riconosciute sono Facebook, Instagram, LinkedIn, Stories_FB_IG,
+Reel_FB_IG e TikTok. Gli script video e le istruzioni restano nel pacchetto originale.
+Le date si scelgono esplicitamente; il nome LUNEDI non imposta una data da solo.
+Un errore di importazione può essere ritentato nella stessa sessione senza ricaricare
+gli asset già riusciti. Ricaricare lo stesso ZIP in una nuova sessione crea nuove bozze.
+
+Il calendario mensile/settimanale filtra per social e stato. Un clic sul giorno
+apre la programmazione; un clic sul post apre modifica e approvazione. Le immagini
+e i testi vengono copiati dallo slot del social nel job, conservando lo snapshot.
+I contenuti da approvare non sono invii attivi. Le copertine Reel non sono video:
+il server impedisce di inviarle come Reel. Lo slot Storie programma Instagram Story;
+la grafica è riutilizzabile manualmente su Facebook. TikTok resta manuale.
+
+Test aggiuntivi: `python -m unittest discover -s social_hub/tests -p test_planner.py`
+e `node social_hub/tests/test_planner_import.cjs`. Quest’ultimo accetta opzionalmente
+il percorso al pacchetto Aversa per verificarne 10 contenuti e 60 grafiche.
