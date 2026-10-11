@@ -27,7 +27,7 @@ Per Aversa sono stati indicati Instagram `credipass.aversa` e Facebook
 né autorizzazioni. Serve completare la configurazione dell'app Meta e il consenso
 sulla pagina ufficiale, quindi selezionare la pagina in Collegamenti.
 Le sedi partono con pubblicazione disabilitata. Nessun test pubblica post reali.
-LinkedIn e TikTok non sono attivati perché gli account non sono ancora stati creati.
+Ogni piattaforma richiede il proprio collegamento autorizzato prima degli invii.
 
 ## Verifica
 
@@ -68,7 +68,7 @@ apre la programmazione; un clic sul post apre modifica e approvazione. Le immagi
 e i testi vengono copiati dallo slot del social nel job, conservando lo snapshot.
 I contenuti da approvare non sono invii attivi. Le copertine Reel non sono video:
 il server impedisce di inviarle come Reel. Lo slot Storie programma Instagram Story;
-la grafica è riutilizzabile manualmente su Facebook. TikTok resta manuale.
+la grafica è riutilizzabile manualmente su Facebook. TikTok supporta post fotografici tramite Buffer.
 
 Test aggiuntivi: `python -m unittest discover -s social_hub/tests -p test_planner.py`
 e `node social_hub/tests/test_planner_import.cjs`. Quest’ultimo accetta opzionalmente
@@ -97,9 +97,30 @@ promemoria escluso dal worker: copia testo, apri/salva media, apri il social, pu
 Dopo l’invio l’operatore può inserire il permalink: lo stato «Pubblicato manualmente (dichiarato)»
 è distinto dalla conferma API. Non vengono inviate notifiche automatiche per questi promemoria.
 Per un invio già programmato bisogna prima annullare la programmazione.
-TikTok usa questo percorso assistito: Direct Post non è abilitato per lo strumento interno.
-Una copertina non costituisce un video Reel/TikTok.
+TikTok può usare questo percorso assistito oppure Buffer per gli invii automatici.
+Una copertina non costituisce un video Reel; su TikTok può essere un post fotografico.
 
 Test OAuth con risposte simulate: stato monouso, scadenza, isolamento del provider e dell’utente,
 identità LinkedIn, host Instagram diretto, token scaduti, esclusione dei promemoria dal worker.
 I test non sostituiscono il collaudo con un account autorizzato e una pubblicazione reale approvata.
+
+## TikTok tramite Buffer
+
+Collegare TikTok a Buffer, verificare l’email e generare una chiave API personale.
+In Collegamenti → TikTok inserire la chiave, cercare i canali e confermare quello
+della sede. La chiave viene cifrata; identità, piattaforma e stato vengono verificati
+prima di salvare. Il piano gratuito Buffer prevede tre canali, dieci post in coda
+per canale e un limite API: verificare le condizioni correnti su buffer.com/pricing.
+
+Gli orari restano nel Social Hub: il worker invia a Buffer all’orario approvato
+con modalità automatica. Solo `sent` viene registrato come pubblicato;
+`scheduled` e `sending` vengono controllati nuovamente. Prima della richiesta
+viene salvato un marcatore persistente: se l’esito è ambiguo non si crea un secondo
+post. Dopo la presa in carico, modifica, annullamento e passaggio al percorso
+manuale dal Hub sono bloccati: verificare il post in Buffer. Il controllo termina
+dopo 40 tentativi; un problema prolungato richiede verifica in Buffer.
+
+Supportati fino a dieci immagini oppure un video HTTPS MP4/MOV/WebM, senza
+mescolare immagini e video. Gli upload locali restano immagini; i video si
+forniscono tramite URL. Musica/effetti aggiunti nell’app richiedono il percorso
+assistito. Nessun test automatico pubblica su un account reale.
