@@ -14,6 +14,7 @@ from import_schedule import extract
 from assets import Assets
 from auth import Auth,AccessDenied,admin,office_access,visible
 from feeds import fetch
+from community import Community, SOURCES
 from network import HTTP,RemoteError
 from publishers import Publishers,Pending,platform
 from storage import make_store
@@ -83,6 +84,7 @@ class Service:
             for slot in post.get('slots',{}).values():
                 try:slot['preview']=self.assets.url(slot['media']) if slot.get('media') else ''
                 except Exception:slot['preview']=''
+        result['official_sources']=SOURCES
         result['consultants']=self.auth.consultants(actor) if actor['role']=='admin' else []
         result['members']=self.store.list('members') if actor['role']=='admin' else []
         result['status']={'auth':self.settings.auth,'database':self.settings.store,'project':self.settings.project,
@@ -402,6 +404,8 @@ class Service:
     def route(self,actor,path,d):
         routes={'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
+        community=Community(self)
+        routes.update({'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})
         if path in routes:return routes[path](actor,d)
         if path=='buffer/test':
             admin(actor);post=self.get('posts',text(d,'post_id',required=True));office=self.office(actor,post['office_id'])

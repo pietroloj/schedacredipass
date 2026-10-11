@@ -25,7 +25,7 @@ class DirectOAuth:
         if not self.key('id') or not self.key('secret'): raise ValueError('Completare la configurazione dell’app '+self.provider)
         state=secrets.token_urlsafe(32)
         self.hub.store.put('operations',{'type':'direct-oauth','provider':self.provider,'uid':actor['uid'],'office_id':office['id'],'expires':time.time()+600,'used':False},state)
-        query={'client_id':self.key('id'),'redirect_uri':self.redirect_uri(),'response_type':'code','state':state,'scope':PROVIDERS[self.provider][1]}
+        query={'client_id':self.key('id'),'redirect_uri':self.redirect_uri(),'response_type':'code','state':state,'scope':PROVIDERS[self.provider][1]+(',instagram_business_manage_messages,instagram_business_manage_insights' if self.provider=='instagram' and data.get('community') is True else '')}
         if self.provider=='instagram': query['enable_fb_login']='false'
         return {'url':PROVIDERS[self.provider][0]+'?'+urlencode(query)}
     def callback(self, params):
