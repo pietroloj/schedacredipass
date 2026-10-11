@@ -85,6 +85,7 @@ class Service:
         result['members']=self.store.list('members') if actor['role']=='admin' else []
         result['status']={'auth':self.settings.auth,'database':self.settings.store,'project':self.settings.project,
            'ai_configured':bool(self.ai.key()),'image_model':self.settings.image_model,'text_model':self.settings.openai_model,
+           **{p+'_oauth_configured':bool(self.vault.read(p+'_app_id') and self.vault.read(p+'_app_secret') and self.settings.base_url) for p in ('instagram','linkedin')},
            'meta_oauth_configured':bool(self.vault.read('meta_app_id') and self.vault.read('meta_app_secret') and self.settings.base_url)}
         result['jobs'].sort(key=lambda j:j.get('scheduled_at',0))
         result['posts'].sort(key=lambda p:p.get('created_at',0),reverse=True)
@@ -159,8 +160,18 @@ class Service:
         def change(job):
             if not job:raise ValueError('Programmazione inesistente')
             if job.get('_rev')!=original.get('_rev'):raise ValueError('La programmazione è cambiata: ricarica prima di modificarla')
-            if job['status'] in ('processing','published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
-            if action=='cancel':job.update(status='cancelled')
+            if job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
+            if action=='assist':
+                if job['status'] not in ('draft','error','cancelled','assisted'):raise ValueError('Annulla prima l’invio automatico programmato')
+                job.update(status='assisted',connection_id='',account_target='',remote={},last_error='')
+            elif action=='manual-published':
+                if job['status']!='assisted':raise ValueError('Apri prima la pubblicazione assistita')
+                from urllib.parse import urlsplit
+                link=text(d,'url',required=True,maximum=2000); parsed=urlsplit(link)
+                domains={'Instagram':('instagram.com','www.instagram.com'),'Facebook':('facebook.com','www.facebook.com'),'LinkedIn':('linkedin.com','www.linkedin.com'),'TikTok':('tiktok.com','www.tiktok.com')}
+                if parsed.scheme!='https' or parsed.hostname not in domains.get(platform(job['channel']),()) or parsed.username or parsed.password or parsed.port not in (None,443):raise ValueError('Inserisci il link HTTPS della pubblicazione sul social corretto')
+                job.update(status='manual_published',manual_url=link,manual_confirmed_by=actor['uid'],manual_confirmed_at=now())
+            elif action=='cancel':job.update(status='cancelled')
             elif action=='approve':
                 if job['scheduled_at']<=now():raise ValueError('La data è passata: riprogramma prima di approvare')
                 job.update(status='scheduled',connection_id=connection['id'],account_target=connection['external_id'],approved_by=actor['uid'],approved_at=now(),last_error='')
@@ -252,12 +263,15 @@ class Service:
         if provider=='LinkedIn' and not re.fullmatch(r'urn:li:(person|organization):[A-Za-z0-9_-]+',external):raise ValueError('Inserire un autore LinkedIn urn:li:person:ID o urn:li:organization:ID')
         token=text(d,'token',required=True,maximum=10000)
         key=hashlib.sha256((office['id']+provider).encode()).hexdigest()
+        method=d.get('auth_method','facebook_login' if provider in ('Facebook','Instagram') else 'manual_token')
+        if method not in ('facebook_login','instagram_login','linkedin_login','manual_token') or (method=='instagram_login' and provider!='Instagram') or (method=='linkedin_login' and provider!='LinkedIn'):raise ValueError('Metodo di accesso non valido')
         # Probe access for Meta before replacing a working connection.
         if provider in ('Facebook','Instagram'):
-            data=self.publishers.graph('GET',external+'?fields=id',token)
-            if str(data.get('id'))!=external:raise ValueError('Il token non corrisponde all’account richiesto')
+            data=self.publishers.graph('GET','me?fields=user_id' if method=='instagram_login' else external+'?fields=id',token,host='instagram' if method=='instagram_login' else 'facebook')
+            if str(data.get('user_id') if method=='instagram_login' else data.get('id'))!=external:raise ValueError('Il token non corrisponde all’account richiesto')
         self.vault.save('connection-'+key,token)
         self.store.put('connections',{'office_id':office['id'],'platform':provider,'external_id':external,
+            'auth_method':method,'expires_at':float(d.get('expires_at',0)),
             'name':text(d,'name',provider,maximum=200),'enabled':True,'checked_at':now() if provider!='LinkedIn' else None,
             'state':'accesso verificato' if provider!='LinkedIn' else 'configurato; permessi da verificare alla prima pubblicazione'},key)
         return {'ok':True}
@@ -334,7 +348,7 @@ class Service:
         if path in routes:return routes[path](actor,d)
         if path=='keys':
             admin(actor)
-            for field in ['openai','meta_app_id','meta_app_secret']:
+            for field in ['openai','meta_app_id','meta_app_secret','instagram_app_id','instagram_app_secret','linkedin_app_id','linkedin_app_secret']:
                 if field in d:self.vault.save(field,text(d,field,required=True,maximum=10000))
             return {'ok':True}
         if path=='upload':

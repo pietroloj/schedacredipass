@@ -73,3 +73,33 @@ la grafica è riutilizzabile manualmente su Facebook. TikTok resta manuale.
 Test aggiuntivi: `python -m unittest discover -s social_hub/tests -p test_planner.py`
 e `node social_hub/tests/test_planner_import.cjs`. Quest’ultimo accetta opzionalmente
 il percorso al pacchetto Aversa per verificarne 10 contenuti e 60 grafiche.
+
+
+## Accessi diretti e pubblicazione assistita
+
+Instagram Login è separato dal percorso Facebook Login, che rimane disponibile.
+Configurare nell’app Instagram il callback pubblico `/social-hub/oauth/instagram/callback`,
+poi salvare **Instagram App ID e Instagram App Secret** (distinti dalle credenziali Meta generali)
+da Collegamenti. L’accesso richiede un account professionale e i permessi
+`instagram_business_basic,instagram_business_content_publish`; per uso in sviluppo
+occorre aggiungere l’account ai ruoli di test secondo la procedura Meta.
+Non abilita né aggira account soggetti a restrizioni di sicurezza.
+
+LinkedIn personale richiede un’app con Share on LinkedIn e Sign In with LinkedIn using OpenID Connect,
+callback `/social-hub/oauth/linkedin/callback`, scope `openid profile w_member_social`.
+L’app va associata a una Pagina secondo i requisiti LinkedIn; il destinatario dei post
+può essere il profilo personale. Entrambi i flussi mostrano l’identità autorizzata e richiedono
+una conferma esplicita prima di associarla alla sede. I token sono cifrati; la scadenza è visibile
+in Collegamenti. Al momento il rinnovo avviene riautorizzando l’account, non in background.
+
+Dal dettaglio del calendario, «Prepara pubblicazione assistita» rende un contenuto un
+promemoria escluso dal worker: copia testo, apri/salva media, apri il social, pubblica lì.
+Dopo l’invio l’operatore può inserire il permalink: lo stato «Pubblicato manualmente (dichiarato)»
+è distinto dalla conferma API. Non vengono inviate notifiche automatiche per questi promemoria.
+Per un invio già programmato bisogna prima annullare la programmazione.
+TikTok usa questo percorso assistito: Direct Post non è abilitato per lo strumento interno.
+Una copertina non costituisce un video Reel/TikTok.
+
+Test OAuth con risposte simulate: stato monouso, scadenza, isolamento del provider e dell’utente,
+identità LinkedIn, host Instagram diretto, token scaduti, esclusione dei promemoria dal worker.
+I test non sostituiscono il collaudo con un account autorizzato e una pubblicazione reale approvata.

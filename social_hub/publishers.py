@@ -1,5 +1,6 @@
 """Real API adapters. All public writes explicitly mark ambiguous outcomes."""
 import json
+import time
 import re
 import urllib.parse
 from network import RemoteError,public_url
@@ -17,6 +18,7 @@ class Publishers:
         if not connection or not connection.get('enabled'):raise ValueError('Collegare e abilitare un account per questa sede')
         if connection.get('platform')!=platform(job['channel']):raise ValueError('Account di piattaforma diversa')
         if not self.vault.read('connection-'+connection['id']):raise ValueError('Token account mancante')
+        if connection.get('expires_at') and connection['expires_at']<=time.time():raise ValueError('Autorizzazione scaduta: ricollega l’account prima di pubblicare')
         media=job.get('media',[]);channel=job['channel']
         if channel=='Instagram Reel' and (len(media)!=1 or not re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I)):raise ValueError('Per un Reel serve un video MP4 o MOV; una copertina non basta')
         if channel=='TikTok':raise ValueError('TikTok: usare esportazione assistita; Direct Post non è abilitato per questo strumento interno')
@@ -31,8 +33,9 @@ class Publishers:
             if channel.startswith('Instagram') or channel.startswith('Facebook'):public_url(self.assets.url(ref,public=True))
         if channel!='Instagram Reel' and any(re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I) for m in media):raise ValueError('Questo canale supporta immagini; per un video usa Instagram Reel o esportazione TikTok')
         if len(media)>10:raise ValueError('Massimo 10 media per pubblicazione')
-    def graph(self,method,path,token,data=None,final=False):
-        url='https://graph.facebook.com/'+self.settings.graph_version+'/'+path
+    def graph(self,method,path,token,data=None,final=False,host='facebook'):
+        if host not in ('facebook','instagram'):raise ValueError('Host non valido')
+        url='https://graph.'+host+'.com/'+self.settings.graph_version+'/'+path
         return self.http.request(method,url,data,{'Authorization':'Bearer '+token},final=final)
     def publish(self,job,connection,checkpoint):
         self.validate(job,connection)
@@ -50,22 +53,23 @@ class Publishers:
             if not result.get('id'):raise RemoteError('Conferma di pubblicazione Facebook assente',uncertain=True)
             return {'id':result['id'],'url':'https://www.facebook.com/'+result['id']}
         if connection['platform']=='Instagram':
+            graph=lambda *args,**kwargs:self.graph(*args,**kwargs,host='instagram' if connection.get('auth_method')=='instagram_login' else 'facebook')
             container=remote.get('container')
             if not container:
                 if job['channel']=='Instagram carosello':
                     children=list(remote.get('children',[]))
                     for ref in media[len(children):]:
-                        child=self.graph('POST',pid+'/media',token,{'image_url':self.assets.url(ref,True),'is_carousel_item':True})
+                        child=graph('POST',pid+'/media',token,{'image_url':self.assets.url(ref,True),'is_carousel_item':True})
                         children.append(child['id']);checkpoint({'children':children})
                     payload={'media_type':'CAROUSEL','children':','.join(children),'caption':body}
                 elif job['channel']=='Instagram Reel':payload={'media_type':'REELS','video_url':self.assets.url(media[0],True),'caption':body}
                 elif job['channel']=='Instagram Story':payload={'media_type':'STORIES','image_url':self.assets.url(media[0],True)}
                 else:payload={'image_url':self.assets.url(media[0],True),'caption':body}
-                container=self.graph('POST',pid+'/media',token,payload)['id'];checkpoint({'container':container})
-            state=self.graph('GET',container+'?fields=status_code',token)
+                container=graph('POST',pid+'/media',token,payload)['id'];checkpoint({'container':container})
+            state=graph('GET',container+'?fields=status_code',token)
             if state.get('status_code') in ('ERROR','EXPIRED'):raise ValueError('Instagram ha rifiutato o fatto scadere il media; crea una nuova programmazione')
             if state.get('status_code')!='FINISHED':raise Pending('Instagram sta elaborando il contenuto')
-            result=self.graph('POST',pid+'/media_publish',token,{'creation_id':container},final=True)
+            result=graph('POST',pid+'/media_publish',token,{'creation_id':container},final=True)
             if not result.get('id'):raise RemoteError('Conferma di pubblicazione Instagram assente',uncertain=True)
             # Do not let an optional permalink lookup turn confirmed publication into an error.
             return {'id':result['id'],'url':''}

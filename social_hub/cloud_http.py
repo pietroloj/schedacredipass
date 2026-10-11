@@ -8,6 +8,7 @@ from flask import Response
 from auth import AccessDenied
 from network import RemoteError
 from oauth import MetaOAuth
+from direct_oauth import DirectOAuth
 
 
 def dispatch(req,hub):
@@ -50,14 +51,15 @@ def _dispatch(req,hub):
                 body=hub.assets.signed_bytes(path[7:],req.args.get('expires'),req.args.get('signature'))
                 return response(body,ctype='image/jpeg')
             if path=='/healthz':return response({'ok':True})
-            if path=='/oauth/meta/callback':
+            if path in ('/oauth/meta/callback','/oauth/instagram/callback','/oauth/linkedin/callback'):
                 try:
-                    MetaOAuth(hub).callback(req.args.to_dict(flat=False))
-                    msg='Account autorizzato. Torna a Collegamenti e scegli la pagina da associare.'
+                    (MetaOAuth(hub) if path=='/oauth/meta/callback' else DirectOAuth(hub,path.split('/')[2])).callback(req.args.to_dict(flat=False))
+                    msg='Account autorizzato. Torna a Collegamenti e conferma l’account da associare.'
                 except (ValueError,RemoteError):msg='Collegamento non riuscito o scaduto. Ricomincia dal Social Hub.'
                 return response(('<!doctype html><meta charset="utf-8"><p>'+msg+'</p><a href="'+html.escape(hub.settings.base_url)+'/">Torna al Social Hub</a>').encode(),ctype='text/html')
             actor=hub.auth.actor(req.headers)
             if path=='/api/state':return response(hub.public_state(actor))
+            if path in ('/api/oauth/instagram/options','/api/oauth/linkedin/options'):return response({'options':DirectOAuth(hub,path.split('/')[3]).options(actor)})
             if path=='/api/oauth/options':return response({'options':MetaOAuth(hub).options(actor)})
             return response({'error':'Non trovato'},404)
         if req.method!='POST':return response({'error':'Metodo non consentito'},405)
@@ -71,7 +73,9 @@ def _dispatch(req,hub):
         actor=hub.auth.actor(req.headers)
         data=req.get_json(silent=True)
         if not isinstance(data,dict):raise ValueError('Richiesta non valida')
-        if path=='/api/oauth/start':result=MetaOAuth(hub).start(actor,data)
+        if path in ('/api/oauth/instagram/start','/api/oauth/linkedin/start'):result=DirectOAuth(hub,path.split('/')[3]).start(actor,data)
+        elif path in ('/api/oauth/instagram/select','/api/oauth/linkedin/select'):result=DirectOAuth(hub,path.split('/')[3]).select(actor,data)
+        elif path=='/api/oauth/start':result=MetaOAuth(hub).start(actor,data)
         elif path=='/api/oauth/select':result=MetaOAuth(hub).select(actor,data)
         elif path.startswith('/api/'):result=hub.route(actor,path[5:],data)
         else:return response({'error':'Non trovato'},404)
