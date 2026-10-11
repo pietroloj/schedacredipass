@@ -8,8 +8,9 @@
 
 [[redirects]]
   from = "/social-hub"
-  to = "/social-hub/"
-  status = 301
+  to = "https://us-central1-consulenza-credipass.cloudfunctions.net/socialHub/social-hub/"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/social-hub/*"
