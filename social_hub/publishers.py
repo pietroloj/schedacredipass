@@ -4,6 +4,7 @@ import time
 import re
 import urllib.parse
 from network import RemoteError,public_url
+from buffer_api import BufferAPI
 
 class Pending(Exception):pass
 
@@ -21,7 +22,12 @@ class Publishers:
         if connection.get('expires_at') and connection['expires_at']<=time.time():raise ValueError('Autorizzazione scaduta: ricollega l’account prima di pubblicare')
         media=job.get('media',[]);channel=job['channel']
         if channel=='Instagram Reel' and (len(media)!=1 or not re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I)):raise ValueError('Per un Reel serve un video MP4 o MOV; una copertina non basta')
-        if channel=='TikTok':raise ValueError('TikTok: usare esportazione assistita; Direct Post non è abilitato per questo strumento interno')
+        if channel=='TikTok':
+            if connection.get('auth_method')!='buffer':raise ValueError('Collega TikTok tramite Buffer')
+            if not media:raise ValueError('TikTok richiede immagini o un video')
+            videos=[m for m in media if re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I)]
+            if videos and len(media)!=1:raise ValueError('TikTok: scegli un solo video oppure fino a 10 immagini')
+            if len(job['body'])>2200:raise ValueError('TikTok: massimo 2200 caratteri')
         if channel.startswith('Instagram'):
             if not media:raise ValueError('Instagram richiede almeno un’immagine o video')
             if len(job['body'])>2200:raise ValueError('Instagram: massimo 2200 caratteri')
@@ -30,9 +36,13 @@ class Publishers:
         if channel=='LinkedIn' and len(job['body'])>3000:raise ValueError('LinkedIn: massimo 3000 caratteri')
         for ref in media:
             if not ref.startswith('asset:'):public_url(ref)
-            if channel.startswith('Instagram') or channel.startswith('Facebook'):public_url(self.assets.url(ref,public=True))
-        if channel!='Instagram Reel' and any(re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I) for m in media):raise ValueError('Questo canale supporta immagini; per un video usa Instagram Reel o esportazione TikTok')
+            if channel.startswith('Instagram') or channel.startswith('Facebook') or channel=='TikTok':public_url(self.assets.url(ref,public=True))
+        if channel not in ('Instagram Reel','TikTok') and any(re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I) for m in media):raise ValueError('Questo canale supporta immagini; per un video usa Instagram Reel o esportazione TikTok')
         if len(media)>10:raise ValueError('Massimo 10 media per pubblicazione')
+    def buffer_payload(self,job,connection,draft=False):
+        self.validate(job,connection)
+        return {'channelId':connection['external_id'],'text':job['body'],'schedulingType':'automatic','mode':'shareNow','needsApproval':False,'saveToDraft':draft,
+            'assets':[{('video' if re.search(r'\.(mp4|mov|webm)(\?|$)',ref,re.I) else 'image'):{'url':self.assets.url(ref,public=True)}} for ref in job.get('media',[])]}
     def graph(self,method,path,token,data=None,final=False,host='facebook'):
         if host not in ('facebook','instagram'):raise ValueError('Host non valido')
         url='https://graph.'+host+'.com/'+self.settings.graph_version+'/'+path
@@ -42,6 +52,21 @@ class Publishers:
         token=self.vault.read('connection-'+connection['id'])
         pid=connection['external_id'];media=job.get('media',[]);body=job['body']
         remote=job.get('remote',{})
+        if connection['platform']=='TikTok':
+            api=BufferAPI(self.http)
+            if remote.get('buffer_id'):
+                result=api.post(token,remote['buffer_id'])
+            else:
+                if remote.get('buffer_attempted'):raise RemoteError('Invio Buffer già tentato: verifica in Buffer prima di riprogrammare.',uncertain=True)
+                api.channel(token,pid)
+                payload=self.buffer_payload(job,connection)
+                checkpoint({'buffer_attempted':True})
+                result=api.create(token,payload)
+                checkpoint({'buffer_id':result['id']})
+            if result.get('schedulingType')!='automatic':raise RemoteError('Buffer richiede una pubblicazione manuale: verifica il contenuto in Buffer.',uncertain=True)
+            if result['status']=='sent':return {'id':result['id'],'url':result.get('externalLink') or ''}
+            if result['status'] in ('scheduled','sending'):raise Pending('Buffer sta inviando il contenuto a TikTok; conferma in attesa')
+            raise RemoteError('Contenuto presente in Buffer ma non pubblicato: controlla lo stato in Buffer, senza duplicarlo.',uncertain=True)
         if connection['platform']=='Facebook':
             photo_ids=list(remote.get('photos',[]))
             for ref in media[len(photo_ids):]:

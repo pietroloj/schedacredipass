@@ -9,6 +9,7 @@ import time
 import uuid
 import urllib.parse
 from ai import AI
+from buffer_api import BufferAPI
 from assets import Assets
 from auth import Auth,AccessDenied,admin,office_access,visible
 from feeds import fetch
@@ -141,7 +142,7 @@ class Service:
         body=(slot.get('body') or post['body']) if slot else post['body']
         return {'office_id':office['id'],'post_id':post['id'],'title':post['title'],
            'body':personalize(body,office),'media':media,'channel':channel,
-           'scheduled_at':when,'created_at':now(),'status':'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection and channel!='TikTok' else 'draft',
+           'scheduled_at':when,'created_at':now(),'status':'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection else 'draft',
            'connection_id':connection['id'] if connection else '', 'account_target':connection['external_id'] if connection else '', 'attempts':0,'last_error':'','remote':{}}
     def create_job(self,actor,d):
         post=self.get('posts',d.get('post_id',''));office_access(actor,post['office_id'])
@@ -160,7 +161,7 @@ class Service:
         def change(job):
             if not job:raise ValueError('Programmazione inesistente')
             if job.get('_rev')!=original.get('_rev'):raise ValueError('La programmazione è cambiata: ricarica prima di modificarla')
-            if job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
+            if job.get('remote',{}).get('buffer_attempted') or job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
             if action=='assist':
                 if job['status'] not in ('draft','error','cancelled','assisted'):raise ValueError('Annulla prima l’invio automatico programmato')
                 job.update(status='assisted',connection_id='',account_target='',remote={},last_error='')
@@ -253,18 +254,24 @@ class Service:
         # Jobs are snapshots. Invalidate approval when changing associated creative.
         for job in self.store.list('jobs'):
             if job['post_id']==post['id'] and job['status'] in ('draft','scheduled','error'):
-                self.store.mutate('jobs',job['id'],lambda j: {**j,'media':[ref],'status':'draft','remote':{}} if j and j['status'] in ('draft','scheduled','error') else None)
+                self.store.mutate('jobs',job['id'],lambda j: {**j,'media':[ref],'status':'draft','remote':{}} if j and not j.get('remote',{}).get('buffer_attempted') and j['status'] in ('draft','scheduled','error') else None)
         return {'ok':True,'media':ref}
     def save_connection(self,actor,d):
         admin(actor);office=self.office(actor,d.get('office_id',''));provider=d.get('platform')
-        if provider not in ('Facebook','Instagram','LinkedIn'):raise ValueError('Piattaforma non collegabile direttamente')
+        if provider not in ('Facebook','Instagram','LinkedIn','TikTok'):raise ValueError('Piattaforma non collegabile direttamente')
         external=text(d,'external_id',required=True,maximum=150)
         if provider in ('Facebook','Instagram') and not external.isdigit():raise ValueError('Inserire l’ID numerico dell’account')
         if provider=='LinkedIn' and not re.fullmatch(r'urn:li:(person|organization):[A-Za-z0-9_-]+',external):raise ValueError('Inserire un autore LinkedIn urn:li:person:ID o urn:li:organization:ID')
         token=text(d,'token',required=True,maximum=10000)
         key=hashlib.sha256((office['id']+provider).encode()).hexdigest()
         method=d.get('auth_method','facebook_login' if provider in ('Facebook','Instagram') else 'manual_token')
-        if method not in ('facebook_login','instagram_login','linkedin_login','manual_token') or (method=='instagram_login' and provider!='Instagram') or (method=='linkedin_login' and provider!='LinkedIn'):raise ValueError('Metodo di accesso non valido')
+        if method not in ('facebook_login','instagram_login','linkedin_login','manual_token','buffer') or (method=='instagram_login' and provider!='Instagram') or (method=='linkedin_login' and provider!='LinkedIn'):raise ValueError('Metodo di accesso non valido')
+        if (provider=='TikTok') != (method=='buffer'):raise ValueError('TikTok richiede il collegamento Buffer')
+        if provider=='TikTok':
+            verified=BufferAPI(self.http).channel(token,external)
+            d={**d,'name':verified['name']}
+            expiry=float(d.get('expires_at',0))
+            if not expiry>now():raise ValueError('Inserisci la scadenza futura della chiave Buffer')
         # Probe access for Meta before replacing a working connection.
         if provider in ('Facebook','Instagram'):
             data=self.publishers.graph('GET','me?fields=user_id' if method=='instagram_login' else external+'?fields=id',token,host='instagram' if method=='instagram_login' else 'facebook')
@@ -346,6 +353,25 @@ class Service:
         routes={'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         if path in routes:return routes[path](actor,d)
+        if path=='buffer/test':
+            admin(actor);post=self.get('posts',text(d,'post_id',required=True));office=self.office(actor,post['office_id'])
+            connection=self.connection(office['id'],'TikTok')
+            if not connection:raise ValueError('Collega prima TikTok con Buffer')
+            job=self.make_job(post,office,'TikTok',now()+3600,'approvazione')
+            payload=self.publishers.buffer_payload(job,connection,draft=True)
+            payload['text']='TEST SOCIAL HUB — BOZZA NON DA PUBBLICARE\n\n'+payload['text'][:2000]
+            # Claim once per operator/post. Ambiguous draft creation is never repeated automatically.
+            key=hashlib.sha256((actor['uid']+post['id']+'buffer-draft-test').encode()).hexdigest()
+            owner=uuid.uuid4().hex
+            claimed=self.store.mutate('operations',key,lambda old:None if old else {'owner':owner,'created_at':now()})
+            if claimed.get('owner')!=owner:raise ValueError('Test già richiesto per questo contenuto: controlla le bozze in Buffer')
+            result=BufferAPI(self.http).create(self.vault.read('connection-'+connection['id']),payload)
+            self.store.put('operations',{'owner':owner,'created_at':now(),'buffer_id':result['id'],'status':result['status']},key)
+            if result['status']!='draft':raise RemoteError('Stato del test inatteso: verificare subito il contenuto in Buffer',uncertain=True)
+            return {'ok':True,'id':result['id'],'status':'draft'}
+        if path=='buffer/channels':
+            admin(actor);self.office(actor,d.get('office_id',''))
+            return {'channels':BufferAPI(self.http).channels(text(d,'token',required=True,maximum=10000))}
         if path=='keys':
             admin(actor)
             for field in ['openai','meta_app_id','meta_app_secret','instagram_app_id','instagram_app_secret','linkedin_app_id','linkedin_app_secret']:
