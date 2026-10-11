@@ -1,0 +1,25 @@
+name: Social Hub tests
+on:
+  pull_request:
+    paths: ['social_hub/**', 'firebase.social-hub.json', '.github/workflows/social-hub.yml']
+  push:
+    paths: ['social_hub/**', 'firebase.social-hub.json', '.github/workflows/social-hub.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pip install -r social_hub/requirements.txt
+      - run: python -m unittest discover -s social_hub/tests -p test_hub.py
+      - run: python -m unittest discover -s social_hub/tests -p test_cloud_http.py
+      - run: node social_hub/tests/test_shared_auth.cjs
+      - run: node --check social_hub/web/app.js

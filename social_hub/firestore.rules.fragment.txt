@@ -1,0 +1,9 @@
+// Inserire DENTRO match /databases/{database}/documents delle regole esistenti.
+// NON sostituire le regole della Scheda Consulenza con questo frammento.
+// Il Social Hub accede dal server con Admin SDK; gli utenti non accedono
+// direttamente ai documenti né ai token cifrati tramite SDK client.
+match /social_hub/{document=**} {
+  allow read, write: if false;
+}
+// Verificare che nessuna regola più generale (catch-all) conceda accesso
+// a questi percorsi: i permessi Firestore tra match sovrapposti sono in OR.

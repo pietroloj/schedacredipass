@@ -67,3 +67,12 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Social Hub runtime and secrets
+venv/
+.venv/
+__pycache__/
+*.pyc
+social_hub/data/
+.env.*
+!.env.example

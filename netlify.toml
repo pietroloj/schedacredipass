@@ -5,3 +5,14 @@
   from = "/api/send-email"
   to = "/.netlify/functions/send-email"
   status = 200
+
+[[redirects]]
+  from = "/social-hub"
+  to = "/social-hub/"
+  status = 301
+
+[[redirects]]
+  from = "/social-hub/*"
+  to = "https://us-central1-consulenza-credipass.cloudfunctions.net/socialHub/social-hub/:splat"
+  status = 200
+  force = true
