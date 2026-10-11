@@ -1,0 +1,19 @@
+{
+  "functions": [
+    {
+      "source": "social_hub",
+      "codebase": "social-hub",
+      "runtime": "python313",
+      "ignore": [
+        "venv",
+        "data",
+        "tests",
+        "*.log",
+        "__pycache__",
+        ".env.example",
+        ".git",
+        "integrazione"
+      ]
+    }
+  ]
+}

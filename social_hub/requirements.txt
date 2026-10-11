@@ -1,0 +1,4 @@
+firebase-admin==7.7.0
+cryptography==47.0.0
+Pillow==12.3.0
+firebase-functions==0.6.0

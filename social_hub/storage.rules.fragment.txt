@@ -1,0 +1,7 @@
+// Integrare nelle regole Storage esistenti, senza sostituirle.
+// Le immagini sono scritte dal server e lette tramite URL firmati temporanei.
+match /social-hub/{allPaths=**} {
+  allow read, write: if false;
+}
+// Un match più generale permissivo può comunque concedere accesso:
+// controllare l'insieme delle regole, non solo questo frammento.
