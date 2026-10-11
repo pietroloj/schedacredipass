@@ -59,6 +59,7 @@ class MetaOAuth:
         self.hub.save_connection(actor,{'office_id':session['office_id'],'platform':'Facebook','external_id':page['id'],'name':page.get('name','Facebook'),'token':page['access_token']})
         instagram=page.get('instagram_business_account',{}).get('id')
         if instagram:self.hub.save_connection(actor,{'office_id':session['office_id'],'platform':'Instagram','external_id':instagram,'name':page.get('name','Instagram'),'token':page['access_token']})
-        self.hub.store.put('operations',{**session,'ready':False},session['id'])
-        self.hub.vault.save('oauth-pages-'+session['id'],'[]')
+        remaining=[p for p in pages if p['id']!=page['id']]
+        self.hub.vault.save('oauth-pages-'+session['id'],json.dumps(remaining))
+        self.hub.store.put('operations',{**session,'ready':bool(remaining)},session['id'])
         return {'ok':True}

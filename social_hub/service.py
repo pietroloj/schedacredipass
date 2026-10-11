@@ -10,6 +10,7 @@ import uuid
 import urllib.parse
 from ai import AI
 from buffer_api import BufferAPI
+from import_schedule import extract
 from assets import Assets
 from auth import Auth,AccessDenied,admin,office_access,visible
 from feeds import fetch
@@ -91,9 +92,10 @@ class Service:
         result['jobs'].sort(key=lambda j:j.get('scheduled_at',0))
         result['posts'].sort(key=lambda p:p.get('created_at',0),reverse=True)
         return result
-    def connection(self,office_id,channel):
+    def connection(self,office_id,channel,connection_id=''):
         candidates=[c for c in self.store.list('connections') if c['office_id']==office_id and c['platform']==platform(channel) and c.get('enabled')]
-        return candidates[0] if candidates else None
+        if connection_id:return next((c for c in candidates if c['id']==connection_id),None)
+        return candidates[0] if len(candidates)==1 else None
     def save_office(self,actor,d):
         admin(actor);key=text(d,'id') or uuid.uuid4().hex
         old=self.store.get('offices',key) or {}
@@ -130,11 +132,12 @@ class Service:
         value['slots']=clean
         value['day_label']=text(d,'day_label',(old or {}).get('day_label',''),maximum=80)
         value['category']=category(value['title']+' '+value['body'])
+        if old and any(value.get(k)!=old.get(k) for k in ('body','slots','media','office_id')):value.update(editorial_status='draft',approved_by='',approved_at=0,import_pristine=False)
         self.store.put('posts',value,key);return {'ok':True,'id':key}
-    def make_job(self,post,office,channel,when,mode='approvazione'):
+    def make_job(self,post,office,channel,when,mode='approvazione',connection_id=''):
         if channel not in CHANNELS:raise ValueError('Canale non valido')
         if when<=now():raise ValueError('Inserire date future')
-        connection=self.connection(office['id'],channel)
+        connection=self.connection(office['id'],channel,connection_id)
         slot=next((post.get('slots',{}).get(k) for k,c in SLOT_CHANNELS.items() if c==channel),None)
         if slot and not slot.get('media'):raise ValueError('Carica l’immagine nello slot del social scelto')
         if slot and channel=='Instagram Reel':raise ValueError('La copertina Reel è un’immagine: per pubblicare serve un video, non la copertina')
@@ -148,13 +151,15 @@ class Service:
         post=self.get('posts',d.get('post_id',''));office_access(actor,post['office_id'])
         office=self.office(actor,d.get('office_id',''))
         if actor['role']!='admin' and office['id']!=post['office_id']:raise AccessDenied('Il post appartiene a un’altra sede')
-        job=self.make_job(post,office,d.get('channel'),timestamp(d.get('scheduled')),office.get('editorial_mode'))
+        if not self.connection(office['id'],d.get('channel',''),d.get('connection_id','')) and len([c for c in self.store.list('connections') if c['office_id']==office['id'] and c['platform']==platform(d.get('channel','')) and c.get('enabled')])>1:raise ValueError('Scegli l’account di destinazione')
+        job=self.make_job(post,office,d.get('channel'),timestamp(d.get('scheduled')),'automatica' if post.get('editorial_status')=='approved' else office.get('editorial_mode'),d.get('connection_id',''))
+        if job['status']=='scheduled':self.publishers.validate(job,self.connection(office['id'],job['channel'],job['connection_id']))
         job['approved_by']=actor['uid'] if job['status']=='scheduled' else ''
         job=self.store.put('jobs',job);return {'ok':True,'id':job['id']}
     def job_action(self,actor,d):
         key=text(d,'id',required=True);action=d.get('action')
         original=self.get('jobs',key);office=self.office(actor,original['office_id'])
-        connection=self.connection(original['office_id'],original['channel'])
+        connection=self.connection(original['office_id'],original['channel'],original.get('connection_id',''))
         if action=='approve':
             if not office.get('publishing_enabled'):raise ValueError('Abilita la pubblicazione nella sede prima di approvare')
             self.publishers.validate(original,connection)
@@ -262,8 +267,10 @@ class Service:
         external=text(d,'external_id',required=True,maximum=150)
         if provider in ('Facebook','Instagram') and not external.isdigit():raise ValueError('Inserire l’ID numerico dell’account')
         if provider=='LinkedIn' and not re.fullmatch(r'urn:li:(person|organization):[A-Za-z0-9_-]+',external):raise ValueError('Inserire un autore LinkedIn urn:li:person:ID o urn:li:organization:ID')
-        token=text(d,'token',required=True,maximum=10000)
-        key=hashlib.sha256((office['id']+provider).encode()).hexdigest()
+        token,expiry=self.buffer_token(actor,d) if provider=='TikTok' else (text(d,'token',required=True,maximum=10000),float(d.get('expires_at',0)))
+        d={**d,'expires_at':expiry}
+        existing=next((c for c in self.store.list('connections') if c['office_id']==office['id'] and c['platform']==provider and c['external_id']==external),None)
+        key=existing['id'] if existing else hashlib.sha256((office['id']+provider+external).encode()).hexdigest()
         method=d.get('auth_method','facebook_login' if provider in ('Facebook','Instagram') else 'manual_token')
         if method not in ('facebook_login','instagram_login','linkedin_login','manual_token','buffer') or (method=='instagram_login' and provider!='Instagram') or (method=='linkedin_login' and provider!='LinkedIn'):raise ValueError('Metodo di accesso non valido')
         if (provider=='TikTok') != (method=='buffer'):raise ValueError('TikTok richiede il collegamento Buffer')
@@ -298,6 +305,49 @@ class Service:
                 self.store.mutate('posts',key,lambda old,e=entry:None if old else {**e,'category':category(e['title']+' '+e['body']),'office_id':office['id'],'created_at':now(),'engine':'rss'})
                 count+=1
         return {'ok':True,'imported':count,'examined':len(entries)}
+    def import_preview(self,actor,d):
+        self.office(actor,d.get('office_id',''))
+        return dict(zip(('schedule','warnings'),extract(text(d,'title',required=True,maximum=500),text(d,'day_label'),d.get('documents',[]),text(d,'week'))))
+    def import_post(self,actor,d):
+        office=self.office(actor,d.get('office_id',''));key=text(d,'id',required=True,maximum=100)
+        approved=boolean(d.get('auto_approve',True));post=self.store.get('posts',key)
+        if post and post['office_id']!=office['id']:raise AccessDenied('Contenuto di un’altra sede')
+        if post and post.get('import_pristine') is False:raise ValueError('Contenuto modificato dopo l’importazione: programmalo dalla libreria per non inviare una versione diversa dallo ZIP')
+        if not post:
+            self.save_post(actor,d)
+            self.store.mutate('posts',key,lambda p:{**p,'import_pristine':True,'editorial_status':'approved' if approved else 'draft','approved_by':actor['uid'] if approved else '', 'approved_at':now() if approved else 0})
+        post=self.get('posts',key);result={'ok':True,'id':key,'scheduled':0,'warnings':[]}
+        schedule=d.get('schedule',[])
+        if not isinstance(schedule,list) or len(schedule)>30:raise ValueError('Calendario non valido')
+        for row in schedule:
+            try:
+                ch=row.get('channel');when=timestamp(row.get('scheduled'));cid=row.get('connection_id','')
+                connection=self.connection(office['id'],ch,cid)
+                if not connection:raise ValueError('Account mancante o più account: scegli la destinazione')
+                jobkey=hashlib.sha256((key+ch+connection['id']+str(when)).encode()).hexdigest()
+                old=self.store.get('jobs',jobkey)
+                if old:
+                    if old['status'] in ('scheduled','processing','published'):result['scheduled']+=1
+                    else:result['warnings'].append(ch+': invio già presente ('+old['status']+')')
+                    continue
+                job=self.make_job(post,office,ch,when,'automatica' if approved else 'approvazione',connection['id'])
+                if approved:
+                    if not office.get('publishing_enabled'):raise ValueError('Invii disabilitati per la sede')
+                    self.publishers.validate(job,connection)
+                    job.update(approved_by=actor['uid'],approved_at=now(),approval_source='zip')
+                self.store.mutate('jobs',jobkey,lambda old:None if old else job)
+                result['scheduled']+=int(job['status']=='scheduled')
+            except (ValueError,TypeError) as e:result['warnings'].append(str(row.get('channel','Social'))+': '+str(e))
+        self.store.mutate('posts',key,lambda p:{**p,'import_warnings':result['warnings']})
+        return result
+    def buffer_token(self,actor,d):
+        admin(actor)
+        if d.get('source_connection'):
+            c=self.get('connections',d['source_connection'])
+            if c.get('auth_method')!='buffer':raise ValueError('Scegli un collegamento Buffer')
+            if c.get('expires_at',0)<=now():raise ValueError('Chiave Buffer scaduta')
+            return self.vault.read('connection-'+c['id']),c['expires_at']
+        return text(d,'token',required=True,maximum=10000),float(d.get('expires_at',0))
     def tick(self):
         for job in self.store.list('jobs'):
             if job['status']=='processing' and job.get('claimed_at',0)<now()-600:
@@ -351,7 +401,7 @@ class Service:
             self.stop.wait(15)
     def route(self,actor,path,d):
         routes={'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
-          'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
+          'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         if path in routes:return routes[path](actor,d)
         if path=='buffer/test':
             admin(actor);post=self.get('posts',text(d,'post_id',required=True));office=self.office(actor,post['office_id'])
@@ -371,7 +421,7 @@ class Service:
             return {'ok':True,'id':result['id'],'status':'draft'}
         if path=='buffer/channels':
             admin(actor);self.office(actor,d.get('office_id',''))
-            return {'channels':BufferAPI(self.http).channels(text(d,'token',required=True,maximum=10000))}
+            return {'channels':BufferAPI(self.http).channels(self.buffer_token(actor,d)[0])}
         if path=='keys':
             admin(actor)
             for field in ['openai','meta_app_id','meta_app_secret','instagram_app_id','instagram_app_secret','linkedin_app_id','linkedin_app_secret']:
