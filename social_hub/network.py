@@ -43,8 +43,24 @@ class HTTP:
                 result['_headers']={k.lower():v for k,v in meta.items()}
                 return result
         except urllib.error.HTTPError as e:
-            code=e.code;e.close()
-            raise RemoteError(f'Il servizio ha risposto con errore HTTP {code}. Verificare credenziali, permessi e formato.',code,final and code>=500) from None
+            code=e.code
+            message=f'Il servizio ha risposto con errore HTTP {code}. Verificare credenziali, permessi e formato.'
+            # Never expose provider messages: they can echo tokens or user data.
+            try:
+                if code==429 and urllib.parse.urlsplit(url).hostname=='api.openai.com':
+                    message='OpenAI ha raggiunto un limite di utilizzo. Verifica credito e limiti del progetto API.'
+                    error=json.loads(e.read(8192)).get('error',{})
+                    reason=error.get('code') or error.get('type')
+                    if reason in ('insufficient_quota','credit_balance_exhausted','usage_limit_exceeded'):
+                        message='OpenAI: credito o quota API esauriti. Verifica fatturazione e limiti del progetto OpenAI prima di riprovare.'
+                    elif reason in ('organization_spend_limit_exceeded','project_spend_limit_exceeded','organization_usage_limit_exceeded'):
+                        message='OpenAI: limite di spesa o utilizzo del progetto raggiunto. Verifica i limiti nella piattaforma OpenAI.'
+                    elif reason in ('rate_limit_exceeded','rate_limit_error','slow_down'):
+                        message='OpenAI: troppe richieste in questo momento. Attendi qualche minuto e riprova.'
+            except (ValueError,AttributeError,TypeError,OSError):
+                pass
+            finally:e.close()
+            raise RemoteError(message,code,final and code>=500) from None
         except (urllib.error.URLError,TimeoutError,ConnectionError,OSError) as e:
             raise RemoteError('Servizio non raggiungibile o tempo scaduto.',uncertain=final) from None
         except (ValueError,UnicodeError):
