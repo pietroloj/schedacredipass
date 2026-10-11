@@ -156,3 +156,22 @@ browser. Restano validi i limiti del piano Buffer.
 Gli invii TikTok normali usano `needsApproval:false`, `saveToDraft:false` e
 `schedulingType:automatic`. Il calendario resta nel Social Hub; la trasmissione a
 Buffer avviene all’orario programmato. Solo il pulsante di collaudo usa una bozza.
+
+
+## Statistiche, messaggi e fonti nazionali
+Le nuove sezioni leggono Meta su richiesta. Facebook: follower e Mi piace alla
+pagina; Instagram: follower, numero contenuti, copertura e visualizzazioni degli
+ultimi 7 giorni quando disponibili. Dati mancanti non vengono presentati come zero.
+Messaggi è riservata agli amministratori, 25 conversazioni per pagina, fino a 100
+messaggi recenti per conversazione; allegati richiedono apertura nel social.
+Le risposte testuali (massimo 1000 caratteri) sono limitate alla finestra di 24 ore
+verificata sui messaggi ricevuti e non vengono ritentate in caso di esito incerto.
+I testi delle conversazioni non vengono salvati nel database del gestionale.
+Ticket temporanei di accesso sono vincolati all’operatore e all’account.
+
+I collegamenti esistenti NON acquisiscono automaticamente nuovi permessi:
+la sezione offre un flusso esplicito di autorizzazione aggiuntiva Meta.
+Messaggistica verso clienti reali può richiedere Advanced Access/App Review.
+LinkedIn e TikTok: posta e statistiche non ancora integrate; nessun dato simulato.
+Le quattro fonti Credipass Italia sono riferimenti apribili, non feed sincronizzati.
+Sondaggi e sticker interattivi non sono implementati da questo aggiornamento.
