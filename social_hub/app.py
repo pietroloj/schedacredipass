@@ -12,6 +12,7 @@ from auth import AccessDenied
 from assets import valid_key
 from network import RemoteError
 from oauth import MetaOAuth
+from direct_oauth import DirectOAuth
 from service import Service
 from settings import Settings
 
@@ -61,9 +62,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(body,ctype=mimetypes.guess_type(file.name)[0] or 'text/plain')
             if path=='/api/bootstrap':return self.send({'auth':hub.settings.auth,'firebase_api_key':hub.settings.firebase_key,'project':hub.settings.project,'server_ai':bool(os.getenv('OPENAI_API_KEY'))})
             if path=='/healthz':return self.send({'ok':True})
-            if path=='/oauth/meta/callback':
+            if path in ('/oauth/meta/callback','/oauth/instagram/callback','/oauth/linkedin/callback'):
                 try:
-                    self.server.oauth.callback(urllib.parse.parse_qs(url.query))
+                    (self.server.oauth if path=='/oauth/meta/callback' else DirectOAuth(hub,path.split('/')[2])).callback(urllib.parse.parse_qs(url.query))
                     message='Account autorizzato. Torna a Collegamenti e scegli la pagina da associare alla sede.'
                 except Exception as e:
                     message=str(e) if isinstance(e,(ValueError,RemoteError)) else 'Collegamento non riuscito. Verifica la configurazione Meta.'
@@ -72,6 +73,7 @@ class Handler(BaseHTTPRequestHandler):
                 file=hub.assets.root/path[7:]
                 if file.is_file():return self.send(file.read_bytes(),ctype='image/jpeg')
             if path=='/api/state':return self.send(hub.public_state(hub.auth.actor(self.headers)))
+            if path in ('/api/oauth/instagram/options','/api/oauth/linkedin/options'):return self.send({'options':DirectOAuth(hub,path.split('/')[3]).options(hub.auth.actor(self.headers))})
             if path=='/api/oauth/options':return self.send({'options':self.server.oauth.options(hub.auth.actor(self.headers))})
             return self.send({'error':'Non trovato'},404)
         except AccessDenied as e:self.send({'error':str(e)},403)
@@ -90,7 +92,9 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data,dict):raise ValueError('Richiesta non valida')
             actor=self.server.hub.auth.actor(self.headers)
             path=self.route_path()
-            if path=='/api/oauth/start':result=self.server.oauth.start(actor,data)
+            if path in ('/api/oauth/instagram/start','/api/oauth/linkedin/start'):result=DirectOAuth(self.server.hub,path.split('/')[3]).start(actor,data)
+            elif path in ('/api/oauth/instagram/select','/api/oauth/linkedin/select'):result=DirectOAuth(self.server.hub,path.split('/')[3]).select(actor,data)
+            elif path=='/api/oauth/start':result=self.server.oauth.start(actor,data)
             elif path=='/api/oauth/select':result=self.server.oauth.select(actor,data)
             elif path and path.startswith('/api/'):result=self.server.hub.route(actor,path[5:],data)
             else:raise ValueError('Percorso non trovato')

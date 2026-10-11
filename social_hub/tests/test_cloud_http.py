@@ -71,3 +71,15 @@ class CloudTests(HubCase):
             with self.assertRaises(ValueError):self.hub.assets.signed_bytes(key,expired,self.hub.assets.signature(key,expired))
             with self.assertRaises(ValueError):self.hub.assets.signed_bytes('../private',args['expires'][0],args['signature'][0])
             bucket.return_value.blob.assert_called_once_with('social-hub/media/'+key)
+
+    def test_direct_provider_routes(self):
+        from urllib.parse import urlsplit,parse_qs
+        for provider in ('instagram','linkedin'):
+            self.hub.vault.save(provider+'_app_id','id')
+            self.hub.vault.save(provider+'_app_secret','secret')
+            r=self.req('/social-hub/api/oauth/'+provider+'/start','POST',{'office_id':'1'})
+            self.assertEqual(r.status_code,200)
+            self.assertTrue(parse_qs(urlsplit(r.json['url']).query)['state'])
+            self.assertEqual(self.req('/social-hub/api/oauth/'+provider+'/options').json,{'options':[]})
+            self.assertEqual(self.req('/social-hub/oauth/'+provider+'/callback?error=access_denied').status_code,200)
+            self.assertEqual(self.req('/social-hub/api/oauth/'+provider+'/select','POST',{'session':'invalid'}).status_code,400)
