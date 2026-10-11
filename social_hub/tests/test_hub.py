@@ -347,4 +347,27 @@ class MigrationTests(HubCase):
         self.assertEqual(file.read_bytes(),before);self.assertEqual(len(self.hub.store.list('posts')),1);self.assertEqual(len(self.hub.store.list('jobs')),1)
         self.assertEqual(self.hub.store.list('jobs')[0]['status'],'draft')
 
+
+class ProviderErrorTests(unittest.TestCase):
+    def failure(self,url,payload):
+        transport=HTTP()
+        transport.opener=Mock()
+        transport.opener.open.side_effect=urllib.error.HTTPError(url,429,'limited',{},io.BytesIO(payload))
+        with self.assertRaises(RemoteError) as ctx:
+            transport.request('POST',url,{})
+        self.assertEqual(ctx.exception.status,429)
+        self.assertNotIn('SECRET',str(ctx.exception))
+        return str(ctx.exception)
+    def test_openai_quota_vs_temporary_limit(self):
+        for code,expected in [('insufficient_quota','credito o quota'),('credit_balance_exhausted','credito o quota'),('project_spend_limit_exceeded','limite di spesa'),('rate_limit_exceeded','troppe richieste')]:
+            with self.subTest(code=code):
+                message=self.failure('https://api.openai.com/v1/responses',json.dumps({'error':{'code':code,'message':'SECRET'}}).encode())
+                self.assertIn(expected,message)
+    def test_non_openai_error_is_not_classified_as_openai(self):
+        message=self.failure('https://graph.facebook.com/me',b'{"error":{"code":"insufficient_quota","message":"SECRET"}}')
+        self.assertNotIn('OpenAI',message)
+    def test_malformed_provider_error_stays_sanitized(self):
+        for payload in (b'SECRET',b'{"error":null}',b'[]'):
+            self.assertIn('limite di utilizzo',self.failure('https://api.openai.com/v1/responses',payload))
+
 if __name__=='__main__':unittest.main(verbosity=2)
