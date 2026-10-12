@@ -53,10 +53,30 @@ class ImportTests(HubCase):
         rows,w=extract('Mutuo 100 percento','LUNEDI',docs,'2027-01-06');self.assertTrue(rows[0]['scheduled'].startswith('2026-10-12T13:00'))
     def test_missing_time_and_ambiguous_dates(self):
         self.assertFalse(extract('Titolo','LUNEDI',[],'2027-01-01')[0])
-        docs=[{'name':'x.txt','text':'01/01/2027 13:00 Facebook Titolo\n02/01/2027 13:00 Facebook Titolo'}]
-        self.assertFalse(extract('Titolo','',docs)[0])
+        docs=[{'name':'PIANO.txt','text':'01/01/2027 13:00 Facebook Titolo\n02/01/2027 13:00 Facebook Titolo'}]
+        self.assertEqual(len(extract('Titolo','',docs)[0]),2)
     def test_italy_dst(self):
         self.assertTrue(local_time('2027-06-01','13:00').endswith('+02:00'))
         self.assertTrue(local_time('2027-01-01','13:00').endswith('+01:00'))
         for date in ('2027-03-28','2027-10-31'):
             with self.assertRaises(ValueError):local_time(date,'02:30')
+
+    def test_plan_multiple_daily_slots_and_week_override(self):
+        docs=[{'name':'PIANO_EDITORIALE.txt','text':'Lunedì 12/10/2026 - 13:00 e 19:00 - Facebook Instagram - Titolo'}]
+        rows,w=extract('Titolo','LUNEDI',docs,'2027-01-06',True)
+        self.assertEqual(len(rows),4);self.assertEqual(w,[])
+        self.assertEqual({r['scheduled'] for r in rows},{'2027-01-04T13:00:00+01:00','2027-01-04T19:00:00+01:00'})
+    def test_relative_plan_without_local_instructions(self):
+        rows,w=extract('Titolo','LUNEDI',[{'name':'PIANO_EDITORIALE.txt','text':'Lunedì - 13:00 - Facebook - Titolo\nLunedì - 19:00 - Instagram Story - Titolo'}],'2027-01-04')
+        self.assertEqual([r['channel'] for r in rows],['Facebook post','Instagram Story'])
+        self.assertEqual(len(rows),2)
+    def test_channel_times_are_not_cross_combined(self):
+        docs=[{'local':True,'text':'Lunedì\nFacebook 13:00\nInstagram 19:00'}]
+        rows,w=extract('Titolo','LUNEDI',docs,'2027-01-04')
+        self.assertEqual(len(rows),2);self.assertEqual(rows[0]['channel'],'Facebook post');self.assertIn('13:00',rows[0]['scheduled'])
+        self.assertEqual(rows[1]['channel'],'Instagram post');self.assertIn('19:00',rows[1]['scheduled'])
+
+    def test_readme_recommendation_is_not_a_schedule(self):
+        docs=[{'name':'LEGGIMI_PRIMA.txt','text':'TikTok: scegli Mutuo rifiutato fra le alternative. Prova le 20:30.'},{'name':'PIANO_EDITORIALE.txt','text':'Lunedì 12/10/2026 - 13:00 - Mutuo rifiutato?'},{'local':True,'text':'Lunedì\nFacebook Instagram: 13:00'}]
+        rows,w=extract('Mutuo rifiutato','LUNEDI',docs)
+        self.assertEqual(len(rows),2);self.assertNotIn('TikTok',[r['channel'] for r in rows])

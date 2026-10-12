@@ -346,7 +346,7 @@ class Service:
         return {'ok':True,'imported':count,'examined':len(entries)}
     def import_preview(self,actor,d):
         self.office(actor,d.get('office_id',''))
-        return dict(zip(('schedule','warnings'),extract(text(d,'title',required=True,maximum=500),text(d,'day_label'),d.get('documents',[]),text(d,'week'))))
+        return dict(zip(('schedule','warnings'),extract(text(d,'title',required=True,maximum=500),text(d,'day_label'),d.get('documents',[]),text(d,'week'),boolean(d.get('shift_week',False)))))
     def import_post(self,actor,d):
         office=self.office(actor,d.get('office_id',''));key=text(d,'id',required=True,maximum=100)
         approved=boolean(d.get('auto_approve',True));post=self.store.get('posts',key)

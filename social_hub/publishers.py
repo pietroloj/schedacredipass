@@ -42,7 +42,7 @@ class Publishers:
     def buffer_payload(self,job,connection,draft=False):
         self.validate(job,connection)
         return {'channelId':connection['external_id'],'text':job['body'],'schedulingType':'automatic','mode':'shareNow','needsApproval':False,'saveToDraft':draft,
-            'assets':[{('video' if re.search(r'\.(mp4|mov|webm)(\?|$)',ref,re.I) else 'image'):{'url':self.assets.url(ref,public=True)}} for ref in job.get('media',[])]}
+            'assets':[{('video' if re.search(r'\.(mp4|mov|webm)(\?|$)',ref,re.I) else 'image'):{'url':self.assets.delivery_url(ref)}} for ref in job.get('media',[])]}
     def graph(self,method,path,token,data=None,final=False,host='facebook'):
         if host not in ('facebook','instagram'):raise ValueError('Host non valido')
         url='https://graph.'+host+'.com/'+self.settings.graph_version+'/'+path
@@ -93,8 +93,15 @@ class Publishers:
                 container=graph('POST',pid+'/media',token,payload)['id'];checkpoint({'container':container})
             state=graph('GET',container+'?fields=status_code',token)
             if state.get('status_code') in ('ERROR','EXPIRED'):raise ValueError('Instagram ha rifiutato o fatto scadere il media; crea una nuova programmazione')
+            if state.get('status_code')=='PUBLISHED':raise RemoteError('Instagram segnala il contenitore già pubblicato: verifica sul profilo, senza duplicarlo.',uncertain=True)
             if state.get('status_code')!='FINISHED':raise Pending('Instagram sta elaborando il contenuto')
-            result=graph('POST',pid+'/media_publish',token,{'creation_id':container},final=True)
+            try:result=graph('POST',pid+'/media_publish',token,{'creation_id':container},final=True)
+            except RemoteError as e:
+                # Meta can briefly report FINISHED before the publish endpoint is ready.
+                # Retry the same container only for this explicit not-ready response.
+                if e.provider_code==9007 and e.provider_subcode==2207027 and not e.uncertain:
+                    raise Pending('Instagram sta completando la preparazione: nuovo controllo automatico tra un minuto') from None
+                raise
             if not result.get('id'):raise RemoteError('Conferma di pubblicazione Instagram assente',uncertain=True)
             # Do not let an optional permalink lookup turn confirmed publication into an error.
             return {'id':result['id'],'url':''}

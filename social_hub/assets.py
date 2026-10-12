@@ -48,6 +48,25 @@ class Assets:
         if public and not self.settings.base_url.startswith('https://'):
             raise ValueError('Per pubblicare immagini locali serve un indirizzo HTTPS pubblico o Firebase Storage')
         return (self.settings.base_url if public else getattr(self.settings,'base_path',''))+'/media/'+key
+    def delivery_url(self,ref):
+        """Stable, file-scoped delivery capability for delayed Buffer fetches.
+
+        Preview links remain short-lived. This URL reveals only the selected file,
+        never the bucket or account; deleting the image revokes its delivery URL.
+        """
+        if not ref.startswith('asset:'):return ref
+        key=ref[6:]
+        if not valid_key(key):raise ValueError('Immagine non valida')
+        base=getattr(self.settings,'signed_media_url','')
+        if self.settings.store!='firestore' or not base:return self.url(ref,public=True)
+        signature=hmac.new(self.settings.encryption_key(),('social-hub-delivery-v1:'+key).encode(),hashlib.sha256).hexdigest()
+        return base.rsplit('/',1)[0]+'/delivery/'+key+'?signature='+signature
+    def delivery_bytes(self,key,signature):
+        if not valid_key(key):raise ValueError('Immagine non valida')
+        expected=hmac.new(self.settings.encryption_key(),('social-hub-delivery-v1:'+key).encode(),hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected,str(signature)):raise ValueError('Indirizzo immagine non valido')
+        from firebase_admin import storage
+        return storage.bucket(app=firebase_app(self.settings)).blob('social-hub/media/'+key).download_as_bytes()
     def signature(self,key,expires):
         message=f'social-hub-media-v1:{key}:{expires}'.encode()
         return hmac.new(self.settings.encryption_key(),message,hashlib.sha256).hexdigest()

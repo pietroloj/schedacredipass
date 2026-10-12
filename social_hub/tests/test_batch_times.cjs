@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const source=fs.readFileSync(__dirname+'/../web/app.js','utf8');const ctx=vm.createContext({Date,Error});
+vm.runInContext(source.slice(source.indexOf('function batchDateAt('),source.indexOf('function batchTargets(')),ctx);
+const dates=Array.from({length:10},(_,i)=>ctx.batchDateAt('2027-01-04T10:00','daily','13:00, 19:00',i));
+assert.deepEqual(dates.map(d=>d.getHours()),[13,19,13,19,13,19,13,19,13,19]);
+assert.deepEqual(dates.map(d=>d.getDate()),[4,4,5,5,6,6,7,7,8,8]);
+assert.equal(ctx.batchDateAt('2027-01-04T10:00','7','',1).getDate(),11);
+assert.equal(ctx.batchDateAt('2027-01-04T10:00','0','',8).getDate(),4);
+assert.throws(()=>ctx.batchDateAt('2027-01-04T10:00','daily','25:00',0));
+assert.throws(()=>ctx.batchDateAt('2027-01-04T10:00','daily','',0));
+assert.equal(ctx.batchDateAt('2027-01-04T10:00','daily','19:00,13:00,13:00',1).getHours(),19);
+console.log('PASS: 10 contenuti in cinque giorni, due orari; orari duplicati/invalidi; modalità precedenti');

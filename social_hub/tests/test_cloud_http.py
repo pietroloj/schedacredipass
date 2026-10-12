@@ -83,3 +83,27 @@ class CloudTests(HubCase):
             self.assertEqual(self.req('/social-hub/api/oauth/'+provider+'/options').json,{'options':[]})
             self.assertEqual(self.req('/social-hub/oauth/'+provider+'/callback?error=access_denied').status_code,200)
             self.assertEqual(self.req('/social-hub/api/oauth/'+provider+'/select','POST',{'session':'invalid'}).status_code,400)
+
+    def test_media_head_uses_signature_and_returns_length_without_body(self):
+        with patch.object(self.hub.assets,'signed_bytes',return_value=b'jpeg') as fetch:
+            r=self.req('/social-hub/media/'+('a'*32)+'.jpg?expires=123&signature=s','HEAD')
+            self.assertEqual(r.status_code,200);self.assertEqual(r.data,b'');self.assertEqual(r.headers['Content-Length'],'4')
+            fetch.assert_called_once_with('a'*32+'.jpg','123','s')
+        self.assertEqual(self.req('/social-hub/api/state','HEAD').status_code,405)
+
+    def test_delivery_is_stable_scoped_and_supports_head(self):
+        from urllib.parse import urlsplit,parse_qs
+        self.settings.store='firestore';self.settings.signed_media_url='https://example.com/social-hub/media'
+        self.settings.encryption_key=lambda:b'test-only-key'
+        key='a'*32+'.jpg';url=self.hub.assets.delivery_url('asset:'+key)
+        self.assertEqual(url,self.hub.assets.delivery_url('asset:'+key));self.assertNotIn('expires=',url)
+        signature=parse_qs(urlsplit(url).query)['signature'][0]
+        with patch('assets.firebase_app'),patch('firebase_admin.storage.bucket') as bucket:
+            bucket.return_value.blob.return_value.download_as_bytes.return_value=b'jpeg'
+            for method in ('GET','HEAD'):
+                r=self.req(urlsplit(url).path+'?signature='+signature,method)
+                self.assertEqual(r.status_code,200)
+                self.assertEqual(r.data,b'jpeg' if method=='GET' else b'')
+            with self.assertRaises(ValueError):self.hub.assets.delivery_bytes('b'*32+'.jpg',signature)
+            with self.assertRaises(ValueError):self.hub.assets.delivery_bytes(key,'forged')
+            with self.assertRaises(ValueError):self.hub.assets.delivery_bytes('../secrets',signature)
