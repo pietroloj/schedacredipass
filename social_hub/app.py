@@ -52,7 +52,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.valid_host();hub=self.server.hub
             url=urllib.parse.urlsplit(self.path);path=self.route_path()
-            static={'/':'index.html','/app.js':'app.js','/style.css':'style.css'}
+            static={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/logo.png':'logo.png'}
             if path in static:
                 file=hub.settings.root/'web'/static[path]
                 body=file.read_bytes()

@@ -84,3 +84,15 @@ class CommunityTests(HubCase):
         self.assertNotIn('instagram',scope);self.assertIn('pages_messaging',scope)
         scope=parse_qs(urlsplit(oauth.start(ADMIN,{'office_id':'1','community':True,'platform':'Instagram'})['url']).query)['scope'][0]
         self.assertIn('instagram_manage_messages',scope)
+
+    def test_daily_reach_period_and_missing_days(self):
+        c=self.connection('Instagram')
+        self.http.request.side_effect=[{'followers_count':10},{'media_count':3},{'data':[{'total_value':{'value':20}}]},{'data':[{'total_value':{'value':30}}]},{'data':[{'values':[{'end_time':'2026-10-10T00:00:00Z','value':0},{'end_time':'2026-10-11T00:00:00Z','value':8}]}]}]
+        r=self.api.stats(ADMIN,{'connection_id':c['id'],'days':14})
+        self.assertEqual(r['days'],14);self.assertEqual([x['value'] for x in r['series']],[0,8])
+        self.assertIn('metric_type=time_series',self.http.request.call_args.args[1])
+    def test_invalid_period(self):
+        with self.assertRaises(ValueError):self.api.stats(ADMIN,{**self.d,'days':90})
+    def test_inbox_refresh_reuses_ticket_without_growth(self):
+        first=self.ticket();second=self.ticket();self.assertEqual(first,second)
+        self.assertEqual(len(self.hub.store.list('operations')),1)

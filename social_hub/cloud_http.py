@@ -40,7 +40,7 @@ def _dispatch(req,hub):
         return response({'error':'Non trovato'},404)
     try:
         if req.method=='GET':
-            static={'/':'index.html','/app.js':'app.js','/style.css':'style.css'}
+            static={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/logo.png':'logo.png'}
             if path in static:
                 file=hub.settings.root/'web'/static[path]
                 body=file.read_bytes().replace(b'__HUB_BASE__',prefix.encode()) if file.name=='index.html' else file.read_bytes()
