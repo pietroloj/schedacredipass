@@ -78,6 +78,8 @@ class Service:
         result={'actor':actor,'offices':[o for o in self.store.list('offices') if actor['role']=='admin' or o['id'] in actor['offices']]}
         for collection in ['posts','jobs','plans','connections']:
             result[collection]=[d for d in self.store.list(collection) if visible(actor,d)]
+        result['trash']=[p for p in result['posts'] if p.get('deleted_at')]
+        result['posts']=[p for p in result['posts'] if not p.get('deleted_at')]
         for post in result['posts']+result['jobs']:
             try:post['previews']=[self.assets.url(m) for m in post.get('media',[])]
             except Exception:post['previews']=[]
@@ -136,7 +138,42 @@ class Service:
         value['category']=category(value['title']+' '+value['body'])
         if old and any(value.get(k)!=old.get(k) for k in ('body','slots','media','office_id')):value.update(editorial_status='draft',approved_by='',approved_at=0,import_pristine=False)
         self.store.put('posts',value,key);return {'ok':True,'id':key}
+    def post_action(self,actor,d):
+        post=self.get('posts',text(d,'id',required=True));self.office(actor,post['office_id'])
+        if d.get('action') not in ('trash','restore'):raise ValueError('Azione non valida')
+        self.store.mutate('posts',post['id'],lambda p:{**p,'deleted_at':now() if d['action']=='trash' else 0})
+        return {'ok':True}
+    def batch_jobs(self,actor,d):
+        rows=d.get('items');request=text(d,'request_id',required=True,maximum=100)
+        if not isinstance(rows,list) or not 1<=len(rows)<=100:raise ValueError('Seleziona da 1 a 100 destinazioni')
+        approve=boolean(d.get('approve',False));items=[];seen=set()
+        fingerprint=hashlib.sha256(json.dumps({'items':rows,'approve':approve},sort_keys=True).encode()).hexdigest()
+        for row in rows:
+            post=self.get('posts',row.get('post_id',''));office=self.office(actor,post['office_id'])
+            if post.get('deleted_at'):raise ValueError('Ripristina prima il contenuto dal cestino')
+            when=timestamp(row.get('scheduled'));channel=row.get('channel');cid=row.get('connection_id','')
+            target=(post['id'],channel,cid,when)
+            if target in seen:raise ValueError('Destinazione duplicata')
+            seen.add(target)
+            if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
+            job=self.make_job(post,office,channel,when,'approvazione',cid)
+            if approve:
+                if not office.get('publishing_enabled'):raise ValueError('Abilita gli invii nella sede prima di approvare')
+                connection=self.connection(office['id'],channel,cid)
+                self.publishers.validate(job,connection)
+                job.update(status='scheduled',approved_by=actor['uid'],approved_at=now())
+            key=hashlib.sha256((actor['uid']+'|'+request+'|'+str(len(items))).encode()).hexdigest()
+            job['batch_fingerprint']=fingerprint
+            items.append(('jobs',key,job))
+        existing=[self.store.get('jobs',key) for _,key,_ in items]
+        if all(existing):
+            if any(old.get('batch_fingerprint')!=item[2]['batch_fingerprint'] for old,item in zip(existing,items)):raise ValueError('Richiesta già usata per destinazioni diverse: ricarica il calendario')
+            return {'ok':True,'created':len(items),'reused':True}
+        if any(existing):raise ValueError('Richiesta già usata: ricarica il calendario')
+        self.store.batch_create(items)
+        return {'ok':True,'created':len(items)}
     def make_job(self,post,office,channel,when,mode='approvazione',connection_id=''):
+        if post.get('deleted_at'):raise ValueError('Ripristina il contenuto dal cestino prima di programmarlo')
         if channel not in CHANNELS:raise ValueError('Canale non valido')
         if when<=now():raise ValueError('Inserire date future')
         connection=self.connection(office['id'],channel,connection_id)
@@ -402,7 +439,7 @@ class Service:
                 except Exception:print('Servizio: errore temporaneo o configurazione incompleta; nuovo controllo fra 15 secondi.',flush=True)
             self.stop.wait(15)
     def route(self,actor,path,d):
-        routes={'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
+        routes={'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         community=Community(self)
         routes.update({'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})

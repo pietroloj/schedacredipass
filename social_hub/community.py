@@ -36,7 +36,9 @@ class Community:
         except RemoteError as e:
             raise RemoteError('Meta non ha consentito l’operazione. Controlla permessi, configurazione dell’app e validità dell’accesso; non significa che non ci siano dati.',e.status,e.uncertain) from None
     def stats(self,actor,data):
-        c=self.account(actor,data);pid=ident(c['external_id']);cards=[];warnings=[]
+        c=self.account(actor,data);pid=ident(c['external_id']);cards=[];warnings=[];series=[]
+        days=int(data.get('days',7))
+        if days not in (7,14,28):raise ValueError('Periodo non valido')
         fields={'Facebook':{'followers_count':'Follower','fan_count':'Mi piace alla pagina'},'Instagram':{'followers_count':'Follower','media_count':'Contenuti'}}[c['platform']]
         for field,label in fields.items():
             try:
@@ -44,15 +46,19 @@ class Community:
                 cards.append({'label':label,'value':value,'period':'Totale attuale'})
             except RemoteError:warnings.append(label+': dato non disponibile con questo accesso.')
         if c['platform']=='Instagram':
-            until=int(time.time());since=until-7*86400
+            until=int(time.time());since=until-days*86400
             for metric,label in [('reach','Account raggiunti'),('views','Visualizzazioni')]:
                 try:
                     result=self.graph(c,pid+'/insights',{'metric':metric,'period':'day','metric_type':'total_value','since':since,'until':until})
                     entries=result.get('data',[]);value=entries[0].get('total_value',{}).get('value') if entries else None
-                    cards.append({'label':label,'value':value,'period':'Ultimi 7 giorni'})
+                    cards.append({'label':label,'value':value,'period':f'Ultimi {days} giorni'})
                 except RemoteError:warnings.append(label+': richiede accesso alle statistiche o metrica supportata dall’account.')
+            try:
+                trend=self.graph(c,pid+'/insights',{'metric':'reach','period':'day','metric_type':'time_series','since':since,'until':until})
+                series=[{'date':x.get('end_time',''),'value':x['value']} for entry in trend.get('data',[]) for x in entry.get('values',[]) if isinstance(x.get('value'),(int,float))]
+            except RemoteError:warnings.append('Andamento giornaliero non disponibile per questo account.')
         else:warnings.append('Copertura e visualizzazioni Facebook non ancora integrate; i contatori mostrati sono totali della pagina.')
-        return {'cards':cards,'warnings':warnings,'checked_at':time.time()}
+        return {'cards':cards,'warnings':warnings,'series':series,'days':days,'checked_at':time.time()}
     def inbox(self,actor,data):
         admin(actor);c=self.account(actor,data)
         params={'fields':'id,updated_time,participants','limit':25}
@@ -63,7 +69,7 @@ class Community:
             params['after']=cursor
         result=self.graph(c,ident(c['external_id'])+'/conversations',params);items=[]
         for item in result.get('data',[]):
-            token=uuid.uuid4().hex
+            token=hashlib.sha256((actor['uid']+'|'+c['id']+'|'+ident(item['id'])).encode()).hexdigest()
             self.hub.store.put('operations',{'type':'inbox','uid':actor['uid'],'connection_id':c['id'],'conversation_id':ident(item['id']),'expires':time.time()+3600},token)
             participants=item.get('participants',{}).get('data',[])
             name=', '.join(str(p.get('name') or p.get('username') or 'Contatto') for p in participants if str(p.get('id'))!=c['external_id'])

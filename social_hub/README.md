@@ -175,3 +175,11 @@ Messaggistica verso clienti reali può richiedere Advanced Access/App Review.
 LinkedIn e TikTok: posta e statistiche non ancora integrate; nessun dato simulato.
 Le quattro fonti Credipass Italia sono riferimenti apribili, non feed sincronizzati.
 Sondaggi e sticker interattivi non sono implementati da questo aggiornamento.
+
+## Workspace, inbox e report
+- Interfaccia blu/oro e logo originale già presente nel repository, servito anche dalla funzione cloud.
+- Inbox aggregata Facebook/Instagram, filtri social/account e ricerca nomi. Caricamento all’apertura e polling ogni 60 secondi mentre la pagina è visibile. La bozza di risposta non viene sovrascritta. Nessun webhook o sincronizzazione a browser chiuso; commenti e allegati non integrati. I ticket per conversazione sono riutilizzati, senza memorizzare testi.
+- Analisi: periodo 7/14/28 giorni, spiegazioni KPI, serie giornaliera Instagram reach se restituita da Meta, tabella accessibile e stampa/PDF dal browser. Nessun dato stimato; Facebook espone ancora solo contatori correnti, non andamento storico. Report automatici periodici e confronto col periodo precedente non implementati.
+- Libreria: cestino recuperabile con ACL per sede. Non elimina fisicamente gli allegati e non annulla le copie nel calendario.
+- Programmazione multipla: selezione contenuti della stessa sede, destinazioni/formati espliciti, data comune o distanza 1/7 giorni. Validazione di tutte le destinazioni prima di un batch atomico; request ID idempotente. Approva tutte le bozze nel calendario conserva gli errori per elemento senza ritentare invii.
+- ADS: sezione predisposta con collegamento al gestore ufficiale. Account pubblicitario e permessi Ads non collegati, nessuna campagna o spesa avviabile dall’Hub.
