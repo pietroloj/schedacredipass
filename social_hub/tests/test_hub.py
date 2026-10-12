@@ -185,6 +185,22 @@ class PublishingTests(HubCase):
         self.http.request.side_effect=[{'status_code':'FINISHED'},{'id':'ig-post'}]
         self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published');self.assertEqual(self.http.request.call_count,4)
     @patch('publishers.public_url',side_effect=lambda url:url)
+    def test_instagram_not_ready_retries_same_container(self,_):
+        key=self.due('Instagram',['https://example.com/image.jpg'])
+        self.http.request.side_effect=[{'id':'container'},{'status_code':'FINISHED'},RemoteError('not ready',400,False,9007,2207027)]
+        self.hub.tick();j=self.hub.get('jobs',key)
+        self.assertEqual(j['status'],'scheduled');self.assertEqual(j['remote']['container'],'container')
+        j['retry_at']=0;self.hub.store.put('jobs',j,key)
+        self.http.request.side_effect=[{'status_code':'FINISHED'},{'id':'posted'}]
+        self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published')
+        self.assertEqual(self.http.request.call_count,5)
+    @patch('publishers.public_url',side_effect=lambda url:url)
+    def test_instagram_already_published_does_not_send_again(self,_):
+        key=self.due('Instagram',['https://example.com/image.jpg'])
+        self.http.request.side_effect=[{'id':'container'},{'status_code':'PUBLISHED'}]
+        self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'uncertain')
+        self.assertEqual(self.http.request.call_count,2)
+    @patch('publishers.public_url',side_effect=lambda url:url)
     def test_carousel_payload_and_order(self,_):
         key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.jpg']);j=self.hub.get('jobs',key);j['channel']='Instagram carosello';self.hub.store.put('jobs',j,key)
         self.http.request.side_effect=[{'id':'child1'},{'id':'child2'},{'id':'parent'},{'status_code':'FINISHED'},{'id':'post'}]
@@ -371,3 +387,11 @@ class ProviderErrorTests(unittest.TestCase):
             self.assertIn('limite di utilizzo',self.failure('https://api.openai.com/v1/responses',payload))
 
 if __name__=='__main__':unittest.main(verbosity=2)
+
+class MetaErrorTests(unittest.TestCase):
+    def test_numeric_codes_preserved_without_provider_secrets(self):
+        transport=HTTP();transport.opener=Mock()
+        transport.opener.open.side_effect=urllib.error.HTTPError('https://graph.instagram.com/v25.0/x',400,'bad',{},io.BytesIO(json.dumps({'error':{'code':9007,'error_subcode':2207027,'message':'SECRET token'}}).encode()))
+        with self.assertRaises(RemoteError) as e:transport.request('POST','https://graph.instagram.com/v25.0/x',{},final=True)
+        self.assertEqual(e.exception.provider_code,9007);self.assertEqual(e.exception.provider_subcode,2207027)
+        self.assertFalse(e.exception.uncertain);self.assertNotIn('SECRET',str(e.exception))

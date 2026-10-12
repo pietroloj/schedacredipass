@@ -7,10 +7,12 @@ import urllib.parse
 import urllib.request
 
 class RemoteError(Exception):
-    def __init__(self, message, status=0, uncertain=False):
+    def __init__(self, message, status=0, uncertain=False, provider_code=None, provider_subcode=None):
         super().__init__(message)
         self.status=status
         self.uncertain=uncertain
+        self.provider_code=provider_code
+        self.provider_subcode=provider_subcode
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
@@ -43,10 +45,17 @@ class HTTP:
                 result['_headers']={k.lower():v for k,v in meta.items()}
                 return result
         except urllib.error.HTTPError as e:
-            code=e.code
+            code=e.code;provider_code=None;provider_subcode=None
             message=f'Il servizio ha risposto con errore HTTP {code}. Verificare credenziali, permessi e formato.'
             # Never expose provider messages: they can echo tokens or user data.
             try:
+                if urllib.parse.urlsplit(url).hostname in ('graph.instagram.com','graph.facebook.com'):
+                    error=json.loads(e.read(8192)).get('error',{})
+                    provider_code=error.get('code') if type(error.get('code')) is int else None
+                    provider_subcode=error.get('error_subcode') if type(error.get('error_subcode')) is int else None
+                    numeric=[str(error[k]) for k in ('code','error_subcode') if type(error.get(k)) is int]
+                    message='Meta: richiesta rifiutata (HTTP '+str(code)+('; codice '+ '/'.join(numeric) if numeric else '')+'). '
+                    message+={190:'Autorizzazione scaduta o non valida: ricollega l’account.',10:'Permesso richiesto non disponibile per questo account.',200:'Permesso di pubblicazione non disponibile.',100:'Controllare formato, contenitore e disponibilità del media.'}.get(error.get('code'),'Controllare il media e i permessi dell’account.')
                 if code==429 and urllib.parse.urlsplit(url).hostname=='api.openai.com':
                     message='OpenAI ha raggiunto un limite di utilizzo. Verifica credito e limiti del progetto API.'
                     error=json.loads(e.read(8192)).get('error',{})
@@ -60,7 +69,7 @@ class HTTP:
             except (ValueError,AttributeError,TypeError,OSError):
                 pass
             finally:e.close()
-            raise RemoteError(message,code,final and code>=500) from None
+            raise RemoteError(message,code,final and code>=500,provider_code,provider_subcode) from None
         except (urllib.error.URLError,TimeoutError,ConnectionError,OSError) as e:
             raise RemoteError('Servizio non raggiungibile o tempo scaduto.',uncertain=final) from None
         except (ValueError,UnicodeError):

@@ -39,6 +39,13 @@ def _dispatch(req,hub):
     elif prefix:
         return response({'error':'Non trovato'},404)
     try:
+        # Media probes from social providers use HEAD before fetching the image.
+        # Both verbs validate a file-scoped signature; no account cookie is needed.
+        if req.method in ('GET','HEAD') and (path.startswith('/media/') or path.startswith('/delivery/')):
+            body=hub.assets.delivery_bytes(path[10:],req.args.get('signature')) if path.startswith('/delivery/') else hub.assets.signed_bytes(path[7:],req.args.get('expires'),req.args.get('signature'))
+            result=response(body if req.method=='GET' else b'',ctype='image/jpeg')
+            result.headers['Content-Length']=str(len(body))
+            return result
         if req.method=='GET':
             static={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/logo.png':'logo.png'}
             if path in static:
@@ -47,9 +54,6 @@ def _dispatch(req,hub):
                 return response(body,ctype=mimetypes.guess_type(file.name)[0])
             if path=='/api/bootstrap':
                 return response({'auth':'firebase','project':hub.settings.project,'firebase_api_key':hub.settings.firebase_key,'server_ai':bool(os.getenv('OPENAI_API_KEY')),'api_base':'https://us-central1-'+hub.settings.project+'.cloudfunctions.net/socialHub'+prefix+'/api/'})
-            if path.startswith('/media/'):
-                body=hub.assets.signed_bytes(path[7:],req.args.get('expires'),req.args.get('signature'))
-                return response(body,ctype='image/jpeg')
             if path=='/healthz':return response({'ok':True})
             if path in ('/oauth/meta/callback','/oauth/instagram/callback','/oauth/linkedin/callback'):
                 try:
