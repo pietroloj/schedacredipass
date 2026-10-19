@@ -59,6 +59,10 @@ def media_list(value):
             raise ValueError('Media: usare URL HTTPS o immagini caricate')
     return value
 
+def slot_media(slot):
+    # Retain compatibility with single-image posts saved before carousels.
+    return media_list(slot['media_items'] if 'media_items' in slot else ([slot['media']] if slot.get('media') else []))
+
 class Service:
     def __init__(self,settings,store=None,http=None):
         self.settings=settings;self.store=store or make_store(settings);self.http=http or HTTP()
@@ -84,8 +88,9 @@ class Service:
             try:post['previews']=[self.assets.url(m) for m in post.get('media',[])]
             except Exception:post['previews']=[]
             for slot in post.get('slots',{}).values():
-                try:slot['preview']=self.assets.url(slot['media']) if slot.get('media') else ''
-                except Exception:slot['preview']=''
+                try:slot['previews']=[self.assets.url(ref) for ref in slot_media(slot)]
+                except Exception:slot['previews']=[]
+                slot['preview']=next(iter(slot['previews']),'')
         result['official_sources']=SOURCES
         result['consultants']=self.auth.consultants(actor) if actor['role']=='admin' else []
         result['members']=self.store.list('members') if actor['role']=='admin' else []
@@ -129,9 +134,11 @@ class Service:
         clean={}
         for k,v in slots.items():
             if not isinstance(v,dict):raise ValueError('Slot non valido')
-            media=media_list([v['media']]) if v.get('media') else []
+            media=slot_media(v)
+            if k in ('story','reel') and len(media)>1:raise ValueError('Storie e copertine Reel richiedono una sola immagine per invio')
             clean[k]={'media':media[0] if media else '', 'body':text(v,'body'),
                       'width':int(v.get('width',0)), 'height':int(v.get('height',0))}
+            if 'media_items' in v:clean[k]['media_items']=list(media)
             if not 0<=clean[k]['width']<=30000 or not 0<=clean[k]['height']<=30000:raise ValueError('Dimensioni non valide')
         value['slots']=clean
         value['day_label']=text(d,'day_label',(old or {}).get('day_label',''),maximum=80)
@@ -152,11 +159,11 @@ class Service:
             post=self.get('posts',row.get('post_id',''));office=self.office(actor,post['office_id'])
             if post.get('deleted_at'):raise ValueError('Ripristina prima il contenuto dal cestino')
             when=timestamp(row.get('scheduled'));channel=row.get('channel');cid=row.get('connection_id','')
-            target=(post['id'],channel,cid,when)
+            job=self.make_job(post,office,channel,when,'approvazione',cid)
+            target=(post['id'],job['channel'],job['connection_id'],when)
             if target in seen:raise ValueError('Destinazione duplicata')
             seen.add(target)
             if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
-            job=self.make_job(post,office,channel,when,'approvazione',cid)
             if approve:
                 if not office.get('publishing_enabled'):raise ValueError('Abilita gli invii nella sede prima di approvare')
                 connection=self.connection(office['id'],channel,cid)
@@ -177,10 +184,11 @@ class Service:
         if channel not in CHANNELS:raise ValueError('Canale non valido')
         if when<=now():raise ValueError('Inserire date future')
         connection=self.connection(office['id'],channel,connection_id)
-        slot=next((post.get('slots',{}).get(k) for k,c in SLOT_CHANNELS.items() if c==channel),None)
-        if slot and not slot.get('media'):raise ValueError('Carica l’immagine nello slot del social scelto')
+        slot=post.get('slots',{}).get('instagram') if channel=='Instagram carosello' else next((post.get('slots',{}).get(k) for k,c in SLOT_CHANNELS.items() if c==channel),None)
+        if slot is not None and not slot_media(slot):raise ValueError('Carica l’immagine nello slot del social scelto')
         if slot and channel=='Instagram Reel':raise ValueError('La copertina Reel è un’immagine: per pubblicare serve un video, non la copertina')
-        media=[slot['media']] if slot else post.get('media',[])
+        media=list(slot_media(slot) if slot is not None else post.get('media',[]))
+        if channel=='Instagram post' and len(media)>1:channel='Instagram carosello'
         body=(slot.get('body') or post['body']) if slot else post['body']
         return {'office_id':office['id'],'post_id':post['id'],'title':post['title'],
            'body':personalize(body,office),'media':media,'channel':channel,

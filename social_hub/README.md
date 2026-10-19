@@ -183,3 +183,18 @@ Sondaggi e sticker interattivi non sono implementati da questo aggiornamento.
 - Libreria: cestino recuperabile con ACL per sede. Non elimina fisicamente gli allegati e non annulla le copie nel calendario.
 - Programmazione multipla: selezione contenuti della stessa sede, destinazioni/formati espliciti, data comune o distanza 1/7 giorni. Validazione di tutte le destinazioni prima di un batch atomico; request ID idempotente. Approva tutte le bozze nel calendario conserva gli errori per elemento senza ritentare invii.
 - ADS: sezione predisposta con collegamento al gestore ufficiale. Account pubblicitario e permessi Ads non collegati, nessuna campagna o spesa avviabile dall’Hub.
+
+## Caroselli e caricamento multiplo
+
+Facebook, Instagram, LinkedIn e TikTok conservano fino a dieci slide per slot.
+Selezione e trascinamento aggiungono le immagini; i nomi vengono ordinati in modo
+naturale (1, 2, 10). L'elenco permette di spostare o rimuovere ogni slide.
+Lo ZIP conserva tutte le immagini nella cartella social, scarta i metadati macOS
+e rifiuta i formati con troppe immagini prima di importare i contenuti.
+Le Storie e le copertine Reel restano invii a immagine singola.
+
+`media_items` conserva l'elenco ordinato; `media` resta la prima immagine per
+compatibilità. I vecchi slot a immagine singola restano leggibili. Ogni invio
+copia tutte le slide; Instagram post diventa automaticamente Instagram carosello
+quando contiene più immagini. Il publisher attende l'elaborazione di tutte le
+slide prima di creare il contenitore, riutilizzando gli ID già caricati.

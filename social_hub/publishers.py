@@ -86,6 +86,10 @@ class Publishers:
                     for ref in media[len(children):]:
                         child=graph('POST',pid+'/media',token,{'image_url':self.assets.url(ref,True),'is_carousel_item':True})
                         children.append(child['id']);checkpoint({'children':children})
+                    for child in children:
+                        state=graph('GET',child+'?fields=status_code',token)
+                        if state.get('status_code') in ('ERROR','EXPIRED'):raise ValueError('Instagram ha rifiutato una slide del carosello; crea una nuova programmazione')
+                        if state.get('status_code')!='FINISHED':raise Pending('Instagram sta elaborando le slide del carosello')
                     payload={'media_type':'CAROUSEL','children':','.join(children),'caption':body}
                 elif job['channel']=='Instagram Reel':payload={'media_type':'REELS','video_url':self.assets.url(media[0],True),'caption':body}
                 elif job['channel']=='Instagram Story':payload={'media_type':'STORIES','image_url':self.assets.url(media[0],True)}

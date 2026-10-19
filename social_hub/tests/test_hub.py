@@ -203,9 +203,19 @@ class PublishingTests(HubCase):
     @patch('publishers.public_url',side_effect=lambda url:url)
     def test_carousel_payload_and_order(self,_):
         key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.jpg']);j=self.hub.get('jobs',key);j['channel']='Instagram carosello';self.hub.store.put('jobs',j,key)
-        self.http.request.side_effect=[{'id':'child1'},{'id':'child2'},{'id':'parent'},{'status_code':'FINISHED'},{'id':'post'}]
+        self.http.request.side_effect=[{'id':'child1'},{'id':'child2'},{'status_code':'FINISHED'},{'status_code':'FINISHED'},{'id':'parent'},{'status_code':'FINISHED'},{'id':'post'}]
         self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published')
-        self.assertEqual(self.http.request.call_args_list[2].args[2]['children'],'child1,child2')
+        self.assertEqual(self.http.request.call_args_list[4].args[2]['children'],'child1,child2')
+    @patch('publishers.public_url',side_effect=lambda url:url)
+    def test_carousel_waits_for_children_without_uploading_twice(self,_):
+        key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.jpg'])
+        self.http.request.side_effect=[{'id':'child1'},{'id':'child2'},{'status_code':'IN_PROGRESS'}]
+        self.hub.tick();job=self.hub.get('jobs',key)
+        self.assertEqual(job['status'],'scheduled');self.assertEqual(job['remote']['children'],['child1','child2'])
+        job['scheduled_at']=now()-1;job['retry_at']=0;self.hub.store.put('jobs',job,key)
+        self.http.request.reset_mock();self.http.request.side_effect=[{'status_code':'FINISHED'},{'status_code':'FINISHED'},{'id':'parent'},{'status_code':'FINISHED'},{'id':'post'}]
+        self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published')
+        self.assertEqual([c.args[0] for c in self.http.request.call_args_list],['GET','GET','POST','GET','POST'])
     def test_linkedin_text(self):
         key=self.due('LinkedIn');self.http.request.return_value={'_headers':{'x-restli-id':'urn:li:share:123'}}
         self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published')
