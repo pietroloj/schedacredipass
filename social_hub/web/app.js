@@ -97,9 +97,9 @@ document.addEventListener('click',async event=>{
   if(action==='disable-connection')await api('connection/disable',{id});
   if(action==='toggle-member'){const m=state.members.find(m=>m.id===id);await api('member',{uid:id,name:m.name,offices:m.offices,enabled:!m.enabled})}
   if(action==='meta-options'){
-   const result=await api('oauth/options');$('metaOptions').innerHTML=result.options.map(p=>`<p>${esc(p.name)} · ${esc(officeName(p.office_id))}<button data-action="meta-select" data-id="${esc(p.page_id)}" data-session="${esc(p.session)}">Associa questa pagina${p.instagram?' e Instagram':''}</button></p>`).join('')||'<p>Nessuna autorizzazione in attesa.</p>';return;
+   const result=await api('oauth/options');$('metaOptions').innerHTML=result.options.map(p=>`<p><b>${esc(p.name)}</b><label>Sede di destinazione<select>${options(state.offices,p.office_id)}</select></label><button data-action="meta-select" data-id="${esc(p.page_id)}" data-session="${esc(p.session)}">Associa questa pagina${p.instagram?' e Instagram':''}</button></p>`).join('')||'<p>Nessuna autorizzazione in attesa.</p>';const warnings=[...new Set(result.options.flatMap(p=>p.discovery_warnings||[]))];if(warnings.length)$('metaOptions').innerHTML+=`<div role="status">${warnings.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`;return;
   }
-  if(action==='meta-select')await api('oauth/select',{page_id:id,session:button.dataset.session});
+  if(action==='meta-select')await api('oauth/select',{page_id:id,session:button.dataset.session,office_id:button.closest('p').querySelector('select').value});
   await load();toast('Operazione completata');
  }catch(e){toast(e.message)}finally{button.disabled=false}
 });
