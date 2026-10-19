@@ -54,6 +54,11 @@ class CarouselTests(HubCase):
         post=self.hub.get('posts',pid);post['slots']['instagram']['media_items'].reverse();self.hub.save_post(ADMIN,post)
         self.assertEqual(self.hub.get('jobs',jid)['media'],refs)
         self.assertEqual(self.hub.public_state(ADMIN)['posts'][0]['slots']['instagram']['previews'],list(reversed(refs)))
+    def test_post_and_carousel_alias_cannot_create_duplicate_batch_jobs(self):
+        pid,refs=self.carousel();connection=self.connection('Instagram')
+        rows=[{'post_id':pid,'channel':ch,'connection_id':connection['id'],'scheduled':FUTURE} for ch in ('Instagram post','Instagram carosello')]
+        with self.assertRaisesRegex(ValueError,'duplicata'):self.hub.batch_jobs(ADMIN,{'request_id':'aliases','items':rows,'approve':False})
+        self.assertEqual(self.hub.store.list('jobs'),[])
     def test_invalid_or_excess_slides_rejected(self):
         pid,refs=self.carousel();post=self.hub.get('posts',pid)
         for media in [refs*4,['javascript:alert(1)']]:
