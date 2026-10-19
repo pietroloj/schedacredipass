@@ -159,11 +159,11 @@ class Service:
             post=self.get('posts',row.get('post_id',''));office=self.office(actor,post['office_id'])
             if post.get('deleted_at'):raise ValueError('Ripristina prima il contenuto dal cestino')
             when=timestamp(row.get('scheduled'));channel=row.get('channel');cid=row.get('connection_id','')
-            target=(post['id'],channel,cid,when)
+            job=self.make_job(post,office,channel,when,'approvazione',cid)
+            target=(post['id'],job['channel'],job['connection_id'],when)
             if target in seen:raise ValueError('Destinazione duplicata')
             seen.add(target)
             if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
-            job=self.make_job(post,office,channel,when,'approvazione',cid)
             if approve:
                 if not office.get('publishing_enabled'):raise ValueError('Abilita gli invii nella sede prima di approvare')
                 connection=self.connection(office['id'],channel,cid)
