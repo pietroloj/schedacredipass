@@ -290,7 +290,7 @@ class OAuthTests(HubCase):
     def test_state_single_use(self):
         from urllib.parse import parse_qs,urlsplit
         url=self.oauth.start(ADMIN,{'office_id':'1'})['url'];state=parse_qs(urlsplit(url).query)['state'][0]
-        self.http.request.side_effect=[{'access_token':'short'},{'access_token':'long'},{'data':[{'id':'123','name':'Pagina','access_token':'page-secret'}]}]
+        self.http.request.side_effect=[{'access_token':'short'},{'access_token':'long'},{'data':[{'id':'123','name':'Pagina','access_token':'page-secret'}]},{'data':{'is_valid':True,'app_id':'app','granular_scopes':[]}}]
         self.oauth.callback({'state':[state],'code':['code']})
         with self.assertRaises(ValueError):self.oauth.callback({'state':[state],'code':['code']})
         options=self.oauth.options(ADMIN);self.assertEqual(len(options),1);self.assertNotIn('page-secret',json.dumps(options))
@@ -299,6 +299,53 @@ class OAuthTests(HubCase):
         with self.assertRaises(ValueError):self.oauth.select(ADMIN,{'session':'state','page_id':'123'})
         self.hub.store.put('operations',{'type':'oauth','used':False,'expires':0},'expired')
         with self.assertRaises(ValueError):self.oauth.callback({'state':['expired'],'code':['x']})
+
+    def page_grant(self,ids):
+        return {'data':{'is_valid':True,'app_id':'app','granular_scopes':[{'scope':'pages_show_list','target_ids':ids}]}}
+    def test_all_result_pages_are_followed_without_forwarding_next_url_credentials(self):
+        self.http.request.side_effect=[{'data':[{'id':'1','access_token':'one'}],'paging':{'next':'https://untrusted.example/?after=cursor&access_token=leak','cursors':{'after':'cursor'}}},{'data':[{'id':'2','access_token':'two'}]},self.page_grant(['1','2'])]
+        pages,warnings=self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual([p['id'] for p in pages],['1','2']);self.assertFalse(warnings)
+        request=self.http.request.call_args_list[1]
+        self.assertTrue(request.args[1].startswith('https://graph.facebook.com/v23.0/me/accounts?'))
+        self.assertIn('after=cursor',request.args[1]);self.assertNotIn('leak',request.args[1])
+    def test_granted_missing_pages_use_specific_page_endpoint(self):
+        grant=self.page_grant(['1','2']);grant['data']['granular_scopes'].append({'scope':'instagram_basic','target_ids':['999']})
+        self.http.request.side_effect=[{'data':[{'id':'1','access_token':'one'}]},grant,{'id':'2','name':'Santa Maria','access_token':'two'}]
+        pages,warnings=self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual([p['id'] for p in pages],['1','2']);self.assertFalse(warnings)
+        self.assertEqual(self.http.request.call_args_list[2].args[1],'https://graph.facebook.com/v23.0/2?fields=id,name,access_token')
+        self.assertEqual(self.http.request.call_count,3)
+    def test_denied_specific_page_is_reported_without_dropping_other_pages(self):
+        self.http.request.side_effect=[{'data':[{'id':'1','access_token':'one'}]},self.page_grant(['1','2']),RemoteError('hidden provider message with secret',403)]
+        pages,warnings=self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual([p['id'] for p in pages],['1']);self.assertIn('Pagina 2',warnings[0]);self.assertNotIn('secret',str(warnings))
+    def test_foreign_app_grants_do_not_trigger_page_probes(self):
+        grant=self.page_grant(['2']);grant['data']['app_id']='another-app'
+        self.http.request.side_effect=[{'data':[{'id':'1','access_token':'one'}]},grant]
+        pages,warnings=self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual(len(pages),1);self.assertTrue(warnings);self.assertEqual(self.http.request.call_count,2)
+    def test_debug_unavailable_keeps_standard_discovery(self):
+        self.http.request.side_effect=[{'data':[{'id':'1','access_token':'one'}]},RemoteError('forbidden',403)]
+        pages,warnings=self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual(len(pages),1);self.assertTrue(warnings)
+    def test_repeated_pagination_cursor_stops(self):
+        data={'data':[],'paging':{'next':'https://graph.facebook.com/v23.0/me/accounts?after=same','cursors':{'after':'same'}}}
+        self.http.request.side_effect=[data,data]
+        with self.assertRaisesRegex(ValueError,'Paginazione'):self.oauth.discover_pages('https://graph.facebook.com/v23.0','user-secret')
+        self.assertEqual(self.http.request.call_count,2)
+    def test_page_can_be_associated_to_selected_office_without_new_grant(self):
+        self.hub.store.put('operations',{'type':'oauth','uid':ADMIN['uid'],'ready':True,'office_id':'1','expires':now()+500},'session')
+        self.hub.vault.save('oauth-pages-session',json.dumps([{'id':'123','name':'Santa Maria','access_token':'page-secret'}]))
+        self.http.request.return_value={'id':'123'}
+        self.oauth.select(ADMIN,{'session':'session','page_id':'123','office_id':'2'})
+        cs=self.hub.store.list('connections');self.assertEqual(len(cs),1);self.assertEqual(cs[0]['office_id'],'2')
+        self.assertNotIn('page-secret',json.dumps(cs));self.assertFalse(self.hub.get('operations','session')['ready'])
+    def test_invalid_office_does_not_consume_authorized_page(self):
+        self.hub.store.put('operations',{'type':'oauth','uid':ADMIN['uid'],'ready':True,'office_id':'1','expires':now()+500},'session')
+        self.hub.vault.save('oauth-pages-session',json.dumps([{'id':'123','access_token':'page-secret'}]))
+        with self.assertRaises(ValueError):self.oauth.select(ADMIN,{'session':'session','page_id':'123','office_id':'missing'})
+        self.assertFalse(self.hub.store.list('connections'));self.assertTrue(self.hub.get('operations','session')['ready'])
 
 class AuthTests(HubCase):
     def test_local_and_missing_token(self):
