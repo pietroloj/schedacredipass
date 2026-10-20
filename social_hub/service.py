@@ -429,6 +429,9 @@ class Service:
                 if old:
                     if old['status'] in ('scheduled','processing','published'):result['scheduled']+=1
                     else:result['warnings'].append(ch+': invio già presente ('+old['status']+')')
+                    if old.get('reel_strategy')=='dual':
+                        trial=self.store.get('jobs',hashlib.sha256((jobkey+':trial').encode()).hexdigest())
+                        if trial and trial['status'] in ('scheduled','processing','published'):result['scheduled']+=1
                     continue
                 job=self.make_job(post,office,ch,when,'automatica' if approved else 'approvazione',connection['id'])
                 if approved and job['channel'] not in ASSISTED_CHANNELS:
