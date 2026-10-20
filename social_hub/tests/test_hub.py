@@ -582,7 +582,7 @@ class ReelStrategyTests(HubCase):
         d={'id':'reel-zip','office_id':'1','title':'Video','body':'Testo','slots':{'reel':{'media':'https://example.com/reel.mp4'}},'auto_approve':True,'schedule':[{'channel':'Instagram Reel','scheduled':FUTURE,'connection_id':c['id']}]}
         with patch('publishers.public_url',side_effect=lambda u:u):r=self.hub.import_post(ADMIN,d)
         self.assertEqual(r['scheduled'],2);self.assertEqual(len(self.hub.store.list('jobs')),2)
-        self.hub.import_post(ADMIN,d);self.assertEqual(len(self.hub.store.list('jobs')),2)
+        repeated=self.hub.import_post(ADMIN,d);self.assertEqual(repeated['scheduled'],2);self.assertEqual(len(self.hub.store.list('jobs')),2)
     @patch('publishers.public_url',side_effect=lambda u:u)
     def test_trial_and_normal_payloads(self,_):
         c=self.connection('Instagram')
