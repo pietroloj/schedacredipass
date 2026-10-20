@@ -12,19 +12,30 @@ class Assets:
     def __init__(self,settings):
         self.settings=settings
         self.root=settings.data/'media';self.root.mkdir(exist_ok=True)
+    def save_upload(self,data,filename=''):
+        import re
+        extension=Path(filename).suffix.lower().lstrip('.')
+        if extension not in ('mp4','mov','pdf'):return self.save_image(data)
+        if not data or len(data)>20_000_000:raise ValueError('Video e PDF: massimo 20 MB per file')
+        if extension=='pdf':
+            if not data.startswith(b'%PDF-'):raise ValueError('PDF non valido')
+        elif len(data)<16 or data[4:8]!=b'ftyp':raise ValueError('Video MP4/MOV non valido: esportalo in formato MP4 H.264')
+        return self.save_bytes(data,extension)
+    def save_bytes(self,data,extension):
+        key=uuid.uuid4().hex+'.'+extension
+        if self.settings.store=='firestore':
+            if not self.settings.bucket:raise ValueError('Configurare Firebase Storage per i media')
+            from firebase_admin import storage
+            blob=storage.bucket(app=firebase_app(self.settings)).blob('social-hub/media/'+key)
+            blob.upload_from_string(data,content_type=media_type(key))
+        else:(self.root/key).write_bytes(data)
+        return 'asset:'+key
     def save_image(self,data):
         if len(data)>15_000_000:raise ValueError('Immagine troppo grande: massimo 15 MB')
         with Image.open(io.BytesIO(data)) as im:
             if im.width*im.height>30_000_000:raise ValueError('Immagine oltre il limite di risoluzione')
             im.convert('RGB').save(buffer:=io.BytesIO(),format='JPEG',quality=93)
-        key=uuid.uuid4().hex+'.jpg';data=buffer.getvalue()
-        if self.settings.store=='firestore':
-            if not self.settings.bucket:raise ValueError('Configurare Firebase Storage per le immagini')
-            from firebase_admin import storage
-            blob=storage.bucket(app=firebase_app(self.settings)).blob('social-hub/media/'+key)
-            blob.upload_from_string(data,content_type='image/jpeg')
-        else:(self.root/key).write_bytes(data)
-        return 'asset:'+key
+        return self.save_bytes(buffer.getvalue(),'jpg')
     def url(self,ref,public=False):
         if not ref.startswith('asset:'):return ref
         key=ref[6:]
@@ -88,4 +99,21 @@ class Assets:
 
 def valid_key(key):
     import re
-    return bool(re.fullmatch(r'[a-f0-9]{32}\.jpg',key))
+    return bool(re.fullmatch(r'[a-f0-9]{32}\.(jpg|mp4|mov|pdf)',key))
+
+
+def media_type(key):
+    return {'jpg':'image/jpeg','mp4':'video/mp4','mov':'video/quicktime','pdf':'application/pdf'}.get(key.rsplit('.',1)[-1],'application/octet-stream')
+
+
+def media_range(body,header=None):
+    import re
+    size=len(body);headers={'Accept-Ranges':'bytes','Content-Length':str(size)}
+    if not header:return body,200,headers
+    match=re.fullmatch(r'bytes=(\d*)-(\d*)',header)
+    if not match or not any(match.groups()):return b'',416,{**headers,'Content-Length':'0','Content-Range':f'bytes */{size}'}
+    first,last=match.groups()
+    start=int(first) if first else max(0,size-int(last));end=min(int(last),size-1) if first and last else size-1
+    if start>end or start>=size:return b'',416,{**headers,'Content-Length':'0','Content-Range':f'bytes */{size}'}
+    part=body[start:end+1]
+    return part,206,{**headers,'Content-Length':str(len(part)),'Content-Range':f'bytes {start}-{end}/{size}'}
