@@ -163,12 +163,14 @@ class Service:
         approve=boolean(d.get('approve',False));items=[];seen=set()
         fingerprint=hashlib.sha256(json.dumps({'items':rows,'approve':approve},sort_keys=True).encode()).hexdigest()
         for row in rows:
-            post=self.get('posts',row.get('post_id',''));office=self.office(actor,post['office_id'])
+            post=self.get('posts',row.get('post_id',''));self.office(actor,post['office_id'])
+            destination=self.get('connections',row.get('connection_id',''))
+            office=self.office(actor,destination['office_id'])
             if post.get('deleted_at'):raise ValueError('Ripristina prima il contenuto dal cestino')
             when=timestamp(row.get('scheduled'));channel=row.get('channel');cid=row.get('connection_id','')
             job=self.make_job(post,office,channel,when,'approvazione',cid)
             variants=self.job_variants(job,'preview')
-            targets=[(post['id'],v['channel'],v['connection_id'],v['scheduled_at'],v.get('reel_mode','normal')) for _,_,v in variants]
+            targets=[(post['id'],v['channel'],destination['platform'],destination['external_id'],v['scheduled_at'],v.get('reel_mode','normal')) for _,_,v in variants]
             if any(target in seen for target in targets):raise ValueError('Destinazione duplicata')
             seen.update(targets)
             if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
@@ -187,6 +189,24 @@ class Service:
         if any(existing):raise ValueError('Richiesta già usata: ricarica il calendario')
         self.store.batch_create(items)
         return {'ok':True,'created':len(items)}
+    def move_connection(self,actor,d):
+        admin(actor)
+        connection=self.get('connections',text(d,'id',required=True))
+        office=self.office(actor,text(d,'office_id',required=True))
+        if connection['office_id']==office['id']:return {'ok':True,'paused':0}
+        jobs=[j for j in self.store.list('jobs') if j.get('connection_id')==connection['id']]
+        if any(j['status']=='processing' for j in jobs):raise ValueError('Attendi la conclusione dell’invio in corso prima di spostare l’account')
+        # Preserve the connection ID and encrypted authorization. Pending snapshots
+        # require a fresh approval because signatures and group rules may differ.
+        self.store.mutate('connections',connection['id'],lambda c:{**c,'office_id':office['id']})
+        paused=0
+        for job in jobs:
+            if job.get('deleted_at') or job['status'] not in ('draft','scheduled','error','cancelled','assisted'):continue
+            def move(j):
+                if j['status'] not in ('draft','scheduled','error','cancelled','assisted') or j.get('remote',{}).get('buffer_attempted') or j.get('remote',{}).get('story_published'):return None
+                return {**j,'office_id':office['id'],'status':'cancelled' if j['status']=='cancelled' else 'draft','approved_by':'','approved_at':0,'last_error':'Account spostato: verifica testo, firma e gruppo, poi approva nuovamente.'}
+            self.store.mutate('jobs',job['id'],move);paused+=1
+        return {'ok':True,'paused':paused}
     def make_job(self,post,office,channel,when,mode='approvazione',connection_id=''):
         if post.get('deleted_at'):raise ValueError('Ripristina il contenuto dal cestino prima di programmarlo')
         if channel not in CHANNELS:raise ValueError('Canale non valido')
@@ -202,6 +222,11 @@ class Service:
         if channel=='Instagram post' and len(media)>1:channel='Instagram carosello'
         if channel=='Instagram post' and len(media)==1 and re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I):channel='Instagram Reel'
         body=(slot.get('body') or post['body']) if slot else post['body']
+        if post['office_id']!=office['id']:
+            tags={o.get('hashtag') for o in self.store.list('offices') if o.get('hashtag')}
+            if tags:
+                pattern=r'(?<!\w)(?:'+'|'.join(re.escape(t) for t in sorted(tags,key=len,reverse=True))+r')(?!\w)'
+                body=re.sub(pattern,lambda _:office.get('hashtag') or '#Credipass',body,flags=re.I)
         strategy=(slot or {}).get('reel_strategy','dual') if channel=='Instagram Reel' else 'normal'
         if strategy not in ('normal','trial_manual','trial_auto','dual'):raise ValueError('Strategia Reel non valida')
         return {'reel_strategy':strategy,'reel_mode':'normal' if strategy=='dual' else strategy,'office_id':office['id'],'post_id':post['id'],'title':post['title'],
@@ -507,7 +532,7 @@ class Service:
                 except Exception:print('Servizio: errore temporaneo o configurazione incompleta; nuovo controllo fra 15 secondi.',flush=True)
             self.stop.wait(15)
     def route(self,actor,path,d):
-        routes={'jobs/action':self.jobs_action,'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
+        routes={'connection/move':self.move_connection,'jobs/action':self.jobs_action,'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         community=Community(self)
         routes.update({'community/reel-stats':community.reel_stats,'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})

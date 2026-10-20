@@ -28,6 +28,7 @@ jobs:
       - run: python -m unittest discover -s social_hub/tests -p test_community.py
       - run: python -m unittest discover -s social_hub/tests -p test_workspace.py
       - run: node social_hub/tests/test_planner_import.cjs
+      - run: node social_hub/tests/test_unified_calendar.cjs
       - run: node social_hub/tests/test_batch_times.cjs
       - run: node social_hub/tests/test_shared_auth.cjs
       - run: node --check social_hub/web/app.js

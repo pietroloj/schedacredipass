@@ -35,3 +35,36 @@ class WorkspaceTests(HubCase):
     def test_batch_office_acl(self):
         d=self.rows();d['items'][0]['post_id']=self.post('2')
         with self.assertRaises(AccessDenied):self.hub.batch_jobs(EDITOR,d)
+    def test_one_content_reaches_other_groups_and_retry_does_not_duplicate(self):
+        d=self.rows();other=self.connection(office='2');self.enable('2')
+        other['external_id']='456';self.hub.store.put('connections',other,other['id'])
+        d['items'].append({**d['items'][0],'connection_id':other['id']})
+        self.hub.batch_jobs(ADMIN,d);self.hub.batch_jobs(ADMIN,d)
+        jobs=self.hub.store.list('jobs')
+        self.assertEqual(len(jobs),2)
+        self.assertEqual({j['office_id'] for j in jobs},{'1','2'})
+        self.assertEqual(len({j['post_id'] for j in jobs}),1)
+        self.assertTrue(all(j['status']=='scheduled' for j in jobs))
+    def test_cross_group_targets_require_destination_access(self):
+        d=self.rows();other=self.connection(office='2');self.enable('2')
+        d['items'][0]['connection_id']=other['id']
+        with self.assertRaises(AccessDenied):self.hub.batch_jobs(EDITOR,d)
+        self.assertFalse(self.hub.store.list('jobs'))
+    def test_duplicate_external_account_across_groups_is_rejected(self):
+        d=self.rows();other=self.connection(office='2');self.enable('2')
+        d['items'].append({**d['items'][0],'connection_id':other['id']})
+        # These test connections intentionally use the same remote ID.
+        with self.assertRaisesRegex(ValueError,'duplicata'):self.hub.batch_jobs(ADMIN,d)
+    def test_move_keeps_authorization_and_pauses_pending_delivery(self):
+        d=self.rows();self.hub.batch_jobs(ADMIN,d);cid=d['items'][0]['connection_id']
+        self.hub.move_connection(ADMIN,{'id':cid,'office_id':'2'})
+        self.assertEqual(self.hub.get('connections',cid)['office_id'],'2')
+        self.assertEqual(self.hub.vault.read('connection-'+cid),'test-token')
+        job=self.hub.store.list('jobs')[0]
+        self.assertEqual((job['office_id'],job['status'],job['approved_by']),('2','draft',''))
+    def test_move_is_admin_only_and_protects_inflight_delivery(self):
+        d=self.rows();self.hub.batch_jobs(ADMIN,d);cid=d['items'][0]['connection_id']
+        with self.assertRaises(AccessDenied):self.hub.move_connection(EDITOR,{'id':cid,'office_id':'2'})
+        job=self.hub.store.list('jobs')[0];job['status']='processing';self.hub.store.put('jobs',job,job['id'])
+        with self.assertRaises(ValueError):self.hub.move_connection(ADMIN,{'id':cid,'office_id':'2'})
+        self.assertEqual(self.hub.get('connections',cid)['office_id'],'1')
