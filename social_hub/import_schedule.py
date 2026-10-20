@@ -17,8 +17,16 @@ def local_time(date,time):
     return valid[0].isoformat()
 def channels(line):
     words=norm(line).split();result=list(dict.fromkeys(v for k,v in CHANNEL_NAMES.items() if k in words))
-    if any(c in result for c in ('Instagram Story','Instagram Reel')):result=[c for c in result if c not in ('Instagram post','Facebook post')]
-    return result
+    story=any(w in words for w in ('story','stories','storie'));reel=any(w in words for w in ('reel','reels'))
+    if story or reel:
+        result=[c for c in result if c not in ('Instagram post','Facebook post')]
+        if 'facebook' in words or 'fb' in words:result.append('Facebook Story' if story else 'Facebook Reel')
+        if ('facebook' in words or 'fb' in words) and 'instagram' not in words and 'ig' not in words:result=[c for c in result if c not in ('Instagram Story','Instagram Reel')]
+    if not story and not reel and 'video' in words:
+        if 'Facebook post' in result:result.remove('Facebook post');result.append('Facebook video')
+        if 'LinkedIn' in result:result.remove('LinkedIn');result.append('LinkedIn video')
+    if any(w in words for w in ('pdf','documento','documenti')) and 'LinkedIn' in result:result.remove('LinkedIn');result.append('LinkedIn documento')
+    return list(dict.fromkeys(result))
 
 def extract(title,day,documents,week='',shift_week=False):
     if not isinstance(documents,list) or len(documents)>100:raise ValueError('Troppi file di calendario')
