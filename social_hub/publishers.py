@@ -11,11 +11,17 @@ class Pending(Exception):pass
 def platform(channel):
     if channel.startswith('Instagram'):return 'Instagram'
     if channel.startswith('Facebook'):return 'Facebook'
+    if channel.startswith('LinkedIn'):return 'LinkedIn'
     return channel
+
+ASSISTED_CHANNELS=('Facebook Reel','Facebook video','LinkedIn documento','LinkedIn video')
+
+def is_video(ref):return bool(re.search(r'\.(mp4|mov|webm)(\?|$)',ref,re.I))
 
 class Publishers:
     def __init__(self,settings,vault,http,assets):self.settings,self.vault,self.http,self.assets=settings,vault,http,assets
     def validate(self,job,connection):
+        if job['channel'] in ASSISTED_CHANNELS:raise ValueError('Questo formato richiede la pubblicazione assistita: apri i file e completa l’invio sul social')
         if not connection or not connection.get('enabled'):raise ValueError('Collegare e abilitare un account per questa sede')
         if connection.get('platform')!=platform(job['channel']):raise ValueError('Account di piattaforma diversa')
         if not self.vault.read('connection-'+connection['id']):raise ValueError('Token account mancante')
@@ -32,13 +38,16 @@ class Publishers:
             if not media:raise ValueError('Instagram richiede almeno un’immagine o video')
             if len(job['body'])>2200:raise ValueError('Instagram: massimo 2200 caratteri')
             if channel=='Instagram carosello' and not 2<=len(media)<=10:raise ValueError('Carosello: inserire da 2 a 10 immagini')
-            if channel!='Instagram carosello' and len(media)!=1:raise ValueError('Per più immagini scegli Instagram carosello')
+            if channel not in ('Instagram carosello','Instagram Story') and len(media)!=1:raise ValueError('Per più immagini scegli Instagram carosello')
         if channel=='LinkedIn' and len(job['body'])>3000:raise ValueError('LinkedIn: massimo 3000 caratteri')
         for ref in media:
             if not ref.startswith('asset:'):public_url(ref)
             if channel.startswith('Instagram') or channel.startswith('Facebook') or channel=='TikTok':public_url(self.assets.url(ref,public=True))
-        if channel not in ('Instagram Reel','TikTok') and any(re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I) for m in media):raise ValueError('Questo canale supporta immagini; per un video usa Instagram Reel o esportazione TikTok')
-        if len(media)>10:raise ValueError('Massimo 10 media per pubblicazione')
+        if channel not in ('Instagram Reel','Instagram Story','Instagram carosello','TikTok') and any(re.search(r'\.(mp4|mov|webm)(\?|$)',m,re.I) for m in media):raise ValueError('Questo canale supporta immagini; per un video usa Instagram Reel o esportazione TikTok')
+        limit=20 if channel in ('Instagram Story','Facebook Story') else 10
+        if len(media)>limit:raise ValueError(f'Massimo {limit} media per pubblicazione')
+        if channel=='Facebook Story' and not media:raise ValueError('Le storie richiedono almeno una immagine')
+        if any(re.search(r'\.pdf(\?|$)',m,re.I) for m in media):raise ValueError('I PDF richiedono il formato LinkedIn documento con pubblicazione assistita')
     def buffer_payload(self,job,connection,draft=False):
         self.validate(job,connection)
         return {'channelId':connection['external_id'],'text':job['body'],'schedulingType':'automatic','mode':'shareNow','needsApproval':False,'saveToDraft':draft,
@@ -67,6 +76,33 @@ class Publishers:
             if result['status']=='sent':return {'id':result['id'],'url':result.get('externalLink') or ''}
             if result['status'] in ('scheduled','sending'):raise Pending('Buffer sta inviando il contenuto a TikTok; conferma in attesa')
             raise RemoteError('Contenuto presente in Buffer ma non pubblicato: controlla lo stato in Buffer, senza duplicarlo.',uncertain=True)
+        if job['channel'] in ('Instagram Story','Facebook Story'):
+            published=list(remote.get('story_published',[]));containers=list(remote.get('story_containers',[]))
+            index=len(published)
+            if index>=len(media):return {'id':','.join(published),'url':''}
+            ref=media[index]
+            graph=lambda *args,**kwargs:self.graph(*args,**kwargs,host='instagram' if connection.get('auth_method')=='instagram_login' else 'facebook')
+            if len(containers)<=index:
+                payload={'media_type':'STORIES',('video_url' if is_video(ref) else 'image_url'):self.assets.url(ref,True)} if job['channel']=='Instagram Story' else {'url':self.assets.url(ref,True),'published':False}
+                item=graph('POST',pid+('/media' if job['channel']=='Instagram Story' else '/photos'),token,payload)
+                containers.append(item['id']);checkpoint({'story_containers':containers})
+            container=containers[index]
+            if job['channel']=='Instagram Story':
+                state=graph('GET',container+'?fields=status_code',token).get('status_code')
+                if state in ('ERROR','EXPIRED'):raise ValueError('Storia rifiutata da Instagram; verifica formato e durata')
+                if state=='PUBLISHED':raise RemoteError('Storia già pubblicata: verifica sul profilo prima di riprogrammare',uncertain=True)
+                if state!='FINISHED':raise Pending(f'Elaborazione storia {index+1} di {len(media)}')
+                path=pid+'/media_publish';payload={'creation_id':container}
+            else:path=pid+'/photo_stories';payload={'photo_id':container}
+            try:result=graph('POST',path,token,payload,final=True)
+            except RemoteError as e:
+                if e.provider_code==9007 and e.provider_subcode==2207027 and not e.uncertain:raise Pending('Preparazione storia in corso') from None
+                raise
+            confirmed=result.get('id') or result.get('post_id')
+            if not confirmed:raise RemoteError('Conferma storia assente: verifica sul social',uncertain=True)
+            published.append(str(confirmed));checkpoint({'story_published':published})
+            if len(published)<len(media):raise Pending(f'{len(published)} di {len(media)} storie pubblicate; proseguimento automatico')
+            return {'id':','.join(published),'url':''}
         if connection['platform']=='Facebook':
             photo_ids=list(remote.get('photos',[]))
             for ref in media[len(photo_ids):]:
@@ -84,7 +120,7 @@ class Publishers:
                 if job['channel']=='Instagram carosello':
                     children=list(remote.get('children',[]))
                     for ref in media[len(children):]:
-                        child=graph('POST',pid+'/media',token,{'image_url':self.assets.url(ref,True),'is_carousel_item':True})
+                        child=graph('POST',pid+'/media',token,{**({'media_type':'VIDEO','video_url':self.assets.url(ref,True)} if is_video(ref) else {'image_url':self.assets.url(ref,True)}),'is_carousel_item':True})
                         children.append(child['id']);checkpoint({'children':children})
                     for child in children:
                         state=graph('GET',child+'?fields=status_code',token)
