@@ -16,12 +16,12 @@ from auth import Auth,AccessDenied,admin,office_access,visible
 from feeds import fetch
 from community import Community, SOURCES
 from network import HTTP,RemoteError
-from publishers import Publishers,Pending,platform
+from publishers import Publishers,Pending,platform,ASSISTED_CHANNELS
 from storage import make_store
 from vault import Vault
 
-CHANNELS=('Facebook post','Instagram post','Instagram carosello','Instagram Reel','Instagram Story','LinkedIn','TikTok')
-SLOT_CHANNELS={'facebook':'Facebook post','instagram':'Instagram post','linkedin':'LinkedIn','story':'Instagram Story','reel':'Instagram Reel','tiktok':'TikTok'}
+CHANNELS=('Facebook post','Instagram post','Instagram carosello','Instagram Reel','Instagram Story','Facebook Story','Facebook Reel','Facebook video','LinkedIn','LinkedIn documento','LinkedIn video','TikTok')
+SLOT_CHANNELS={'facebook':'Facebook post','instagram':'Instagram post','linkedin':'LinkedIn','story':'Instagram Story','reel':'Instagram Reel','tiktok':'TikTok','facebook_story':'Facebook Story','facebook_reel':'Facebook Reel','facebook_video':'Facebook video','linkedin_document':'LinkedIn documento','linkedin_video':'LinkedIn video'}
 EDITABLE=('draft','scheduled','error','cancelled')
 
 def now():return time.time()
@@ -52,10 +52,10 @@ def category(value):
     return 'Generale'
 
 def media_list(value):
-    if not isinstance(value,list) or len(value)>10:raise ValueError('Inserire al massimo 10 media')
+    if not isinstance(value,list) or len(value)>20:raise ValueError('Inserire al massimo 20 media')
     for item in value:
         if not isinstance(item,str):raise ValueError('Media non valido')
-        if not (re.fullmatch(r'asset:[a-f0-9]{32}\.jpg',item) or (item.startswith('https://') and urllib.parse.urlsplit(item).hostname)):
+        if not (re.fullmatch(r'asset:[a-f0-9]{32}\.(jpg|mp4|mov|pdf)',item) or (item.startswith('https://') and urllib.parse.urlsplit(item).hostname)):
             raise ValueError('Media: usare URL HTTPS o immagini caricate')
     return value
 
@@ -82,6 +82,8 @@ class Service:
         result={'actor':actor,'offices':[o for o in self.store.list('offices') if actor['role']=='admin' or o['id'] in actor['offices']]}
         for collection in ['posts','jobs','plans','connections']:
             result[collection]=[d for d in self.store.list(collection) if visible(actor,d)]
+        result['job_trash']=[j for j in result['jobs'] if j.get('deleted_at')]
+        result['jobs']=[j for j in result['jobs'] if not j.get('deleted_at')]
         result['trash']=[p for p in result['posts'] if p.get('deleted_at')]
         result['posts']=[p for p in result['posts'] if not p.get('deleted_at')]
         for post in result['posts']+result['jobs']:
@@ -135,7 +137,7 @@ class Service:
         for k,v in slots.items():
             if not isinstance(v,dict):raise ValueError('Slot non valido')
             media=slot_media(v)
-            if k in ('story','reel') and len(media)>1:raise ValueError('Storie e copertine Reel richiedono una sola immagine per invio')
+            if len(media)>(20 if k in ('story','facebook_story') else 1 if k in ('reel','facebook_reel','facebook_video','linkedin_document','linkedin_video') else 10):raise ValueError('Troppi allegati per il formato scelto')
             clean[k]={'media':media[0] if media else '', 'body':text(v,'body'),
                       'width':int(v.get('width',0)), 'height':int(v.get('height',0))}
             if 'media_items' in v:clean[k]['media_items']=list(media)
@@ -164,7 +166,7 @@ class Service:
             if target in seen:raise ValueError('Destinazione duplicata')
             seen.add(target)
             if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
-            if approve:
+            if approve and job['channel'] not in ASSISTED_CHANNELS:
                 if not office.get('publishing_enabled'):raise ValueError('Abilita gli invii nella sede prima di approvare')
                 connection=self.connection(office['id'],channel,cid)
                 self.publishers.validate(job,connection)
@@ -185,14 +187,18 @@ class Service:
         if when<=now():raise ValueError('Inserire date future')
         connection=self.connection(office['id'],channel,connection_id)
         slot=post.get('slots',{}).get('instagram') if channel=='Instagram carosello' else next((post.get('slots',{}).get(k) for k,c in SLOT_CHANNELS.items() if c==channel),None)
-        if slot is not None and not slot_media(slot):raise ValueError('Carica l’immagine nello slot del social scelto')
-        if slot and channel=='Instagram Reel':raise ValueError('La copertina Reel è un’immagine: per pubblicare serve un video, non la copertina')
+        if slot is None and channel=='Facebook Story':slot=post.get('slots',{}).get('story')
+        if slot is None and channel=='Facebook Reel':slot=post.get('slots',{}).get('reel')
+        if slot is not None and not slot_media(slot) and not (channel in ('Facebook post','LinkedIn') and slot.get('body','').strip()):raise ValueError('Carica un allegato nello slot del social scelto')
         media=list(slot_media(slot) if slot is not None else post.get('media',[]))
+        if channel=='Instagram Reel' and (len(media)!=1 or not re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I)):raise ValueError('Per un Reel serve un video MP4 o MOV, non una copertina')
+        if channel in ASSISTED_CHANNELS and not media:raise ValueError('Carica il video o PDF nello slot dedicato')
         if channel=='Instagram post' and len(media)>1:channel='Instagram carosello'
+        if channel=='Instagram post' and len(media)==1 and re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I):channel='Instagram Reel'
         body=(slot.get('body') or post['body']) if slot else post['body']
         return {'office_id':office['id'],'post_id':post['id'],'title':post['title'],
            'body':personalize(body,office),'media':media,'channel':channel,
-           'scheduled_at':when,'created_at':now(),'status':'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection else 'draft',
+           'scheduled_at':when,'created_at':now(),'status':'assisted' if channel in ASSISTED_CHANNELS else 'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection else 'draft',
            'connection_id':connection['id'] if connection else '', 'account_target':connection['external_id'] if connection else '', 'attempts':0,'last_error':'','remote':{}}
     def create_job(self,actor,d):
         post=self.get('posts',d.get('post_id',''));office_access(actor,post['office_id'])
@@ -203,6 +209,29 @@ class Service:
         if job['status']=='scheduled':self.publishers.validate(job,self.connection(office['id'],job['channel'],job['connection_id']))
         job['approved_by']=actor['uid'] if job['status']=='scheduled' else ''
         job=self.store.put('jobs',job);return {'ok':True,'id':job['id']}
+    def jobs_action(self,actor,d):
+        ids=d.get('ids');action=d.get('action')
+        if not isinstance(ids,list) or not 1<=len(ids)<=200 or any(not isinstance(k,str) or not k for k in ids) or len(set(ids))!=len(ids):raise ValueError('Seleziona da 1 a 200 eventi distinti')
+        if action not in ('trash','restore'):raise ValueError('Azione non valida')
+        # Check every office before changing anything; transaction checks protect worker races.
+        for key in ids:self.office(actor,self.get('jobs',key)['office_id'])
+        changed=[];blocked=[]
+        for key in ids:
+            try:
+                def change(job):
+                    if not job:raise ValueError('Evento inesistente')
+                    office_access(actor,job['office_id'])
+                    if job['status'] in ('processing','published','manual_published','uncertain') or job.get('remote',{}).get('buffer_attempted') or job.get('remote',{}).get('story_published'):raise ValueError('Invio avviato o già pubblicato: verifica sul social')
+                    if action=='trash':
+                        if job.get('deleted_at'):return None
+                        job.update(deleted_at=now(),deleted_by=actor['uid'],status='cancelled',approved_by='',approved_at=0)
+                    else:
+                        if not job.get('deleted_at'):return None
+                        job.update(deleted_at=0,status='draft',approved_by='',approved_at=0,retry_at=0,attempts=0,remote={})
+                    return job
+                self.store.mutate('jobs',key,change);changed.append(key)
+            except ValueError as e:blocked.append({'id':key,'reason':str(e)})
+        return {'ok':True,'changed':changed,'blocked':blocked}
     def job_action(self,actor,d):
         key=text(d,'id',required=True);action=d.get('action')
         original=self.get('jobs',key);office=self.office(actor,original['office_id'])
@@ -213,7 +242,7 @@ class Service:
         def change(job):
             if not job:raise ValueError('Programmazione inesistente')
             if job.get('_rev')!=original.get('_rev'):raise ValueError('La programmazione è cambiata: ricarica prima di modificarla')
-            if job.get('remote',{}).get('buffer_attempted') or job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
+            if job.get('deleted_at') or (job.get('remote',{}).get('story_published') and action not in ('cancel','approve')) or job.get('remote',{}).get('buffer_attempted') or job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
             if action=='assist':
                 if job['status'] not in ('draft','error','cancelled','assisted'):raise ValueError('Annulla prima l’invio automatico programmato')
                 job.update(status='assisted',connection_id='',account_target='',remote={},last_error='')
@@ -226,7 +255,7 @@ class Service:
                 job.update(status='manual_published',manual_url=link,manual_confirmed_by=actor['uid'],manual_confirmed_at=now())
             elif action=='cancel':job.update(status='cancelled')
             elif action=='approve':
-                if job['scheduled_at']<=now():raise ValueError('La data è passata: riprogramma prima di approvare')
+                if job['scheduled_at']<=now() and not job.get('remote',{}).get('story_published'):raise ValueError('La data è passata: riprogramma prima di approvare')
                 job.update(status='scheduled',connection_id=connection['id'],account_target=connection['external_id'],approved_by=actor['uid'],approved_at=now(),last_error='')
             elif action=='edit':
                 body=text(d,'body',required=True)
@@ -378,12 +407,13 @@ class Service:
                     else:result['warnings'].append(ch+': invio già presente ('+old['status']+')')
                     continue
                 job=self.make_job(post,office,ch,when,'automatica' if approved else 'approvazione',connection['id'])
-                if approved:
+                if approved and job['channel'] not in ASSISTED_CHANNELS:
                     if not office.get('publishing_enabled'):raise ValueError('Invii disabilitati per la sede')
                     self.publishers.validate(job,connection)
                     job.update(approved_by=actor['uid'],approved_at=now(),approval_source='zip')
                 self.store.mutate('jobs',jobkey,lambda old:None if old else job)
                 result['scheduled']+=int(job['status']=='scheduled')
+                if job['status']=='assisted':result['warnings'].append(ch+': promemoria creato, completa la pubblicazione assistita')
             except (ValueError,TypeError) as e:result['warnings'].append(str(row.get('channel','Social'))+': '+str(e))
         self.store.mutate('posts',key,lambda p:{**p,'import_warnings':result['warnings']})
         return result
@@ -400,12 +430,12 @@ class Service:
             if job['status']=='processing' and job.get('claimed_at',0)<now()-600:
                 self.store.mutate('jobs',job['id'],lambda j:{**j,'status':'uncertain','last_error':'Esecuzione interrotta: verificare sul social prima di riprogrammare.'} if j['status']=='processing' and j.get('claimed_at',0)<now()-600 else None)
                 continue
-            if job['status']!='scheduled' or max(job['scheduled_at'],job.get('retry_at',0))>now():continue
+            if job.get('deleted_at') or job['status']!='scheduled' or max(job['scheduled_at'],job.get('retry_at',0))>now():continue
             office=self.get('offices',job['office_id'])
             if not office.get('publishing_enabled'):continue
             owner=uuid.uuid4().hex
             def claim(j):
-                if j['status']!='scheduled' or max(j['scheduled_at'],j.get('retry_at',0))>now():return None
+                if j.get('deleted_at') or j['status']!='scheduled' or max(j['scheduled_at'],j.get('retry_at',0))>now():return None
                 return {**j,'status':'processing','claim':owner,'claimed_at':now(),'attempts':j.get('attempts',0)+1}
             job=self.store.mutate('jobs',job['id'],claim)
             if job.get('claim')!=owner:continue
@@ -420,7 +450,7 @@ class Service:
                 result=self.publishers.publish(job,connection,checkpoint)
                 finish({'status':'published','published_at':now(),'remote_id':result['id'],'published_url':result.get('url',''),'last_error':''})
             except Pending as e:
-                finish({'status':'scheduled' if job['attempts']<40 else 'error','retry_at':now()+60,'last_error':str(e)})
+                finish({'status':'scheduled' if job['attempts']<(200 if job['channel'] in ('Instagram Story','Facebook Story') else 40) else 'error','retry_at':now()+60,'last_error':str(e)})
             except RemoteError as e:
                 retry=not e.uncertain and (e.status==429 or e.status>=500 or e.status==0) and job['attempts']<3
                 finish({'status':'uncertain' if e.uncertain else 'scheduled' if retry else 'error','retry_at':now()+60*job['attempts'],'last_error':str(e)})
@@ -447,7 +477,7 @@ class Service:
                 except Exception:print('Servizio: errore temporaneo o configurazione incompleta; nuovo controllo fra 15 secondi.',flush=True)
             self.stop.wait(15)
     def route(self,actor,path,d):
-        routes={'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
+        routes={'jobs/action':self.jobs_action,'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         community=Community(self)
         routes.update({'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})
@@ -480,7 +510,7 @@ class Service:
             self.office(actor,d.get('office_id',''))
             try:raw=base64.b64decode(d.get('data',''),validate=True)
             except ValueError:raise ValueError('File non valido') from None
-            return {'ok':True,'media':self.assets.save_image(raw)}
+            return {'ok':True,'media':self.assets.save_upload(raw,d.get('filename',''))}
         if path=='connection/disable':
             admin(actor);c=self.get('connections',d.get('id',''));c['enabled']=False
             self.store.put('connections',c,c['id']);return {'ok':True}

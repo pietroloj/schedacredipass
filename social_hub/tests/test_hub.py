@@ -452,3 +452,103 @@ class MetaErrorTests(unittest.TestCase):
         with self.assertRaises(RemoteError) as e:transport.request('POST','https://graph.instagram.com/v25.0/x',{},final=True)
         self.assertEqual(e.exception.provider_code,9007);self.assertEqual(e.exception.provider_subcode,2207027)
         self.assertFalse(e.exception.uncertain);self.assertNotIn('SECRET',str(e.exception))
+
+class CalendarAndFormatsTests(HubCase):
+    def test_bulk_trash_restore_never_reapproves(self):
+        keys=[self.due(),self.due()]
+        r=self.hub.jobs_action(ADMIN,{'ids':keys,'action':'trash'})
+        self.assertEqual(r['changed'],keys);self.assertFalse(r['blocked'])
+        self.hub.tick();self.http.request.assert_not_called()
+        state=self.hub.public_state(ADMIN);self.assertFalse(state['jobs']);self.assertEqual(len(state['job_trash']),2)
+        self.hub.jobs_action(ADMIN,{'ids':keys,'action':'restore'})
+        for key in keys:self.assertEqual(self.hub.get('jobs',key)['status'],'draft')
+        self.hub.tick();self.http.request.assert_not_called()
+    def test_bulk_protects_inflight_published_buffer_and_partial_stories(self):
+        keys=[]
+        for status,remote in [('processing',{}),('published',{}),('uncertain',{}),('scheduled',{'buffer_attempted':True}),('scheduled',{'story_published':['s1']})]:
+            key=self.due();self.hub.store.mutate('jobs',key,lambda j:{**j,'status':status,'remote':remote});keys.append(key)
+        r=self.hub.jobs_action(ADMIN,{'ids':keys,'action':'trash'})
+        self.assertFalse(r['changed']);self.assertEqual(len(r['blocked']),5)
+        for key in keys:self.assertFalse(self.hub.get('jobs',key).get('deleted_at'))
+    def test_bulk_acl_checked_before_first_write(self):
+        first=self.due();second=self.due();self.hub.store.mutate('jobs',second,lambda j:{**j,'office_id':'2'})
+        with self.assertRaises(AccessDenied):self.hub.jobs_action(EDITOR,{'ids':[first,second],'action':'trash'})
+        self.assertFalse(self.hub.get('jobs',first).get('deleted_at'))
+    def test_bulk_validates_selection(self):
+        key=self.due()
+        for ids in [[],[key,key],['a']*201,[{}]]:
+            with self.assertRaises(ValueError):self.hub.jobs_action(ADMIN,{'ids':ids,'action':'trash'})
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_story_sequence_resumes_without_duplicate(self,_):
+        key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.mp4'])
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'channel':'Instagram Story'})
+        self.http.request.side_effect=[{'id':'c1'},{'status_code':'FINISHED'},{'id':'s1'}]
+        self.hub.tick();job=self.hub.get('jobs',key)
+        self.assertEqual(job['remote']['story_published'],['s1']);self.assertEqual(job['status'],'scheduled')
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'retry_at':0})
+        self.http.request.reset_mock();self.http.request.side_effect=[{'id':'c2'},{'status_code':'FINISHED'},{'id':'s2'}]
+        self.hub.tick();job=self.hub.get('jobs',key)
+        self.assertEqual(job['status'],'published');self.assertEqual(job['remote_id'],'s1,s2')
+        self.assertIn('video_url',self.http.request.call_args_list[0].args[2])
+        self.hub.tick();self.assertEqual(self.http.request.call_count,3)
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_story_pending_reuses_container_and_ambiguous_send_stops(self,_):
+        key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.jpg'])
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'channel':'Instagram Story'})
+        self.http.request.side_effect=[{'id':'c1'},{'status_code':'IN_PROGRESS'}]
+        self.hub.tick();self.hub.store.mutate('jobs',key,lambda j:{**j,'retry_at':0})
+        self.http.request.reset_mock();self.http.request.side_effect=[{'status_code':'FINISHED'},RemoteError('timeout',uncertain=True)]
+        self.hub.tick();self.hub.tick()
+        self.assertEqual(self.hub.get('jobs',key)['status'],'uncertain');self.assertEqual(self.http.request.call_count,2)
+        self.assertEqual(self.http.request.call_args_list[1].args[2],{'creation_id':'c1'})
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_facebook_story_sequence(self,_):
+        key=self.due('Facebook',['https://example.com/1.jpg','https://example.com/2.jpg'])
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'channel':'Facebook Story'})
+        self.http.request.side_effect=[{'id':'p1'},{'post_id':'s1','success':True}]
+        self.hub.tick();self.assertTrue(self.http.request.call_args.args[1].endswith('/123/photo_stories'))
+        self.assertEqual(self.hub.get('jobs',key)['remote']['story_published'],['s1'])
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_mixed_carousel(self,_):
+        key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.mp4'])
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'channel':'Instagram carosello'})
+        self.http.request.side_effect=[{'id':'c1'},{'id':'c2'},{'status_code':'FINISHED'},{'status_code':'FINISHED'},{'id':'parent'},{'status_code':'FINISHED'},{'id':'post'}]
+        self.hub.tick();self.assertEqual(self.hub.get('jobs',key)['status'],'published')
+        self.assertEqual(self.http.request.call_args_list[1].args[2]['media_type'],'VIDEO')
+    def test_uploaded_video_pdf_validation_and_ranges(self):
+        from assets import valid_key,media_type,media_range
+        raw=b'\x00\x00\x00\x18ftypisom'+b'\x00'*20
+        ref=self.hub.assets.save_upload(raw,'movie.mp4');self.assertTrue(valid_key(ref[6:]));self.assertEqual(media_type(ref),'video/mp4')
+        self.assertEqual(self.hub.assets.bytes(ref,self.http),raw)
+        with self.assertRaises(ValueError):self.hub.assets.save_upload(b'not video','movie.mp4')
+        with self.assertRaises(ValueError):self.hub.assets.save_upload(b'not pdf','document.pdf')
+        self.assertTrue(self.hub.assets.save_upload(b'%PDF-1.7\n%%EOF','document.pdf').endswith('.pdf'))
+        self.assertFalse(valid_key('../other.mp4'))
+        self.assertEqual(media_range(b'012345','bytes=2-4')[:2],(b'234',206))
+        self.assertEqual(media_range(b'012345','bytes=-2')[:2],(b'45',206))
+        self.assertEqual(media_range(b'012345','bytes=90-')[1],416)
+    def test_story_slot_twenty_and_assisted_formats(self):
+        refs=['https://example.com/'+str(i)+'.jpg' for i in range(20)]
+        pid=self.hub.save_post(ADMIN,{'office_id':'1','title':'Story','body':'Testo','slots':{'story':{'media_items':refs}}})['id']
+        office=self.hub.get('offices','1');job=self.hub.make_job(self.hub.get('posts',pid),office,'Facebook Story',now()+3600)
+        self.assertEqual(job['media'],refs)
+        pid=self.hub.save_post(ADMIN,{'office_id':'1','title':'PDF','body':'Testo','slots':{'linkedin_document':{'media_items':['https://example.com/guide.pdf']}}})['id']
+        job=self.hub.make_job(self.hub.get('posts',pid),office,'LinkedIn documento',now()+3600,'automatica')
+        self.assertEqual(job['status'],'assisted')
+        with self.assertRaisesRegex(ValueError,'assistita'):self.hub.publishers.validate(job,None)
+    def test_import_channel_variants(self):
+        from import_schedule import channels
+        self.assertEqual(channels('Stories Facebook ore 13:00'),['Facebook Story'])
+        self.assertEqual(channels('Stories FB IG ore 13:00'),['Instagram Story','Facebook Story'])
+        self.assertEqual(channels('PDF LinkedIn ore 13:00'),['LinkedIn documento'])
+        self.assertEqual(channels('Video Facebook ore 13:00'),['Facebook video'])
+
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_partial_sequence_can_pause_and_resume_without_reset(self,_):
+        key=self.due('Instagram',['https://example.com/1.jpg','https://example.com/2.jpg'])
+        self.hub.store.mutate('jobs',key,lambda j:{**j,'channel':'Instagram Story','remote':{'story_containers':['c1'],'story_published':['s1']}})
+        self.hub.job_action(ADMIN,{'id':key,'action':'cancel'})
+        self.assertEqual(self.hub.get('jobs',key)['status'],'cancelled')
+        self.hub.job_action(ADMIN,{'id':key,'action':'approve'})
+        self.assertEqual(self.hub.get('jobs',key)['remote']['story_published'],['s1'])
+        with self.assertRaises(ValueError):self.hub.job_action(ADMIN,{'id':key,'action':'edit','body':'changed','scheduled':FUTURE})

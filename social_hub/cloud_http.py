@@ -1,4 +1,5 @@
 """Firebase HTTP adapter; Firebase identity is verified by the shared domain service."""
+from assets import media_type,media_range
 import html
 import json
 import mimetypes
@@ -43,8 +44,11 @@ def _dispatch(req,hub):
         # Both verbs validate a file-scoped signature; no account cookie is needed.
         if req.method in ('GET','HEAD') and (path.startswith('/media/') or path.startswith('/delivery/')):
             body=hub.assets.delivery_bytes(path[10:],req.args.get('signature')) if path.startswith('/delivery/') else hub.assets.signed_bytes(path[7:],req.args.get('expires'),req.args.get('signature'))
-            result=response(body if req.method=='GET' else b'',ctype='image/jpeg')
-            result.headers['Content-Length']=str(len(body))
+            part,status,headers=media_range(body,req.headers.get('Range') if req.method=='GET' else None)
+            result=response(part if req.method=='GET' else b'',status,ctype=media_type(path.rsplit('/',1)[-1]))
+            result.headers.update(headers)
+            result.headers['X-Content-Type-Options']='nosniff'
+            if path.split('?')[0].endswith('.pdf'):result.headers['Content-Disposition']='attachment; filename=contenuto.pdf'
             return result
         if req.method=='GET':
             static={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/logo.png':'logo.png'}
@@ -73,7 +77,7 @@ def _dispatch(req,hub):
             raise AccessDenied('Origine non autorizzata')
         if req.headers.get('X-Hub-Request')!='1':raise AccessDenied('Richiesta non autorizzata')
         if req.mimetype!='application/json':raise ValueError('Richiesta JSON richiesta')
-        if not req.content_length or req.content_length>22_000_000:raise ValueError('Dimensione richiesta non valida')
+        if not req.content_length or req.content_length>28_000_000:raise ValueError('Dimensione richiesta non valida')
         actor=hub.auth.actor(req.headers)
         data=req.get_json(silent=True)
         if not isinstance(data,dict):raise ValueError('Richiesta non valida')
