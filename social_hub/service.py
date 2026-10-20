@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 import urllib.parse
+from zoneinfo import ZoneInfo
 from ai import AI
 from buffer_api import BufferAPI
 from import_schedule import extract
@@ -141,6 +142,10 @@ class Service:
             clean[k]={'media':media[0] if media else '', 'body':text(v,'body'),
                       'width':int(v.get('width',0)), 'height':int(v.get('height',0))}
             if 'media_items' in v:clean[k]['media_items']=list(media)
+            if k in ('reel','instagram'):
+                strategy=v.get('reel_strategy','dual')
+                if strategy not in ('normal','trial_manual','trial_auto','dual'):raise ValueError('Strategia Reel non valida')
+                clean[k]['reel_strategy']=strategy
             if not 0<=clean[k]['width']<=30000 or not 0<=clean[k]['height']<=30000:raise ValueError('Dimensioni non valide')
         value['slots']=clean
         value['day_label']=text(d,'day_label',(old or {}).get('day_label',''),maximum=80)
@@ -162,9 +167,10 @@ class Service:
             if post.get('deleted_at'):raise ValueError('Ripristina prima il contenuto dal cestino')
             when=timestamp(row.get('scheduled'));channel=row.get('channel');cid=row.get('connection_id','')
             job=self.make_job(post,office,channel,when,'approvazione',cid)
-            target=(post['id'],job['channel'],job['connection_id'],when)
-            if target in seen:raise ValueError('Destinazione duplicata')
-            seen.add(target)
+            variants=self.job_variants(job,'preview')
+            targets=[(post['id'],v['channel'],v['connection_id'],v['scheduled_at'],v.get('reel_mode','normal')) for _,_,v in variants]
+            if any(target in seen for target in targets):raise ValueError('Destinazione duplicata')
+            seen.update(targets)
             if not self.connection(office['id'],channel,cid):raise ValueError('Account di destinazione non disponibile per questo contenuto')
             if approve and job['channel'] not in ASSISTED_CHANNELS:
                 if not office.get('publishing_enabled'):raise ValueError('Abilita gli invii nella sede prima di approvare')
@@ -173,7 +179,7 @@ class Service:
                 job.update(status='scheduled',approved_by=actor['uid'],approved_at=now())
             key=hashlib.sha256((actor['uid']+'|'+request+'|'+str(len(items))).encode()).hexdigest()
             job['batch_fingerprint']=fingerprint
-            items.append(('jobs',key,job))
+            items.extend(self.job_variants(job,key))
         existing=[self.store.get('jobs',key) for _,key,_ in items]
         if all(existing):
             if any(old.get('batch_fingerprint')!=item[2]['batch_fingerprint'] for old,item in zip(existing,items)):raise ValueError('Richiesta già usata per destinazioni diverse: ricarica il calendario')
@@ -196,10 +202,21 @@ class Service:
         if channel=='Instagram post' and len(media)>1:channel='Instagram carosello'
         if channel=='Instagram post' and len(media)==1 and re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I):channel='Instagram Reel'
         body=(slot.get('body') or post['body']) if slot else post['body']
-        return {'office_id':office['id'],'post_id':post['id'],'title':post['title'],
+        strategy=(slot or {}).get('reel_strategy','dual') if channel=='Instagram Reel' else 'normal'
+        if strategy not in ('normal','trial_manual','trial_auto','dual'):raise ValueError('Strategia Reel non valida')
+        return {'reel_strategy':strategy,'reel_mode':'normal' if strategy=='dual' else strategy,'office_id':office['id'],'post_id':post['id'],'title':post['title'],
            'body':personalize(body,office),'media':media,'channel':channel,
            'scheduled_at':when,'created_at':now(),'status':'assisted' if channel in ASSISTED_CHANNELS else 'scheduled' if mode=='automatica' and office.get('publishing_enabled') and connection else 'draft',
            'connection_id':connection['id'] if connection else '', 'account_target':connection['external_id'] if connection else '', 'attempts':0,'last_error':'','remote':{}}
+    def job_variants(self,job,key):
+        primary={**job,'reel_group':key} if job.get('reel_strategy')=='dual' and job['channel']=='Instagram Reel' else job
+        items=[('jobs',key,primary)]
+        if job.get('reel_strategy')=='dual' and job['channel']=='Instagram Reel':
+            date=dt.datetime.fromtimestamp(job['scheduled_at'],ZoneInfo('Europe/Rome'))+dt.timedelta(days=1)
+            trial={**job,'reel_group':key,'reel_strategy':'trial_manual','reel_mode':'trial_manual',
+                'scheduled_at':date.timestamp(),'remote':{},'attempts':0}
+            items.append(('jobs',hashlib.sha256((key+':trial').encode()).hexdigest(),trial))
+        return items
     def create_job(self,actor,d):
         post=self.get('posts',d.get('post_id',''));office_access(actor,post['office_id'])
         office=self.office(actor,d.get('office_id',''))
@@ -208,7 +225,8 @@ class Service:
         job=self.make_job(post,office,d.get('channel'),timestamp(d.get('scheduled')),'automatica' if post.get('editorial_status')=='approved' else office.get('editorial_mode'),d.get('connection_id',''))
         if job['status']=='scheduled':self.publishers.validate(job,self.connection(office['id'],job['channel'],job['connection_id']))
         job['approved_by']=actor['uid'] if job['status']=='scheduled' else ''
-        job=self.store.put('jobs',job);return {'ok':True,'id':job['id']}
+        key=uuid.uuid4().hex;items=self.job_variants(job,key)
+        self.store.batch_create(items);return {'ok':True,'id':key,'created':len(items)}
     def jobs_action(self,actor,d):
         ids=d.get('ids');action=d.get('action')
         if not isinstance(ids,list) or not 1<=len(ids)<=200 or any(not isinstance(k,str) or not k for k in ids) or len(set(ids))!=len(ids):raise ValueError('Seleziona da 1 a 200 eventi distinti')
@@ -309,7 +327,7 @@ class Service:
                 post={**content,'category':category(content['title']+' '+content['body']),'office_id':office['id'],'created_at':now(),'media':[],'engine':engine,'plan_id':plan_id,'id':uuid.uuid4().hex}
                 job=self.make_job(post,office,channel,times[index],office['editorial_mode'])
                 if job['status']=='scheduled':job['approved_by']=actor['uid']
-                items.extend([('posts',post['id'],post),('jobs',uuid.uuid4().hex,job)])
+                items.append(('posts',post['id'],post));items.extend(self.job_variants(job,uuid.uuid4().hex))
             items.append(('plans',plan_id,{'office_id':office['id'],'topic':topic,'engine':engine,'count':len(slots),'created_at':now()}))
             self.store.batch_create(items)
             result={'ok':True,'created':len(slots),'plan_id':plan_id}
@@ -390,6 +408,12 @@ class Service:
         if post and post['office_id']!=office['id']:raise AccessDenied('Contenuto di un’altra sede')
         if post and post.get('import_pristine') is False:raise ValueError('Contenuto modificato dopo l’importazione: programmalo dalla libreria per non inviare una versione diversa dallo ZIP')
         if not post:
+            if not isinstance(d.get('slots',{}),dict):raise ValueError('Formati ZIP non validi')
+            if boolean(d.get('localize_hashtags',False)) and office.get('hashtag'):
+                tags={o.get('hashtag') for o in self.store.list('offices') if o.get('hashtag')}|{'#Credipass'}
+                pattern=r'(?<!\w)(?:'+'|'.join(re.escape(t) for t in sorted(tags,key=len,reverse=True))+r')(?!\w)'
+                adapt=lambda value:re.sub(pattern,lambda _:office['hashtag'],value,flags=re.I) if isinstance(value,str) else value
+                d={**d,'body':adapt(d.get('body','')),'slots':{k:{**v,'body':adapt(v.get('body',''))} if isinstance(v,dict) else v for k,v in d.get('slots',{}).items()}}
             self.save_post(actor,d)
             self.store.mutate('posts',key,lambda p:{**p,'import_pristine':True,'editorial_status':'approved' if approved else 'draft','approved_by':actor['uid'] if approved else '', 'approved_at':now() if approved else 0})
         post=self.get('posts',key);result={'ok':True,'id':key,'scheduled':0,'warnings':[]}
@@ -405,14 +429,20 @@ class Service:
                 if old:
                     if old['status'] in ('scheduled','processing','published'):result['scheduled']+=1
                     else:result['warnings'].append(ch+': invio già presente ('+old['status']+')')
+                    if old.get('reel_strategy')=='dual':
+                        trial=self.store.get('jobs',hashlib.sha256((jobkey+':trial').encode()).hexdigest())
+                        if trial and trial['status'] in ('scheduled','processing','published'):result['scheduled']+=1
                     continue
                 job=self.make_job(post,office,ch,when,'automatica' if approved else 'approvazione',connection['id'])
                 if approved and job['channel'] not in ASSISTED_CHANNELS:
                     if not office.get('publishing_enabled'):raise ValueError('Invii disabilitati per la sede')
                     self.publishers.validate(job,connection)
                     job.update(approved_by=actor['uid'],approved_at=now(),approval_source='zip')
-                self.store.mutate('jobs',jobkey,lambda old:None if old else job)
-                result['scheduled']+=int(job['status']=='scheduled')
+                variants=self.job_variants(job,jobkey)
+                try:self.store.batch_create(variants)
+                except Exception:
+                    if not all(self.store.get('jobs',k) for _,k,_ in variants):raise
+                result['scheduled']+=sum(int(v['status']=='scheduled') for _,_,v in variants)
                 if job['status']=='assisted':result['warnings'].append(ch+': promemoria creato, completa la pubblicazione assistita')
             except (ValueError,TypeError) as e:result['warnings'].append(str(row.get('channel','Social'))+': '+str(e))
         self.store.mutate('posts',key,lambda p:{**p,'import_warnings':result['warnings']})
@@ -480,7 +510,7 @@ class Service:
         routes={'jobs/action':self.jobs_action,'post/action':self.post_action,'jobs/batch':self.batch_jobs,'office':self.save_office,'post':self.save_post,'job':self.create_job,'job/action':self.job_action,
           'import/preview':self.import_preview,'import/post':self.import_post,'plan':self.plan,'image':self.generate_image,'connection':self.save_connection,'member':self.save_member,'import':self.import_feed}
         community=Community(self)
-        routes.update({'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})
+        routes.update({'community/reel-stats':community.reel_stats,'community/stats':community.stats,'community/inbox':community.inbox,'community/messages':community.messages,'community/reply':community.reply})
         if path in routes:return routes[path](actor,d)
         if path=='buffer/test':
             admin(actor);post=self.get('posts',text(d,'post_id',required=True));office=self.office(actor,post['office_id'])

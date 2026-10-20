@@ -552,3 +552,68 @@ class CalendarAndFormatsTests(HubCase):
         self.hub.job_action(ADMIN,{'id':key,'action':'approve'})
         self.assertEqual(self.hub.get('jobs',key)['remote']['story_published'],['s1'])
         with self.assertRaises(ValueError):self.hub.job_action(ADMIN,{'id':key,'action':'edit','body':'changed','scheduled':FUTURE})
+
+class ReelStrategyTests(HubCase):
+    def reel_post(self,strategy=None):
+        slot={'media_items':['https://example.com/reel.mp4'],'body':'Un consiglio utile'}
+        if strategy:slot['reel_strategy']=strategy
+        return self.hub.save_post(ADMIN,{'office_id':'1','title':'Reel','body':'Testo','slots':{'reel':slot}})['id']
+    def test_combined_is_atomic_two_jobs_at_same_rome_hour_across_dst(self):
+        pid=self.reel_post();r=self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Instagram Reel','scheduled':'2027-03-27T13:00:00+01:00'})
+        jobs=sorted(self.hub.store.list('jobs'),key=lambda j:j['scheduled_at'])
+        self.assertEqual(r['created'],2);self.assertEqual([j['reel_mode'] for j in jobs],['normal','trial_manual'])
+        self.assertEqual(jobs[1]['scheduled_at']-jobs[0]['scheduled_at'],23*3600)
+        self.assertEqual(jobs[0]['reel_group'],jobs[1]['reel_group'])
+        self.hub.jobs_action(ADMIN,{'ids':[jobs[1]['id']],'action':'trash'})
+        self.assertFalse(self.hub.get('jobs',jobs[0]['id']).get('deleted_at'))
+    def test_batch_pair_idempotent(self):
+        pid=self.reel_post();c=self.connection('Instagram');d={'request_id':'pair','approve':False,'items':[{'post_id':pid,'channel':'Instagram Reel','connection_id':c['id'],'scheduled':FUTURE}]}
+        self.assertEqual(self.hub.batch_jobs(ADMIN,d)['created'],2)
+        self.assertTrue(self.hub.batch_jobs(ADMIN,d)['reused']);self.assertEqual(len(self.hub.store.list('jobs')),2)
+        with self.assertRaises(ValueError):self.hub.batch_jobs(ADMIN,{**d,'request_id':'dup','items':d['items']*2})
+        self.assertEqual(len(self.hub.store.list('jobs')),2)
+    def test_single_modes_and_invalid_strategy(self):
+        for mode in ['normal','trial_manual','trial_auto']:
+            pid=self.reel_post(mode);r=self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Instagram Reel','scheduled':FUTURE})
+            self.assertEqual(r['created'],1);self.assertEqual(self.hub.get('jobs',r['id'])['reel_mode'],mode)
+        with self.assertRaisesRegex(ValueError,'Strategia'):self.reel_post('bad')
+    def test_import_creates_pair_once(self):
+        c=self.connection('Instagram');self.enable()
+        d={'id':'reel-zip','office_id':'1','title':'Video','body':'Testo','slots':{'reel':{'media':'https://example.com/reel.mp4'}},'auto_approve':True,'schedule':[{'channel':'Instagram Reel','scheduled':FUTURE,'connection_id':c['id']}]}
+        with patch('publishers.public_url',side_effect=lambda u:u):r=self.hub.import_post(ADMIN,d)
+        self.assertEqual(r['scheduled'],2);self.assertEqual(len(self.hub.store.list('jobs')),2)
+        repeated=self.hub.import_post(ADMIN,d);self.assertEqual(repeated['scheduled'],2);self.assertEqual(len(self.hub.store.list('jobs')),2)
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_trial_and_normal_payloads(self,_):
+        c=self.connection('Instagram')
+        for mode,strategy in [('normal',None),('trial_manual','MANUAL'),('trial_auto','SS_PERFORMANCE')]:
+            job={'channel':'Instagram Reel','reel_mode':mode,'body':'Testo','media':['https://example.com/reel.mp4'],'remote':{}}
+            self.http.request.reset_mock();self.http.request.side_effect=[{'id':'container'},{'status_code':'FINISHED'},{'id':'published'}]
+            self.hub.publishers.publish(job,c,lambda _:None)
+            payload=self.http.request.call_args_list[0].args[2]
+            if strategy:self.assertEqual(payload['trial_params'],{'graduation_strategy':strategy});self.assertNotIn('share_to_feed',payload)
+            else:self.assertTrue(payload['share_to_feed']);self.assertNotIn('trial_params',payload)
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_rejected_trial_does_not_fallback_to_normal(self,_):
+        c=self.connection('Instagram');job={'channel':'Instagram Reel','reel_mode':'trial_manual','body':'Testo','media':['https://example.com/reel.mp4'],'remote':{}}
+        self.http.request.side_effect=RemoteError('not eligible',400)
+        with self.assertRaises(RemoteError):self.hub.publishers.publish(job,c,lambda _:None)
+        self.assertEqual(self.http.request.call_count,1)
+    @patch('publishers.public_url',side_effect=lambda u:u)
+    def test_trial_pending_reuses_container(self,_):
+        c=self.connection('Instagram');job={'channel':'Instagram Reel','reel_mode':'trial_auto','body':'Testo','media':['https://example.com/reel.mp4'],'remote':{'container':'existing'}}
+        self.http.request.side_effect=[{'status_code':'FINISHED'},{'id':'published'}]
+        self.hub.publishers.publish(job,c,lambda _:None)
+        self.assertEqual(self.http.request.call_count,2);self.assertEqual(self.http.request.call_args.args[2],{'creation_id':'existing'})
+    def test_saved_strategy_is_a_snapshot(self):
+        pid=self.reel_post('trial_auto');r=self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Instagram Reel','scheduled':FUTURE})
+        post=self.hub.get('posts',pid);post['slots']['reel']['reel_strategy']='normal';self.hub.save_post(ADMIN,post)
+        self.assertEqual(self.hub.get('jobs',r['id'])['reel_mode'],'trial_auto')
+
+    def test_multi_office_hashtags_keep_sources_and_acl(self):
+        d={'id':'office-two-copy','office_id':'2','title':'Mutui','body':'Consigli #CredipassAversa #Credipass','slots':{'facebook':{'body':'Testo #CredipassAversa'}} ,'localize_hashtags':True,'schedule':[]}
+        self.hub.import_post(ADMIN,d);post=self.hub.get('posts',d['id'])
+        self.assertEqual(post['body'],'Consigli #CredipassSantaMaria #CredipassSantaMaria')
+        self.assertEqual(post['slots']['facebook']['body'],'Testo #CredipassSantaMaria')
+        self.assertEqual(d['body'],'Consigli #CredipassAversa #Credipass')
+        with self.assertRaises(AccessDenied):self.hub.import_post(EDITOR,{**d,'id':'blocked'})

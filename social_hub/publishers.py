@@ -27,6 +27,8 @@ class Publishers:
         if not self.vault.read('connection-'+connection['id']):raise ValueError('Token account mancante')
         if connection.get('expires_at') and connection['expires_at']<=time.time():raise ValueError('Autorizzazione scaduta: ricollega l’account prima di pubblicare')
         media=job.get('media',[]);channel=job['channel']
+        if job.get('reel_mode','normal') not in ('normal','trial_manual','trial_auto'):raise ValueError('Modalità Reel non valida')
+        if job.get('reel_mode','normal')!='normal' and channel!='Instagram Reel':raise ValueError('La prova è disponibile solo per i Reel Instagram')
         if channel=='Instagram Reel' and (len(media)!=1 or not re.search(r'\.(mp4|mov)(\?|$)',media[0],re.I)):raise ValueError('Per un Reel serve un video MP4 o MOV; una copertina non basta')
         if channel=='TikTok':
             if connection.get('auth_method')!='buffer':raise ValueError('Collega TikTok tramite Buffer')
@@ -127,7 +129,12 @@ class Publishers:
                         if state.get('status_code') in ('ERROR','EXPIRED'):raise ValueError('Instagram ha rifiutato una slide del carosello; crea una nuova programmazione')
                         if state.get('status_code')!='FINISHED':raise Pending('Instagram sta elaborando le slide del carosello')
                     payload={'media_type':'CAROUSEL','children':','.join(children),'caption':body}
-                elif job['channel']=='Instagram Reel':payload={'media_type':'REELS','video_url':self.assets.url(media[0],True),'caption':body}
+                elif job['channel']=='Instagram Reel':
+                    payload={'media_type':'REELS','video_url':self.assets.url(media[0],True),'caption':body}
+                    mode=job.get('reel_mode','normal')
+                    if mode=='normal':payload['share_to_feed']=True
+                    # Meta IG User /media: trial_params.graduation_strategy = MANUAL | SS_PERFORMANCE.
+                    else:payload['trial_params']={'graduation_strategy':'SS_PERFORMANCE' if mode=='trial_auto' else 'MANUAL'}
                 elif job['channel']=='Instagram Story':payload={'media_type':'STORIES','image_url':self.assets.url(media[0],True)}
                 else:payload={'image_url':self.assets.url(media[0],True),'caption':body}
                 container=graph('POST',pid+'/media',token,payload)['id'];checkpoint({'container':container})
