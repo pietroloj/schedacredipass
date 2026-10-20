@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync(path.join(__dirname,'../web/app.js'),'utf8');
 function zip(files){let offset=0;const local=[],central=[];for(const [name,text] of files){const n=Buffer.from(name),d=Buffer.from(text),h=Buffer.alloc(30),c=Buffer.alloc(46);h.writeUInt32LE(0x04034b50);h.writeUInt32LE(d.length,18);h.writeUInt32LE(d.length,22);h.writeUInt16LE(n.length,26);c.writeUInt32LE(0x02014b50);c.writeUInt32LE(d.length,20);c.writeUInt32LE(d.length,24);c.writeUInt16LE(n.length,28);c.writeUInt32LE(offset,42);local.push(h,n,d);central.push(c,n);offset+=h.length+n.length+d.length}const dir=Buffer.concat(central),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(files.length,10);end.writeUInt32LE(dir.length,12);end.writeUInt32LE(offset,16);return new Blob([...local,dir,end])}
 async function run(){const elements={},calls=[];const ctx=vm.createContext({Uint8Array,DataView,TextDecoder,TextEncoder,Blob,File,URL,DecompressionStream,Error,Map,crypto:webcrypto,zipItems:[],zipOffice:'',zipBusy:false,tab:'importer',state:{connections:[],posts:[],offices:[]},esc:x=>String(x).replaceAll('<','&lt;'),action:()=>'',imageInfo:async()=>({width:1200,height:628,preview:'blob:test'}),file64:async f=>Buffer.from(await f.arrayBuffer()).toString('base64'),$:id=>elements[id]||(elements[id]={value:'1',innerHTML:'',textContent:'',disabled:false,checked:true}),api:async(route,d)=>{calls.push({route,d});return {media:'asset:00000000000000000000000000000001.jpg',schedule:[],warnings:[],scheduled:0,connections:[],posts:[],offices:[]}},load:async()=>{},toast:()=>{}});
+elements.importReelStrategy={value:'dual'};
 vm.runInContext(source.slice(source.indexOf('const formats='),source.indexOf('let calendarDate=')),ctx);
 vm.runInContext(source.slice(source.indexOf('function slotSlides('),source.indexOf('function slotMarkup(')),ctx);
 vm.runInContext(source.slice(source.indexOf('async function uploadSlot('),source.indexOf('// Read central directory')),ctx);
@@ -16,7 +17,8 @@ await ctx.selectSlotFile([image('slide_10.png'),image('slide_2.png')]);
 await ctx.selectSlotFile([image('slide_3.png')]);
 assert.deepEqual(Array.from(ctx.draftSlots.instagram.slides,s=>s.name),['slide_2.png','slide_10.png','slide_3.png']);
 assert.match(ctx.slotMarkup('instagram'),/type="file" multiple/);assert.match(ctx.slotMarkup('story'),/type="file" multiple/);
-assert.equal(ctx.formDirty,true);const saved=await ctx.uploadSlot(ctx.draftSlots.instagram,'1');assert.equal(saved.media_items.length,3);
+elements.reelStrategy={value:'trial_auto'};ctx.keepSlotText();assert.equal(ctx.draftSlots.instagram.reel_strategy,'trial_auto');assert.match(ctx.reelStrategyFields({}),/value="dual" selected/);
+assert.equal(ctx.formDirty,true);const saved=await ctx.uploadSlot(ctx.draftSlots.instagram,'1');assert.equal(saved.media_items.length,3);assert.equal(saved.reel_strategy,'trial_auto');
 const uploadedBefore=calls.filter(c=>c.route==='upload').length;await ctx.uploadSlot(ctx.draftSlots.instagram,'1');assert.equal(calls.filter(c=>c.route==='upload').length,uploadedBefore);
 await assert.rejects(ctx.selectSlotFile(Array.from({length:8},(_,i)=>image(i+'.png'))),/Massimo 10/);
 ctx.activeSlot='story';await ctx.selectSlotFile([image('1.png'),image('2.png')]);assert.equal(ctx.draftSlots.story.slides.length,2);await assert.rejects(ctx.selectSlotFile(Array.from({length:19},(_,i)=>image(i+'.png'))),/Massimo 20/);
@@ -39,6 +41,12 @@ await ctx.inspectZip(zip([['Pack/01_LUNEDI/01_Video/Reel_FB_IG/video.mp4','video
 ctx.validateSlotFiles('instagram',[image('foto.png'),new File(['v'],'video.mp4',{type:'video/mp4'})]);
 assert.throws(()=>ctx.validateSlotFiles('tiktok',[image('foto.png'),new File(['v'],'video.mp4')]),/un solo video/);
 assert.throws(()=>ctx.validateSlotFiles('facebook',[new File(['v'],'video.mp4')]),/non supportato/);
+// One ZIP, two offices: shared uploads, separate IDs and safe partial retry.
+ctx.state={offices:[{id:'1',name:'Aversa'},{id:'2',name:'Santa Maria'}],connections:[],posts:[]};elements.importOffice={value:'1',selectedOptions:[{value:'1'},{value:'2'}],disabled:false};
+let officeTwoFails=true;const multiCalls=[];ctx.api=async(route,d)=>{if(route==='import/post'&&d.office_id==='2'&&officeTwoFails){officeTwoFails=false;throw Error('office two interrupted')}multiCalls.push({route,d});return {media:'https://example.com/upload.jpg',schedule:[],warnings:[],scheduled:0,offices:ctx.state.offices,connections:[],posts:[]}};
+await ctx.inspectZip(fixture);await assert.rejects(ctx.importPack());assert.equal(multiCalls.filter(c=>c.route==='import/post'&&c.d.office_id==='1').length,1);const multiUploads=multiCalls.filter(c=>c.route==='upload').length;assert.equal(multiUploads,6);assert.equal(elements.importOffice.disabled,true);
+await ctx.importPack();assert.equal(multiCalls.filter(c=>c.route==='upload').length,multiUploads);const officePosts=multiCalls.filter(c=>c.route==='import/post');assert.equal(officePosts.length,2);assert.notEqual(officePosts[0].d.id,officePosts[1].d.id);assert.deepEqual(officePosts.map(c=>c.d.office_id),['1','2']);assert.equal(officePosts[0].d.localize_hashtags,true);assert.equal(officePosts[0].d.slots.reel.reel_strategy,'dual');assert.equal(elements.importOffice.disabled,false);
+elements.importOffice.selectedOptions=[];await ctx.inspectZip(fixture);await assert.rejects(ctx.importPack(),/almeno una sede/);
 if(process.argv[2]){await ctx.inspectZip(new Blob([fs.readFileSync(process.argv[2])]));assert.equal(ctx.zipItems.length,10);assert.equal(ctx.zipItems.reduce((n,p)=>n+Object.values(p.slots).reduce((n,v)=>n+(v.slides?.length||0),0),0),60);console.log('PASS: real package, 10 cards and 60 assets with captions')}
 console.log('PASS: ZIP grouping, per-channel captions, automatic approval payload, schedule metadata, malformed paths, partial retry');}
 run().catch(e=>{console.error(e);process.exitCode=1});
