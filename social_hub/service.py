@@ -242,7 +242,7 @@ class Service:
         def change(job):
             if not job:raise ValueError('Programmazione inesistente')
             if job.get('_rev')!=original.get('_rev'):raise ValueError('La programmazione è cambiata: ricarica prima di modificarla')
-            if job.get('deleted_at') or job.get('remote',{}).get('story_published') or job.get('remote',{}).get('buffer_attempted') or job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
+            if job.get('deleted_at') or (job.get('remote',{}).get('story_published') and action not in ('cancel','approve')) or job.get('remote',{}).get('buffer_attempted') or job['status'] in ('processing','published','manual_published','uncertain'):raise ValueError('Questa pubblicazione non può essere modificata o ripetuta automaticamente')
             if action=='assist':
                 if job['status'] not in ('draft','error','cancelled','assisted'):raise ValueError('Annulla prima l’invio automatico programmato')
                 job.update(status='assisted',connection_id='',account_target='',remote={},last_error='')
@@ -255,7 +255,7 @@ class Service:
                 job.update(status='manual_published',manual_url=link,manual_confirmed_by=actor['uid'],manual_confirmed_at=now())
             elif action=='cancel':job.update(status='cancelled')
             elif action=='approve':
-                if job['scheduled_at']<=now():raise ValueError('La data è passata: riprogramma prima di approvare')
+                if job['scheduled_at']<=now() and not job.get('remote',{}).get('story_published'):raise ValueError('La data è passata: riprogramma prima di approvare')
                 job.update(status='scheduled',connection_id=connection['id'],account_target=connection['external_id'],approved_by=actor['uid'],approved_at=now(),last_error='')
             elif action=='edit':
                 body=text(d,'body',required=True)
