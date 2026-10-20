@@ -198,3 +198,25 @@ compatibilità. I vecchi slot a immagine singola restano leggibili. Ogni invio
 copia tutte le slide; Instagram post diventa automaticamente Instagram carosello
 quando contiene più immagini. Il publisher attende l'elaborazione di tutte le
 slide prima di creare il contenitore, riutilizzando gli ID già caricati.
+
+## Pubblicazione unificata e gruppi personali
+
+Sedi e gruppi possono contenere anche profili personali. Da Collegamenti si può
+spostare un account conservando ID e autorizzazione cifrata. Gli invii pendenti
+vengono rimessi in bozza per ricontrollare testo e firma; un invio in corso blocca
+lo spostamento. Gli esiti incerti e i contenuti già affidati al provider restano
+protetti da tentativi automatici.
+
+Il pannello di programmazione seleziona tutti gli account abilitati del social
+per ciascun formato preparato, anche appartenenti a gruppi diversi. I dettagli
+consentono esclusioni puntuali. Il server verifica accesso al contenuto e a ogni
+gruppo di destinazione, pubblicazione abilitata, formato, account e duplicazioni
+prima della creazione atomica. Gli hashtag di sede e la firma seguono il gruppo
+di destinazione; le grafiche restano quelle del contenuto selezionato.
+
+Il calendario raggruppa per data/ora, tipo di contenuto, modalità Reel, titolo e
+media. Anche copie precedentemente importate in più sedi vengono riunite se hanno
+queste caratteristiche uguali. Ogni account mantiene il proprio invio, esito,
+blocco dei duplicati e gestione degli errori. Una scheda raccoglie tutti gli esiti;
+la vista singoli invii rimane disponibile e la selezione multipla comprende gli
+invii modificabili della scheda, senza toccare quelli già pubblicati o avviati.
