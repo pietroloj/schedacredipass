@@ -59,6 +59,27 @@ class Community:
             except RemoteError:warnings.append('Andamento giornaliero non disponibile per questo account.')
         else:warnings.append('Copertura e visualizzazioni Facebook non ancora integrate; i contatori mostrati sono totali della pagina.')
         return {'cards':cards,'warnings':warnings,'series':series,'days':days,'checked_at':time.time()}
+    def reel_stats(self,actor,data):
+        job=self.hub.get('jobs',ident(data.get('job_id','')));self.hub.office(actor,job['office_id'])
+        if job['channel']!='Instagram Reel' or job['status']!='published' or not job.get('remote_id'):raise ValueError('Seleziona un Reel Instagram pubblicato dal Social Hub')
+        c=self.account(actor,{'connection_id':job.get('connection_id','')})
+        if c['platform']!='Instagram' or c['office_id']!=job['office_id'] or c['external_id']!=job.get('account_target'):raise ValueError('Il collegamento non corrisponde al Reel pubblicato')
+        media=ident(str(job['remote_id']));cards=[];values={};warnings=[]
+        for metric,label in [('views','Visualizzazioni'),('reach','Account raggiunti'),('saved','Salvataggi'),('shares','Condivisioni')]:
+            value=None
+            try:
+                result=self.graph(c,media+'/insights',{'metric':metric})
+                entries=result.get('data',[])
+                entry=next((e for e in entries if e.get('name')==metric),None)
+                if entry:
+                    value=entry.get('total_value',{}).get('value')
+                    if value is None and entry.get('values'):value=entry['values'][0].get('value')
+                if type(value) not in (int,float) or value<0:value=None
+            except RemoteError:pass
+            if value is None:warnings.append(label+': non disponibile con questo accesso o per questo Reel; non equivale a zero.')
+            cards.append({'label':label,'value':value});values[metric]=value
+        rate=round(100*(values['saved']+values['shares'])/values['reach'],2) if values['reach'] and values['saved'] is not None and values['shares'] is not None else None
+        return {'cards':cards,'warnings':warnings,'useful_rate':rate,'checked_at':time.time()}
     def inbox(self,actor,data):
         admin(actor);c=self.account(actor,data)
         params={'fields':'id,updated_time,participants','limit':25}
