@@ -35,8 +35,12 @@ class PlannerTests(HubCase):
         with self.assertRaises(AccessDenied):self.hub.save_post(EDITOR,p)
     def test_empty_slot_does_not_reuse_wrong_image(self):
         pid=self.variant_post();p=self.hub.get('posts',pid);p['slots']['facebook']['media']='';self.hub.save_post(ADMIN,p)
+        jid=self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Facebook post','scheduled':FUTURE})['id']
+        self.assertEqual(self.hub.get('jobs',jid)['media'],[])
+        self.assertTrue(self.hub.get('jobs',jid)['body'].startswith('Testo Facebook'))
+        p=self.hub.get('posts',pid);p['slots']['instagram']['media']='';self.hub.save_post(ADMIN,p)
         with self.assertRaisesRegex(ValueError,'slot'):
-            self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Facebook post','scheduled':FUTURE})
+            self.hub.create_job(ADMIN,{'post_id':pid,'office_id':'1','channel':'Instagram post','scheduled':FUTURE})
 
 class CarouselTests(HubCase):
     def carousel(self):
