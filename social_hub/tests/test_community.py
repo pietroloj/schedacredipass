@@ -96,3 +96,22 @@ class CommunityTests(HubCase):
     def test_inbox_refresh_reuses_ticket_without_growth(self):
         first=self.ticket();second=self.ticket();self.assertEqual(first,second)
         self.assertEqual(len(self.hub.store.list('operations')),1)
+
+class ReelStatsTests(HubCase):
+    def setUp(self):
+        super().setUp();self.c=self.connection('Instagram');self.api=Community(self.hub)
+        self.job=self.hub.store.put('jobs',{'office_id':'1','channel':'Instagram Reel','status':'published','connection_id':self.c['id'],'account_target':self.c['external_id'],'remote_id':'reel1'})
+    def test_real_metrics_and_derived_rate(self):
+        self.http.request.side_effect=[{'data':[{'name':name,'values':[{'value':value}]}]} for name,value in [('views',100),('reach',50),('saved',2),('shares',3)]]
+        result=self.api.reel_stats(ADMIN,{'job_id':self.job['id']})
+        self.assertEqual([c['value'] for c in result['cards']],[100,50,2,3]);self.assertEqual(result['useful_rate'],10)
+    def test_missing_never_becomes_zero(self):
+        self.http.request.side_effect=RemoteError('no permissions',403)
+        result=self.api.reel_stats(ADMIN,{'job_id':self.job['id']})
+        self.assertTrue(all(c['value'] is None for c in result['cards']));self.assertIsNone(result['useful_rate']);self.assertEqual(len(result['warnings']),4)
+    def test_other_office_and_changed_account_are_blocked(self):
+        self.hub.store.mutate('jobs',self.job['id'],lambda j:{**j,'office_id':'2'})
+        with self.assertRaises(AccessDenied):self.api.reel_stats(EDITOR,{'job_id':self.job['id']})
+        self.hub.store.mutate('jobs',self.job['id'],lambda j:{**j,'office_id':'1','account_target':'different'})
+        with self.assertRaises(ValueError):self.api.reel_stats(ADMIN,{'job_id':self.job['id']})
+        self.http.request.assert_not_called()
