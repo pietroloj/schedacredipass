@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const source=fs.readFileSync(__dirname+'/../web/app.js','utf8');
+const ctx=vm.createContext({Map,Date,Set,JSON,calendarGrouped:true,calendarSelection:new Set(),esc:String,reelLabel:j=>j.channel,calendarMutable:j=>j.status==='draft',labels:{draft:'Da approvare',error:'Da correggere'},state:{connections:[{id:'a',enabled:true,platform:'Instagram',office_id:'1',name:'Aversa'},{id:'b',enabled:true,platform:'Instagram',office_id:'2',name:'Personale'},{id:'c',enabled:false,platform:'Instagram',office_id:'2',name:'Disabilitato'}],offices:[{id:'1',publishing_enabled:true},{id:'2',publishing_enabled:true}]},officeName:String,channels:['Instagram post','Instagram carosello','Instagram Reel','Facebook post'],formats:{instagram:{channel:'Instagram post'},reel:{channel:'Instagram Reel'},facebook:{channel:'Facebook post'}},slotSlides:v=>v.media?[v.media]:[],channelLabel:String});
+vm.runInContext(source.slice(source.indexOf('function availableBatchChannels('),source.indexOf('function schedulePreview(')),ctx);
+vm.runInContext(source.slice(source.indexOf('function groupCalendarJobs('),source.indexOf('function unifiedDetail(')),ctx);
+const jobs=[{id:'a',office_id:'1',post_id:'one',scheduled_at:1000,title:'Casa',channel:'Instagram post',media:['https://example.com/a.png'],status:'draft'},{id:'b',office_id:'2',post_id:'two',scheduled_at:1000,title:'Casa',channel:'Instagram post',media:['https://example.com/a.png'],status:'error'}];
+assert.equal(ctx.groupCalendarJobs(jobs).length,1);
+assert.equal(ctx.groupCalendarJobs([...jobs,{...jobs[0],id:'other',media:['https://example.com/b.png']}]).length,2);
+assert.equal(ctx.groupCalendarJobs([...jobs,{...jobs[0],channel:'Instagram Story'}]).length,2);
+assert.equal(ctx.groupCalendarJobs([...jobs,{...jobs[0],reel_mode:'trial_manual'}]).length,2);
+const markup=ctx.calendarItemsMarkup(jobs);assert.equal((markup.match(/data-unified-detail=/g)||[]).length,1);assert.match(markup,/2 account/);assert.match(markup,/1 Da correggere/);
+ctx.calendarGrouped=false;assert.equal((ctx.calendarItemsMarkup(jobs).match(/data-unified-detail=/g)||[]).length,2);
+const targets=ctx.batchTargets({office_id:'1',slots:{instagram:{media:'https://example.com/a.png'}}});
+assert.match(targets,/value="a"/);assert.match(targets,/value="b"/);assert.doesNotMatch(targets,/value="c"/);assert.doesNotMatch(targets,/Instagram Reel/);assert.match(targets,/data-channel-all="Instagram post" checked/);
+console.log('PASS: grouped deliveries, mixed outcomes, per-account view and all-group format targets');
