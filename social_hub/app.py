@@ -1,4 +1,5 @@
 """Local/cloud HTTP entry point. Secrets are never served as static files."""
+from assets import media_type
 import html
 import json
 import mimetypes
@@ -71,7 +72,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(('<!doctype html><meta charset="utf-8"><p>'+html.escape(message)+'</p><a href="'+html.escape(getattr(hub.settings,'base_path','')+'/')+'">Torna al Social Hub</a>').encode(),ctype='text/html')
             if path and path.startswith('/media/') and valid_key(path[7:]) and hub.settings.store=='sqlite':
                 file=hub.assets.root/path[7:]
-                if file.is_file():return self.send(file.read_bytes(),ctype='image/jpeg')
+                if file.is_file():return self.send(file.read_bytes(),ctype=media_type(file.name))
             if path=='/api/state':return self.send(hub.public_state(hub.auth.actor(self.headers)))
             if path in ('/api/oauth/instagram/options','/api/oauth/linkedin/options'):return self.send({'options':DirectOAuth(hub,path.split('/')[3]).options(hub.auth.actor(self.headers))})
             if path=='/api/oauth/options':return self.send({'options':self.server.oauth.options(hub.auth.actor(self.headers))})
@@ -86,7 +87,7 @@ class Handler(BaseHTTPRequestHandler):
             if origin and urllib.parse.urlsplit(origin).netloc!=self.headers.get('Host'):raise AccessDenied('Origine non autorizzata')
             if self.headers.get('Content-Type','').split(';')[0]!='application/json':raise ValueError('Richiesta JSON richiesta')
             length=int(self.headers.get('Content-Length','0'))
-            if length<1 or length>22_000_000:raise ValueError('Dimensione richiesta non valida')
+            if length<1 or length>28_000_000:raise ValueError('Dimensione richiesta non valida')
             self.connection.settimeout(300)
             data=json.loads(self.rfile.read(length))
             if not isinstance(data,dict):raise ValueError('Richiesta non valida')
