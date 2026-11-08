@@ -249,26 +249,10 @@ td strong{color:var(--navy)}
     </div>
 
     <div class="card">
-      <h2>Tempi medi pratica</h2>
-
-      <div class="metric-list">
-        <div class="metric"><small>Creazione → istruttoria</small><strong>—</strong></div>
-        <div class="metric"><small>Istruttoria → delibera</small><strong>—</strong></div>
-        <div class="metric"><small>Delibera → perizia</small><strong>—</strong></div>
-        <div class="metric"><small>Delibera → stipula</small><strong>—</strong></div>
-      </div>
+      <h2>Tempi medi pratica</h2><p>Calcolati solo sui passaggi con date disponibili.</p>
+      <div class="metric-list"><div class="metric"><small>Avvio → raccolta documenti</small><strong id="tCollection">—</strong></div><div class="metric"><small>Raccolta → verifica</small><strong id="tReview">—</strong></div><div class="metric"><small>Verifica → caricamento banca</small><strong id="tBank">—</strong></div><div class="metric"><small>Pre-stipula → stipula</small><strong id="tStipulation">—</strong></div></div>
     </div>
-
-    <div class="card">
-      <h2>Qualità operativa</h2>
-
-      <div class="metric-list">
-        <div class="metric"><small>Email banca non gestite</small><strong id="qEmails">—</strong></div>
-        <div class="metric"><small>Reminder 48h attivi</small><strong>—</strong></div>
-        <div class="metric"><small>Gmail da ricollegare</small><strong>—</strong></div>
-        <div class="metric"><small>Review AI pendenti</small><strong>—</strong></div>
-      </div>
-    </div>
+    <div class="card"><h2>Qualità operativa</h2><div class="metric-list"><div class="metric"><small>Reminder documentali attivi</small><strong id="qReminders">—</strong></div><div class="metric"><small>Pratiche ferme oltre 7 giorni</small><strong id="qStale">—</strong></div><div class="metric"><small>Documentazione incompleta</small><strong id="qIncomplete">—</strong></div><div class="metric"><small>Pratiche nel perimetro</small><strong id="qTotal">—</strong></div></div></div>
 
   </div>
 
@@ -796,7 +780,7 @@ function renderConsultants() {
             <td>${Number(item.pratiche || 0)}</td>
             <td>${Number(item.delibere || 0)}</td>
             <td>${Number(item.stipule || 0)}</td>
-            <td><strong>${pct(item.conversione || 0)}</strong></td>
+            <td><strong>${pct(Number(item.stipule || 0), Number(item.pratiche || 0))}</strong></td>
           </tr>
         `).join("")
       : `<tr><td colspan="5" class="empty">Nessuna pratica nel perimetro selezionato.</td></tr>`;
@@ -1048,6 +1032,7 @@ function renderDashboard() {
     </div>
   `;
 
+  const metrics=d.operationalMetrics||{};for(const [id,key] of [['tCollection','collection'],['tReview','review'],['tBank','bank'],['tStipulation','stipulation']]){const v=metrics.intervals?.[key];document.getElementById(id).textContent=v?.count ? `${v.days.toLocaleString('it-IT',{maximumFractionDigits:1})} giorni (${v.count})` : 'Dati insufficienti';}document.getElementById('qReminders').textContent=metrics.reminders??'Non disponibile';document.getElementById('qStale').textContent=d.staleOver7Days||0;document.getElementById('qIncomplete').textContent=d.incompleteDocs||0;document.getElementById('qTotal').textContent=total;
   renderStates();
   renderSources();
   renderConsultants();

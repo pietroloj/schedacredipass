@@ -381,6 +381,7 @@ const listaAgenzieImmobiliari =
                   ?.nome
                 ||
                 doc.id,
+              email: doc.data()?.email || "",
             })
           )
           .sort(
@@ -1574,6 +1575,7 @@ const dashboardGestionaleDati =
         consultants,
 
         attentionPractices,
+        operationalMetrics: require('./dashboard-metrics').metrics(practices),
       };
 
     }

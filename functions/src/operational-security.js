@@ -95,7 +95,7 @@ exports.manageAgency=onCall(options,async request=>{
  const id=text(request.data?.agencyId),name=text(request.data?.name,160),action=text(request.data?.action);
  if(!id||id.includes('/'))throw new HttpsError('invalid-argument','Agenzia non valida.');
  const ref=db.collection('agenzie_immobiliari').doc(id),snap=await ref.get();
- if(action==='save'){if(!name)throw new HttpsError('invalid-argument','Inserisci il nome.');await ref.set({nome:name,attiva:true,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});return {ok:true};}
+ if(action==='save'){if(!name)throw new HttpsError('invalid-argument','Inserisci il nome.');const email=text(request.data?.email,254).toLowerCase();if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new HttpsError('invalid-argument','Email non valida.');const patch={nome:name,attiva:true,updatedAt:admin.firestore.FieldValue.serverTimestamp()};if(Object.prototype.hasOwnProperty.call(request.data||{},'email'))patch.email=email;await ref.set(patch,{merge:true});return {ok:true};}
  if(action==='deactivate'){if(!snap.exists)throw new HttpsError('not-found','Agenzia non trovata.');await ref.update({attiva:false,updatedAt:admin.firestore.FieldValue.serverTimestamp()});return {ok:true};}
  throw new HttpsError('invalid-argument','Operazione non valida.');
 });

@@ -515,8 +515,8 @@ function injectBadge(session) {
                 Social Hub
             </a>
 
-            <a href="/index.html" class="credipass-user-menu-item" style="display:block;padding:12px 20px;color:white;text-decoration:none;font-size:12px;font-weight:700">Scheda consulenza</a>
-            <a href="/main/agenzie.html" class="credipass-user-menu-item" style="display:block;padding:12px 20px;color:white;text-decoration:none;font-size:12px;font-weight:700">Accessi agenzie</a>
+            <a href="/index.html" class="credipass-user-menu-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#fff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13)"><i class="fas fa-file-alt" style="width:15px;text-align:center"></i> Scheda consulenza</a>
+            <a href="/main/agenzie.html" class="credipass-user-menu-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#fff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13)"><i class="fas fa-building" style="width:15px;text-align:center"></i> Accessi agenzie</a>
             <a href="/main/area-operativa.html" class="credipass-user-menu-item"
                style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#ffffff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13);transition:background .15s ease,color .15s ease;">
                 <i class="fas fa-columns" style="width:15px;text-align:center;"></i>
@@ -1105,11 +1105,6 @@ function injectBadge(session) {
 
 
     // Mantiene il menu nello stesso punto anche durante lo scorrimento.
-    wrapper.style.position = 'fixed';
-    wrapper.style.top = '12px';
-    wrapper.style.right = '16px';
-    wrapper.style.zIndex = '40000';
-    wrapper.style.maxWidth = 'min(250px, 65vw)';
 
     /* ========================================================
        MENU APERTURA / CHIUSURA
@@ -1615,10 +1610,10 @@ function checkPageAccess(session) {
 }
 function addContextNavigation(session){
  if(document.getElementById('context-navigation'))return;
- const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');nav.style.cssText='position:fixed;left:14px;bottom:14px;z-index:40000;background:white;border:1px solid #ccd7e4;border-radius:10px;padding:8px;box-shadow:0 3px 15px #002d7222;display:flex;gap:12px;font:12px Arial';
- const back=document.createElement('button');back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');nav.appendChild(back);
+ const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');nav.style.cssText='position:sticky;top:0;z-index:1000;background:#002d72;border-bottom:3px solid #c99700;padding:8px 18px;display:flex;gap:16px;align-items:center;font:600 12px Poppins,Arial,sans-serif';
+ const back=document.createElement('button');back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');back.style.cssText='background:transparent;color:white;border:1px solid #ffffff55;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit';nav.appendChild(back);
  const links=[['Archivio','/main/ricerca-clienti.html'],['Area operativa','/main/area-operativa.html']];const p=new URLSearchParams(location.search),id=p.get('id')||p.get('clienteId')||p.get('practiceId');if(id)links.push(['Scheda consulenza','/main/scheda-pratica.html?id='+encodeURIComponent(id)]);
- for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;nav.appendChild(a);}document.body.appendChild(nav);
+ for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;a.style.cssText='color:white;text-decoration:none;padding:6px';nav.appendChild(a);}document.body.prepend(nav);
  const css=document.createElement('style');css.textContent='@media print{#context-navigation{display:none!important}}';document.head.appendChild(css);
 }
 function filterNavigation(session){document.querySelectorAll('a[href]').forEach(a=>{const key=PAGE_PERMISSIONS[new URL(a.href,location.origin).pathname];if(key&&!can(key,session))a.remove();});}
