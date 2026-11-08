@@ -1428,9 +1428,7 @@ const dashboardGestionaleDati =
       /*
        * Completiamo nome/email dai profili consulenti, quando disponibili.
        */
-      const consultants = [];
-
-      for (const item of consultantMap.values()) {
+      const consultants = await Promise.all(Array.from(consultantMap.values(), async item => {
         let nome = item.nome;
         let email = item.email;
 
@@ -1470,7 +1468,7 @@ const dashboardGestionaleDati =
           );
         }
 
-        consultants.push({
+        return {
           ...item,
           nome,
           email,
@@ -1484,8 +1482,8 @@ const dashboardGestionaleDati =
                   100
                 )
               : 0,
-        });
-      }
+        };
+      }));
 
       consultants.sort(
         (a, b) =>

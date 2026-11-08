@@ -631,10 +631,8 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             if (
                 sessioneConsulente.isAdmin
             ) {
-                const [snap] = await Promise.all([
-                    db.collection("pratiche_mutuo").get(),
-                    setupAdminPracticeFilter()
-                ]);
+                const filterLoading = setupAdminPracticeFilter().then(() => filtraClienti()).catch(error => console.warn('Filtro collaboratori non disponibile:', error));
+                const snap = await db.collection("pratiche_mutuo").get();
 
                 snap.forEach(doc =>
                     docs.push(doc)

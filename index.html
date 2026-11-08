@@ -18,6 +18,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/main/js/one-page-pdf.js"></script>
 <script>
 /* ==========================================================
    RUBRICA SEGNALATORI / AGENZIE + SOGGETTI AGGIUNTIVI
@@ -11278,15 +11280,16 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
    ========================================================== */
 
 function compilaPDF() {
-    let contacts = document.getElementById('pdf-contact-details');
-    const anchor = document.getElementById('p_nome1');
-    if (anchor && !contacts) {
-        contacts = document.createElement('div');
-        contacts.id = 'pdf-contact-details';
-        contacts.style.cssText = 'padding:12px 0;font-size:12px;white-space:pre-line;break-inside:avoid';
-        anchor.parentElement.appendChild(contacts);
+    for (const n of [1, 2]) {
+        const anchor = document.getElementById('p_nome' + n);
+        let contacts = document.getElementById('pdf-contact-details-' + n);
+        if (anchor && !contacts) { contacts = document.createElement('div'); contacts.id = 'pdf-contact-details-' + n; contacts.className = 'p-data-row'; contacts.style.cssText = 'font-size:9px;color:#111;line-height:1.35;overflow-wrap:anywhere'; anchor.parentElement.parentElement.appendChild(contacts); }
+        const prefix = n === 1 ? 'cliente' : 'cliente2';
+        if (contacts) contacts.textContent = 'Contatti: ' + ([V(prefix + '_cell', ''), V(prefix + '_email', '')].filter(Boolean).join(' · ') || '-');
+        let work = document.getElementById('pdf-work-details-' + n);
+        if (anchor && !work) { work = document.createElement('div'); work.id = 'pdf-work-details-' + n; work.className = 'p-data-row'; work.style.cssText = 'font-size:9px;color:#111;line-height:1.35;overflow-wrap:anywhere'; anchor.parentElement.parentElement.appendChild(work); }
+        if (work) { const values = [S('lav' + n, ''), V(prefix + '_professione', ''), V(prefix + '_datore_lavoro', ''), V('reddito_note' + n, '')].filter(Boolean); work.textContent = values.length ? 'Lavoro: ' + values.join(' · ') : ''; }
     }
-    if (contacts) contacts.textContent = 'Contatti richiedente 1: ' + V('cliente_cell', '-') + ' · ' + V('cliente_email', '-') + '\nContatti richiedente 2: ' + V('cliente2_cell', '-') + ' · ' + V('cliente2_email', '-');
 
 
     const nome1 =
@@ -16057,19 +16060,9 @@ window.addEventListener(
                                 )
                         );
 
-                        const worker =
-                            html2pdf()
-                                .set(
-                                    options
-                                )
-                                .from(
-                                    sheet
-                                );
-
-                        const blob =
-                            await worker.output(
-                                'blob'
-                            );
+                        const canvas = await html2pdf().set(options).from(sheet).toCanvas().get('canvas');
+                        const pdf = CredipassOnePagePDF.fromCanvas(canvas, window.jspdf.jsPDF);
+                        const blob = pdf.output('blob');
 
                         const pdfBase64 =
                             await blobToBase64(
@@ -16105,7 +16098,7 @@ window.addEventListener(
 
                         }
 
-                        await worker.save();
+                        pdf.save(fileName);
 
                         const to = [
 
@@ -16298,7 +16291,7 @@ window.addEventListener(
                                 ?
                                 'PDF generato, salvato nel portale e email inviate correttamente.'
                                 :
-                                'PDF generato ed email inviate. Il salvataggio permanente del PDF non è riuscito: verifica le regole Firebase Storage.'
+                                'PDF generato ed email inviate. Il salvataggio nel fascicolo non è riuscito; controlla la connessione e i permessi e riprova.'
                         );
 
                     }
