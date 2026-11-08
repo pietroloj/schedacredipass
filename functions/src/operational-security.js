@@ -135,6 +135,12 @@ exports.agencyDocumentLink=onCall(options,async request=>{
  const file=admin.storage().bucket().file(`Fascicoli/${id}/${name}`);const [exists]=await file.exists();if(!exists)throw new HttpsError('not-found','Documento non disponibile.');
  const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
 });
+exports.consultationPdfLink=onCall(options,async request=>{
+ const id=text(request.data?.practiceId,200);await access(request,id,'vede_scheda_consulenza');
+ const file=admin.storage().bucket().file(`SchedeConsulenza/${id}/Scheda_Consulenza.pdf`);const [exists]=await file.exists();
+ if(!exists)throw new HttpsError('not-found','La scheda PDF non è stata trovata nel fascicolo.');
+ const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
+});
 exports.saveConsultationPdf=onCall({...options,memory:'512MiB'},async request=>{
  const id=text(request.data?.practiceId,200),name=text(request.data?.fileName,180),encoded=String(request.data?.pdfBase64||'');
  const snap=await access(request,id,'modifica_scheda_consulenza');

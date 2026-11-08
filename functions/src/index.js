@@ -3517,6 +3517,7 @@ exports.agencyPracticeDetails = operationalSecurity.agencyPracticeDetails;
 exports.agencyDocumentLink = operationalSecurity.agencyDocumentLink;
 exports.shareAgencyMessage = operationalSecurity.shareAgencyMessage;
 exports.saveConsultationPdf = operationalSecurity.saveConsultationPdf;
+exports.consultationPdfLink = operationalSecurity.consultationPdfLink;
 
 exports.notifyClientUpload = operationalSecurity.notifyClientUpload;
 exports.synchronizePracticeWorkflow = require('./practice-workflow').synchronizePracticeWorkflow;
