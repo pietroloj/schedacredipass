@@ -17,6 +17,12 @@ await assertFails(updateDoc(practice(db('secretary')),{cliente_email:'attacker@t
 await assertFails(setDoc(doc(db('bob'),'consulenti','bob'),{ruolo:'admin'}));
 await assertFails(getDoc(practice(env.authenticatedContext('portal',{portal_practice:'case'}).firestore())));
 await assertFails(getDoc(practice(env.authenticatedContext('agency',{agency_id:'agency'}).firestore())));
+const pdfPath='SchedeConsulenza/case/Scheda_Consulenza.pdf';
+await assertSucceeds(uploadBytes(ref(env.authenticatedContext('admin').storage(),pdfPath),new Uint8Array([1,2,3]),{contentType:'application/pdf'}));
+await assertSucceeds(uploadBytes(ref(env.authenticatedContext('alice').storage(),pdfPath),new Uint8Array([4,5,6]),{contentType:'application/pdf'}));
+await assertFails(uploadBytes(ref(env.authenticatedContext('bob').storage(),pdfPath),new Uint8Array([1]),{contentType:'application/pdf'}));
+await assertFails(uploadBytes(ref(env.authenticatedContext('secretary').storage(),pdfPath),new Uint8Array([1]),{contentType:'application/pdf'}));
+await assertSucceeds(updateDoc(practice(db('admin')),{scheda_consulenza_pdf_path:pdfPath,scheda_consulenza_pdf_nome:'Scheda.pdf'}));
 const portalStorage=env.authenticatedContext('portal',{portal_practice:'case',auth_time:Math.floor(Date.now()/1000)}).storage();
 await assertSucceeds(uploadBytes(ref(portalStorage,'Fascicoli/case/doc_ci1_test.pdf'),new Uint8Array([1,2,3]),{contentType:'application/pdf'}));
 await assertFails(uploadBytes(ref(portalStorage,'Fascicoli/other/doc_ci1_test.pdf'),new Uint8Array([1,2,3]),{contentType:'application/pdf'}));

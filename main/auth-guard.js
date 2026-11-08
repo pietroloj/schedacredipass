@@ -64,7 +64,7 @@ function isConsultationPage() {
 
 function styleRoleBadges() {
     const badges =
-        document.querySelectorAll(".badge");
+        document.querySelectorAll(isConsultantsPage() ? ".badge" : ".credipass-role-badge");
 
     badges.forEach(badge => {
         const role =
@@ -748,39 +748,6 @@ function injectBadge(session) {
                 );
             }
 
-            let returnLink =
-                findReturnLink(
-                    document
-                );
-
-            /*
-             * Se il pulsante esiste già nella pagina lo SPOSTIAMO.
-             * Non ne creiamo un duplicato.
-             */
-            if (
-                returnLink &&
-                !wrapper.contains(
-                    returnLink
-                )
-            ) {
-                normalizeReturnLink(
-                    returnLink
-                );
-
-                rightControls.appendChild(
-                    returnLink
-                );
-
-            } else if (!returnLink) {
-
-                returnLink =
-                    createReturnLink();
-
-                rightControls.appendChild(
-                    returnLink
-                );
-            }
-
             rightControls.appendChild(
                 wrapper
             );
@@ -856,39 +823,6 @@ function injectBadge(session) {
                 );
             }
 
-            let returnLink =
-                findReturnLink(
-                    head
-                ) ||
-                findReturnLink(
-                    document
-                );
-
-            if (
-                returnLink &&
-                !wrapper.contains(
-                    returnLink
-                )
-            ) {
-
-                normalizeReturnLink(
-                    returnLink
-                );
-
-                rightControls.appendChild(
-                    returnLink
-                );
-
-            } else if (!returnLink) {
-
-                returnLink =
-                    createReturnLink();
-
-                rightControls.appendChild(
-                    returnLink
-                );
-            }
-
             rightControls.appendChild(
                 wrapper
             );
@@ -953,39 +887,6 @@ function injectBadge(session) {
 
                 head.appendChild(
                     rightControls
-                );
-            }
-
-            let returnLink =
-                findReturnLink(
-                    head
-                ) ||
-                findReturnLink(
-                    document
-                );
-
-            if (
-                returnLink &&
-                !wrapper.contains(
-                    returnLink
-                )
-            ) {
-
-                normalizeReturnLink(
-                    returnLink
-                );
-
-                rightControls.appendChild(
-                    returnLink
-                );
-
-            } else if (!returnLink) {
-
-                returnLink =
-                    createReturnLink();
-
-                rightControls.appendChild(
-                    returnLink
                 );
             }
 
@@ -1089,18 +990,10 @@ function injectBadge(session) {
 
         } else {
 
-            wrapper.style.position =
-                "fixed";
-
-            wrapper.style.top =
-                "12px";
-
-            wrapper.style.right =
-                "20px";
-
-            document.body.appendChild(
-                wrapper
-            );
+            const menuRow = document.createElement('div');
+            menuRow.style.cssText = 'display:flex;justify-content:flex-end;width:100%;max-width:1280px;margin:0 auto;padding:12px 18px;box-sizing:border-box';
+            menuRow.appendChild(wrapper);
+            document.body.prepend(menuRow);
         }
     }
 
@@ -1613,8 +1506,6 @@ function addContextNavigation(session){
  if(document.getElementById('context-navigation'))return;
  const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');
  const back=document.createElement('button');back.type='button';back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');nav.appendChild(back);
- const links=[['Archivio','/main/ricerca-clienti.html'],['Area operativa','/main/area-operativa.html']];const p=new URLSearchParams(location.search),id=p.get('id')||p.get('clienteId')||p.get('practiceId');if(id)links.push(['Scheda consulenza','/main/scheda-pratica.html?id='+encodeURIComponent(id)]);
- for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;nav.appendChild(a);}
  const path=location.pathname.toLowerCase();let host;
  if(path==='/'||path==='/index.html')host=document.getElementById('app_main_container');
  else if(path.endsWith('/area-operativa.html'))host=document.querySelector('.main');

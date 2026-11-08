@@ -30,6 +30,7 @@
     .search-input { width: 100%; padding: 15px 15px 15px 45px; border-radius: 8px; border: none; font-size: 16px; font-family: 'Poppins', sans-serif; box-sizing: border-box; outline: none; }
     .search-input:focus { box-shadow: 0 0 0 3px rgba(201, 151, 0, 0.5); }
 
+    .archive-filters{display:flex;gap:16px;padding:0 40px 20px;background:#002d72;color:#fff}.archive-filters>div{flex:1;min-width:0}.archive-filters label{display:block;color:#fff;font:600 12px Poppins,sans-serif;margin-bottom:6px}.archive-filters select{width:100%;padding:10px;border:1px solid #cbd8e5;border-radius:8px;background:#fff;color:#183153;font:500 13px Poppins,sans-serif}@media(max-width:600px){.archive-filters{padding:0 20px 20px;flex-wrap:wrap}.archive-filters>div{min-width:180px}}
     .client-list { padding: 20px 40px; min-height: 300px; }
     
     .client-card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e9ecef; border-left: 6px solid #ccc; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; background: #fff; }
@@ -211,9 +212,7 @@
                 <p style="color: #C99700; margin-top:5px; margin-bottom:0; font-weight:600;">Gestione e Ricerca Clienti</p>
             </div>
 
-            <a href="../index.html" class="btn-return-consulenza">
-                <i class="fas fa-arrow-left"></i> TORNA ALLA SCHEDA CONSULENZA
-            </a>
+
         </div>
     </div>
 
@@ -224,8 +223,8 @@
         </div>
     </div>
 
-    <div class="search-box"><label for="statusFilter">Stato pratica</label><select id="statusFilter" onchange="filtraClienti()"><option value="">Tutti gli stati</option></select></div>
-    <div class="search-box"><label for="sortFilter" style="color:white">Ordina per</label> <select id="sortFilter" onchange="filtraClienti()"><option value="date-desc">Consulenza più recente</option><option value="date-asc">Consulenza meno recente</option><option value="surname-asc">Cognome A–Z</option><option value="surname-desc">Cognome Z–A</option><option value="name-asc">Nome A–Z</option><option value="name-desc">Nome Z–A</option><option value="created-desc">Ultima caricata</option><option value="created-asc">Prima caricata</option><option value="updated-desc">Ultimo aggiornamento</option><option value="updated-asc">Primo aggiornamento</option><option value="product-asc">Prodotto A–Z</option><option value="product-desc">Prodotto Z–A</option><option value="status-asc">Stato A–Z</option><option value="status-desc">Stato Z–A</option></select></div>
+    <div class="archive-filters"><div><label for="statusFilter">Stato pratica</label><select id="statusFilter" onchange="filtraClienti()"><option value="">Tutti gli stati</option></select></div>
+    <div><label for="sortFilter">Ordina per</label> <select id="sortFilter" onchange="filtraClienti()"><option value="date-desc">Consulenza più recente</option><option value="date-asc">Consulenza meno recente</option><option value="surname-asc">Cognome A–Z</option><option value="surname-desc">Cognome Z–A</option><option value="name-asc">Nome A–Z</option><option value="name-desc">Nome Z–A</option><option value="created-desc">Ultima caricata</option><option value="created-asc">Prima caricata</option><option value="updated-desc">Ultimo aggiornamento</option><option value="updated-asc">Primo aggiornamento</option><option value="product-asc">Prodotto A–Z</option><option value="product-desc">Prodotto Z–A</option><option value="status-asc">Stato A–Z</option><option value="status-desc">Stato Z–A</option></select></div></div>
     <div id="collaboratorFilter" class="collaborator-filter">
         <label for="collaboratorSelect">
             <i class="fas fa-users"></i>
@@ -632,15 +631,15 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             if (
                 sessioneConsulente.isAdmin
             ) {
-                const snap =
-                    await db.collection("pratiche_mutuo")
-                        .get();
+                const [snap] = await Promise.all([
+                    db.collection("pratiche_mutuo").get(),
+                    setupAdminPracticeFilter()
+                ]);
 
                 snap.forEach(doc =>
                     docs.push(doc)
                 );
 
-                await setupAdminPracticeFilter();
             }
             else if (
                 ["segreteria","responsabile"].includes(role)

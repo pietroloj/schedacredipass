@@ -476,7 +476,8 @@ document.addEventListener(
 
     .practice-progress {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(8, minmax(90px, 1fr));
+        min-width: 720px;
         gap: 0;
         margin-top: 18px;
         position: relative;
@@ -486,8 +487,8 @@ document.addEventListener(
         content: "";
         position: absolute;
         top: 14px;
-        left: 8.5%;
-        right: 8.5%;
+        left: 6.25%;
+        right: 6.25%;
         height: 3px;
         background: #e4e8ed;
         z-index: 0;
@@ -562,13 +563,11 @@ document.addEventListener(
 
         .practice-progress {
             overflow-x: auto;
-            grid-template-columns: repeat(6, minmax(80px, 1fr));
+            grid-template-columns: repeat(8, minmax(90px, 1fr));
             padding-bottom: 5px;
         }
 
-        .practice-progress::before {
-            display: none;
-        }
+
     }
 
     @media (max-width: 1100px) {
@@ -1737,7 +1736,7 @@ document.addEventListener(
 
         <div id="statoPraticaUpdated" class="practice-status-updated"></div>
 
-<div class="practice-progress" id="practiceProgress"><div class="progress-step" data-step="0"><div class="progress-dot">1</div><div class="progress-label">Da avviare</div></div><div class="progress-step" data-step="1"><div class="progress-dot">2</div><div class="progress-label">In raccolta documenti</div></div><div class="progress-step" data-step="2"><div class="progress-dot">3</div><div class="progress-label">In verifica</div></div><div class="progress-step" data-step="3"><div class="progress-dot">4</div><div class="progress-label">Caricata in banca</div></div><div class="progress-step" data-step="4"><div class="progress-dot">5</div><div class="progress-label">In istruttoria banca</div></div><div class="progress-step" data-step="5"><div class="progress-dot">6</div><div class="progress-label">In integrazione banca</div></div><div class="progress-step" data-step="6"><div class="progress-dot">7</div><div class="progress-label">Pre-stipula</div></div><div class="progress-step" data-step="7"><div class="progress-dot">8</div><div class="progress-label">Stipulata</div></div></div>
+<div style="overflow-x:auto"><div class="practice-progress" id="practiceProgress"><div class="progress-step" data-step="0"><div class="progress-dot">1</div><div class="progress-label">Da avviare</div></div><div class="progress-step" data-step="1"><div class="progress-dot">2</div><div class="progress-label">In raccolta documenti</div></div><div class="progress-step" data-step="2"><div class="progress-dot">3</div><div class="progress-label">In verifica</div></div><div class="progress-step" data-step="3"><div class="progress-dot">4</div><div class="progress-label">Caricata in banca</div></div><div class="progress-step" data-step="4"><div class="progress-dot">5</div><div class="progress-label">In istruttoria banca</div></div><div class="progress-step" data-step="5"><div class="progress-dot">6</div><div class="progress-label">In integrazione banca</div></div><div class="progress-step" data-step="6"><div class="progress-dot">7</div><div class="progress-label">Pre-stipula</div></div><div class="progress-step" data-step="7"><div class="progress-dot">8</div><div class="progress-label">Stipulata</div></div></div></div>
         <div class="activity-admin-panel">
             <div class="activity-admin-title">
                 <i class="fas fa-history" style="color:#C99700;"></i>

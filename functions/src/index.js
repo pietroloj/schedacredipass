@@ -3513,9 +3513,14 @@ exports.updateClientPortal = operationalSecurity.updateClientPortal;
 exports.manageAgencyAccess = operationalSecurity.manageAgencyAccess;
 exports.manageAgency = operationalSecurity.manageAgency;
 exports.agencyPractices = operationalSecurity.agencyPractices;
+exports.agencyPracticeDetails = operationalSecurity.agencyPracticeDetails;
+exports.agencyDocumentLink = operationalSecurity.agencyDocumentLink;
 exports.shareAgencyMessage = operationalSecurity.shareAgencyMessage;
 
 exports.notifyClientUpload = operationalSecurity.notifyClientUpload;
 exports.synchronizePracticeWorkflow = require('./practice-workflow').synchronizePracticeWorkflow;
 exports.createClientAccessLink = operationalSecurity.createClientAccessLink;
 exports.exchangeClientLink = operationalSecurity.exchangeClientLink;
+exports.rememberClientDevice = operationalSecurity.rememberClientDevice;
+exports.exchangeClientDevice = operationalSecurity.exchangeClientDevice;
+exports.forgetClientDevice = operationalSecurity.forgetClientDevice;

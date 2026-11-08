@@ -1036,6 +1036,17 @@ const dashboardGestionaleDati =
         );
       }
 
+      const periodStart = String(request.data?.periodStart || '');
+      const periodEnd = String(request.data?.periodEnd || '');
+      let periodExcludedUndated = 0;
+      if (periodStart || periodEnd) {
+        try {
+          const filtered = require('./dashboard-period').filter(practices, periodStart, periodEnd);
+          practices = filtered.practices;
+          periodExcludedUndated = filtered.excludedUndated;
+        } catch (_) { throw new HttpsError('invalid-argument', 'Seleziona un intervallo di date valido.'); }
+      }
+
       const now =
         Date.now();
 
@@ -1551,6 +1562,7 @@ const dashboardGestionaleDati =
             practices.length,
         },
 
+        period: periodStart ? {start:periodStart,end:periodEnd,excludedUndated:periodExcludedUndated} : null,
         totalPractices:
           practices.length,
 

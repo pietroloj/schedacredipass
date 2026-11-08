@@ -12,16 +12,6 @@ const boot=()=>{
  app.addEventListener('input',e=>{if(panel.contains(e.target))return;clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,120);});
  app.addEventListener('change',e=>{if(!panel.contains(e.target))refresh();});
 
- const original=window.compilaPDF;
- window.compilaPDF=function(){original();const sheet=document.getElementById('print-sheet');if(!sheet)return;document.getElementById('complete-sheet-appendix')?.remove();const section=document.createElement('section');section.id='complete-sheet-appendix';section.style.cssText='page-break-before:always;padding:24px;color:#243447;font:12px Arial;';const title=document.createElement('h2');title.textContent='Dettaglio completo della consulenza';section.appendChild(title);const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse';const seen=new Set();
- for(const el of app.querySelectorAll('input,select,textarea')){
- if(panel.contains(el)||['button','submit','hidden','password','file'].includes(el.type)||((el.type==='checkbox'||el.type==='radio')&&!el.checked))continue;
- const key=el.id||el.name;if(!key||seen.has(key))continue;seen.add(key);
- const label=document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent||el.closest('label')?.textContent||el.previousElementSibling?.textContent||key.replace(/_/g,' ');
- const value=el.tagName==='SELECT'?el.selectedOptions[0]?.textContent:el.type==='checkbox'?'Sì':el.value;
- if(!value)continue;
- const row=document.createElement('tr');row.style.breakInside='avoid';for(const t of [label.trim().slice(0,150),String(value)]){const cell=document.createElement('td');cell.textContent=t;cell.style.cssText='padding:7px;border-bottom:1px solid #ddd;vertical-align:top;white-space:pre-wrap';row.appendChild(cell);}table.appendChild(row);
- }
- section.appendChild(table);const r=CredipassRatio.calculate(window.consultationRatio.getData());const summary=document.createElement('p');summary.textContent=`Rapporto rata/reddito: ${r.ratio===null?'non calcolabile':r.ratio.toFixed(1)+'%'} · Redditi: € ${r.income.toFixed(2)} · Rate e impegni: € ${r.total.toFixed(2)} · Residuo: € ${r.residual.toFixed(2)}`;section.appendChild(summary);section.style.flex='0 0 100%';section.style.boxSizing='border-box';sheet.style.flexWrap='wrap';sheet.appendChild(section);sheet.style.height='auto';sheet.style.maxHeight='none';sheet.style.overflow='visible';};
+
 };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();

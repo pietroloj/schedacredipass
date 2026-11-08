@@ -61,7 +61,7 @@ exports.verifyPortalCode=onCall(options,async request=>{
  if(!d)throw new HttpsError('permission-denied','Codice non valido o scaduto.');
  const uid='external_'+hash(d.kind+'|'+d.email).slice(0,48);
  try{await admin.auth().getUser(uid);}catch(e){if(e.code!=='auth/user-not-found')throw e;await admin.auth().createUser({uid});}
- const claims=d.kind==='agency'?{agency_id:d.agencyId,agency_email_hash:hash(d.email)}:{portal_practice:d.practiceId};
+ const claims=d.kind==='agency'?{agency_id:d.agencyId,agency_email_hash:hash(d.email)}:{portal_practice:d.practiceId,portal_email_hash:hash(d.email)};
  return {token:await admin.auth().createCustomToken(uid,claims)};
 });
 exports.readClientPortal=onCall(options,async request=>{const id=text(request.data?.practiceId);await clientAccess(request,id);const s=await db.collection('pratiche_mutuo').doc(id).get();return {practice:projection(s.data()||{})};});
@@ -106,6 +106,35 @@ exports.agencyPractices=onCall(options,async request=>{
  const s=await db.collection('pratiche_mutuo').where('provenienza.agenziaId','==',claim.agency_id).get();
  return {practices:s.docs.map(x=>{const d=x.data();return {id:x.id,cliente:[d.cliente_nome,d.cliente_cognome].filter(Boolean).join(' ')||d.cliente_nome_completo||'Pratica',stato:d.stato_pratica||'da_istruire',updatedAt:d.stato_pratica_aggiornato_il,messages:(d.agency_messages||[]).map(m=>({text:m.text,createdAt:m.createdAt}))};})};
 });
+async function agencyViewAccess(request,practiceId){
+ const claim=request.auth?.token||{};let agencyId=claim.agency_id;
+ if(agencyId){
+  if(!claim.auth_time||Date.now()/1000-claim.auth_time>86400)fail();
+  const grant=(await db.collection('agency_access').doc(claim.agency_email_hash||'_').get()).data();
+  if(!grant||grant.active===false||grant.agencyId!==agencyId)fail();
+ }else{
+  const profile=await staff(request,'gestisce_utenti');if(profile.ruolo!=='admin')fail();
+  agencyId=text(request.data?.agencyId);if(!agencyId||agencyId.includes('/'))fail();
+ }
+ const a=await db.collection('agenzie_immobiliari').doc(agencyId).get();if(!a.exists||a.data().attiva===false)fail();
+ if(!practiceId||practiceId.includes('/'))fail();
+ const snap=await db.collection('pratiche_mutuo').doc(practiceId).get();if(!snap.exists||snap.data()?.provenienza?.agenziaId!==agencyId)fail();
+ return snap;
+}
+exports.agencyPracticeDetails=onCall(options,async request=>{
+ const id=text(request.data?.practiceId),snap=await agencyViewAccess(request,id),d=snap.data();
+ const [files]=await admin.storage().bucket().getFiles({prefix:`Fascicoli/${id}/`,maxResults:1000,autoPaginate:false});
+ const documents=files.filter(f=>f.name.startsWith(`Fascicoli/${id}/doc_`)&&!f.name.slice(`Fascicoli/${id}/`.length).includes('/')).map(f=>({name:f.name.slice(`Fascicoli/${id}/`.length),createdAt:f.metadata?.timeCreated||''}));
+ const clientMessages=(Array.isArray(d.messaggi_cliente_log)?d.messaggi_cliente_log:[]).filter(m=>m&&m.visibile_cliente===true).map(m=>({title:text(m.titolo,200),text:text(m.testo,3000),date:Number(m.data_ms)||0}));
+ const activity=(Array.isArray(d.attivita_cliente_log)?d.attivita_cliente_log:[]).filter(m=>m&&m.visibile_cliente===true).map(m=>({title:text(m.titolo,200),text:text(m.descrizione,1000),date:Number(m.data_ms)||0}));
+ return {practice:{id:snap.id,cliente:[d.cliente_nome,d.cliente_cognome].filter(Boolean).join(' ')||d.cliente_nome_completo||'Pratica',stato:d.stato_pratica||'da_istruire',messages:(Array.isArray(d.agency_messages)?d.agency_messages:[]).map(m=>({text:text(m.text,3000),createdAt:text(m.createdAt,80)})),clientMessages,activity,documents}};
+});
+exports.agencyDocumentLink=onCall(options,async request=>{
+ const id=text(request.data?.practiceId),name=text(request.data?.name,500);await agencyViewAccess(request,id);
+ if(!name.startsWith('doc_')||name.includes('/')||name.includes('\\'))fail();
+ const file=admin.storage().bucket().file(`Fascicoli/${id}/${name}`);const [exists]=await file.exists();if(!exists)throw new HttpsError('not-found','Documento non disponibile.');
+ const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
+});
 exports.shareAgencyMessage=onCall(options,async request=>{
  const id=text(request.data?.practiceId),message=text(request.data?.text,3000);if(!message)throw new HttpsError('invalid-argument','Scrivi un messaggio.');
  const s=await access(request,id,'modifica_timeline');await s.ref.update({agency_messages:admin.firestore.FieldValue.arrayUnion({text:message,createdAt:new Date().toISOString(),authorUid:request.auth.uid})});return {ok:true};
@@ -129,5 +158,27 @@ exports.exchangeClientLink=onCall(options,async request=>{
  const secret=text(request.data?.access,80),id=text(request.data?.practiceId);if(!/^[A-Za-z0-9_-]{43}$/.test(secret))fail();
  const key=hash(secret),d=(await db.collection('portal_links').doc(key).get()).data();if(!d||!d.active||d.practiceId!==id||d.expiresAt<Date.now())fail();
  const uid='portal_link_'+key.slice(0,48);try{await admin.auth().getUser(uid);}catch(e){if(e.code!=='auth/user-not-found')throw e;await admin.auth().createUser({uid});}
- return {token:await admin.auth().createCustomToken(uid,{portal_practice:id})};
+ return {token:await admin.auth().createCustomToken(uid,{portal_practice:id,portal_link_hash:key})};
+});
+
+exports.rememberClientDevice=onCall(options,async request=>{
+ const id=text(request.data?.practiceId),claim=request.auth?.token||{};if(!portalClaim(request,id))fail();
+ const practice=(await db.collection('pratiche_mutuo').doc(id).get()).data();if(!practice)fail();
+ const emailHash=text(claim.portal_email_hash,64),linkHash=text(claim.portal_link_hash,64);
+ if(!emailHash&&!linkHash)throw new HttpsError('failed-precondition','Accedi nuovamente con il codice o il link per memorizzare il dispositivo.');
+ const secret=crypto.randomBytes(32).toString('base64url');
+ await db.collection('portal_devices').doc(hash(secret)).set({practiceId:id,uid:request.auth.uid,emailHash,linkHash,expiresAt:Date.now()+90*86400000,active:true,createdAt:Date.now()});
+ return {secret,expiresInDays:90};
+});
+exports.exchangeClientDevice=onCall(options,async request=>{
+ const id=text(request.data?.practiceId),secret=text(request.data?.secret,80);if(!id||id.includes('/')||!/^[A-Za-z0-9_-]{43}$/.test(secret))fail();
+ const device=(await db.collection('portal_devices').doc(hash(secret)).get()).data();if(!device||device.active!==true||device.practiceId!==id||device.expiresAt<Date.now())fail();
+ const practice=(await db.collection('pratiche_mutuo').doc(id).get()).data();if(!practice)fail();
+ if(device.emailHash&&![practice.cliente_email,practice.cliente2_email,practice.email_cliente].some(e=>e&&hash(String(e).trim().toLowerCase())===device.emailHash))fail();
+ if(device.linkHash){const link=(await db.collection('portal_links').doc(device.linkHash).get()).data();if(!link||!link.active||link.practiceId!==id)fail();}
+ return {token:await admin.auth().createCustomToken(device.uid,{portal_practice:id,...(device.emailHash?{portal_email_hash:device.emailHash}:{}),...(device.linkHash?{portal_link_hash:device.linkHash}:{})})};
+});
+exports.forgetClientDevice=onCall(options,async request=>{
+ const id=text(request.data?.practiceId),secret=text(request.data?.secret,80);if(!portalClaim(request,id)||!/^[A-Za-z0-9_-]{43}$/.test(secret))fail();
+ const ref=db.collection('portal_devices').doc(hash(secret)),d=(await ref.get()).data();if(!d||d.practiceId!==id||d.uid!==request.auth.uid)fail();await ref.update({active:false});return {ok:true};
 });

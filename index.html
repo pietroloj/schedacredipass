@@ -2193,6 +2193,8 @@ hr {
 
                 </div>
 
+                <div class="p-side-item">Provenienza<strong id="p_provenienza"></strong></div>
+
                 <div class="p-side-block">
 
                     <div class="p-side-title">
@@ -11294,6 +11296,9 @@ function compilaPDF() {
         nomeCompleto(2);
 
     /* RIFERIMENTI */
+    const fonte = document.querySelector('[name="tipo_fonte_pratica"]:checked')?.value || '';
+    const fonteLabel = {DIRETTA:'Diretta', SEGNALATORE:'Segnalatore', AGENZIA_IMMOBILIARE:'Agenzia immobiliare', COLLEGA:'Collega'}[fonte] || fonte.replace(/_/g, ' ') || '-';
+    setPrint('p_provenienza', fonteLabel + (V('segnalatore_riferimento', '') ? ' · ' + V('segnalatore_riferimento', '') : ''));
 
     setPrint(
         'p_referente',
