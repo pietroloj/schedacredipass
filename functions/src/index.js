@@ -3511,6 +3511,7 @@ exports.verifyPortalCode = operationalSecurity.verifyPortalCode;
 exports.readClientPortal = operationalSecurity.readClientPortal;
 exports.updateClientPortal = operationalSecurity.updateClientPortal;
 exports.manageAgencyAccess = operationalSecurity.manageAgencyAccess;
+exports.manageAgency = operationalSecurity.manageAgency;
 exports.agencyPractices = operationalSecurity.agencyPractices;
 exports.shareAgencyMessage = operationalSecurity.shareAgencyMessage;
 

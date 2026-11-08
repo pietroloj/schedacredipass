@@ -7,6 +7,7 @@ const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 const req=(data,uid,token={})=>({data,auth:uid?{uid,token:{auth_time:Date.now()/1000,...token}}:undefined,rawRequest:{ip:'127.0.0.2'}});
 (async()=>{
 await db.collection('consulenti').doc('owner').set({ruolo:'consulente',attivo:true});
+await db.collection('consulenti').doc('admin-test').set({ruolo:'admin',attivo:true});
 await db.collection('pratiche_mutuo').doc('portal-case').set({consulente_uid:'owner',cliente_email:'client@example.test',cliente_nome:'Cliente',stato_pratica:'in_verifica',documentReminderAttivo:false,documenti_richiesti_portale:['ci1'],attivita_interne:[{descrizione:'riservata'}],reddito_richiedente_1:2000,provenienza:{agenziaId:'a1'},agency_messages:[{text:'Appuntamento confermato',createdAt:'2026-01-01'}]});
 let r=await api.requestPortalCode.run(req({practiceId:'portal-case',email:'client@example.test'}));assert.equal(sent.length,1);const code=sent[0].html.match(/<strong>(\d+)<\/strong>/)[1];
 await assert.rejects(api.verifyPortalCode.run(req({challenge:r.challenge,code:'000000'})));
@@ -17,9 +18,11 @@ await assert.rejects(api.readClientPortal.run(req({practiceId:'portal-case'},'ex
 await api.updateClientPortal.run(req({practiceId:'portal-case',fields:{stato_pratica:'stipulato',consulente_uid:'external',doc_ci1:true}},'external',{portal_practice:'portal-case'}));let saved=(await db.collection('pratiche_mutuo').doc('portal-case').get()).data();assert.equal(saved.stato_pratica,'in_verifica');assert.equal(saved.consulente_uid,'owner');assert.equal(saved.doc_ci1,undefined);
 await admin.storage().bucket().file('Fascicoli/portal-case/doc_ci1_0_123_test.pdf').save(Buffer.from('%PDF-1.4 test'),{metadata:{contentType:'application/pdf'}});
 await api.updateClientPortal.run(req({practiceId:'portal-case',fields:{doc_ci1:true}},'external',{portal_practice:'portal-case'}));saved=(await db.collection('pratiche_mutuo').doc('portal-case').get()).data();assert.equal(saved.doc_ci1,true);assert.equal(saved.documentReminderAttivo,false);
+await db.collection('agenzie_immobiliari').doc('a1').set({nome:'Agenzia test',attiva:true});
 await db.collection('agency_access').doc(hash('agency@example.test')).set({agencyId:'a1',active:true});
 const agency=req({},'external-agency',{agency_id:'a1',agency_email_hash:hash('agency@example.test')});const list=await api.agencyPractices.run(agency);assert.equal(list.practices.length,1);assert.equal(list.practices[0].messages[0].text,'Appuntamento confermato');assert.equal(list.practices[0].reddito_richiedente_1,undefined);
-await db.collection('agency_access').doc(hash('agency@example.test')).update({active:false});await assert.rejects(api.agencyPractices.run(agency));
+await api.manageAgency.run(req({agencyId:'a1',action:'deactivate'},'admin-test'));await assert.rejects(api.agencyPractices.run(agency));await api.manageAgency.run(req({agencyId:'a1',action:'save',name:'Agenzia test'},'admin-test'));await db.collection('agency_access').doc(hash('agency@example.test')).update({active:false});await assert.rejects(api.agencyPractices.run(agency));
+await assert.rejects(api.manageAgency.run(req({agencyId:'a1',action:'deactivate'},'owner')));
 await assert.rejects(api.manageAgencyAccess.run(req({agencyId:'a1',email:'x@test.it'},'owner')));
 console.log('PASS: codice email monouso, email estranea, separazione clienti/agenzie, upload reale, blocco modifiche non consentite, revoca agenzia');
 await admin.app().delete();

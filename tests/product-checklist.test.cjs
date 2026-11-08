@@ -1,0 +1,4 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {update}=require('../main/js/product-checklist');
+test('passaggio acquisto voucher rimuove documenti immobile e CTC mantenendo anagrafica',()=>{assert.deepEqual(update(['ci1','atto','planimetria','visura_catastale','preliminare','titoli_edilizi','agibilita','ctc'],'ACQUISTO','ACQUISTO VOUCHER'),['ci1']);});
+test('ritorno ad acquisto aggiunge documenti immobiliari',()=>{const x=update(['ci1'],'VOUCHER','ACQUISTO');for(const k of ['ci1','atto','planimetria','visura_catastale','preliminare'])assert(x.includes(k));});
+test('conserva mutuo e prestiti quando sono presenti impegni',()=>{const x=update(['mutuo_pre','prestiti'],'SURROGA','VOUCHER',{existingMortgage:true,loans:true});assert(x.includes('mutuo_pre'));assert(x.includes('prestiti'));});

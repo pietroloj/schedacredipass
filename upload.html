@@ -760,7 +760,7 @@ body {
 
 .client-stepper {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 4px;
     align-items: start;
 }
@@ -1667,7 +1667,7 @@ const CLIENT_PHASE_META = {
     }
 };
 Object.entries(CredipassStates).forEach(([k,v])=>CLIENT_PHASE_META[k]={phase:v.step,responsabile:v.step>=3?'Banca / Consulente':'Consulente',tempo:'Da concordare con il consulente',explain:v.next});
-const stepper=document.getElementById('clienteStepper');if(stepper)stepper.innerHTML=Object.values(CredipassStates).filter(s=>s.step>=0).map(s=>`<div class="client-step" data-phase="${s.step}"><span>${s.step+1}</span><span>${s.label}</span></div>`).join('');
+const stepper=document.getElementById('clienteStepper');if(stepper)stepper.innerHTML=Object.values(CredipassStates).filter(s=>s.step>=0).map(s=>`<div class="client-step" data-phase="${s.step}"><div class="client-step-dot">${s.step+1}</div><div class="client-step-label">${s.label}</div></div>`).join('');
 
 let statoClienteCorrente = "da_istruire";
 
@@ -2312,14 +2312,14 @@ const docsRichiestiRaw =
 const docsRichiesti =
     docsRichiestiRaw.filter(
         codice =>
-            hasSecondApplicant
+            String(codice).replace(/^doc_/, "") !== "ctc" && (hasSecondApplicant
             ||
             !/2$/.test(
                 String(
                     codice ||
                     ""
                 )
-            )
+            ))
     );
 
 document.getElementById("welcome-text").innerHTML =
@@ -3090,6 +3090,7 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
     const dati = docSnap.data() || {};
 
     aggiornaPortaleCliente(dati);
+    if (!isSegnalatore && clienteRaw === "Cliente") { const nome = dati.cliente_nome_completo || [dati.cliente_nome, dati.cliente_cognome].filter(Boolean).join(" ") || dati.nomeCliente; if (nome) document.getElementById("welcome-text").innerHTML = `Gentile <strong>${escapeHtml(nome)}</strong>, di seguito l'elenco dei documenti necessari.`; }
 
     if (isSegnalatore) {
 
@@ -3119,7 +3120,7 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
     // anche dopo la creazione del link. Per le vecchie pratiche resta il fallback
     // ai codici presenti nell'URL. Le integrazioni/versioni si sommano alla checklist.
     const baseDB = Array.isArray(dati.documenti_richiesti_portale)
-        ? dati.documenti_richiesti_portale
+        ? dati.documenti_richiesti_portale.filter(c => String(c).replace(/^doc_/, "") !== "ctc")
         : docsRichiesti;
     const richiestiDB = Array.isArray(dati.elencoDocRichiesti)
         ? dati.elencoDocRichiesti

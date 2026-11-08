@@ -2634,6 +2634,7 @@ SANTA MARIA CAPUA VETERE (CE)</textarea>
     <div id="sourceContactFields" class="segnalatore-grid" style="display:none">
         <div class="form-group source-autocomplete">
             <label>Nominativo / Agenzia</label>
+            <input type="hidden" id="segnalatore_agenzia_id">
             <input type="text" id="segnalatore_riferimento" placeholder="Inizia a scrivere per cercare in rubrica" autocomplete="off">
             <div id="segnalatore_suggestions" class="source-suggestions"></div>
         </div>
@@ -9344,6 +9345,8 @@ async function sincronizzaSchedaConDatabase() {
                 'segnalatore_riferimento',
                 ''
             ),
+
+        segnalatore_agenzia_id: V('segnalatore_agenzia_id', ''),
 
         segnalatore_email:
             V(
@@ -17164,5 +17167,5 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
-<script src="/main/js/ratio-calculator.js"></script><script src="/main/js/consultation-enhancements.js"></script></body>
+<script src="/main/js/ratio-calculator.js"></script><script src="/main/js/consultation-enhancements.js"></script><script src="/main/js/consultation-agencies.js"></script></body>
 </html>

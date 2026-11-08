@@ -1672,7 +1672,8 @@ document.addEventListener(
 .subject-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}@media(max-width:650px){.subject-form-grid{grid-template-columns:1fr}}
 
 </style>
-<script src="/main/js/practice-states.js"></script></head>
+<script src="/main/js/practice-states.js"></script>
+<script src="/main/js/product-checklist.js"></script></head>
 <body>
 
             
@@ -1824,6 +1825,7 @@ document.addEventListener(
 
     <div class="main-grid">
         <div id="documentiArea">
+            <section id="riepilogoDocumenti" style="background:white;padding:18px;border-radius:12px;margin-bottom:16px"><strong style="color:#002d72">Documenti richiesti</strong><div id="riepilogoDocumentiLista" aria-live="polite"></div></section>
             <div id="loading" class="empty-state">
                 <i class="fas fa-spinner fa-spin fa-3x" style="color:#002d72;"></i>
                 <p style="margin-top:15px; font-weight:600;">Recupero documenti dal cloud...</p>
@@ -6757,6 +6759,9 @@ Cordiali saluti`
                     firebase.firestore.FieldValue.serverTimestamp()
             };
 
+            if (Array.isArray(old.documenti_richiesti_portale)) {
+                update.documenti_richiesti_portale = CredipassProductChecklist.update(old.documenti_richiesti_portale, [old.finalita || old.mutuo_finalita, old.prodotto || old.prodotto_bancario].filter(Boolean).join(' '), [finalita, prodotto].filter(Boolean).join(' '), {existingMortgage: !!old.rata_mutuo_pre, loans: Array.isArray(old.finanziamenti_dettaglio) && old.finanziamenti_dettaglio.length > 0});
+            }
             await ref.set(
                 update,
                 {
@@ -7114,10 +7119,10 @@ Cordiali saluti`
     async function caricaDocumenti() {
         const loading = document.getElementById('loading');
 
-        let versioniRichieste = [];
+        let versioniRichieste = [], praticaDati = {};
         try {
             const praticaSnap = await db.collection("pratiche_mutuo").doc(idCliente).get();
-            const praticaDati = praticaSnap.exists ? (praticaSnap.data() || {}) : {};
+            praticaDati = praticaSnap.exists ? (praticaSnap.data() || {}) : {};
             versioniRichieste = Array.isArray(praticaDati.documenti_versione_richiesta)
                 ? praticaDati.documenti_versione_richiesta
                 : [];
@@ -7144,6 +7149,13 @@ Cordiali saluti`
         }
 
         if (loading) loading.style.display = 'none';
+        const richiesti = [...new Set([...(praticaDati.documenti_richiesti_portale || []).filter(c => String(c).replace(/^doc_/, '') !== 'ctc'), ...(praticaDati.elencoDocRichiesti || []), ...versioniRichieste].map(c => String(c).replace(/^doc_/, '')))];
+        const nomi = Object.fromEntries(Object.values(DB_SELECT).flat().map(d => [d.id,d.n]));
+        const presenti = new Set(files.map(f => estraiCodiceDocumentoDaNomeFile(f.name)).filter(Boolean));
+        const lista = document.getElementById('riepilogoDocumentiLista');
+        lista.replaceChildren();
+        if (!richiesti.length) lista.textContent = 'Nessuna lista documentale disponibile.';
+        richiesti.forEach(code => {const ok=(presenti.has(code)||praticaDati['doc_'+code]===true)&&!versioniRichieste.includes(code);const row=document.createElement('div');row.style.cssText=`margin-top:7px;padding:9px 12px;border-left:6px solid ${ok?'#16945b':'#d74646'};background:${ok?'#edf8f1':'#fff1f1'};border-radius:6px;display:flex;justify-content:space-between;gap:10px;font-size:12px`;const name=document.createElement('span');name.textContent=nomi[code]||TRADUZIONI[code]||code.replace(/_/g,' ');const status=document.createElement('strong');status.textContent=ok?'Presente':'Mancante';row.append(name,status);lista.appendChild(row);});
 
         if (files.length === 0) {
             document.getElementById('documentiArea').innerHTML += '<p class="empty-state">Nessun documento caricato dal cliente.</p>';

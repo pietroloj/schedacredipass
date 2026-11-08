@@ -1,0 +1,7 @@
+(function(root){'use strict';
+function kind(value){const v=String(value||'').toUpperCase();if(v.includes('VOUCHER'))return 'voucher';if(v.includes('ACQUISTO'))return 'acquisto';if(v.includes('RISTRUTTURAZ'))return 'ristrutturazione';if(v.includes('SURROGA'))return 'surroga';if(v.includes('RIFINANZIAMENTO'))return 'rifinanziamento';if(v.includes('CONSOLIDAMENTO'))return 'consolidamento';return null;}
+const property=['atto','planimetria','visura_catastale'],purchase=['titoli_edilizi','agibilita','preliminare'];
+function docs(k){if(!k)return [];const a=k==='voucher'?[]:[...property];if(k==='acquisto')a.push(...purchase);if(k==='ristrutturazione')a.push('computo_metrico');if(k==='surroga'||k==='rifinanziamento')a.push('mutuo_pre');if(k==='consolidamento')a.push('prestiti','conteggi_estintivi');return a;}
+function update(existing,oldValue,newValue,opts={}){const old=kind(oldValue),next=kind(newValue);if(!next||old===next)return existing;const result=new Set((existing||[]).map(x=>String(x).replace(/^doc_/,'')));for(const c of docs(old))if(!docs(next).includes(c)&&!(c==='mutuo_pre'&&opts.existingMortgage)&&!(c==='prestiti'&&opts.loans))result.delete(c);for(const c of docs(next))result.add(c);result.delete('ctc');return [...result];}
+root.CredipassProductChecklist={kind,docs,update};if(typeof module!=='undefined')module.exports=root.CredipassProductChecklist;
+})(typeof window==='undefined'?globalThis:window);

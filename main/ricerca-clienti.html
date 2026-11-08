@@ -225,6 +225,7 @@
     </div>
 
     <div class="search-box"><label for="statusFilter">Stato pratica</label><select id="statusFilter" onchange="filtraClienti()"><option value="">Tutti gli stati</option></select></div>
+    <div class="search-box"><label for="sortFilter" style="color:white">Ordina per</label> <select id="sortFilter" onchange="filtraClienti()"><option value="date-desc">Consulenza più recente</option><option value="date-asc">Consulenza meno recente</option><option value="surname-asc">Cognome A–Z</option><option value="surname-desc">Cognome Z–A</option><option value="name-asc">Nome A–Z</option><option value="name-desc">Nome Z–A</option><option value="created-desc">Ultima caricata</option><option value="created-asc">Prima caricata</option><option value="updated-desc">Ultimo aggiornamento</option><option value="updated-asc">Primo aggiornamento</option><option value="product-asc">Prodotto A–Z</option><option value="product-desc">Prodotto Z–A</option><option value="status-asc">Stato A–Z</option><option value="status-desc">Stato Z–A</option></select></div>
     <div id="collaboratorFilter" class="collaborator-filter">
         <label for="collaboratorSelect">
             <i class="fas fa-users"></i>
@@ -1012,6 +1013,9 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
                 );
             });
 
+        const [sortKey, direction] = document.getElementById("sortFilter").value.split("-");
+        const date = v => { if (v?.toMillis) return v.toMillis(); if (v?.seconds) return v.seconds * 1000; const t=String(v||""); const m=t.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/); return Date.parse(m ? `${m[3]}-${m[2]}-${m[1]}` : t)||0; };
+        filtrati.sort((a,b)=> { let x,y; if(["date","created","updated"].includes(sortKey)){const field=sortKey==="date"?"data_consulenza":sortKey==="created"?"createdAt":"stato_pratica_aggiornato_il";x=date(a.dati[field]||a.dati.data_creazione||a.dati.data_consulenza);y=date(b.dati[field]||b.dati.data_creazione||b.dati.data_consulenza);return (x-y)*(direction==="desc"?-1:1);} const key=sortKey==="surname"?"cliente_cognome":sortKey==="name"?"cliente_nome":sortKey==="product"?"prodotto":"stato_pratica"; x=String(a.dati[key]||"");y=String(b.dati[key]||"");return x.localeCompare(y,"it",{sensitivity:"base"})*(direction==="desc"?-1:1)||a.nomeRicerca.localeCompare(b.nomeRicerca,"it"); });
         mostraClienti(
             filtrati
         );

@@ -515,7 +515,8 @@ function injectBadge(session) {
                 Social Hub
             </a>
 
-            <a href="/main/agenzie.html" class="credipass-user-menu-item" style="display:block;padding:12px;color:white">Accessi agenzie</a>
+            <a href="/index.html" class="credipass-user-menu-item" style="display:block;padding:12px 20px;color:white;text-decoration:none;font-size:12px;font-weight:700">Scheda consulenza</a>
+            <a href="/main/agenzie.html" class="credipass-user-menu-item" style="display:block;padding:12px 20px;color:white;text-decoration:none;font-size:12px;font-weight:700">Accessi agenzie</a>
             <a href="/main/area-operativa.html" class="credipass-user-menu-item"
                style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#ffffff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13);transition:background .15s ease,color .15s ease;">
                 <i class="fas fa-columns" style="width:15px;text-align:center;"></i>
@@ -1102,6 +1103,13 @@ function injectBadge(session) {
         }
     }
 
+
+    // Mantiene il menu nello stesso punto anche durante lo scorrimento.
+    wrapper.style.position = 'fixed';
+    wrapper.style.top = '12px';
+    wrapper.style.right = '16px';
+    wrapper.style.zIndex = '40000';
+    wrapper.style.maxWidth = 'min(250px, 65vw)';
 
     /* ========================================================
        MENU APERTURA / CHIUSURA

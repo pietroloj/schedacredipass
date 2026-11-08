@@ -49,7 +49,7 @@ exports.requestPortalCode=onCall(options,async request=>{
  tx.set(rate,{start:recent?r.data().start:now,count:recent?r.data().count+1:1});tx.set(ref,{sentAt:now,attempts:0,codeHash:hash(code+'|'+key),expiresAt:now+600000,kind,practiceId:id,email,approved:false});});
  let allowed=false,agencyId='';
  if(kind==='client'&&id){const d=(await db.collection('pratiche_mutuo').doc(id).get()).data()||{};allowed=[d.cliente_email,d.cliente2_email,d.email_cliente].some(e=>String(e||'').trim().toLowerCase()===email);}
- if(kind==='agency'){const a=await db.collection('agency_access').doc(hash(email)).get();if(a.exists&&a.data().active!==false){agencyId=a.data().agencyId;allowed=true;}}
+ if(kind==='agency'){const a=await db.collection('agency_access').doc(hash(email)).get();if(a.exists&&a.data().active!==false){agencyId=a.data().agencyId;const agency=await db.collection('agenzie_immobiliari').doc(agencyId).get();allowed=agency.exists&&agency.data().attiva!==false;}}
  if(allowed){await ref.update({approved:true,agencyId});await serviceMail({to:email,subject:'Codice di accesso Credipass',html:`<p>Il tuo codice di accesso è <strong>${code}</strong>.</p><p>Scade tra 10 minuti. Se non hai richiesto l’accesso, ignora questo messaggio.</p>`});}
  return {ok:true,challenge:key,message:'Se l’indirizzo è associato alla pratica o all’agenzia, riceverai un codice via email.'};
 });
@@ -87,12 +87,22 @@ exports.updateClientPortal=onCall(options,async request=>{
 exports.manageAgencyAccess=onCall(options,async request=>{
  const p=await staff(request,'gestisce_utenti');if(p.ruolo!=='admin')fail();const id=text(request.data?.agencyId),email=text(request.data?.email).toLowerCase();
  if(!id||id.includes('/')||!email.includes('@'))throw new HttpsError('invalid-argument','Seleziona agenzia e indirizzo email.');
- if(!(await db.collection('agenzie_immobiliari').doc(id).get()).exists)fail();
+ const agency=(await db.collection('agenzie_immobiliari').doc(id).get());if(!agency.exists||agency.data().attiva===false)fail();
  await db.collection('agency_access').doc(hash(email)).set({agencyId:id,email,active:request.data?.active!==false,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:request.auth.uid});return {ok:true};
+});
+exports.manageAgency=onCall(options,async request=>{
+ const p=await staff(request,'gestisce_utenti');if(p.ruolo!=='admin')fail();
+ const id=text(request.data?.agencyId),name=text(request.data?.name,160),action=text(request.data?.action);
+ if(!id||id.includes('/'))throw new HttpsError('invalid-argument','Agenzia non valida.');
+ const ref=db.collection('agenzie_immobiliari').doc(id),snap=await ref.get();
+ if(action==='save'){if(!name)throw new HttpsError('invalid-argument','Inserisci il nome.');await ref.set({nome:name,attiva:true,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});return {ok:true};}
+ if(action==='deactivate'){if(!snap.exists)throw new HttpsError('not-found','Agenzia non trovata.');await ref.update({attiva:false,updatedAt:admin.firestore.FieldValue.serverTimestamp()});return {ok:true};}
+ throw new HttpsError('invalid-argument','Operazione non valida.');
 });
 exports.agencyPractices=onCall(options,async request=>{
  const claim=request.auth?.token;if(!claim?.agency_id||Date.now()/1000-claim.auth_time>86400)fail();
  const grant=(await db.collection('agency_access').doc(claim.agency_email_hash||'_').get()).data();if(!grant||grant.active===false||grant.agencyId!==claim.agency_id)fail();
+ const agency=await db.collection('agenzie_immobiliari').doc(claim.agency_id).get();if(!agency.exists||agency.data().attiva===false)fail();
  const s=await db.collection('pratiche_mutuo').where('provenienza.agenziaId','==',claim.agency_id).get();
  return {practices:s.docs.map(x=>{const d=x.data();return {id:x.id,cliente:[d.cliente_nome,d.cliente_cognome].filter(Boolean).join(' ')||d.cliente_nome_completo||'Pratica',stato:d.stato_pratica||'da_istruire',updatedAt:d.stato_pratica_aggiornato_il,messages:(d.agency_messages||[]).map(m=>({text:m.text,createdAt:m.createdAt}))};})};
 });

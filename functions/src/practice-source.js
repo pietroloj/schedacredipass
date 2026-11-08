@@ -312,32 +312,13 @@ const salvaProvenienzaPratica =
               120
             );
 
-        await db
-          .collection(
-            "agenzie_immobiliari"
-          )
-          .doc(
-            agencyId
-          )
-          .set(
-            {
-              nome:
-                provenienza
-                  .agenziaNome,
-
-              attiva:
-                true,
-
-              updatedAt:
-                admin.firestore
-                  .FieldValue
-                  .serverTimestamp(),
-            },
-            {
-              merge:
-                true,
-            }
-          );
+        const agencyRef = db.collection('agenzie_immobiliari').doc(agencyId);
+        await db.runTransaction(async tx => {
+          const existing = await tx.get(agencyRef);
+          const data = {nome: provenienza.agenziaNome, updatedAt: admin.firestore.FieldValue.serverTimestamp()};
+          if (!existing.exists) data.attiva = true;
+          tx.set(agencyRef, data, {merge:true});
+        });
 
       }
 
