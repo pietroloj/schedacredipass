@@ -260,7 +260,7 @@ async function saveVisibilityModal(){
 }
 
 
-const PERMISSION_LABELS={
+const PERMISSION_LABELS={pagina_archivio:'Archivio',pagina_area_operativa:'Area operativa',pagina_dashboard:'Fascicolo pratica',pagina_gestionale:'Dashboard gestionale',pagina_notifiche:'Centro notifiche',pagina_email:'Gestione email',pagina_impostazioni:'Impostazioni',pagina_provenienza:'Provenienza pratica',pagina_agenzie:'Gestione accessi agenzie',vede_social_hub:'Social Hub',
  crea_pratiche:'Crea pratiche',vede_rete:'Vede pratiche/rete assegnata',vede_scheda_consulenza:'Vede scheda di consulenza',modifica_scheda_consulenza:'Modifica scheda di consulenza',modifica_operazione_mutuo:'Modifica operazione mutuo',vede_documenti:'Vede documenti',carica_documenti:'Carica documenti',elimina_documenti:'Elimina documenti',richiede_integrazioni:'Richiede integrazioni',cambia_stato:'Cambia stato pratica',vede_timeline:'Vede timeline',modifica_timeline:'Modifica timeline',gestisce_reminder:'Gestisce reminder',invia_email:'Invia email',vede_ai:'Vede report AI',usa_ai:'Usa funzioni AI',vede_bank_matching:'Vede bank matching',gestisce_utenti:'Gestisce consulenti/utenti',vede_report_rete:'Vede report rete'
 };
 const ROLE_DEFAULTS={
@@ -269,6 +269,7 @@ const ROLE_DEFAULTS={
  consulente:{crea_pratiche:true,vede_rete:false,vede_scheda_consulenza:true,modifica_scheda_consulenza:true,modifica_operazione_mutuo:true,vede_documenti:true,carica_documenti:true,elimina_documenti:true,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:true,usa_ai:true,vede_bank_matching:true,gestisce_utenti:false,vede_report_rete:false},
  segreteria:{crea_pratiche:false,vede_rete:true,vede_scheda_consulenza:false,modifica_scheda_consulenza:false,modifica_operazione_mutuo:false,vede_documenti:true,carica_documenti:true,elimina_documenti:false,richiede_integrazioni:true,cambia_stato:true,vede_timeline:true,modifica_timeline:true,gestisce_reminder:true,invia_email:true,vede_ai:false,usa_ai:false,vede_bank_matching:false,gestisce_utenti:false,vede_report_rete:false}
 };
+for (const [role, values] of Object.entries(ROLE_DEFAULTS)) Object.assign(values,{"pagina_archivio": true, "pagina_area_operativa": true, "pagina_dashboard": true, "pagina_gestionale": true, "pagina_notifiche": true, "pagina_email": true, "pagina_impostazioni": true, "pagina_provenienza": true, "pagina_agenzie": true, "vede_social_hub": true}, {vede_social_hub:role!=='segreteria',pagina_agenzie:role==='admin'});
 let editingPermissionsUid='';
 function effectivePermissions(u){const r=String(u?.ruolo||'consulente').toLowerCase();return {...(ROLE_DEFAULTS[r]||ROLE_DEFAULTS.consulente),...(u?.permessi||{})};}
 function openPermissionsModal(uid){const u=getUser(uid);if(!u)return;editingPermissionsUid=uid;document.getElementById('permissionsTitle').textContent='Permessi — '+nameOf(u);document.getElementById('permissionsMsg').textContent='';renderPermissions(effectivePermissions(u));document.getElementById('permissionsModal').classList.add('open');}

@@ -23,7 +23,7 @@ button{border:0;border-radius:7px;padding:9px 11px;font-weight:bold;cursor:point
 input{padding:9px;border:1px solid #ccd4dd;border-radius:7px;min-width:230px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 </style>
-</head>
+<script src="/main/auth-guard.js"></script></head>
 <body>
 
 <div class="wrap">
@@ -132,7 +132,9 @@ async function loadItems(){
   }
 }
 
-firebase.auth().onAuthStateChanged(user=>{
+firebase.auth().onAuthStateChanged(async user=>{
+ if(user){try{await CredipassAuth.guard();}catch(e){console.warn(e.message);return;}}
+
   if(user) loadItems();
   else document.getElementById("list").textContent="Effettua il login.";
 });

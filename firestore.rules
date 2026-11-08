@@ -1,212 +1,32 @@
 rules_version = '2';
-
 service cloud.firestore {
-  match /databases/{database}/documents {
-
-    /* ======================================================
-       FUNZIONI DI SICUREZZA CONSULENTI
-       ====================================================== */
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn()
-        && exists(
-          /databases/$(database)/documents/consulenti/$(request.auth.uid)
-        )
-        && get(
-          /databases/$(database)/documents/consulenti/$(request.auth.uid)
-        ).data.ruolo == "admin"
-        && get(
-          /databases/$(database)/documents/consulenti/$(request.auth.uid)
-        ).data.attivo != false;
-    }
-
-
-    /* ======================================================
-       PRATICHE MUTUO
-       Per adesso lasciamo invariato per compatibilità
-       con il Portale Cliente esistente.
-       ====================================================== */
-
-    match /pratiche_mutuo/{document} {
-      allow read, write: if true;
-    }
-
-
-    /* ======================================================
-       CLIENTI
-       Per adesso lasciamo invariato.
-       ====================================================== */
-
-    match /clienti/{document} {
-      allow read, write: if true;
-    }
-
-
-    /* ======================================================
-       REPORT AI
-       Per adesso lasciamo invariato.
-       ====================================================== */
-
-    match /analisi_deliberante/{document} {
-      allow read, write: if true;
-    }
-
-
-    /* ======================================================
-       RUBRICA REFERENTI
-
-       - solo utenti Firebase autenticati possono leggere
-       - solo utenti autenticati possono creare/aggiornare
-       - la rubrica contiene soltanto Nome + Email
-         e metadati tecnici di indicizzazione/audit
-       - eliminazione riservata all'Admin
-       ====================================================== */
-
-    match /rubrica_referenti/{referenteId} {
-
-      allow read: if isSignedIn();
-
-      allow create, update: if isSignedIn()
-        && request.resource.data.keys().hasOnly([
-          "nome",
-          "email",
-          "nome_normalizzato",
-          "email_normalizzata",
-          "aggiornatoIl",
-          "creatoDa"
-        ])
-        && request.resource.data.nome is string
-        && request.resource.data.email is string
-        && request.resource.data.nome_normalizzato is string
-        && request.resource.data.email_normalizzata is string;
-
-      allow delete: if isAdmin();
-    }
-
-
-    /* ======================================================
-       GMAIL OAUTH
-
-       I refresh token non devono MAI essere accessibili dal browser.
-       Tutta la gestione avviene tramite Cloud Functions / Admin SDK.
-       ====================================================== */
-
-    match /gmail_connections/{uid} {
-      allow read, write: if false;
-    }
-
-
-    match /gmail_audit_logs/{logId} {
-      allow read, write: if false;
-    }
-
-
-    match /user_notifications/{notificationId} {
-      allow read, write: if false;
-    }
-
-
-    match /agenzie_immobiliari/{agencyId} {
-      allow read, write: if false;
-    }
-
-
-
-
-    match /gmail_oauth_states/{stateId} {
-      allow read, write: if false;
-    }
-
-
-    /* ======================================================
-       MAIL ENGINE
-
-       Catalogo domini e code operative.
-       Le email abbinate alle pratiche sono subcollection di pratiche_mutuo
-       e vengono scritte dal backend Admin SDK.
-       ====================================================== */
-
-    match /mail_banche/{bancaId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    match /mail_domini_da_verificare/{domainId} {
-      allow read: if isSignedIn() && isAdmin();
-      allow write: if false;
-    }
-
-    match /mail_da_associare/{mailId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    /*
-     * La dashboard può leggere le email della pratica.
-     * La scrittura resta esclusivamente al Mail Engine (Admin SDK).
-     */
-    match /pratiche_mutuo/{praticaId}/email_timeline/{emailId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-
-    /* ======================================================
-       CONSULENTI
-
-       - ogni consulente può leggere il proprio profilo
-       - Admin può vedere tutti i consulenti
-       - nessuna scrittura diretta dal browser
-       - creazione/modifica avvengono tramite Cloud Functions
-       ====================================================== */
-
-    match /consulenti/{uid} {
-
-      allow read: if isSignedIn()
-        && (
-          request.auth.uid == uid
-          || isAdmin()
-        );
-
-      allow create, update, delete: if false;
-    }
-
-
-    /* ======================================================
-       WORKSPACES
-
-       - consulente vede il proprio workspace
-       - Admin può vedere tutti
-       - scrittura soltanto dalle Cloud Functions
-       ====================================================== */
-
-    match /workspaces/{uid} {
-
-      allow read: if isSignedIn()
-        && (
-          request.auth.uid == uid
-          || isAdmin()
-        );
-
-      allow create, update, delete: if false;
-    }
-
-
-    /* ======================================================
-       CONFIGURAZIONE SISTEMA
-
-       Il browser non deve modificare system/security.
-       Le Cloud Functions Admin possono comunque accedervi
-       perché Admin SDK non è soggetto a queste Rules.
-       ====================================================== */
-
-    match /system/{document} {
-      allow read, write: if false;
-    }
-
+ match /databases/{database}/documents {
+  function signed(){return request.auth != null;}
+  function profile(){return get(/databases/$(database)/documents/consulenti/$(request.auth.uid)).data;}
+  function staff(){return signed() && exists(/databases/$(database)/documents/consulenti/$(request.auth.uid)) && profile().get('attivo',true) == true;}
+  function admin(){return staff() && profile().ruolo == 'admin';}
+  function can(key){return admin() || (staff() && profile().get('permessi',{}).get(key,defaultPermission(key)));}
+  function defaultPermission(key){return key in ['vede_documenti','vede_timeline','carica_documenti','richiede_integrazioni','cambia_stato','modifica_timeline','gestisce_reminder','invia_email'] || (profile().ruolo != 'segreteria' && key in ['crea_pratiche','vede_scheda_consulenza','modifica_scheda_consulenza','modifica_operazione_mutuo','elimina_documenti','vede_ai','usa_ai']);}
+  function owner(d){return d.get('consulente_uid','') != '' ? d.consulente_uid : d.get('workspace_uid',d.get('owner_uid',''));}
+  function assigned(d){return admin() || (staff() && (owner(d) == request.auth.uid || (profile().ruolo in ['responsabile','segreteria'] && (owner(d) in profile().get('collaboratori_visibili',[]) || (owner(d) != '' && exists(/databases/$(database)/documents/consulenti/$(owner(d))) && (get(/databases/$(database)/documents/consulenti/$(owner(d))).data.get('responsabile_uid','') == request.auth.uid || (profile().ruolo == 'segreteria' && get(/databases/$(database)/documents/consulenti/$(owner(d))).data.get('responsabile_uid','') in profile().get('collaboratori_visibili',[]))))))));}
+  function changes(){return request.resource.data.diff(resource.data).affectedKeys();}
+  function updatesAllowed(){let p=profile();let permissions=p.get('permessi',{});let changed=changes();return (permissions.get('modifica_scheda_consulenza',p.ruolo != 'segreteria') || changed.hasOnly(["stato_pratica","stato_pratica_label", "stato_pratica_aggiornato_il", "stato_pratica_aggiornato_da", "stato_motivo", "stato_reminder_attivo", "stato_reminder_inviato", "stato_reminder_data", "stato_reminder_stato", "stato_reminder_creato_il", "documentReminderAttivo", "documentReminderPausa","documentReminderPausaIl", "documentReminderRichiestoIl", "documentReminderPrimoUploadIl", "documentReminderUltimoInvioIl", "documentReminderHelpInviatoIl", "documentReminderHelpInviato", "richiestaIntegrazioneAttiva", "notaPerCliente", "elencoDocRichiesti", "ultimoAggiornamentoIntegrazione", "documenti_richiesti_portale", "documenti_richiesti_portale_aggiornati_il", "documenti_versione_richiesta", "documenti_versione_motivi", "attivita_cliente_log", "attivita_interne", "attivita_interna_aggiornata_il", "note_interne_log", "messaggi_cliente_log", "appuntamenti_cliente_log", "agency_messages", "doc_visura1", "doc_bustepaga2", "doc_matrimonio", "doc_contratto_marittimo1", "doc_preliminare", "doc_libretto_navigazione1", "doc_ricevute1", "doc_obis1", "doc_f242", "doc_locazioni", "doc_planimetria", "doc_cud1", "doc_mutuo_pre", "doc_ci1", "doc_obis2", "doc_libretto_navigazione2", "doc_ctc", "doc_pensione1", "doc_visura_catastale", "doc_redditi_agrari1", "doc_contratto_marittimo2", "doc_ts2", "doc_redditi_locazione", "doc_conteggi_estintivi", "doc_cud2", "doc_iva2", "doc_atto", "doc_ricevute2", "doc_divorzio", "doc_accrediti_locazione", "doc_residenza1", "doc_ec2", "doc_agibilita", "doc_unici2", "doc_mantenimento", "doc_mov1", "doc_iva1", "doc_mov2", "doc_unici1", "doc_ts1", "doc_ci2", "doc_pensione2", "doc_f241", "doc_computo_metrico", "doc_visura2", "doc_titoli_edilizi", "doc_redditi_agrari2", "doc_prestiti", "doc_separazione", "doc_ec1", "doc_bustepaga1"])) && (permissions.get('cambia_stato',true) || permissions.get('richiede_integrazioni',true) || !changed.hasAny(["stato_pratica","stato_pratica_label", "stato_pratica_aggiornato_il", "stato_pratica_aggiornato_da", "stato_motivo"])) && (permissions.get('gestisce_reminder',true) || permissions.get('richiede_integrazioni',true) || !changed.hasAny(["stato_reminder_attivo", "stato_reminder_inviato", "stato_reminder_data", "stato_reminder_stato", "stato_reminder_creato_il", "documentReminderAttivo", "documentReminderPausa","documentReminderPausaIl", "documentReminderRichiestoIl", "documentReminderPrimoUploadIl", "documentReminderUltimoInvioIl", "documentReminderHelpInviatoIl", "documentReminderHelpInviato"])) && (permissions.get('richiede_integrazioni',true) || !changed.hasAny(["richiestaIntegrazioneAttiva", "notaPerCliente", "elencoDocRichiesti", "ultimoAggiornamentoIntegrazione", "documenti_richiesti_portale", "documenti_richiesti_portale_aggiornati_il", "documenti_versione_richiesta", "documenti_versione_motivi"])) && (permissions.get('modifica_timeline',true) || !changed.hasAny(["attivita_cliente_log", "attivita_interne", "attivita_interna_aggiornata_il", "note_interne_log", "messaggi_cliente_log", "appuntamenti_cliente_log", "agency_messages"])) && (permissions.get('carica_documenti',true) || !changed.hasAny(["doc_visura1", "doc_bustepaga2", "doc_matrimonio", "doc_contratto_marittimo1", "doc_preliminare", "doc_libretto_navigazione1", "doc_ricevute1", "doc_obis1", "doc_f242", "doc_locazioni", "doc_planimetria", "doc_cud1", "doc_mutuo_pre", "doc_ci1", "doc_obis2", "doc_libretto_navigazione2", "doc_ctc", "doc_pensione1", "doc_visura_catastale", "doc_redditi_agrari1", "doc_contratto_marittimo2", "doc_ts2", "doc_redditi_locazione", "doc_conteggi_estintivi", "doc_cud2", "doc_iva2", "doc_atto", "doc_ricevute2", "doc_divorzio", "doc_accrediti_locazione", "doc_residenza1", "doc_ec2", "doc_agibilita", "doc_unici2", "doc_mantenimento", "doc_mov1", "doc_iva1", "doc_mov2", "doc_unici1", "doc_ts1", "doc_ci2", "doc_pensione2", "doc_f241", "doc_computo_metrico", "doc_visura2", "doc_titoli_edilizi", "doc_redditi_agrari2", "doc_prestiti", "doc_separazione", "doc_ec1", "doc_bustepaga1"]));}
+  match /pratiche_mutuo/{id} {
+   allow read: if assigned(resource.data);
+   allow create: if can('crea_pratiche') && (admin() || owner(request.resource.data) == request.auth.uid);
+   allow update: if assigned(resource.data) && (admin() || (!changes().hasAny(['consulente_uid','workspace_uid','owner_uid']) && updatesAllowed()));
+   allow delete: if admin();
+   match /{collection}/{document} {allow read: if assigned(get(/databases/$(database)/documents/pratiche_mutuo/$(id)).data);allow write: if false;}
   }
+  match /analisi_deliberante/{id} {allow read: if can('vede_ai') && assigned(get(/databases/$(database)/documents/pratiche_mutuo/$(id)).data);allow write: if false;}
+  match /clienti/{id} {allow read,write: if admin();}
+  match /consulenti/{uid} {allow read: if staff() && (uid == request.auth.uid || admin() || profile().ruolo in ['responsabile','segreteria']);allow write: if false;}
+  match /workspaces/{uid} {allow read: if staff() && (uid == request.auth.uid || admin());allow write: if false;}
+  match /rubrica_referenti/{id} {allow read: if staff();allow write: if can('modifica_scheda_consulenza');}
+  match /rubrica_segnalatori/{id} {allow read: if staff();allow write: if can('modifica_scheda_consulenza');}
+  match /mail_banche/{id} {allow read: if staff();allow write: if false;}
+  match /mail_domini_da_verificare/{id} {allow read: if admin();allow write: if false;}
+  match /mail_da_associare/{id} {allow read: if admin();allow write: if false;}
+  match /{document=**} {allow read,write: if false;}
+ }
 }

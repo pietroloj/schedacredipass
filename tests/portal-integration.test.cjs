@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict'),crypto=require('crypto');
+process.env.GCLOUD_PROJECT='demo-credipass';process.env.FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9096';process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8086';process.env.FIREBASE_STORAGE_EMULATOR_HOST='127.0.0.1:9196';
+const admin=require('../functions/node_modules/firebase-admin');admin.initializeApp({projectId:'demo-credipass',storageBucket:'demo-credipass.appspot.com'});
+const sent=[];require('../functions/node_modules/google-auth-library').GoogleAuth.prototype.getIdTokenClient=async()=>({request:async x=>{sent.push(x.data);return {status:200,data:{success:true}};}});
+const api=require('../functions/src/operational-security'),db=admin.firestore();
+const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+const req=(data,uid,token={})=>({data,auth:uid?{uid,token:{auth_time:Date.now()/1000,...token}}:undefined,rawRequest:{ip:'127.0.0.2'}});
+(async()=>{
+await db.collection('consulenti').doc('owner').set({ruolo:'consulente',attivo:true});
+await db.collection('pratiche_mutuo').doc('portal-case').set({consulente_uid:'owner',cliente_email:'client@example.test',cliente_nome:'Cliente',stato_pratica:'in_verifica',documentReminderAttivo:false,documenti_richiesti_portale:['ci1'],attivita_interne:[{descrizione:'riservata'}],reddito_richiedente_1:2000,provenienza:{agenziaId:'a1'},agency_messages:[{text:'Appuntamento confermato',createdAt:'2026-01-01'}]});
+let r=await api.requestPortalCode.run(req({practiceId:'portal-case',email:'client@example.test'}));assert.equal(sent.length,1);const code=sent[0].html.match(/<strong>(\d+)<\/strong>/)[1];
+await assert.rejects(api.verifyPortalCode.run(req({challenge:r.challenge,code:'000000'})));
+const login=await api.verifyPortalCode.run(req({challenge:r.challenge,code}));assert.ok(login.token);await assert.rejects(api.verifyPortalCode.run(req({challenge:r.challenge,code})));
+await api.requestPortalCode.run(req({practiceId:'portal-case',email:'wrong@example.test'}));assert.equal(sent.length,1);
+const client=req({practiceId:'portal-case'},'external',{portal_practice:'portal-case'});const view=(await api.readClientPortal.run(client)).practice;assert.equal(view.stato_pratica,'in_verifica');assert.equal(view.reddito_richiedente_1,undefined);assert.equal(view.attivita_interne,undefined);
+await assert.rejects(api.readClientPortal.run(req({practiceId:'portal-case'},'external',{portal_practice:'another'})));
+await api.updateClientPortal.run(req({practiceId:'portal-case',fields:{stato_pratica:'stipulato',consulente_uid:'external',doc_ci1:true}},'external',{portal_practice:'portal-case'}));let saved=(await db.collection('pratiche_mutuo').doc('portal-case').get()).data();assert.equal(saved.stato_pratica,'in_verifica');assert.equal(saved.consulente_uid,'owner');assert.equal(saved.doc_ci1,undefined);
+await admin.storage().bucket().file('Fascicoli/portal-case/doc_ci1_0_123_test.pdf').save(Buffer.from('%PDF-1.4 test'),{metadata:{contentType:'application/pdf'}});
+await api.updateClientPortal.run(req({practiceId:'portal-case',fields:{doc_ci1:true}},'external',{portal_practice:'portal-case'}));saved=(await db.collection('pratiche_mutuo').doc('portal-case').get()).data();assert.equal(saved.doc_ci1,true);assert.equal(saved.documentReminderAttivo,false);
+await db.collection('agency_access').doc(hash('agency@example.test')).set({agencyId:'a1',active:true});
+const agency=req({},'external-agency',{agency_id:'a1',agency_email_hash:hash('agency@example.test')});const list=await api.agencyPractices.run(agency);assert.equal(list.practices.length,1);assert.equal(list.practices[0].messages[0].text,'Appuntamento confermato');assert.equal(list.practices[0].reddito_richiedente_1,undefined);
+await db.collection('agency_access').doc(hash('agency@example.test')).update({active:false});await assert.rejects(api.agencyPractices.run(agency));
+await assert.rejects(api.manageAgencyAccess.run(req({agencyId:'a1',email:'x@test.it'},'owner')));
+console.log('PASS: codice email monouso, email estranea, separazione clienti/agenzie, upload reale, blocco modifiche non consentite, revoca agenzia');
+await admin.app().delete();
+})().catch(e=>{console.error(e);process.exitCode=1;});

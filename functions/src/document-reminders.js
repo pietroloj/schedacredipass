@@ -513,7 +513,7 @@ async function sendEmail({
   }
 
   const response =
-    await fetch(
+    await authenticatedEmailFetch(
       EMAIL_ENDPOINT,
       {
         method:
@@ -841,6 +841,20 @@ async function processPractice(
       .stato_pratica ===
       "sospesa"
   ) {
+    return;
+  }
+
+  // Nessun sollecito documentale dopo l'ingresso in verifica.
+  const statesWithoutReminders = new Set([
+    'in_verifica', 'caricato_banca', 'valutazione_reddituale',
+    'in_istruttoria_banca', 'integrazione_banca', 'in_integrazione_banca',
+    'delibera_reddituale_ok', 'delibera_reddituale_ko',
+    'attesa_perizia', 'perizia_in_corso', 'perizia_ok', 'perizia_ko',
+    'attesa_documentazione_notarile', 'chiamata_atto', 'pre_stipula',
+    'stipulato', 'rinunciata'
+  ]);
+  if (statesWithoutReminders.has(data.stato_pratica)) {
+    await docSnap.ref.set({ documentReminderAttivo: false }, { merge: true });
     return;
   }
 
@@ -1454,3 +1468,10 @@ const controllaReminderDocumenti =
 module.exports = {
   controllaReminderDocumenti,
 };
+
+async function authenticatedEmailFetch(url, options) {
+ const {GoogleAuth}=require('google-auth-library');
+ const client=await new GoogleAuth().getIdTokenClient('https://consulenza-credipass.it/api/send-email');
+ const r=await client.request({url,method:'POST',data:JSON.parse(options.body)});
+ return {ok:r.status>=200&&r.status<300,status:r.status,json:async()=>r.data,text:async()=>JSON.stringify(r.data)};
+}

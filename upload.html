@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
@@ -1073,7 +1074,7 @@ body.viewer-segnalatore .version-request-note {
 }
 
 </style>
-</head>
+<script src="/main/js/practice-states.js"></script></head>
 
 <body>
 
@@ -1339,14 +1340,15 @@ body.viewer-segnalatore .version-request-note {
 
 <script src="/main/config/app.js"></script>
 <script src="/main/config/firebase.js"></script>
+<script src="/main/js/portal-access.js"></script>
 <script>
 function toggleInfo(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
-const db = firebase.firestore();
-const storage = firebase.storage();
-const functionsFirebase = firebase.app().functions(window.CREDIPASS_APP_CONFIG?.firebaseFunctionsRegion || "us-central1");
+const db = CredipassPortal.db;
+const storage = CredipassPortal.storage;
+const functionsFirebase = firebase.app("client-portal").functions("us-central1");
 
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -1562,6 +1564,7 @@ const CLIENT_STATUS = {
         next: "Per ulteriori informazioni puoi contattare il tuo consulente."
     }
 };
+Object.entries(CredipassStates).forEach(([k,v])=>CLIENT_STATUS[k]={label:v.label,percent:v.percent,subtitle:'Stato attuale: '+v.label,next:v.next});
 
 let datiPraticaCliente = {};
 
@@ -1663,6 +1666,8 @@ const CLIENT_PHASE_META = {
         explain: "La pratica risulta conclusa. Per ulteriori dettagli puoi contattare il consulente."
     }
 };
+Object.entries(CredipassStates).forEach(([k,v])=>CLIENT_PHASE_META[k]={phase:v.step,responsabile:v.step>=3?'Banca / Consulente':'Consulente',tempo:'Da concordare con il consulente',explain:v.next});
+const stepper=document.getElementById('clienteStepper');if(stepper)stepper.innerHTML=Object.values(CredipassStates).filter(s=>s.step>=0).map(s=>`<div class="client-step" data-phase="${s.step}"><span>${s.step+1}</span><span>${s.label}</span></div>`).join('');
 
 let statoClienteCorrente = "da_istruire";
 
@@ -2278,7 +2283,7 @@ async function registraAttivitaDaUpload({
             .doc(clienteId)
             .set({
                 attivita_cliente_log:
-                    firebase.firestore.FieldValue.arrayUnion(evento)
+                    CredipassPortal.fieldValue.arrayUnion(evento)
             }, { merge: true });
     } catch (error) {
         console.warn("Impossibile registrare attività portale:", error);
@@ -3144,6 +3149,7 @@ db.collection("pratiche_mutuo").doc(clienteId).onSnapshot((docSnap) => {
 
 
 function emailUploadStatoMeta(stato) {
+    if(CredipassStates[stato])return {...CredipassStates[stato],pct:CredipassStates[stato].percent};
     const map = {
         da_istruire: { step: 0, pct: 12, label: "Da istruire" },
         istruttoria: { step: 1, pct: 25, label: "Istruttoria" },
@@ -3169,14 +3175,7 @@ function emailUploadStatoMeta(stato) {
 
 function emailUploadFasiHtml(stato) {
     const meta = emailUploadStatoMeta(stato);
-    const labels = [
-        "Richiesta",
-        "Istruttoria",
-        "Banca / Delibera",
-        "Perizia",
-        "Notaio / Atto",
-        "Stipula"
-    ];
+    const labels = Object.values(CredipassStates).filter(s=>s.step>=0).map(s=>s.label);
 
     return `
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -3554,7 +3553,7 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
             const reminderUpdate = {
                 documentReminderUltimaAttivitaClienteIl:
-                    firebase.firestore.FieldValue.serverTimestamp(),
+                    CredipassPortal.fieldValue.serverTimestamp(),
 
                 documentReminderAttivo:
                     true
@@ -3567,14 +3566,14 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
                 reminderUpdate
                     .documentReminderPrimoUploadIl =
-                    firebase.firestore.FieldValue.serverTimestamp();
+                    CredipassPortal.fieldValue.serverTimestamp();
 
                 /*
                  * Il primo reminder verrà valutato 48 ore da ora.
                  */
                 reminderUpdate
                     .documentReminderUltimoInvioIl =
-                    firebase.firestore.FieldValue.serverTimestamp();
+                    CredipassPortal.fieldValue.serverTimestamp();
 
             }
 
@@ -3600,9 +3599,9 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
         for (const codice of codiciVersioneCaricati) {
             await praticaRef.update({
                 documenti_versione_richiesta:
-                    firebase.firestore.FieldValue.arrayRemove(codice),
+                    CredipassPortal.fieldValue.arrayRemove(codice),
                 [`documenti_versione_motivi.${codice}`]:
-                    firebase.firestore.FieldValue.delete()
+                    CredipassPortal.fieldValue.delete()
             });
         }
 
@@ -3658,13 +3657,13 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
                         false,
 
                     integrazioneCompletataIl:
-                        firebase.firestore.FieldValue.serverTimestamp(),
+                        CredipassPortal.fieldValue.serverTimestamp(),
 
                     documentReminderAttivo:
                         false,
 
                     documentReminderCompletatoIl:
-                        firebase.firestore.FieldValue.serverTimestamp()
+                        CredipassPortal.fieldValue.serverTimestamp()
                 }, { merge: true });
 
                 await registraAttivitaDaUpload({
@@ -3687,50 +3686,8 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
             console.warn("Errore nella ricostruzione pratica:", err);
         }
 
-        if (emailRef || emailBO) {
-            let destinatari = [];
-
-            if (emailRef) destinatari.push(emailRef);
-            if (emailBO) destinatari.push(emailBO);
-
-            const praticaNotificaSnap =
-                await db.collection("pratiche_mutuo")
-                    .doc(clienteId)
-                    .get();
-
-            const praticaNotifica =
-                praticaNotificaSnap.exists
-                    ? (praticaNotificaSnap.data() || {})
-                    : {};
-
-            fetch("/api/send-email", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    to: destinatari,
-                    bcc: [],
-                    subject:
-                        `Aggiornamento Documenti: Pratica ${clienteRaw}`,
-                    html:
-                        costruisciEmailUploadBackofficeHtml({
-                            pratica:
-                                praticaNotifica,
-                            documenti:
-                                documentiCaricatiTitoli
-                        }),
-                    replyTo:
-                        emailRef
-                })
-            }).catch(
-                e =>
-                    console.log(
-                        "Notifica silenziata",
-                        e
-                    )
-            );
-        }
+        try { await functionsFirebase.httpsCallable('notifyClientUpload')({practiceId:clienteId}); }
+        catch(e) { console.warn('Documenti salvati; notifica al consulente non riuscita.',e); }
 
         btn.innerHTML = '<i class="fas fa-check"></i> Trasferimento Completato';
         btn.style.backgroundColor = "#28a745";

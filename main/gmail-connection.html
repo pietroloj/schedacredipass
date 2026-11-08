@@ -76,7 +76,7 @@ body{
 .note{font-size:11px;line-height:1.55;color:#66717d}
 @media(max-width:650px){.method-grid{grid-template-columns:1fr}}
 </style>
-</head>
+<script src="/main/auth-guard.js"></script></head>
 
 <body>
 
@@ -587,8 +587,9 @@ async function disconnectGmail(){
 
 }
 
-firebase.auth().onAuthStateChanged(
-  user => {
+firebase.auth().onAuthStateChanged(async user=>{
+ if(user){try{await CredipassAuth.guard();}catch(e){console.warn(e.message);return;}}
+
 
     if(!user){
 

@@ -148,6 +148,7 @@ exports.deletePracticeDocument = onCall(
       );
     }
 
+    await require("../operational-security").access(request,idCliente,"elimina_documenti");
     const callerUid = request.auth.uid;
 
     const profileSnap =

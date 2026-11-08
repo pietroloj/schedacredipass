@@ -515,6 +515,7 @@ function injectBadge(session) {
                 Social Hub
             </a>
 
+            <a href="/main/agenzie.html" class="credipass-user-menu-item" style="display:block;padding:12px;color:white">Accessi agenzie</a>
             <a href="/main/area-operativa.html" class="credipass-user-menu-item"
                style="display:flex;align-items:center;gap:10px;padding:12px 14px;color:#ffffff;text-decoration:none;font-size:9px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.13);transition:background .15s ease,color .15s ease;">
                 <i class="fas fa-columns" style="width:15px;text-align:center;"></i>
@@ -1327,6 +1328,7 @@ async function guard(options = {}) {
             );
         }
 
+        checkPageAccess(sessionCache);
         return sessionCache;
     }
 
@@ -1428,9 +1430,10 @@ async function guard(options = {}) {
         );
     }
 
-    injectBadge(
-        sessionCache
-    );
+    checkPageAccess(sessionCache);
+    injectBadge(sessionCache);
+    addContextNavigation(sessionCache);
+    filterNavigation(sessionCache);
 
     return sessionCache;
 }
@@ -1585,12 +1588,40 @@ if (
 
 
 
+const PAGE_PERMISSIONS = {
+ '/main/scheda-pratica.html':'vede_scheda_consulenza','/':'vede_scheda_consulenza','/index.html':'vede_scheda_consulenza',
+ '/main/ricerca-clienti.html':'pagina_archivio','/main/area-operativa.html':'pagina_area_operativa',
+ '/main/dashboard-consulente.html':'pagina_dashboard','/main/dashboard-gestionale.html':'pagina_gestionale',
+ '/main/centro-notifiche.html':'pagina_notifiche','/main/impostazioni.html':'pagina_impostazioni',
+ '/main/provenienza-pratica.html':'pagina_provenienza','/main/agenzie.html':'pagina_agenzie',
+ '/main/mail-view.html':'pagina_email','/main/email-da-associare.html':'pagina_email','/main/gmail-connection.html':'pagina_email',
+ '/main/mail-domini.html':'gestisce_utenti','/main/test-gmail-oauth.html':'gestisce_utenti','/main/gestione-consulenti.html':'gestisce_utenti','/social-hub/':'vede_social_hub'
+};
+function checkPageAccess(session) {
+ const key=PAGE_PERMISSIONS[location.pathname];
+ if(key&&!can(key,session)) {
+  document.body.replaceChildren();const box=document.createElement('div');box.style.cssText='padding:40px;font:18px sans-serif';box.textContent='Non hai accesso a questa pagina. Contatta il gestore per abilitare il permesso.';
+  const back=document.createElement('button');back.textContent='Torna indietro';back.onclick=()=>history.back();box.appendChild(back);document.body.appendChild(box);
+  throw new Error('Pagina non autorizzata');
+ }
+}
+function addContextNavigation(session){
+ if(document.getElementById('context-navigation'))return;
+ const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');nav.style.cssText='position:fixed;left:14px;bottom:14px;z-index:40000;background:white;border:1px solid #ccd7e4;border-radius:10px;padding:8px;box-shadow:0 3px 15px #002d7222;display:flex;gap:12px;font:12px Arial';
+ const back=document.createElement('button');back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');nav.appendChild(back);
+ const links=[['Archivio','/main/ricerca-clienti.html'],['Area operativa','/main/area-operativa.html']];const p=new URLSearchParams(location.search),id=p.get('id')||p.get('clienteId')||p.get('practiceId');if(id)links.push(['Scheda consulenza','/main/scheda-pratica.html?id='+encodeURIComponent(id)]);
+ for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;nav.appendChild(a);}document.body.appendChild(nav);
+ const css=document.createElement('style');css.textContent='@media print{#context-navigation{display:none!important}}';document.head.appendChild(css);
+}
+function filterNavigation(session){document.querySelectorAll('a[href]').forEach(a=>{const key=PAGE_PERMISSIONS[new URL(a.href,location.origin).pathname];if(key&&!can(key,session))a.remove();});}
 function can(permission, session) {
     const current = session || sessionCache;
     const profile = current?.profile || {};
     if (current?.isAdmin) return true;
     const custom = profile.permessi_effettivi || profile.permessi || {};
     if (Object.prototype.hasOwnProperty.call(custom, permission)) return custom[permission] === true;
+    if(permission==='vede_social_hub') return !['segreteria','segnalatore'].includes(profile.ruolo);
+    if(permission.startsWith('pagina_')) return permission!=='pagina_agenzie';
     return false;
 }
 

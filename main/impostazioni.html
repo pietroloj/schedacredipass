@@ -23,7 +23,7 @@ body{
 .card strong{display:block;color:#002d72;margin-bottom:7px}
 .card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08)}
 </style>
-</head>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script><script src="/main/config/app.js"></script><script src="/main/config/firebase.js"></script><script src="/main/auth-guard.js"></script></head>
 <body>
 <div class="wrap">
   <div class="head">
@@ -49,5 +49,5 @@ body{
     </div>
   </div>
 </div>
-</body>
+<script>CredipassAuth.guard().catch(e=>console.warn(e.message));</script></body>
 </html>

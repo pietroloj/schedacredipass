@@ -208,6 +208,8 @@ exports.ensureConsultantProfile = onCall(
 
     const existing = await db.collection("consulenti").doc(uid).get();
 
+    if (!existing.exists) throw new HttpsError("permission-denied", "Account non abilitato dal gestore.");
+
     let nome = "";
     let cognome = "";
     let ruolo = "consulente";
@@ -256,6 +258,8 @@ exports.ensureConsultantProfile = onCall(
         nome: profile.nome || "",
         cognome: profile.cognome || "",
         email: profile.email || user.email || "",
+        permessi: profile.permessi || {},
+        permessi_effettivi: mergePermissions(profile.ruolo, profile.permessi),
         ruolo: profile.ruolo || "consulente",
         attivo: profile.attivo !== false,
         collaboratori_visibili:
@@ -562,6 +566,7 @@ exports.listActiveConsultants = onCall(
       throw new HttpsError("unauthenticated", "Accesso richiesto.");
     }
 
+    await require("../operational-security").staff(request);
     const snap = await db.collection("consulenti").get();
     const consultants = [];
     snap.forEach(doc => {

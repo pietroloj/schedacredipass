@@ -99,3 +99,5 @@
   });
 
 })();
+
+(function(){const original=window.fetch.bind(window);window.fetch=async function(input,init={}){const url=new URL(typeof input==='string'?input:input.url,location.href);if(url.origin===location.origin&&url.pathname==='/api/send-email'){const auth=window.CredipassPortal?.auth||firebase.auth();if(!auth.currentUser)throw Error('Accedi prima di inviare email');const headers=new Headers(init.headers||{});headers.set('Authorization','Bearer '+await auth.currentUser.getIdToken());init={...init,headers};}return original(input,init);};})();

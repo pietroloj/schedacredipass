@@ -200,7 +200,7 @@
     .assign-role { font-size:8px; font-weight:800; text-transform:uppercase; color:#8a6500; background:#fff7df; padding:4px 7px; border-radius:999px; white-space:nowrap; }
 
 </style>
-</head>
+<script src="/main/js/practice-states.js"></script></head>
 <body>
 
 <div class="search-container">
@@ -224,6 +224,7 @@
         </div>
     </div>
 
+    <div class="search-box"><label for="statusFilter">Stato pratica</label><select id="statusFilter" onchange="filtraClienti()"><option value="">Tutti gli stati</option></select></div>
     <div id="collaboratorFilter" class="collaborator-filter">
         <label for="collaboratorSelect">
             <i class="fas fa-users"></i>
@@ -280,11 +281,16 @@
     var practiceToAssign = null;
 
     const STATO_PRATICA_CONFIG = {
-        da_istruire: { label: "Da istruire", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
+        attesa_documenti: { label: "In raccolta documenti", color: "#002d72", step: 1, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        in_verifica: { label: "In verifica", color: "#002d72", step: 2, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        integrazione_banca: { label: "In integrazione banca", color: "#002d72", step: 5, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        pre_stipula: { label: "Pre-stipula", color: "#002d72", step: 6, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+
+        da_istruire: { label: "Da avviare", border: "#adb5bd", bg: "#f8f9fa", badge: "#6c757d" },
         istruttoria: { label: "Istruttoria", border: "#2f80ed", bg: "#f2f7ff", badge: "#2f80ed" },
         integrazione_documenti: { label: "Integrazione documenti", border: "#d39e00", bg: "#fffaf0", badge: "#b8860b" },
-        caricato_banca: { label: "Caricato in banca", border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
-        valutazione_reddituale: { label: "Valutazione reddituale", border: "#7b61a8", bg: "#f7f4fb", badge: "#7b61a8" },
+        caricato_banca: { label: "Caricata in banca", border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        valutazione_reddituale: { label: "In istruttoria banca", border: "#7b61a8", bg: "#f7f4fb", badge: "#7b61a8" },
         delibera_reddituale_ok: { label: "Delibera reddituale OK", border: "#28a745", bg: "#f2fbf5", badge: "#28a745" },
         delibera_reddituale_ko: { label: "Delibera reddituale KO", border: "#dc3545", bg: "#fff4f5", badge: "#dc3545" },
         attesa_perizia: { label: "Attesa perizia", border: "#f0ad4e", bg: "#fff8ed", badge: "#d88a1d" },
@@ -293,10 +299,11 @@
         perizia_ko: { label: "Perizia KO", border: "#c62828", bg: "#fff2f2", badge: "#c62828" },
         attesa_documentazione_notarile: { label: "Attesa documentazione notarile", border: "#9a6b35", bg: "#fbf7f1", badge: "#9a6b35" },
         chiamata_atto: { label: "Chiamata d'atto", border: "#087f5b", bg: "#effaf6", badge: "#087f5b" },
-        stipulato: { label: "Stipulato", border: "#198754", bg: "#effaf3", badge: "#198754" },
+        stipulato: { label: "Stipulata", border: "#198754", bg: "#effaf3", badge: "#198754" },
         sospesa: { label: "Sospesa", border: "#495057", bg: "#f1f3f5", badge: "#495057" },
-        rinunciata: { label: "Rinunciata / KO", border: "#b02a37", bg: "#fff2f3", badge: "#b02a37" }
+        rinunciata: { label: "Rinunciata", border: "#b02a37", bg: "#fff2f3", badge: "#b02a37" }
     };
+Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(STATO_PRATICA_CONFIG[k]||{color:'#002d72',border:'#002d72',bg:'#eef4fb',badge:'#002d72'}),label:v.label,step:v.step});
 
     function getStatoPraticaConfig(stato) {
         return STATO_PRATICA_CONFIG[stato] || STATO_PRATICA_CONFIG.da_istruire;
@@ -738,7 +745,20 @@
             );
 
             document.getElementById('loadingIndicator').style.display = 'none';
-            mostraClienti(tuttiIClienti);
+            const dateValue = value => {
+                if (value?.toMillis) return value.toMillis();
+                if (value?.seconds) return value.seconds * 1000;
+                const v = String(value || '');
+                const italian = v.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+                return Date.parse(italian ? `${italian[3]}-${italian[2]}-${italian[1]}` : v) || 0;
+            };
+            tuttiIClienti.sort((a,b) => dateValue(b.dati.data_consulenza) - dateValue(a.dati.data_consulenza) || a.idOriginale.localeCompare(b.idOriginale));
+            const statusFilter = document.getElementById('statusFilter');
+            statusFilter.replaceChildren(new Option('Tutti gli stati', ''));
+            [...new Set(tuttiIClienti.map(c => c.dati.stato_pratica || 'da_istruire'))].forEach(stato => statusFilter.add(new Option(getStatoPraticaConfig(stato).label, stato)));
+            document.getElementById("searchInput").value=sessionStorage.getItem("credipass-archive-search")||"";
+            statusFilter.value=sessionStorage.getItem("credipass-archive-state")||"";
+            filtraClienti();
 
         } catch (error) {
             console.error(error);
@@ -804,11 +824,11 @@
             card.innerHTML = `
                 <div class="client-info-container">
                     <div class="client-data" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
-                        <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${cliente.nomeRicerca} ${badgeHtml}</h3>
-                        <p>ID: ${cliente.idOriginale}</p>
+                        <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${escapeHtml(cliente.nomeRicerca)} ${badgeHtml}</h3>
+                        <p>ID: ${escapeHtml(cliente.idOriginale)}</p>
                         <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
                         ${cliente.dati.collega_segnalato_uid ? `<div class="client-progress-info"><i class="fas fa-user-friends"></i> Collega associato: ${String(cliente.dati.collega_segnalato_nome || cliente.dati.collega_segnalato_uid).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>` : ""}
-                        ${(sessioneConsulente?.isAdmin || ["segreteria","responsabile"].includes(roleSession())) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${ownerLabel}</div>` : ""}
+                        ${(sessioneConsulente?.isAdmin || ["segreteria","responsabile"].includes(roleSession())) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${escapeHtml(ownerLabel)}</div>` : ""}
                     </div>
                     <div class="client-actions">
                         ${sessioneConsulente?.isAdmin ? `
@@ -816,7 +836,7 @@
                                 onclick="apriAssegnaPratica('${cliente.idOriginale}', ${JSON.stringify(cliente.nomeRicerca).replace(/"/g, '&quot;')})">
                             <i class="fas fa-user-check"></i> Assegna
                         </button>` : ""}
-                        <button class="btn-delete" title="Elimina Pratica" onclick="eliminaPratica('${cliente.idOriginale}', '${cliente.nomeRicerca}')">
+                        <button class="btn-delete" title="Elimina Pratica" data-delete-practice="true">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                         <div class="btn-fascicolo" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
@@ -825,6 +845,8 @@
                     </div>
                 </div>
             `;
+            const deleteButton=card.querySelector('[data-delete-practice]');
+            if(deleteButton){deleteButton.hidden=!sessioneConsulente?.isAdmin;deleteButton.onclick=()=>eliminaPratica(cliente.idOriginale,cliente.nomeRicerca);}
             container.appendChild(card);
         });
     }
@@ -940,6 +962,8 @@
 
 
     function filtraClienti() {
+        sessionStorage.setItem("credipass-archive-search",document.getElementById("searchInput").value);
+        sessionStorage.setItem("credipass-archive-state",document.getElementById("statusFilter").value);
         const filtro =
             String(
                 document.getElementById('searchInput')?.value ||
@@ -983,6 +1007,7 @@
 
                 return (
                     matchesName &&
+                    (!document.getElementById("statusFilter").value || (cliente.dati.stato_pratica || "da_istruire") === document.getElementById("statusFilter").value) &&
                     matchesOwner
                 );
             });

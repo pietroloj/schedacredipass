@@ -7748,12 +7748,6 @@ function buildApplicantRedditiSection(
 
         aggiungiVoce(
             rows,
-            EMOJI.contratto,
-            'Contratto di lavoro o attestazione di servizio'
-        );
-
-        aggiungiVoce(
-            rows,
             EMOJI.banca,
             `Estratto conto trimestrale al ${formatDateIT(periodo.endDate)}`
         );
@@ -8531,16 +8525,6 @@ function buildChecklistFromSnapshot(
 
     }
 
-    aggiungiVoce(
-        altri,
-        EMOJI.mondo,
-        'CTC online – accesso tramite SPID'
-    );
-
-    altri.push(
-        `${EMOJI.freccia} https://www.ctconline.it`
-    );
-
     sections.push(
         `${EMOJI.tessera} ALTRI DOCUMENTI`
         +
@@ -8808,6 +8792,7 @@ async function sincronizzaSchedaConDatabase() {
         getFittiDettaglio();
 
     const dati = {
+        rrr: window.consultationRatio ? window.consultationRatio.getData() : null,
 
         cliente_nome:
             V(
@@ -9390,6 +9375,9 @@ async function sincronizzaSchedaConDatabase() {
     };
 
     try {
+        const existingPractice = await db.collection('pratiche_mutuo').doc(id).get();
+        if (!existingPractice.exists) dati.stato_pratica = 'da_istruire';
+        else { delete dati.consulente_uid; delete dati.workspace_uid; }
 
         await db
             .collection(
@@ -11285,6 +11273,16 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
    ========================================================== */
 
 function compilaPDF() {
+    let contacts = document.getElementById('pdf-contact-details');
+    const anchor = document.getElementById('p_nome1');
+    if (anchor && !contacts) {
+        contacts = document.createElement('div');
+        contacts.id = 'pdf-contact-details';
+        contacts.style.cssText = 'padding:12px 0;font-size:12px;white-space:pre-line;break-inside:avoid';
+        anchor.parentElement.appendChild(contacts);
+    }
+    if (contacts) contacts.textContent = 'Contatti richiedente 1: ' + V('cliente_cell', '-') + ' · ' + V('cliente_email', '-') + '\nContatti richiedente 2: ' + V('cliente2_cell', '-') + ' · ' + V('cliente2_email', '-');
+
 
     const nome1 =
         nomeCompleto(1);
@@ -12237,7 +12235,7 @@ function getUploadDocumentCodes() {
 
             codes.add(`bustepaga${n}`);
             codes.add(`cud${n}`);
-            codes.add(`contratto${n}`);
+
             codes.add(`ec${n}`);
             codes.add(`mov${n}`);
 
@@ -12376,8 +12374,8 @@ function getUploadDocumentCodes() {
 
     }
 
-    /* CTC richiesto sempre */
-    codes.add('ctc');
+    /* Eventuali ulteriori documenti si richiedono manualmente. */
+
 
     return [
         ...codes
@@ -14218,18 +14216,6 @@ ${checklistCards}
 <td style="padding:0 34px 16px;">
 
 ${buildGuidaANPRHtml()}
-
-</td>
-
-</tr>
-
-<!-- GUIDA CTC -->
-
-<tr>
-
-<td style="padding:0 34px 24px;">
-
-${buildGuidaCTCHtml()}
 
 </td>
 
@@ -17178,5 +17164,5 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
-</body>
+<script src="/main/js/ratio-calculator.js"></script><script src="/main/js/consultation-enhancements.js"></script></body>
 </html>

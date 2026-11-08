@@ -231,6 +231,7 @@ const salvaProvenienzaPratica =
         );
       }
 
+      await require("./operational-security").access(request, practiceId, "modifica_scheda_consulenza");
       const provenienza =
         normalizeSource(
           request.data
@@ -239,6 +240,7 @@ const salvaProvenienzaPratica =
           {}
         );
 
+      if (provenienza.categoria === 'agenzia_immobiliare' && !provenienza.agenziaId) provenienza.agenziaId = provenienza.agenziaNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,120);
       const practiceRef =
         db
           .collection(
@@ -250,6 +252,8 @@ const salvaProvenienzaPratica =
 
       await practiceRef.set(
         {
+          tipo_fonte_pratica: provenienza.categoria==='agenzia_immobiliare'?'AGENZIA_IMMOBILIARE':provenienza.categoria==='passaparola'?'SEGNALATORE':'DIRETTO',
+          ...(provenienza.categoria==='agenzia_immobiliare'?{segnalatore_riferimento:provenienza.agenziaNome}:{}),
           provenienza: {
             ...provenienza,
 
@@ -338,25 +342,6 @@ const salvaProvenienzaPratica =
       }
 
 
-      attentionPractices.sort(
-        (a, b) => {
-          const scoreA =
-            (a.ferma_oltre_7_giorni ? 100 : 0)
-            + (a.documentazione_incompleta ? 50 : 0)
-            + (a.da_istruire ? 20 : 0)
-            + Number(a.giorni_inattivita || 0);
-
-          const scoreB =
-            (b.ferma_oltre_7_giorni ? 100 : 0)
-            + (b.documentazione_incompleta ? 50 : 0)
-            + (b.da_istruire ? 20 : 0)
-            + Number(b.giorni_inattivita || 0);
-
-          return scoreB - scoreA;
-        }
-      );
-
-
       return {
         ok:
           true,
@@ -376,6 +361,8 @@ const listaAgenzieImmobiliari =
     },
 
     async request => {
+      await require("./operational-security").staff(request);
+
 
       if (
         !request.auth?.uid

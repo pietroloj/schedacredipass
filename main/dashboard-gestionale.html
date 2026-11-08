@@ -161,7 +161,7 @@ td strong{color:var(--navy)}
 .modal-empty{padding:35px;text-align:center;color:var(--muted);font-size:12px}
 
 </style>
-</head>
+<script src="/main/js/practice-states.js"></script></head>
 <body>
 
 <div class="topbar">
@@ -180,7 +180,7 @@ td strong{color:var(--navy)}
 
   <div class="kpis">
     <div class="kpi clickable" onclick="openAttentionModal('all')"><small>Pratiche totali</small><strong id="kTotal">—</strong><div class="delta">Database attuale</div></div>
-    <div class="kpi clickable" onclick="openAttentionModal('to_process')"><small>Da istruire</small><strong id="kToProcess">—</strong><div class="delta">Clicca per vedere le pratiche</div></div>
+    <div class="kpi clickable" onclick="openAttentionModal('to_process')"><small>Da avviare</small><strong id="kToProcess">—</strong><div class="delta">Clicca per vedere le pratiche</div></div>
     <div class="kpi clickable" onclick="openAttentionModal('processing')"><small>In istruttoria</small><strong id="kProcessing">—</strong><div class="delta">Clicca per vedere le pratiche</div></div>
     <div class="kpi"><small>Deliberate</small><strong id="kDeliberate">—</strong><div class="delta">Esiti deliberativi</div></div>
     <div class="kpi"><small>Stipulate</small><strong id="kStipulated">—</strong><div class="delta">Completate</div></div>
@@ -443,6 +443,7 @@ function stateSum(
 
 
 function humanState(value) {
+  if(CredipassStates[value])return CredipassStates[value].label;
   const s = String(value || "").trim().toLowerCase();
 
   const map = {

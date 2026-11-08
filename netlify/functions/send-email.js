@@ -11,6 +11,7 @@ exports.handler = async (event) => {
       };
     }
 
+    try { await require("./lib/verify-access").verify(event); } catch (_) { return {statusCode:401,body:JSON.stringify({error:"Accesso non autorizzato"})}; }
     const data = JSON.parse(event.body || "{}");
     const { to, bcc, subject, html, replyTo, pdfBase64, pdfFileName } = data;
 
@@ -43,6 +44,7 @@ exports.handler = async (event) => {
 
     const result = await resend.emails.send(emailPayload);
 
+    if (result.error) throw new Error("Invio email non riuscito");
     return {
       statusCode: 200,
       body: JSON.stringify({

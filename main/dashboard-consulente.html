@@ -1672,7 +1672,7 @@ document.addEventListener(
 .subject-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}@media(max-width:650px){.subject-form-grid{grid-template-columns:1fr}}
 
 </style>
-</head>
+<script src="/main/js/practice-states.js"></script></head>
 <body>
 
             
@@ -1713,6 +1713,7 @@ document.addEventListener(
         </div>
     </div>
 
+<nav id="practice-navigation" style="display:flex;gap:12px;flex-wrap:wrap;padding:16px"><button type="button" onclick="history.back()">← Indietro</button><a href="/main/ricerca-clienti.html">Archivio</a><a id="consultation-link">Scheda consulenza</a><a id="complete-pdf-link">Scarica scheda PDF</a><button type="button" id="client-access-link">Genera link cliente riservato</button><input id="client-access-output" readonly hidden aria-label="Link cliente valido sette giorni" style="width:100%"></nav>
     <div class="practice-status-panel" id="practiceStatusPanel">
         <div class="practice-status-top">
             <div class="practice-status-title">
@@ -1721,25 +1722,7 @@ document.addEventListener(
             </div>
 
             <div class="practice-status-controls">
-                <select id="statoPraticaSelect" class="practice-status-select" onchange="salvaStatoPratica(this.value)">
-                    <option value="da_istruire">Da istruire</option>
-                    <option value="istruttoria">Istruttoria</option>
-                    <option value="integrazione_documenti">Integrazione documenti</option>
-                    <option value="attesa_documenti">Attesa documenti</option>
-                    <option value="caricato_banca">Caricato in banca</option>
-                    <option value="valutazione_reddituale">Valutazione reddituale</option>
-                    <option value="delibera_reddituale_ok">Delibera reddituale OK</option>
-                    <option value="delibera_reddituale_ko">Delibera reddituale KO</option>
-                    <option value="attesa_perizia">Attesa perizia</option>
-                    <option value="perizia_in_corso">Perizia in corso</option>
-                    <option value="perizia_ok">Perizia OK</option>
-                    <option value="perizia_ko">Perizia KO</option>
-                    <option value="attesa_documentazione_notarile">Attesa documentazione notarile</option>
-                    <option value="chiamata_atto">Chiamata d'atto</option>
-                    <option value="stipulato">Stipulato</option>
-                    <option value="sospesa">Sospesa</option>
-                    <option value="rinunciata">Rinunciata / KO</option>
-                </select>
+                <select id="statoPraticaSelect" class="practice-status-select" onchange="salvaStatoPratica(this.value)"><option value="da_istruire">Da avviare</option><option value="attesa_documenti">In raccolta documenti</option><option value="in_verifica">In verifica</option><option value="caricato_banca">Caricata in banca</option><option value="valutazione_reddituale">In istruttoria banca</option><option value="integrazione_banca">In integrazione banca</option><option value="pre_stipula">Pre-stipula</option><option value="stipulato">Stipulata</option><option value="sospesa">Sospesa</option><option value="rinunciata">Rinunciata</option></select>
 
                 <span id="statoPraticaBadge" class="practice-status-badge" style="background:#6c757d;">
                     <i class="fas fa-circle"></i> Da istruire
@@ -1753,33 +1736,7 @@ document.addEventListener(
 
         <div id="statoPraticaUpdated" class="practice-status-updated"></div>
 
-        <div class="practice-progress" id="practiceProgress">
-            <div class="progress-step" data-step="0">
-                <div class="progress-dot">1</div>
-                <div class="progress-label">Richiesta</div>
-            </div>
-            <div class="progress-step" data-step="1">
-                <div class="progress-dot">2</div>
-                <div class="progress-label">Istruttoria</div>
-            </div>
-            <div class="progress-step" data-step="2">
-                <div class="progress-dot">3</div>
-                <div class="progress-label">Banca / Delibera</div>
-            </div>
-            <div class="progress-step" data-step="3">
-                <div class="progress-dot">4</div>
-                <div class="progress-label">Perizia</div>
-            </div>
-            <div class="progress-step" data-step="4">
-                <div class="progress-dot">5</div>
-                <div class="progress-label">Notaio / Atto</div>
-            </div>
-            <div class="progress-step" data-step="5">
-                <div class="progress-dot">6</div>
-                <div class="progress-label">Stipula</div>
-            </div>
-        </div>
-
+<div class="practice-progress" id="practiceProgress"><div class="progress-step" data-step="0"><div class="progress-dot">1</div><div class="progress-label">Da avviare</div></div><div class="progress-step" data-step="1"><div class="progress-dot">2</div><div class="progress-label">In raccolta documenti</div></div><div class="progress-step" data-step="2"><div class="progress-dot">3</div><div class="progress-label">In verifica</div></div><div class="progress-step" data-step="3"><div class="progress-dot">4</div><div class="progress-label">Caricata in banca</div></div><div class="progress-step" data-step="4"><div class="progress-dot">5</div><div class="progress-label">In istruttoria banca</div></div><div class="progress-step" data-step="5"><div class="progress-dot">6</div><div class="progress-label">In integrazione banca</div></div><div class="progress-step" data-step="6"><div class="progress-dot">7</div><div class="progress-label">Pre-stipula</div></div><div class="progress-step" data-step="7"><div class="progress-dot">8</div><div class="progress-label">Stipulata</div></div></div>
         <div class="activity-admin-panel">
             <div class="activity-admin-title">
                 <i class="fas fa-history" style="color:#C99700;"></i>
@@ -2375,12 +2332,16 @@ const db = firebase.firestore();
     setTimeout(()=>caricaSoggettiPratica(),700);
 
     const STATO_PRATICA_CONFIG = {
-        da_istruire: { label: "Da istruire", color: "#6c757d", step: 0 },
+        in_verifica: { label: "In verifica", color: "#002d72", step: 2, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        integrazione_banca: { label: "In integrazione banca", color: "#002d72", step: 5, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+        pre_stipula: { label: "Pre-stipula", color: "#002d72", step: 6, border: "#002d72", bg: "#eef4fb", badge: "#002d72" },
+
+        da_istruire: { label: "Da avviare", color: "#6c757d", step: 0 },
         istruttoria: { label: "Istruttoria", color: "#2f80ed", step: 1 },
         integrazione_documenti: { label: "Integrazione documenti", color: "#d39e00", step: 1 },
-        attesa_documenti: { label: "Attesa documenti", color: "#b8860b", step: 1 },
-        caricato_banca: { label: "Caricato in banca", color: "#002d72", step: 2 },
-        valutazione_reddituale: { label: "Valutazione reddituale", color: "#7b61a8", step: 2 },
+        attesa_documenti: { label: "In raccolta documenti", color: "#b8860b", step: 1 },
+        caricato_banca: { label: "Caricata in banca", color: "#002d72", step: 3 },
+        valutazione_reddituale: { label: "In istruttoria banca", color: "#7b61a8", step: 4 },
         delibera_reddituale_ok: { label: "Delibera reddituale OK", color: "#28a745", step: 2 },
         delibera_reddituale_ko: { label: "Delibera reddituale KO", color: "#dc3545", step: 2 },
         attesa_perizia: { label: "Attesa perizia", color: "#f0ad4e", step: 3 },
@@ -2389,10 +2350,11 @@ const db = firebase.firestore();
         perizia_ko: { label: "Perizia KO", color: "#c62828", step: 3 },
         attesa_documentazione_notarile: { label: "Attesa documentazione notarile", color: "#9a6b35", step: 4 },
         chiamata_atto: { label: "Chiamata d'atto", color: "#087f5b", step: 4 },
-        stipulato: { label: "Stipulato", color: "#198754", step: 5 },
-        sospesa: { label: "Sospesa", color: "#495057", step: 2 },
-        rinunciata: { label: "Rinunciata / KO", color: "#b02a37", step: 1 }
+        stipulato: { label: "Stipulata", color: "#198754", step: 7 },
+        sospesa: { label: "Sospesa", color: "#495057", step: -1 },
+        rinunciata: { label: "Rinunciata", color: "#b02a37", step: -1 }
     };
+Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(STATO_PRATICA_CONFIG[k]||{color:'#002d72',border:'#002d72',bg:'#eef4fb',badge:'#002d72'}),label:v.label,step:v.step});
 
     function getStatoPraticaConfig(stato) {
         return STATO_PRATICA_CONFIG[stato] || STATO_PRATICA_CONFIG.da_istruire;
@@ -2464,6 +2426,7 @@ const db = firebase.firestore();
             descrizione: "La lavorazione della pratica è stata conclusa."
         }
     };
+Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CLIENTE_META[k]={titolo:v.label,descrizione:v.next});
 
     async function registraAttivitaCliente({
         tipo = "nota",
@@ -2521,6 +2484,7 @@ const db = firebase.firestore();
         sospesa: 45,
         rinunciata: 25
     };
+Object.entries(CredipassStates).forEach(([k,v])=>EMAIL_STATO_PERCENTUALE[k]=v.percent);
 
     const EMAIL_PROSSIMO_PASSAGGIO = {
         da_istruire: "Avvio istruttoria",
@@ -2541,6 +2505,7 @@ const db = firebase.firestore();
         sospesa: "Ripresa della lavorazione",
         rinunciata: "Eventuale nuova valutazione"
     };
+Object.entries(CredipassStates).forEach(([k,v])=>EMAIL_PROSSIMO_PASSAGGIO[k]=v.next);
 
     function emailStatoNormalizzato(stato) {
         return STATO_PRATICA_CONFIG[stato]
@@ -2584,14 +2549,7 @@ const db = firebase.firestore();
     function emailFasiHtml(stato) {
         const s = emailStatoNormalizzato(stato);
         const current = getStatoPraticaConfig(s).step;
-        const labels = [
-            "Richiesta",
-            "Istruttoria",
-            "Banca / Delibera",
-            "Perizia",
-            "Notaio / Atto",
-            "Stipula"
-        ];
+        const labels = Object.values(CredipassStates).filter(s=>s.step>=0).map(s=>s.label);
 
         return `
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -3569,7 +3527,10 @@ Accesso in sola consultazione: non è possibile caricare, eliminare o scaricare 
         const badge = document.getElementById("statoPraticaBadge");
         const updated = document.getElementById("statoPraticaUpdated");
 
-        if (select) select.value = STATO_PRATICA_CONFIG[stato] ? stato : "da_istruire";
+        if (select) {
+            if (STATO_PRATICA_CONFIG[stato] && !Array.from(select.options).some(o => o.value === stato)) select.add(new Option(getStatoPraticaConfig(stato).label + ' (precedente)', stato));
+            select.value = STATO_PRATICA_CONFIG[stato] ? stato : 'da_istruire';
+        }
 
         if (badge) {
             badge.style.background = cfg.color;
@@ -4096,6 +4057,8 @@ Cordiali saluti`
                 stato_pratica_aggiornato_il:
                     firebase.firestore.FieldValue.serverTimestamp()
             };
+
+            if (!['da_istruire', 'attesa_documenti', 'istruttoria', 'integrazione_documenti', 'sospesa'].includes(stato)) update.documentReminderAttivo = false;
 
             /*
              * Se esco da uno stato con reminder interno,
@@ -7019,7 +6982,11 @@ Cordiali saluti`
                 db.collection("pratiche_mutuo").doc(idCliente);
 
             await ref.set({
+                documentReminderAttivo: true,
+                documentReminderPausa: false,
                 richiestaIntegrazioneAttiva: true,
+                stato_pratica: "attesa_documenti",
+                stato_pratica_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
                 elencoDocRichiesti:
                     firebase.firestore.FieldValue.arrayUnion(codiceFinale),
                 documenti_versione_richiesta:
@@ -7448,7 +7415,7 @@ Cordiali saluti`
                 : {};
 
         praticaEmailIntegrazione.stato_pratica =
-            "integrazione_documenti";
+            "attesa_documenti";
 
         const emailHtml =
             costruisciEmailPortaleHtml({
@@ -7469,6 +7436,8 @@ Cordiali saluti`
         try {
             await db.collection("pratiche_mutuo").doc(idCliente).set({
                 richiestaIntegrazioneAttiva: true,
+                stato_pratica: "attesa_documenti",
+                stato_pratica_aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
                 notaPerCliente: nota,
                 elencoDocRichiesti: carrello.map(x => x.id),
                 ultimoAggiornamentoIntegrazione:
@@ -9066,5 +9035,8 @@ Cordiali saluti`
     </div>
 </div>
 
-</body>
+<script>
+(function(){const params=new URLSearchParams(location.search);const id=params.get('id')||params.get('clienteId')||params.get('cliente');if(!id)return;const url='/main/scheda-pratica.html?id='+encodeURIComponent(id);document.getElementById('consultation-link').href=url;document.getElementById('complete-pdf-link').href=url+'&download=1';document.getElementById('client-access-link').onclick=async()=>{try{const r=await firebase.app().functions('us-central1').httpsCallable('createClientAccessLink')({practiceId:id});const out=document.getElementById('client-access-output');out.hidden=false;out.value=r.data.url;out.select();alert('Link riservato valido 7 giorni. Condividilo soltanto con il cliente della pratica.');}catch(e){alert(e.message);}};
+const box=document.createElement('section');box.style.cssText='padding:24px;background:white;border:1px solid #ddd;border-radius:12px;margin:20px';box.innerHTML='<h2>Aggiornamento per l’agenzia immobiliare</h2><p>Questo messaggio sarà visibile soltanto all’agenzia associata alla pratica.</p><textarea rows="3" maxlength="3000" style="width:100%" aria-label="Messaggio per agenzia"></textarea><button type="button">Condividi con agenzia</button><p role="status"></p>';document.getElementById('practice-navigation').after(box);box.querySelector('button').onclick=async()=>{const b=box.querySelector('button');b.disabled=true;try{await firebase.app().functions('us-central1').httpsCallable('shareAgencyMessage')({practiceId:id,text:box.querySelector('textarea').value});box.querySelector('textarea').value='';box.querySelector('[role=status]').textContent='Messaggio condiviso.';}catch(e){box.querySelector('[role=status]').textContent=e.message;}finally{b.disabled=false;}};})();
+</script></body>
 </html>

@@ -24,7 +24,7 @@ input,select{width:100%;padding:10px;border:1px solid #ccd4dd;border-radius:8px}
 .help{font-size:11px;color:#6d7783;line-height:1.55;margin-top:8px}
 @media(max-width:700px){.grid{grid-template-columns:1fr}}
 </style>
-</head>
+<script src="/main/auth-guard.js"></script></head>
 <body>
 <div class="wrap">
   <div class="head">
@@ -278,7 +278,9 @@ async function saveSource(){
   }
 }
 
-firebase.auth().onAuthStateChanged(user=>{
+firebase.auth().onAuthStateChanged(async user=>{
+ if(user){try{await CredipassAuth.guard();}catch(e){console.warn(e.message);return;}}
+
   if(user){
     loadAgencies();
     loadPractice();

@@ -1500,6 +1500,8 @@ exports.analizzaDocumentoAI =
     async (request) => {
       const data =
         request.data || {};
+      await require("./operational-security").clientAccess(request, String(data.idCliente || ""));
+
 
 
       const {
@@ -2802,6 +2804,8 @@ exports.ricostruisciPraticaCompleta =
     async (request) => {
       const data =
         request.data || {};
+      await require("./operational-security").clientAccess(request, String(data.idCliente || ""));
+
 
 
       const {
@@ -3500,3 +3504,17 @@ exports.segnaEmailGestita = require("./mail-engine-imap-personal").segnaEmailGes
 exports.riparaNumeriPraticaDaEmail = require("./mail-engine-imap-personal").riparaNumeriPraticaDaEmail;
 
 exports.inviaRispostaEmailPratica = require("./mail-reply").inviaRispostaEmailPratica;
+
+const operationalSecurity = require("./operational-security");
+exports.requestPortalCode = operationalSecurity.requestPortalCode;
+exports.verifyPortalCode = operationalSecurity.verifyPortalCode;
+exports.readClientPortal = operationalSecurity.readClientPortal;
+exports.updateClientPortal = operationalSecurity.updateClientPortal;
+exports.manageAgencyAccess = operationalSecurity.manageAgencyAccess;
+exports.agencyPractices = operationalSecurity.agencyPractices;
+exports.shareAgencyMessage = operationalSecurity.shareAgencyMessage;
+
+exports.notifyClientUpload = operationalSecurity.notifyClientUpload;
+exports.synchronizePracticeWorkflow = require('./practice-workflow').synchronizePracticeWorkflow;
+exports.createClientAccessLink = operationalSecurity.createClientAccessLink;
+exports.exchangeClientLink = operationalSecurity.exchangeClientLink;

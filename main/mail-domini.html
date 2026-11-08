@@ -17,7 +17,7 @@ input{padding:9px;border:1px solid #ced4da;border-radius:7px;min-width:220px}
 button{border:0;border-radius:7px;padding:10px 13px;background:#002d72;color:#fff;font-weight:bold;cursor:pointer}
 .small{font-size:12px;color:#64717c}
 </style>
-</head>
+<script src="/main/auth-guard.js"></script></head>
 <body>
 <div class="wrap">
 <h1>Domini banca da verificare</h1>
@@ -83,7 +83,9 @@ async function approve(docId,domain){
   await load();
 }
 
-firebase.auth().onAuthStateChanged(user=>{
+firebase.auth().onAuthStateChanged(async user=>{
+ if(user){try{await CredipassAuth.guard();}catch(e){console.warn(e.message);return;}}
+
   if(!user){
     document.getElementById("list").innerHTML="Accesso Firebase richiesto.";
     return;

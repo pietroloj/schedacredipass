@@ -13,7 +13,7 @@ body{font-family:Arial;background:#eef2f6;margin:0;padding:30px}
 button{padding:11px 15px;border:0;border-radius:8px;background:#002d72;color:white;font-weight:bold;cursor:pointer}
 pre{background:#f7f9fb;padding:14px;border-radius:8px;white-space:pre-wrap}
 </style>
-</head>
+<script src="/main/auth-guard.js"></script></head>
 <body>
 <div class="box">
 <h2>Test collegamento Gmail OAuth</h2>
@@ -50,7 +50,9 @@ async function run(){
   }
 }
 
-firebase.auth().onAuthStateChanged(user=>{
+firebase.auth().onAuthStateChanged(async user=>{
+ if(user){try{await CredipassAuth.guard();}catch(e){console.warn(e.message);return;}}
+
   document.getElementById("out").textContent =
     user
       ? "Utente autenticato: "+(user.email||user.uid)

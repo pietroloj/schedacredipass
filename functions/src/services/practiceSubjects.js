@@ -197,6 +197,8 @@ exports.getPracticeSubjects = onCall(
     await assertAuthenticated(request);
     const idCliente = clean(request.data?.idCliente);
     if (!idCliente) throw new HttpsError("invalid-argument", "ID pratica mancante.");
+    await require("../operational-security").access(request,idCliente,"vede_scheda_consulenza");
+
 
     const ref = db.collection("pratiche_mutuo").doc(idCliente);
     const snap = await ref.get();
@@ -225,6 +227,8 @@ exports.savePracticeSubject = onCall(
     const idCliente = clean(request.data?.idCliente);
     const input = request.data?.soggetto || {};
     if (!idCliente) throw new HttpsError("invalid-argument", "ID pratica mancante.");
+    await require("../operational-security").access(request,idCliente,"modifica_scheda_consulenza");
+
 
     const ref = db.collection("pratiche_mutuo").doc(idCliente);
 

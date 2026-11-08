@@ -132,6 +132,19 @@ const ROLE_DEFAULT_PERMISSIONS = {
   }
 };
 
+for (const [role, values] of Object.entries(ROLE_DEFAULT_PERMISSIONS)) {
+  values.pagina_archivio = role !== 'segnalatore';
+  values.pagina_area_operativa = role !== 'segnalatore';
+  values.pagina_dashboard = role !== 'segnalatore';
+  values.pagina_gestionale = role !== 'segnalatore';
+  values.pagina_notifiche = role !== 'segnalatore';
+  values.pagina_email = role !== 'segnalatore';
+  values.pagina_impostazioni = role !== 'segnalatore';
+  values.pagina_provenienza = role !== 'segnalatore';
+  values.pagina_agenzie = role === 'admin';
+  values.vede_social_hub = !['segreteria','segnalatore'].includes(role);
+}
+
 function normalizeRole(role) {
   const r = String(role || "consulente").trim().toLowerCase();
   return ROLE_DEFAULT_PERMISSIONS[r] ? r : "consulente";

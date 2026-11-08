@@ -32,6 +32,8 @@ class Auth:
         consultant=db.collection('consulenti').document(uid).get()
         profile=consultant.to_dict() if consultant.exists else {}
         if profile.get('attivo') is False:raise AccessDenied('Utente disabilitato nella Scheda Consulenza')
+        if not profile:raise AccessDenied('Account non abilitato')
+        if profile.get('ruolo')!='admin' and not profile.get('permessi',{}).get('vede_social_hub',profile.get('ruolo') not in ('segreteria','segnalatore')):raise AccessDenied('Accesso Social Hub non autorizzato dal gestore')
         admin=str(profile.get('ruolo','')).lower()=='admin' or uid in os.getenv('FIREBASE_ADMIN_UIDS','').split(',')
         member=self.store.get('members',uid) or {}
         if not admin and member.get('enabled') is not True:raise AccessDenied('Accesso Social Hub non abilitato')
