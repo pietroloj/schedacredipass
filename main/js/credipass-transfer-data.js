@@ -1,0 +1,15 @@
+(function(root){'use strict';
+function amount(value){if(typeof value==='number')return Number.isFinite(value)?value:null;let s=String(value??'').trim().replace(/[€\s]/g,'');if(!s)return null;if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');else if(/^\d{1,3}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,'');const n=Number(s);return Number.isFinite(n)?n:null;}
+function age(value,now=new Date()){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return null;const [year,month,day]=value.split('-').map(Number),d=new Date(year,month-1,day);if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return null;let n=now.getFullYear()-year;if(now.getMonth()+1<month||(now.getMonth()+1===month&&now.getDate()<day))n--;return n>=0&&n<=120?n:null;}
+function prepare(p={},now=new Date()){
+ const financial=(Array.isArray(p.finanziamenti_dettaglio)?p.finanziamenti_dettaglio:[]).filter(x=>String(x?.gestione||'').toUpperCase()!=='ESTINGUERE').map(x=>amount(x?.rata)).filter(x=>x!==null);
+ const oldMortgage=String(p.mutuo_pre_gestione||'').toUpperCase()==='ESTINGUERE'?null:amount(p.rata_mutuo_pre);if(oldMortgage!==null)financial.push(oldMortgage);
+ const incomes=[amount(p.reddito_richiedente_1),amount(p.reddito_richiedente_2)].filter(x=>x!==null);
+ const extra=(Array.isArray(p.fitti_dettaglio)?p.fitti_dettaglio:[]).map(x=>amount(x?.importo)).filter(x=>x!==null);
+ for(const n of [1,2]) if(String(p['mantenimento_tipo_r'+n]||'').toUpperCase()==='ATTIVO'){const x=amount(p['mantenimento_importo_r'+n]);if(x!==null)extra.push(x);}
+ const result={nome:String(p.cliente_nome||'').trim(),cognome:String(p.cliente_cognome||'').trim(),telefono:String(p.cliente_cell||'').trim(),email:String(p.cliente_email||'').trim(),importo:amount(p.importo_richiesto),durata:amount(p.durata_mutuo),valore_immobile:amount(p.valore_compravendita)??amount(p.valore_immobile),eta:age(p.cliente_data_nascita,now),nucleo:amount(p.num_componenti),reddito:incomes.length?incomes.reduce((a,b)=>a+b,0):null,altre_entrate:extra.length?extra.reduce((a,b)=>a+b,0):null,finanziamenti:financial.length?financial.reduce((a,b)=>a+b,0):null,finalita:String(p.finalita||'').trim(),tasso:String(p.tasso||'').trim(),contratto:[p.lav1,p.lav2].map(x=>String(x||'').trim()).filter(Boolean).join(' | ')};
+ return Object.fromEntries(Object.entries(result).filter(([,v])=>v!==null&&v!==''));
+}
+function choices(p={}){const purposes={'ACQUISTO':'ACQ','VOUCHER':'ACQ1','SURROGA':'SURR','LIQUIDITÀ':'LIQ','CONSOLIDAMENTO':'CONS','RIFINANZIAMENTO':'RIF','SOSTITUZIONE + ACQUISTO':'ACQ-SOST','RISTRUTTURAZIONE':'RISTR'},rates={'FISSO':'F','FISSO RINEGOZIABILE':'F','VARIABILE':'V'};return {finalita:purposes[String(p.finalita||'').trim().toUpperCase()]||null,tasso:rates[String(p.tasso||'').trim().toUpperCase()]||null};}
+root.CredipassTransferData={amount,age,prepare,choices};if(typeof module!=='undefined')module.exports=root.CredipassTransferData;
+})(typeof window==='undefined'?globalThis:window);
