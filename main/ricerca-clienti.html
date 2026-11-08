@@ -601,15 +601,17 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             id.replace(/_/g, "-")
         ]));
 
+        let almenoUnaLettura = false;
         for (const variante of varianti) {
             try {
                 const res = await storage.ref(`Fascicoli/${variante}`).listAll();
+                almenoUnaLettura = true;
                 if (res.items.length > 0) return res.items.length;
             } catch (error) {
                 console.warn(`Conteggio documenti non disponibile per ${variante}:`, error);
             }
         }
-        return 0;
+        return almenoUnaLettura ? 0 : null;
     }
 
 
@@ -738,12 +740,6 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
                 });
             });
 
-            await Promise.all(
-                tuttiIClienti.map(async cliente => {
-                    cliente.documentiReali =
-                        await contaDocumentiFascicolo(cliente.idOriginale);
-                })
-            );
 
             document.getElementById('loadingIndicator').style.display = 'none';
             const dateValue = value => {
@@ -760,6 +756,8 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             document.getElementById("searchInput").value=sessionStorage.getItem("credipass-archive-search")||"";
             statusFilter.value=sessionStorage.getItem("credipass-archive-state")||"";
             filtraClienti();
+            // Mostra subito le pratiche; i conteggi Storage arrivano progressivamente.
+            aggiornaConteggiDocumenti(tuttiIClienti);
 
         } catch (error) {
             console.error(error);
@@ -773,6 +771,24 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             );
             document.getElementById('loadingIndicator').style.display = 'none';
         }
+    }
+
+    let conteggioGenerazione = 0;
+    async function aggiornaConteggiDocumenti(clienti) {
+        const generazione = ++conteggioGenerazione;
+        let prossimo = 0;
+        async function worker() {
+            while (generazione === conteggioGenerazione && prossimo < clienti.length) {
+                const cliente = clienti[prossimo++];
+                const count = await contaDocumentiFascicolo(cliente.idOriginale);
+                if (generazione !== conteggioGenerazione) return;
+                cliente.documentiReali = count;
+                const card = Array.from(document.querySelectorAll('.client-card')).find(el => el.dataset.practiceId === cliente.idOriginale);
+                const target = card?.querySelector('.document-count');
+                if (target) target.innerHTML = `<i class="fas fa-folder-open"></i> ${count === null ? "Conteggio documenti non disponibile" : count > 0 ? `${count} ${count === 1 ? "documento" : "documenti"} nel fascicolo` : "Nessun documento nel fascicolo"}`;
+            }
+        }
+        await Promise.all(Array.from({length: Math.min(6, clienti.length)}, worker));
     }
 
     function mostraClienti(lista) {
@@ -791,8 +807,11 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             
 
             const fileCaricati = Number(cliente.documentiReali || 0);
-            const statoDocumenti =
-                fileCaricati > 0
+            const statoDocumenti = cliente.documentiReali === null
+                ? "Conteggio documenti non disponibile"
+                : cliente.documentiReali === undefined
+                ? "Conteggio documenti in corso…"
+                : fileCaricati > 0
                     ? `${fileCaricati} ${fileCaricati === 1 ? "documento" : "documenti"} nel fascicolo`
                     : "Nessun documento nel fascicolo";
 
@@ -820,6 +839,7 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
             `;
 
             card.className = "client-card";
+            card.dataset.practiceId = cliente.idOriginale;
             card.style.borderLeftColor = statoCfg.border;
             card.style.backgroundColor = statoCfg.bg;
             card.innerHTML = `
@@ -827,7 +847,7 @@ Object.entries(CredipassStates).forEach(([k,v])=>STATO_PRATICA_CONFIG[k]={...(ST
                     <div class="client-data" onclick="window.location.href='dashboard-consulente.html?clienteId=${cliente.idOriginale}'">
                         <h3><i class="fas fa-user-circle" style="color:#002d72;"></i> ${escapeHtml(cliente.nomeRicerca)} ${badgeHtml}</h3>
                         <p>ID: ${escapeHtml(cliente.idOriginale)}</p>
-                        <div class="client-progress-info"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
+                        <div class="client-progress-info document-count"><i class="fas fa-folder-open"></i> ${statoDocumenti}</div>
                         ${cliente.dati.collega_segnalato_uid ? `<div class="client-progress-info"><i class="fas fa-user-friends"></i> Collega associato: ${String(cliente.dati.collega_segnalato_nome || cliente.dati.collega_segnalato_uid).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>` : ""}
                         ${(sessioneConsulente?.isAdmin || ["segreteria","responsabile"].includes(roleSession())) && ownerLabel ? `<div class="client-progress-info"><i class="fas fa-user-tie"></i> Pratica di: ${escapeHtml(ownerLabel)}</div>` : ""}
                     </div>
