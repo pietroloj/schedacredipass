@@ -1610,11 +1610,19 @@ function checkPageAccess(session) {
 }
 function addContextNavigation(session){
  if(document.getElementById('context-navigation'))return;
- const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');nav.style.cssText='position:sticky;top:0;z-index:1000;background:#002d72;border-bottom:3px solid #c99700;padding:8px 18px;display:flex;gap:16px;align-items:center;font:600 12px Poppins,Arial,sans-serif';
- const back=document.createElement('button');back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');back.style.cssText='background:transparent;color:white;border:1px solid #ffffff55;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit';nav.appendChild(back);
+ const nav=document.createElement('nav');nav.id='context-navigation';nav.setAttribute('aria-label','Navigazione rapida');
+ const back=document.createElement('button');back.type='button';back.textContent='← Indietro';back.onclick=()=>history.length>1?history.back():location.assign('/main/area-operativa.html');nav.appendChild(back);
  const links=[['Archivio','/main/ricerca-clienti.html'],['Area operativa','/main/area-operativa.html']];const p=new URLSearchParams(location.search),id=p.get('id')||p.get('clienteId')||p.get('practiceId');if(id)links.push(['Scheda consulenza','/main/scheda-pratica.html?id='+encodeURIComponent(id)]);
- for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;a.style.cssText='color:white;text-decoration:none;padding:6px';nav.appendChild(a);}document.body.prepend(nav);
- const css=document.createElement('style');css.textContent='@media print{#context-navigation{display:none!important}}';document.head.appendChild(css);
+ for(const [label,url]of links){const a=document.createElement('a');a.href=url;a.textContent=label;nav.appendChild(a);}
+ const path=location.pathname.toLowerCase();let host;
+ if(path==='/'||path==='/index.html')host=document.getElementById('app_main_container');
+ else if(path.endsWith('/area-operativa.html'))host=document.querySelector('.main');
+ else if(path.endsWith('/ricerca-clienti.html'))host=document.querySelector('.search-container');
+ else if(path.endsWith('/dashboard-consulente.html'))host=document.querySelector('.container');
+ else if(path.endsWith('/dashboard-gestionale.html'))host=document.querySelector('.wrap');
+ else host=document.querySelector('main,.shell,.container');
+ if(host)host.prepend(nav);else{document.body.prepend(nav);if(getComputedStyle(document.body).display==='flex'){document.body.style.flexWrap='wrap';nav.style.width='100%';}}
+ const css=document.createElement('style');css.textContent=`#context-navigation{position:static;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 18px;background:transparent;border:0;box-sizing:border-box;font:600 12px Poppins,Arial,sans-serif}#context-navigation a,#context-navigation button{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;margin:0;border:1px solid #c9d6e4;border-radius:8px;background:#fff;color:#002d72;text-decoration:none;font:inherit;line-height:1.3;cursor:pointer}#context-navigation a:hover,#context-navigation button:hover{border-color:#c99700;background:#fff9e8}#context-navigation a:focus-visible,#context-navigation button:focus-visible{outline:3px solid #c99700;outline-offset:2px}@media print{#context-navigation{display:none!important}}`;document.head.appendChild(css);
 }
 function filterNavigation(session){document.querySelectorAll('a[href]').forEach(a=>{const key=PAGE_PERMISSIONS[new URL(a.href,location.origin).pathname];if(key&&!can(key,session))a.remove();});}
 function can(permission, session) {
