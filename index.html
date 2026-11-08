@@ -9734,48 +9734,57 @@ async function salvaPdfPersistente(
                 storagePath
             );
 
-    await ref.put(
-        blob,
-        {
-            contentType:
-                'application/pdf'
-        }
-    );
-
-    const url =
-        await ref
-            .getDownloadURL();
-
-    await db
-        .collection(
-            'pratiche_mutuo'
-        )
-        .doc(
-            praticaId
-        )
-        .set(
+    try {
+        await ref.put(
+            blob,
             {
-                scheda_consulenza_pdf_url:
-                    url,
-
-                scheda_consulenza_pdf_path:
-                    storagePath,
-
-                scheda_consulenza_pdf_nome:
-                    fileName,
-
-                scheda_consulenza_pdf_aggiornata_il:
-                    firebase
-                        .firestore
-                        .FieldValue
-                        .serverTimestamp()
-            },
-            {
-                merge:true
+                contentType:
+                    'application/pdf'
             }
         );
 
-    return url;
+        const url =
+            await ref
+                .getDownloadURL();
+
+        await db
+            .collection(
+                'pratiche_mutuo'
+            )
+            .doc(
+                praticaId
+            )
+            .set(
+                {
+                    scheda_consulenza_pdf_url:
+                        url,
+
+                    scheda_consulenza_pdf_path:
+                        storagePath,
+
+                    scheda_consulenza_pdf_nome:
+                        fileName,
+
+                    scheda_consulenza_pdf_aggiornata_il:
+                        firebase
+                            .firestore
+                            .FieldValue
+                            .serverTimestamp()
+                },
+                {
+                    merge:true
+                }
+            );
+        return url;
+    } catch (directError) {
+        console.warn('Salvataggio diretto non riuscito, provo il servizio protetto:', directError?.code || directError?.message);
+        const result = await functionsFirebase.httpsCallable('saveConsultationPdf')({
+            practiceId: praticaId,
+            fileName,
+            pdfBase64: await blobToBase64(blob)
+        });
+        return result.data.url;
+    }
 
 }
 

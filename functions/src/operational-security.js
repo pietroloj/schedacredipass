@@ -135,6 +135,17 @@ exports.agencyDocumentLink=onCall(options,async request=>{
  const file=admin.storage().bucket().file(`Fascicoli/${id}/${name}`);const [exists]=await file.exists();if(!exists)throw new HttpsError('not-found','Documento non disponibile.');
  const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
 });
+exports.saveConsultationPdf=onCall({...options,memory:'512MiB'},async request=>{
+ const id=text(request.data?.practiceId,200),name=text(request.data?.fileName,180),encoded=String(request.data?.pdfBase64||'');
+ const snap=await access(request,id,'modifica_scheda_consulenza');
+ if(!encoded||encoded.length>14*1024*1024||!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))throw new HttpsError('invalid-argument','PDF non valido o troppo grande.');
+ const bytes=Buffer.from(encoded,'base64');if(bytes.length>10*1024*1024||bytes.subarray(0,5).toString()!=='%PDF-')throw new HttpsError('invalid-argument','Il file non è un PDF valido.');
+ const path=`SchedeConsulenza/${id}/Scheda_Consulenza.pdf`,bucket=admin.storage().bucket(),token=crypto.randomUUID();
+ await bucket.file(path).save(bytes,{resumable:false,metadata:{contentType:'application/pdf',metadata:{firebaseStorageDownloadTokens:token}}});
+ const url=`https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+ await snap.ref.update({scheda_consulenza_pdf_url:url,scheda_consulenza_pdf_path:path,scheda_consulenza_pdf_nome:name||'Scheda_Consulenza.pdf',scheda_consulenza_pdf_aggiornata_il:admin.firestore.FieldValue.serverTimestamp()});
+ return {url};
+});
 exports.shareAgencyMessage=onCall(options,async request=>{
  const id=text(request.data?.practiceId),message=text(request.data?.text,3000);if(!message)throw new HttpsError('invalid-argument','Scrivi un messaggio.');
  const s=await access(request,id,'modifica_timeline');await s.ref.update({agency_messages:admin.firestore.FieldValue.arrayUnion({text:message,createdAt:new Date().toISOString(),authorUid:request.auth.uid})});return {ok:true};
