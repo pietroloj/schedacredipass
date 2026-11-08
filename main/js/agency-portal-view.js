@@ -1,0 +1,4 @@
+(function(root){'use strict';
+function render(target,status,practices){target.replaceChildren();for(const p of practices){const card=document.createElement('article'),title=document.createElement('h2'),state=document.createElement('p');title.textContent=p.cliente;state.textContent='Stato: '+(root.CredipassStates?.[p.stato]?.label||String(p.stato||'').replace(/_/g,' '));card.append(title,state);for(const m of p.messages||[]){const line=document.createElement('p');line.textContent=new Date(m.createdAt).toLocaleString('it-IT')+' — '+m.text;card.appendChild(line);}if(!p.messages?.length){const line=document.createElement('p');line.textContent='Nessun messaggio condiviso.';card.appendChild(line);}target.appendChild(card);}status.textContent=practices.length?'Aggiornato alle '+new Date().toLocaleTimeString('it-IT'):'Nessuna pratica assegnata alla tua agenzia.';}
+root.AgencyPortalView={render};
+})(window);

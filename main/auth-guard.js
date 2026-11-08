@@ -1597,7 +1597,7 @@ const PAGE_PERMISSIONS = {
  '/main/ricerca-clienti.html':'pagina_archivio','/main/area-operativa.html':'pagina_area_operativa',
  '/main/dashboard-consulente.html':'pagina_dashboard','/main/dashboard-gestionale.html':'pagina_gestionale',
  '/main/centro-notifiche.html':'pagina_notifiche','/main/impostazioni.html':'pagina_impostazioni',
- '/main/provenienza-pratica.html':'pagina_provenienza','/main/agenzie.html':'pagina_agenzie','/main/dashboard-agenzie.html':'gestisce_utenti',
+ '/main/provenienza-pratica.html':'pagina_provenienza','/main/agenzie.html':'pagina_agenzie','/main/dashboard-agenzie.html':'gestisce_utenti','/main/anteprima-agenzia.html':'gestisce_utenti',
  '/main/mail-view.html':'pagina_email','/main/email-da-associare.html':'pagina_email','/main/gmail-connection.html':'pagina_email',
  '/main/mail-domini.html':'gestisce_utenti','/main/test-gmail-oauth.html':'gestisce_utenti','/main/gestione-consulenti.html':'gestisce_utenti','/social-hub/':'vede_social_hub'
 };
@@ -1625,7 +1625,7 @@ function addContextNavigation(session){
  if(host)host.prepend(nav);else{document.body.prepend(nav);if(getComputedStyle(document.body).display==='flex'){document.body.style.flexWrap='wrap';nav.style.width='100%';}}
  const css=document.createElement('style');css.textContent=`#context-navigation{position:static;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 18px;background:transparent;border:0;box-sizing:border-box;font:600 12px Poppins,Arial,sans-serif}#context-navigation a,#context-navigation button{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;margin:0;border:1px solid #c9d6e4;border-radius:8px;background:#fff;color:#002d72;text-decoration:none;font:inherit;line-height:1.3;cursor:pointer}#context-navigation a:hover,#context-navigation button:hover{border-color:#c99700;background:#fff9e8}#context-navigation a:focus-visible,#context-navigation button:focus-visible{outline:3px solid #c99700;outline-offset:2px}@media print{#context-navigation{display:none!important}}`;document.head.appendChild(css);
 }
-function filterNavigation(session){document.querySelectorAll('a[href]').forEach(a=>{const path=new URL(a.href,location.origin).pathname,key=PAGE_PERMISSIONS[path];if((path==='/main/dashboard-agenzie.html'&&!session?.isAdmin)||(key&&!can(key,session)))a.remove();});}
+function filterNavigation(session){document.querySelectorAll('a[href]').forEach(a=>{const path=new URL(a.href,location.origin).pathname,key=PAGE_PERMISSIONS[path];if((['/main/dashboard-agenzie.html','/main/anteprima-agenzia.html'].includes(path)&&!session?.isAdmin)||(key&&!can(key,session)))a.remove();});}
 function can(permission, session) {
     const current = session || sessionCache;
     const profile = current?.profile || {};
