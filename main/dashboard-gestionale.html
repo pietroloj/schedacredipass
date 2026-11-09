@@ -193,7 +193,8 @@ td strong{color:var(--navy)}
   <div class="card" style="margin:16px 0">
     <h2>Acquisizione lead</h2>
     <p class="empty">Richieste di contatto ricevute nel periodo selezionato, distinte dalle pratiche di consulenza.</p>
-    <strong id="leadTotal">—</strong> <span class="empty">lead ricevuti</span>
+    <button class="btn light" id="leadOpen" type="button"><strong id="leadTotal">—</strong> lead ricevuti · Vedi elenco</button>
+    <button class="btn light" id="leadHistory" type="button">Recupera storico dalla mia casella</button> <span class="empty" id="leadHistoryStatus" role="status"></span>
     <div id="leadSources" class="agency-bars" style="margin-top:14px"><span class="empty">Caricamento...</span></div>
   </div>
 
@@ -313,6 +314,7 @@ td strong{color:var(--navy)}
 </div>
 
 
+<dialog id="leadDialog" style="border:0;border-radius:14px;padding:24px;width:min(900px,calc(100% - 32px));max-height:85vh;color:#0b2a5b"><h2>Elenco lead</h2><label>Collega <select id="leadConsultant"><option value="">Tutti i colleghi</option></select></label><label style="margin-left:16px">Provenienza <select id="leadSource"><option value="">Tutte le provenienze</option></select></label><div id="leadList" class="table-wrap" style="margin-top:18px"></div><button type="button" class="btn light" onclick="document.getElementById('leadDialog').close()">Chiudi</button></dialog>
 <div id="attentionModal" class="attention-modal" onclick="if(event.target===this) closeAttentionModal()">
   <div class="attention-panel">
     <div class="attention-head">
@@ -963,8 +965,9 @@ function renderDashboard() {
   document.getElementById('leadTotal').textContent = Number(leads.total || 0).toLocaleString('it-IT');
   const leadSources = Object.entries(leads.sources || {}).sort((a,b)=>b[1]-a[1]);
   document.getElementById('leadSources').innerHTML = leadSources.length
-    ? leadSources.map(([name,count])=>`<div class="status-row"><span>${safe(name)}</span><b>${Number(count)||0}</b></div>`).join('')
+    ? leadSources.map(([name,count],index)=>`<button type="button" class="status-row lead-source-button" data-index="${index}" style="width:100%;border:0;text-align:left;cursor:pointer"><span>${safe(name)}</span><b>${Number(count)||0}</b></button>`).join('')
     : '<span class="empty">Nessuna richiesta di contatto rilevata nel periodo.</span>';
+  document.querySelectorAll('.lead-source-button').forEach(button=>button.onclick=()=>openLeadDialog(leadSources[Number(button.dataset.index)][0]));
 
   const total =
     Number(
@@ -1057,6 +1060,20 @@ function renderDashboard() {
 
 }
 
+
+function openLeadDialog(source='') {
+  const items=dashboardData?.leadAcquisition?.items || [];
+  const consultant=document.getElementById('leadConsultant'), sourceSelect=document.getElementById('leadSource');
+  consultant.replaceChildren(new Option('Tutti i colleghi',''));
+  sourceSelect.replaceChildren(new Option('Tutte le provenienze',''));
+  [...new Set(items.map(x=>x.consultant).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'it')).forEach(x=>consultant.add(new Option(x,x)));
+  [...new Set(items.map(x=>x.source).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'it')).forEach(x=>sourceSelect.add(new Option(x,x)));
+  sourceSelect.value=source;
+  const render=()=>{const rows=items.filter(x=>(!consultant.value||x.consultant===consultant.value)&&(!sourceSelect.value||x.source===sourceSelect.value));document.getElementById('leadList').innerHTML=rows.length?`<table><thead><tr><th>Nome</th><th>Data</th><th>Provenienza</th><th>Collega</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${safe(x.name)}</td><td>${x.date?safe(new Date(x.date).toLocaleDateString('it-IT')):'Non disponibile'}</td><td>${safe(x.source)}</td><td>${safe(x.consultant)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">Nessun lead nel periodo selezionato.</p>';};
+  consultant.onchange=render; sourceSelect.onchange=render; render(); document.getElementById('leadDialog').showModal();
+}
+document.getElementById('leadOpen').onclick=()=>openLeadDialog();
+document.getElementById('leadHistory').onclick=async()=>{const button=document.getElementById('leadHistory'), status=document.getElementById('leadHistoryStatus');button.disabled=true;let cursor={folderIndex:0,offset:0}, scanned=0;try{while(true){const result=await fn.httpsCallable('recuperaStoricoLead')(cursor);const page=result.data||{};scanned+=Number(page.scanned||0);status.textContent=`Analizzate ${scanned} email nelle cartelle della tua casella…`;if(page.done)break;if(!Number.isInteger(page.folderIndex)||!Number.isInteger(page.offset))throw new Error('Risposta di recupero non valida.');cursor={folderIndex:page.folderIndex,offset:page.offset};}status.textContent=`Recupero completato: ${scanned} email analizzate.`;await loadDashboard();}catch(e){status.textContent=`Recupero interrotto: ${e.message||'errore'}. Puoi riprovare.`;}finally{button.disabled=false;}};
 
 async function loadDashboard() {
 

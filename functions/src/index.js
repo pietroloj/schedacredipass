@@ -3380,6 +3380,7 @@ const {
   collegaGmailConAppPassword,
   sincronizzaGmailImapPersonale,
   sincronizzaGmailImapTutti,
+  recuperaStoricoLead,
   leggiEmailTimeline,
   gestisciNumeroPraticaBanca,
 } = require("./mail-engine-imap-personal");
@@ -3393,6 +3394,7 @@ exports.sincronizzaGmailImapPersonale =
 
 exports.sincronizzaGmailImapTutti =
   sincronizzaGmailImapTutti;
+exports.recuperaStoricoLead = recuperaStoricoLead;
 
 
 exports.leggiEmailTimeline =

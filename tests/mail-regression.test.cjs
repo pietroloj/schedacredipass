@@ -16,6 +16,10 @@ assert.equal(policy.contactLead({...assignedLead,text:'Canale di Provenienza: PR
 assert.equal(policy.contactLead({...assignedLead,text:'Conv: ROTA PASQUALE (Mondragone) ()'}).partner,'ROTA PASQUALE (Mondragone)');
 assert.equal(policy.contactLead({...leadExample,text:'Provenienza Canale: PROFESSIONECASA\nSottocanale: Web'}).source,'PROFESSIONECASA');
 assert.equal(policy.contactLead({...assignedLead,subject:'Altra comunicazione 1083128'}),null);
+assert.equal(policy.contactLead(leadExample).name,'LUIGI BARONE');
+const leadDisplay=require(root+'/functions/src/lead-display');
+assert.equal(leadDisplay.displaySource({source:'Santucci_TikTok',subchannel:'Santucci_Meta_Test'}),'Santucci Tik Tok');
+assert.equal(leadDisplay.displaySource({source:'PROFESSIONECASA',partner:'ROTA PASQUALE (Mondragone)'}),'Professionecasa Mondragone');
 let count=0;function check(name,fn){fn();count++;console.log('PASS '+name);}
 const molino={consulente_uid:'owner',cliente_nome:'Giuseppe',cliente_cognome:'Molino',cliente2_nome:'Anna',cliente2_cognome:'Della Monica'};
 for(const name of ['Giuseppe Molino','MOLINO GIUSEPPE','Molino G.','G. MOLINO','Della Monica Anna'])check(name,()=>assert.equal(policy.strictSubject('Re: '+name,molino).matched,true));
@@ -69,6 +73,12 @@ let mailboxReadOnly=false;
 class TestImap {async connect(){} async getMailboxLock(folder,options){mailboxReadOnly=options.readOnly;return {release(){}}} async fetchOne(){return {uid:42,source:Buffer.from('example')}} async logout(){}}
 const manualEngine=load('mail-engine-imap-personal.js',{'imapflow':{ImapFlow:TestImap},'mailparser':{simpleParser:async()=>pendingMail},'./gmail-token-crypto':{GMAIL_TOKEN_ENCRYPTION_KEY:'key',decryptRefreshToken:()=>({token:'mock'})}});
 records.set('gmail_connections/owner',{connected:true,provider:'imap_app_password',email:'owner@example.com'});
+class HistoryImap {async connect(){} async list(){return [{path:'INBOX'},{path:'Trash',specialUse:'\\Trash'}]} async getMailboxLock(folder,options){assert.equal(options.readOnly,true);return {release(){}}} async search(){return [1,2]} async fetchOne(uid){return {uid,source:Buffer.from(String(uid))}} async logout(){}}
+const historyEngine=load('mail-engine-imap-personal.js',{'imapflow':{ImapFlow:HistoryImap},'mailparser':{simpleParser:async source=>String(source)==='1'?leadExample:assignedLead},'./gmail-token-crypto':{GMAIL_TOKEN_ENCRYPTION_KEY:'key',decryptRefreshToken:()=>({token:'mock'})}});
+const recovered=await historyEngine.recuperaStoricoLead({auth:{uid:'owner'},data:{folderIndex:0,offset:0}});
+check('history merges both messages by lead number in read-only mode',()=>{assert.equal(recovered.done,true);assert.equal(recovered.matched,2);const rows=[...records.keys()].filter(x=>x==='acquisizione_lead/owner_1083128');assert.equal(rows.length,1);assert.equal(records.get(rows[0]).source,'PROFESSIONECASA');});
+await assert.rejects(historyEngine.recuperaStoricoLead({auth:{uid:'stranger'},data:{}}));
+check('history requires an active consultant',()=>{});
 records.get('mail_da_associare/'+ownerPending).numeriPraticaRilevati=[];
 await manualEngine.associaEmailAPratica({auth:{uid:'owner'},data:{emailId:ownerPending,practiceId:'molino'}});
 check('manual association saves original message before completing',()=>{const stored=[...records.entries()].find(([k,v])=>k.startsWith('pratiche_mutuo/molino/email_timeline/')&&v.messageId==='shared-message');assert(stored);assert.equal(stored[1].autoAssociata,false);assert.equal(records.get('mail_da_associare/'+ownerPending).stato,'associated');assert(mailboxReadOnly);});

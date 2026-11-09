@@ -841,7 +841,7 @@ const dashboardGestionaleDati =
           );
 
       let practices = [];
-      let leadOwnerUids = new Set([uid]);
+      let leadOwnerUids = new Set([uid, ...directVisible]);
 
       if (role === "admin") {
         practices =
@@ -1055,6 +1055,7 @@ const dashboardGestionaleDati =
 
       const leadSnap = await db.collection('acquisizione_lead').get();
       const leadCounts = {};
+      const leadItems = [];
       let leadTotal = 0;
       for (const doc of leadSnap.docs) {
         const lead = doc.data() || {};
@@ -1062,13 +1063,15 @@ const dashboardGestionaleDati =
         const received = lead.receivedAt?.toDate?.();
         const day = received ? new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome'}).format(received) : '';
         if (periodStart && (!day || day < periodStart || day > periodEnd)) continue;
-        const baseSource = cleanText(lead.source, 120) || 'Da verificare';
-        const subchannel = cleanText(lead.subchannel, 120);
-        const partner = cleanText(lead.partner, 160);
-        const source = [baseSource, subchannel, partner].filter(Boolean).join(' / ');
+        const source = require('./lead-display').displaySource(lead);
         leadCounts[source] = (leadCounts[source] || 0) + 1;
+        leadItems.push({name:cleanText(lead.name,160) || 'Nome non disponibile', date:received?.toISOString() || null, source, consultantUid:cleanText(lead.consultantUid)});
         leadTotal++;
       }
+      const leadOwners = [...new Set(leadItems.map(x=>x.consultantUid).filter(Boolean))];
+      const leadProfiles = await Promise.all(leadOwners.map(id=>db.collection('consulenti').doc(id).get()));
+      const leadOwnerNames = Object.fromEntries(leadProfiles.map((snap,i)=>{const p=snap.data()||{}; return [leadOwners[i],cleanText(p.nome_completo || [p.nome,p.cognome].filter(Boolean).join(' ') || p.email) || 'Consulente'];}));
+      leadItems.forEach(x=>{x.consultant=leadOwnerNames[x.consultantUid] || 'Non indicato';});
 
       const sevenDays =
         7
@@ -1568,7 +1571,7 @@ const dashboardGestionaleDati =
       return {
         ok:
           true,
-        leadAcquisition:{total:leadTotal, sources:leadCounts},
+        leadAcquisition:{total:leadTotal, sources:leadCounts, items:leadItems.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))},
 
         /*
          * Utile anche per verificare dal browser quale perimetro

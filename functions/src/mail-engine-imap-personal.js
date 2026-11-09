@@ -904,6 +904,23 @@ function mailReferenceIds(mail) {
 
 const {strictSubject, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender, contactLead} = require("./mail-policy");
 
+async function storeContactLead(consultantUid, lead, mail, folderName, uid) {
+  const leadKey = `${consultantUid}_${lead.id || messageKey(folderName, uid, mail.messageId)}`;
+  const ref = db.collection('acquisizione_lead').doc(leadKey);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref), old = snap.data() || {};
+    const known = lead.source !== 'Da verificare';
+    const replaceSource = known && (!old.source || old.source === 'Da verificare' || lead.sourceRank >= Number(old.sourceRank || 0));
+    const date = mail.date && !Number.isNaN(new Date(mail.date).getTime()) ? admin.firestore.Timestamp.fromDate(new Date(mail.date)) : null;
+    const oldDate = old.receivedAt?.toDate?.();
+    const receivedAt = date && (!oldDate || new Date(mail.date) < oldDate) ? date : (old.receivedAt || admin.firestore.FieldValue.serverTimestamp());
+    tx.set(ref, {consultantUid, leadId:lead.id || null, receivedAt,
+      ...(replaceSource ? {source:lead.source, sourceRank:lead.sourceRank} : (!old.source ? {source:'Da verificare'} : {})),
+      ...(lead.subchannel ? {subchannel:lead.subchannel} : {}), ...(lead.partner ? {partner:lead.partner} : {}),
+      ...(lead.name ? {name:lead.name} : {}), updatedAt:admin.firestore.FieldValue.serverTimestamp()}, {merge:true});
+  });
+}
+
 async function learnPracticeNumberAfterNameMatch({practiceRef,practiceData,subject,method}) {
   if(method!=="subject_full_name"&&method!=="subject_surname_initial")return [];
   const learned=extractLabeledPracticeNumbersFromSubject(subject);
@@ -1148,22 +1165,7 @@ async function syncFolder({
 
       const lead = contactLead({...mail, text:cleanBody(mail)});
       if (lead) {
-        const leadKey = `${consultantUid}_${lead.id || messageKey(folderName, msg.uid, mail.messageId)}`;
-        const ref = db.collection('acquisizione_lead').doc(leadKey);
-        await db.runTransaction(async tx => {
-          const snap = await tx.get(ref);
-          const old = snap.data() || {};
-          const known = lead.source !== 'Da verificare';
-          const replaceSource = known && (!old.source || old.source === 'Da verificare' || lead.sourceRank >= Number(old.sourceRank || 0));
-          const date = mail.date && !Number.isNaN(new Date(mail.date).getTime()) ? admin.firestore.Timestamp.fromDate(new Date(mail.date)) : null;
-          const oldDate = old.receivedAt?.toDate?.();
-          const receivedAt = date && (!oldDate || new Date(mail.date) < oldDate) ? date : (old.receivedAt || admin.firestore.FieldValue.serverTimestamp());
-          tx.set(ref, {consultantUid, leadId:lead.id || null, receivedAt,
-            ...(replaceSource ? {source:lead.source, sourceRank:lead.sourceRank} : (!old.source ? {source:'Da verificare'} : {})),
-            ...(lead.subchannel ? {subchannel:lead.subchannel} : {}),
-            ...(lead.partner ? {partner:lead.partner} : {}),
-            updatedAt:admin.firestore.FieldValue.serverTimestamp()}, {merge:true});
-        });
+        await storeContactLead(consultantUid, lead, mail, folderName, msg.uid);
         continue;
       }
       if (excludedSender(mail.from)) {
@@ -1772,6 +1774,32 @@ const sincronizzaGmailImapPersonale =
     }
   );
 
+
+const recuperaStoricoLead = onCall({region:'us-central1',secrets:[GMAIL_TOKEN_ENCRYPTION_KEY],timeoutSeconds:120,memory:'1GiB'},async request=>{
+  const uid=request.auth?.uid; await requireActiveConsultant(uid);
+  const connectionSnap=await db.collection('gmail_connections').doc(uid).get(), connection=connectionSnap.data() || {};
+  if(!connection.connected || connection.provider!=='imap_app_password') throw new HttpsError('failed-precondition','Collega prima la tua casella Gmail.');
+  const password=decryptRefreshToken(imapCredentialPayload(connection)).token;
+  const client=new ImapFlow({host:'imap.gmail.com',port:993,secure:true,auth:{user:String(connection.email||''),pass:String(password).replace(/\s+/g,'')},logger:false});
+  let lock;
+  try {
+    await client.connect();
+    const folders=(await client.list()).filter(f=>!f.flags?.has?.('\\Noselect') && !['\\Trash','\\Junk','\\Sent','\\Drafts'].includes(f.specialUse)).map(f=>f.path).sort();
+    const folderIndex=Math.max(0,Math.floor(Number(request.data?.folderIndex)||0)), offset=Math.max(0,Math.floor(Number(request.data?.offset)||0));
+    if(folderIndex>=folders.length) return {done:true};
+    const folder=folders[folderIndex]; lock=await client.getMailboxLock(folder,{readOnly:true});
+    const ids=await client.search({or:[{from:'richieste.online@credipass.it'},{from:'servizio.clienti@credipass.it'}]},{uid:true});
+    const page=(ids||[]).slice(offset,offset+50); let matched=0;
+    for (const uidValue of page) {
+      const msg=await client.fetchOne(uidValue,{uid:true,source:true},{uid:true}); if(!msg?.source) continue;
+      const mail=await simpleParser(msg.source,{skipImageLinks:true}), lead=contactLead({...mail,text:cleanBody(mail)});
+      if(lead){await storeContactLead(uid,lead,mail,folder,msg.uid);matched++;}
+    }
+    const nextOffset=offset+page.length, nextFolder=nextOffset>=(ids||[]).length;
+    return {done:nextFolder && folderIndex+1>=folders.length,folder,matched,scanned:page.length,folderIndex:nextFolder?folderIndex+1:folderIndex,offset:nextFolder?0:nextOffset};
+  } catch(error){throw new HttpsError('internal',String(error?.message||error));}
+  finally {lock?.release();await client.logout().catch(()=>{});}
+});
 
 const sincronizzaGmailImapTutti =
   onSchedule(
@@ -2496,6 +2524,7 @@ const segnaEmailGestita = onCall({region:"us-central1"}, async request=>{
 });
 
 module.exports = {
+  recuperaStoricoLead,
   saveUnmatched,
   resolveTimelineEmail,
   imapCredentialPayload,
