@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="/main/js/one-page-pdf.js"></script>
+<script src="/main/js/ratio-pdf.js"></script>
 <script>
 /* ==========================================================
    RUBRICA SEGNALATORI / AGENZIE + SOGGETTI AGGIUNTIVI
@@ -2502,6 +2503,18 @@ hr {
                     class="p-notes-box"
                     id="p_note_box_text"
                 ></div>
+
+                <div class="p-section-title">RAPPORTO RATA / REDDITO</div>
+                <div class="p-card" id="p_ratio_summary">
+                    <div class="p-grid-3">
+                        <div class="p-data-row"><span>Rapporto</span><strong id="p_ratio_value"></strong></div>
+                        <div class="p-data-row"><span>Redditi mensili</span><strong id="p_ratio_income"></strong></div>
+                        <div class="p-data-row"><span>Impegni esistenti</span><strong id="p_ratio_commitments"></strong></div>
+                        <div class="p-data-row"><span>Nuova rata mensile</span><strong id="p_ratio_mortgage"></strong></div>
+                        <div class="p-data-row"><span>Disponibilità residua</span><strong id="p_ratio_residual"></strong></div>
+                    </div>
+                    <div class="p-data-row" style="margin-top:5px"><span>Rate massime</span><strong id="p_ratio_limits"></strong></div>
+                </div>
 
                 <div class="p-footer">
                     Generato il
@@ -11293,6 +11306,15 @@ style="max-width:650px;background:#ffffff;border-radius:16px;overflow:hidden;bor
    ========================================================== */
 
 function compilaPDF() {
+    const ratioData = typeof window.getConsultationRatioForPdf === 'function' ? window.getConsultationRatioForPdf() : window.consultationRatio?.getData();
+    const ratioPdf = window.CredipassRatioPdf?.build(ratioData, window.CredipassRatio);
+    if (!ratioPdf) throw new Error('Calcolo rata / reddito non disponibile. Ricarica la scheda prima di generare il PDF.');
+    setPrint('p_ratio_value', ratioPdf.ratio);
+    setPrint('p_ratio_income', ratioPdf.income);
+    setPrint('p_ratio_commitments', ratioPdf.commitments);
+    setPrint('p_ratio_mortgage', ratioPdf.mortgage);
+    setPrint('p_ratio_residual', ratioPdf.residual);
+    setPrint('p_ratio_limits', ratioPdf.limits.map(x => x.percent + '%: ' + x.value).join('  ·  '));
     for (const n of [1, 2]) {
         const anchor = document.getElementById('p_nome' + n);
         let contacts = document.getElementById('pdf-contact-details-' + n);
@@ -15959,7 +15981,12 @@ window.addEventListener(
 
                     await sincronizzaSchedaConDatabase();
 
-                    compilaPDF();
+                    try {
+                        compilaPDF();
+                    } catch (error) {
+                        alert(error.message || 'Impossibile preparare la scheda PDF.');
+                        return;
+                    }
 
                     const app =
                         document.getElementById(

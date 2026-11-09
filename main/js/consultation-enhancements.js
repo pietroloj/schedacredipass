@@ -8,6 +8,7 @@ const boot=()=>{
 
  function mount(d){window.consultationRatio=CredipassRatio.mount(panel,d,()=>{});}
  mount(initial());
+ window.getConsultationRatioForPdf=()=>({...initial(),mortgage:window.consultationRatio?.getData()?.mortgage||0});
  let refreshTimer;function refresh(){const old=window.consultationRatio.getData();mount({...initial(),mortgage:old.mortgage});}
  app.addEventListener('input',e=>{if(panel.contains(e.target))return;clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,120);});
  app.addEventListener('change',e=>{if(!panel.contains(e.target))refresh();});
