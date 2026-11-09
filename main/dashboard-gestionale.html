@@ -126,6 +126,7 @@ td strong{color:var(--navy)}
 .agency-kpi small{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}
 .agency-kpi strong{display:block;margin-top:6px;color:var(--navy);font-size:18px}
 .empty{color:var(--muted);font-size:11px}
+.lead-section{margin:16px 0;padding:24px}.lead-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.lead-head h2{font-size:20px;margin:0 0 4px}.lead-actions{display:flex;gap:8px;flex-wrap:wrap}.lead-actions .btn{border:1px solid #d4dfec}.lead-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.lead-summary-item{background:#fff;border:1px solid #e2eaf3;border-bottom:3px solid #d1a300;border-radius:12px;padding:14px}.lead-summary-item small{display:block;color:#6f7a86;font-size:10px;font-weight:700}.lead-summary-item strong{display:block;font-size:24px;color:var(--navy);margin-top:5px}.lead-content{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}.lead-panel{padding:18px;border:1px solid #e2eaf3;border-radius:12px;min-width:0}.lead-panel h3{font-size:13px;margin:0 0 12px;color:var(--navy)}.lead-source-button{display:grid;grid-template-columns:minmax(120px,180px) minmax(45px,1fr) 32px;gap:12px;align-items:center;width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;padding:8px 0;color:var(--navy)}.lead-source-button span:first-child{font-size:11px;font-weight:700;overflow-wrap:anywhere}.lead-source-button b{text-align:right}.lead-source-track{height:18px;background:#e9eef6;border-radius:20px;overflow:hidden}.lead-source-track i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#d6a000,#163d78)}.lead-recent-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #e9eef5;padding:10px 0;font-size:11px}.lead-recent-row strong,.lead-recent-row small{display:block}.lead-recent-row small{color:#758499}.lead-recent-source{font-size:10px;padding:5px 8px;color:#285a43;background:#e8f5ed;border-radius:20px;align-self:center}.lead-empty{padding:8px 0}.lead-source-button:focus-visible{outline:3px solid #c99700;outline-offset:2px}@media(max-width:900px){.lead-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.lead-content{grid-template-columns:1fr}}@media(max-width:480px){.lead-section{padding:16px}.lead-source-button{grid-template-columns:minmax(90px,1fr) minmax(40px,1fr) 25px}}
 @media(max-width:1200px){
   .kpis{grid-template-columns:repeat(4,1fr)}
   .grid,.bottom-grid,.agency-grid{grid-template-columns:1fr}
@@ -190,12 +191,11 @@ td strong{color:var(--navy)}
     <div class="kpi clickable" onclick="openAttentionModal('incomplete')"><small>Doc. incomplete</small><strong id="kIncomplete">—</strong><div class="delta" style="color:var(--amber)">Clicca per vedere le integrazioni</div></div>
   </div>
 
-  <div class="card" style="margin:16px 0">
-    <h2>Acquisizione lead</h2>
-    <p class="empty">Richieste di contatto ricevute nel periodo selezionato, distinte dalle pratiche di consulenza.</p>
-    <button class="btn light" id="leadOpen" type="button"><strong id="leadTotal">—</strong> lead ricevuti · Vedi elenco</button>
-    <button class="btn light" id="leadHistory" type="button">Recupera storico dalla mia casella</button> <span class="empty" id="leadHistoryStatus" role="status"></span>
-    <div id="leadSources" class="agency-bars" style="margin-top:14px"><span class="empty">Caricamento...</span></div>
+  <div class="card lead-section">
+    <div class="lead-head"><div><h2>Acquisizione lead</h2><p class="empty">Richieste di contatto nel periodo selezionato, distinte dalle pratiche di consulenza.</p></div><div class="lead-actions"><button class="btn light" id="leadOpen" type="button">Vedi elenco</button><button class="btn light" id="leadHistory" type="button">Recupera storico dalla mia casella</button></div></div>
+    <span class="empty" id="leadHistoryStatus" role="status"></span>
+    <div class="lead-summary"><button type="button" class="lead-summary-item" id="leadTotalOpen" style="text-align:left;cursor:pointer;font:inherit"><small>Lead ricevuti</small><strong id="leadTotal">—</strong></button><div class="lead-summary-item"><small>Questa settimana nel periodo</small><strong id="leadWeek">—</strong></div><div class="lead-summary-item"><small>Canali attivi</small><strong id="leadChannelCount">—</strong></div><div class="lead-summary-item"><small>Collaboratori</small><strong id="leadConsultantCount">—</strong></div></div>
+    <div class="lead-content"><div class="lead-panel"><h3>Provenienza</h3><div id="leadSources"><span class="empty">Caricamento...</span></div></div><div class="lead-panel"><h3>Ultimi lead ricevuti</h3><div id="leadRecent"><span class="empty">Caricamento...</span></div></div></div>
   </div>
 
   <div class="grid">
@@ -964,9 +964,17 @@ function renderDashboard() {
   const leads = d.leadAcquisition || {total:0,sources:{}};
   document.getElementById('leadTotal').textContent = Number(leads.total || 0).toLocaleString('it-IT');
   const leadSources = Object.entries(leads.sources || {}).sort((a,b)=>b[1]-a[1]);
+  const leadItems = Array.isArray(leads.items) ? leads.items : [];
+  const leadWeek = CredipassDateFilters.week();
+  const leadDay = value => value && !Number.isNaN(new Date(value).getTime()) ? new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome'}).format(new Date(value)) : '';
+  document.getElementById('leadWeek').textContent = leadItems.filter(item=>{const day=leadDay(item.date);return day && day>=leadWeek.periodStart && day<=leadWeek.periodEnd;}).length.toLocaleString('it-IT');
+  document.getElementById('leadChannelCount').textContent = leadSources.filter(([name])=>name.toLowerCase()!=='da verificare').length.toLocaleString('it-IT');
+  document.getElementById('leadConsultantCount').textContent = new Set(leadItems.map(x=>x.consultantUid).filter(Boolean)).size.toLocaleString('it-IT');
+  const maxLeadSource = Math.max(1,...leadSources.map(([,count])=>Number(count)||0));
   document.getElementById('leadSources').innerHTML = leadSources.length
-    ? leadSources.map(([name,count],index)=>`<button type="button" class="status-row lead-source-button" data-index="${index}" style="width:100%;border:0;text-align:left;cursor:pointer"><span>${safe(name)}</span><b>${Number(count)||0}</b></button>`).join('')
+    ? leadSources.map(([name,count],index)=>`<button type="button" class="lead-source-button" data-index="${index}"><span>${safe(name)}</span><span class="lead-source-track" aria-hidden="true"><i style="width:${Math.max(0,Math.min(100,(Number(count)||0)/maxLeadSource*100))}%"></i></span><b>${Number(count)||0}</b></button>`).join('')
     : '<span class="empty">Nessuna richiesta di contatto rilevata nel periodo.</span>';
+  document.getElementById('leadRecent').innerHTML = leadItems.length ? leadItems.slice(0,3).map(item=>`<div class="lead-recent-row"><div><strong>${safe(item.name || 'Nome non disponibile')}</strong><small>${item.date && !Number.isNaN(new Date(item.date).getTime()) ? safe(new Date(item.date).toLocaleDateString('it-IT',{timeZone:'Europe/Rome'})) : 'Data non disponibile'} · ${safe(item.consultant || 'Non indicato')}</small></div><span class="lead-recent-source">${safe(item.source || 'Da verificare')}</span></div>`).join('') : '<span class="empty">Nessun lead nel periodo selezionato.</span>';
   document.querySelectorAll('.lead-source-button').forEach(button=>button.onclick=()=>openLeadDialog(leadSources[Number(button.dataset.index)][0]));
 
   const total =
@@ -1075,6 +1083,7 @@ function openLeadDialog(source='') {
   consultant.onchange=render; sourceSelect.onchange=render; render(); document.getElementById('leadDialog').showModal();
 }
 document.getElementById('leadOpen').onclick=()=>openLeadDialog();
+document.getElementById('leadTotalOpen').onclick=()=>openLeadDialog();
 document.getElementById('leadHistory').onclick=async()=>{const button=document.getElementById('leadHistory'), status=document.getElementById('leadHistoryStatus');button.disabled=true;button.textContent='Recupero in corso…';status.textContent='Avvio del recupero: collegamento alla casella in corso…';let cursor={folderIndex:0,offset:0}, scanned=0;try{while(true){const result=await fn.httpsCallable('recuperaStoricoLead',{timeout:180000})(cursor);const page=result.data||{};scanned+=Number(page.scanned||0);status.textContent=`Analizzate ${scanned} email nelle cartelle della tua casella…`;if(page.done)break;if(!Number.isInteger(page.folderIndex)||!Number.isInteger(page.offset))throw new Error('Risposta di recupero non valida.');cursor={folderIndex:page.folderIndex,offset:page.offset};}status.textContent=`Recupero completato: ${scanned} email analizzate.`;await loadDashboard();}catch(e){status.textContent=`Recupero interrotto: ${e.message||'errore'}. Puoi riprovare.`;}finally{button.disabled=false;button.textContent='Recupera storico dalla mia casella';}};
 
 async function loadDashboard() {
