@@ -1,0 +1,5 @@
+(function(root){'use strict';
+function millis(value){if(!value)return 0;if(typeof value.toMillis==='function')return value.toMillis();if(value instanceof Date)return value.getTime();if(typeof value==='object'&&Number.isFinite(value.seconds))return value.seconds*1000+(Number(value.nanoseconds)||0)/1e6;if(typeof value==='object'&&Number.isFinite(value._seconds))return value._seconds*1000+(Number(value._nanoseconds)||0)/1e6;if(typeof value==='number')return value;const n=Date.parse(value);return Number.isFinite(n)?n:0;}
+function check(data){const saved=millis(data?.scheda_consulenza_pdf_aggiornata_il),updated=millis(data?.ultimo_aggiornamento_scheda);if(!saved)return {status:'unknown',message:'Data di aggiornamento del PDF non disponibile: verifica che corrisponda ai dati attuali della scheda.'};if(updated>saved+1000)return {status:'stale',message:'La scheda è stata modificata dopo la generazione del PDF: il documento potrebbe non contenere gli ultimi dati.'};return {status:'current',message:''};}
+root.CredipassPdfFreshness={check,millis};if(typeof module!=='undefined')module.exports=root.CredipassPdfFreshness;
+})(typeof window==='undefined'?globalThis:window);

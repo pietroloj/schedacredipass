@@ -1,0 +1,2 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),{check}=require('../main/js/pdf-freshness');
+test('segnala PDF precedente ai dati e lascia senza avviso il PDF aggiornato',()=>{assert.equal(check({scheda_consulenza_pdf_aggiornata_il:{seconds:100},ultimo_aggiornamento_scheda:{seconds:120}}).status,'stale');assert.equal(check({scheda_consulenza_pdf_aggiornata_il:{seconds:120},ultimo_aggiornamento_scheda:{seconds:100}}).status,'current');assert.equal(check({ultimo_aggiornamento_scheda:{seconds:100}}).status,'unknown');});
