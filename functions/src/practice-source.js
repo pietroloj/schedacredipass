@@ -1058,7 +1058,10 @@ const dashboardGestionaleDati =
       const leadSnap = await db.collection('acquisizione_lead').get();
       const reconciliation = require('./lead-reconciliation');
       const accessibleLeads = leadSnap.docs.map(doc=>({id:doc.id,...(doc.data()||{})})).filter(lead=>role==='admin'||leadOwnerUids.has(cleanText(lead.consultantUid)));
-      const matched = reconciliation.reconcile(accessibleLeads,accessiblePractices);
+      const involvedOwners=[...new Set([...accessibleLeads.map(l=>cleanText(l.consultantUid)),...accessiblePractices.map(reconciliation.owner)].filter(Boolean))];
+      const involvedProfiles=await Promise.all(involvedOwners.map(id=>db.collection('consulenti').doc(id).get()));
+      const profileByUid=Object.fromEntries(involvedProfiles.map((snap,i)=>[involvedOwners[i],snap.data()||{}]));
+      const matched = reconciliation.reconcile(accessibleLeads,accessiblePractices,profileByUid);
       const leadCounts = {};
       const leadItems = [];
       let leadTotal = 0;
@@ -1070,7 +1073,7 @@ const dashboardGestionaleDati =
         const source = require('./lead-display').displaySource(lead);
         leadCounts[source] = (leadCounts[source] || 0) + 1;
         const practice = matched.linked.get(leadIndex);
-        leadItems.push({name:cleanText(lead.name,160) || 'Nome non disponibile', date:received?.toISOString() || null, source, consultantUid:cleanText(lead.consultantUid), practiceId:practice?.id||null, matchStatus:practice?'collegata':matched.ambiguousLeadIndices.has(leadIndex)?'da_verificare':'non_collegata'});
+        leadItems.push({name:cleanText(lead.name,160) || 'Nome non disponibile', date:received?.toISOString() || null, source, consultantUid:cleanText(lead.consultantUid), practiceId:practice?.id||null, practiceConsultantUid:practice?reconciliation.owner(practice):null, matchStatus:practice?'collegata':matched.ambiguousLeadIndices.has(leadIndex)?'da_verificare':'non_collegata'});
         leadTotal++;
       }
       const periodDay = require('./dashboard-period').day;
@@ -1078,14 +1081,13 @@ const dashboardGestionaleDati =
         if(!reconciliation.explicitDirect(practice)||matched.linkedPracticeIds.has(practice.id))continue;
         const day=periodDay(practice.data_consulenza)||periodDay(practice.createdAt)||periodDay(practice.creato_il)||periodDay(practice.data_creazione);
         const name=practiceDisplayName(practice);
-        leadItems.push({name, date:day?`${day}T12:00:00.000Z`:null, source:'Diretto',consultantUid:reconciliation.owner(practice),practiceId:practice.id,matchStatus:matched.ambiguous.has(practice.id)?'da_verificare':'diretta'});
+        leadItems.push({name, date:day?`${day}T12:00:00.000Z`:null, source:'Diretto',consultantUid:reconciliation.owner(practice),practiceConsultantUid:reconciliation.owner(practice),practiceId:practice.id,matchStatus:matched.ambiguous.has(practice.id)?'da_verificare':'diretta'});
         leadCounts.Diretto=(leadCounts.Diretto||0)+1;leadTotal++;
       }
-      const leadAgencyCounts=reconciliation.agencyCounts(accessibleLeads,leadPeriodPractices);
-      const leadOwners = [...new Set(leadItems.map(x=>x.consultantUid).filter(Boolean))];
-      const leadProfiles = await Promise.all(leadOwners.map(id=>db.collection('consulenti').doc(id).get()));
-      const leadOwnerNames = Object.fromEntries(leadProfiles.map((snap,i)=>{const p=snap.data()||{}; return [leadOwners[i],cleanText(p.nome_completo || [p.nome,p.cognome].filter(Boolean).join(' ') || p.email) || 'Consulente'];}));
-      leadItems.forEach(x=>{x.consultant=leadOwnerNames[x.consultantUid] || 'Non indicato';});
+      const leadAgencyCounts=reconciliation.agencyCounts(accessibleLeads,leadPeriodPractices,profileByUid);
+      const leadOwnerNames = Object.fromEntries(involvedOwners.map(id=>{const p=profileByUid[id]||{}; return [id,cleanText(p.nome_completo || [p.nome,p.cognome].filter(Boolean).join(' ') || p.email) || 'Consulente'];}));
+      leadItems.forEach(x=>{x.consultant=leadOwnerNames[x.consultantUid] || 'Non indicato';x.practiceConsultant=x.practiceConsultantUid?(leadOwnerNames[x.practiceConsultantUid]||'Non indicato'):null;});
+      const leadConversions=reconciliation.conversions(leadItems);
 
       const sevenDays =
         7
@@ -1585,7 +1587,7 @@ const dashboardGestionaleDati =
       return {
         ok:
           true,
-        leadAcquisition:{total:leadTotal, sources:leadCounts, agencyPracticeCounts:leadAgencyCounts, items:leadItems.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))},
+        leadAcquisition:{total:leadTotal, sources:leadCounts, conversions:leadConversions, agencyPracticeCounts:leadAgencyCounts, items:leadItems.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))},
 
         /*
          * Utile anche per verificare dal browser quale perimetro
