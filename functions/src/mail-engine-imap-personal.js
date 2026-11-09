@@ -1789,7 +1789,7 @@ const recuperaStoricoLead = onCall({region:'us-central1',secrets:[GMAIL_TOKEN_EN
     if(folderIndex>=folders.length) return {done:true};
     const folder=folders[folderIndex]; lock=await client.getMailboxLock(folder,{readOnly:true});
     const ids=await client.search({or:[{from:'richieste.online@credipass.it'},{from:'servizio.clienti@credipass.it'}]},{uid:true});
-    const page=(ids||[]).slice(offset,offset+50); let matched=0;
+    const page=(ids||[]).slice(offset,offset+10); let matched=0;
     for (const uidValue of page) {
       const msg=await client.fetchOne(uidValue,{uid:true,source:true},{uid:true}); if(!msg?.source) continue;
       const mail=await simpleParser(msg.source,{skipImageLinks:true}), lead=contactLead({...mail,text:cleanBody(mail)});
