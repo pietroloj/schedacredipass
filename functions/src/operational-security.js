@@ -136,8 +136,10 @@ exports.agencyDocumentLink=onCall(options,async request=>{
  const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
 });
 exports.consultationPdfLink=onCall(options,async request=>{
- const id=text(request.data?.practiceId,200);await access(request,id,'vede_scheda_consulenza');
- const file=admin.storage().bucket().file(`SchedeConsulenza/${id}/Scheda_Consulenza.pdf`);const [exists]=await file.exists();
+ const id=text(request.data?.practiceId,200),snap=await access(request,id,'vede_scheda_consulenza');
+ const stored=String(snap.data()?.scheda_consulenza_pdf_path||''),prefix=`SchedeConsulenza/${id}/`;
+ const path=stored.startsWith(prefix)&&/^[A-Za-z0-9_.-]+\.pdf$/i.test(stored.slice(prefix.length))?stored:prefix+'Scheda_Consulenza.pdf';
+ const file=admin.storage().bucket().file(path);const [exists]=await file.exists();
  if(!exists)throw new HttpsError('not-found','La scheda PDF non è stata trovata nel fascicolo.');
  const [url]=await file.getSignedUrl({action:'read',expires:Date.now()+120000});return {url};
 });
@@ -146,10 +148,12 @@ exports.saveConsultationPdf=onCall({...options,memory:'512MiB'},async request=>{
  const snap=await access(request,id,'modifica_scheda_consulenza');
  if(!encoded||encoded.length>14*1024*1024||!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))throw new HttpsError('invalid-argument','PDF non valido o troppo grande.');
  const bytes=Buffer.from(encoded,'base64');if(bytes.length>10*1024*1024||bytes.subarray(0,5).toString()!=='%PDF-')throw new HttpsError('invalid-argument','Il file non è un PDF valido.');
- const path=`SchedeConsulenza/${id}/Scheda_Consulenza.pdf`,bucket=admin.storage().bucket(),token=crypto.randomUUID();
+ const path=`SchedeConsulenza/${id}/`+(request.data?.newVersion===true?`Scheda_${crypto.randomUUID()}.pdf`:'Scheda_Consulenza.pdf'),bucket=admin.storage().bucket(),token=crypto.randomUUID();
+ const expected=request.data?.expectedUpdated;if(expected!=null&&(!Number.isFinite(expected)||expected!==(snap.data()?.ultimo_aggiornamento_scheda?.toMillis?.()||0)))throw new HttpsError('failed-precondition','La scheda è stata modificata. Ricarica prima di generare il PDF.');
  await bucket.file(path).save(bytes,{resumable:false,metadata:{contentType:'application/pdf',metadata:{firebaseStorageDownloadTokens:token}}});
  const url=`https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket.name)}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
- await snap.ref.update({scheda_consulenza_pdf_url:url,scheda_consulenza_pdf_path:path,scheda_consulenza_pdf_nome:name||'Scheda_Consulenza.pdf',scheda_consulenza_pdf_aggiornata_il:admin.firestore.FieldValue.serverTimestamp()});
+ if(expected!=null)await db.runTransaction(async tx=>{const latest=await tx.get(snap.ref);if((latest.data()?.ultimo_aggiornamento_scheda?.toMillis?.()||0)!==expected)throw new HttpsError('failed-precondition','La scheda è stata modificata. Ricarica prima di generare il PDF.');tx.update(snap.ref,{scheda_consulenza_pdf_url:url,scheda_consulenza_pdf_path:path,scheda_consulenza_pdf_nome:name||'Scheda_Consulenza.pdf',scheda_consulenza_pdf_aggiornata_il:admin.firestore.FieldValue.serverTimestamp()});});
+ else await snap.ref.update({scheda_consulenza_pdf_url:url,scheda_consulenza_pdf_path:path,scheda_consulenza_pdf_nome:name||'Scheda_Consulenza.pdf',scheda_consulenza_pdf_aggiornata_il:admin.firestore.FieldValue.serverTimestamp()});
  return {url};
 });
 exports.shareAgencyMessage=onCall(options,async request=>{
