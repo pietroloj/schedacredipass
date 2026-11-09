@@ -1039,6 +1039,7 @@ const dashboardGestionaleDati =
         );
       }
 
+      const accessiblePractices = role === 'consulente' ? allPractices.filter(p=>leadOwnerUids.has(cleanText(p.consulente_uid||p.workspace_uid||p.owner_uid||p.assegnato_a_uid))) : practices.slice();
       const periodStart = String(request.data?.periodStart || '');
       const periodEnd = String(request.data?.periodEnd || '');
       let periodExcludedUndated = 0;
@@ -1049,25 +1050,38 @@ const dashboardGestionaleDati =
           periodExcludedUndated = filtered.excludedUndated;
         } catch (_) { throw new HttpsError('invalid-argument', 'Seleziona un intervallo di date valido.'); }
       }
+      const leadPeriodPractices = periodStart ? require('./dashboard-period').filter(accessiblePractices,periodStart,periodEnd).practices : accessiblePractices;
 
       const now =
         Date.now();
 
       const leadSnap = await db.collection('acquisizione_lead').get();
+      const reconciliation = require('./lead-reconciliation');
+      const accessibleLeads = leadSnap.docs.map(doc=>({id:doc.id,...(doc.data()||{})})).filter(lead=>role==='admin'||leadOwnerUids.has(cleanText(lead.consultantUid)));
+      const matched = reconciliation.reconcile(accessibleLeads,accessiblePractices);
       const leadCounts = {};
       const leadItems = [];
       let leadTotal = 0;
-      for (const doc of leadSnap.docs) {
-        const lead = doc.data() || {};
-        if (role !== 'admin' && !leadOwnerUids.has(cleanText(lead.consultantUid))) continue;
+      for (let leadIndex=0;leadIndex<accessibleLeads.length;leadIndex++) {
+        const lead = accessibleLeads[leadIndex];
         const received = lead.receivedAt?.toDate?.();
         const day = received ? new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome'}).format(received) : '';
         if (periodStart && (!day || day < periodStart || day > periodEnd)) continue;
         const source = require('./lead-display').displaySource(lead);
         leadCounts[source] = (leadCounts[source] || 0) + 1;
-        leadItems.push({name:cleanText(lead.name,160) || 'Nome non disponibile', date:received?.toISOString() || null, source, consultantUid:cleanText(lead.consultantUid)});
+        const practice = matched.linked.get(leadIndex);
+        leadItems.push({name:cleanText(lead.name,160) || 'Nome non disponibile', date:received?.toISOString() || null, source, consultantUid:cleanText(lead.consultantUid), practiceId:practice?.id||null, matchStatus:practice?'collegata':matched.ambiguousLeadIndices.has(leadIndex)?'da_verificare':'non_collegata'});
         leadTotal++;
       }
+      const periodDay = require('./dashboard-period').day;
+      for(const practice of leadPeriodPractices){
+        if(!reconciliation.explicitDirect(practice)||matched.linkedPracticeIds.has(practice.id))continue;
+        const day=periodDay(practice.data_consulenza)||periodDay(practice.createdAt)||periodDay(practice.creato_il)||periodDay(practice.data_creazione);
+        const name=practiceDisplayName(practice);
+        leadItems.push({name, date:day?`${day}T12:00:00.000Z`:null, source:'Diretto',consultantUid:reconciliation.owner(practice),practiceId:practice.id,matchStatus:matched.ambiguous.has(practice.id)?'da_verificare':'diretta'});
+        leadCounts.Diretto=(leadCounts.Diretto||0)+1;leadTotal++;
+      }
+      const leadAgencyCounts=reconciliation.agencyCounts(accessibleLeads,leadPeriodPractices);
       const leadOwners = [...new Set(leadItems.map(x=>x.consultantUid).filter(Boolean))];
       const leadProfiles = await Promise.all(leadOwners.map(id=>db.collection('consulenti').doc(id).get()));
       const leadOwnerNames = Object.fromEntries(leadProfiles.map((snap,i)=>{const p=snap.data()||{}; return [leadOwners[i],cleanText(p.nome_completo || [p.nome,p.cognome].filter(Boolean).join(' ') || p.email) || 'Consulente'];}));
@@ -1571,7 +1585,7 @@ const dashboardGestionaleDati =
       return {
         ok:
           true,
-        leadAcquisition:{total:leadTotal, sources:leadCounts, items:leadItems.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))},
+        leadAcquisition:{total:leadTotal, sources:leadCounts, agencyPracticeCounts:leadAgencyCounts, items:leadItems.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))},
 
         /*
          * Utile anche per verificare dal browser quale perimetro
