@@ -2104,7 +2104,7 @@ async function canReadTimelinePractice(uid, practice = {}) {
     const ownerSnap = await db.collection("consulenti").doc(ownerUid).get();
     if (!ownerSnap.exists) return false;
     const managerUid = String(ownerSnap.data()?.responsabile_uid || "").trim();
-    return !!managerUid && visible.includes(managerUid);
+    return !!managerUid && (role === "responsabile" ? managerUid === uid : visible.includes(managerUid));
   }
   return false;
 }
