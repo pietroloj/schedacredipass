@@ -11,7 +11,7 @@ async function boot(search='',deny=false){
  })};
  let denied=deny;
  const fn={httpsCallable:name=>async args=>{calls.push({name,args});if(name==='statoCollegamentoGmail')return {data:{connected:true,email:'test@example.com',lastSyncOk:false,lastError:'Errore simulato',lastSyncAt:'2026-09-18'}};if(denied)throw Error('Accesso negato');return {data:{practice:data,thread:[{id:args.threadAfter?'second':'first',oggetto:'Richiesta <img>',mittente:['bank@example.com'],data:'2026-09-18'}],threadNext:args.threadAfter?null:'first'}}}};
- const context={window:{CREDIPASS_FIREBASE:{db,functions:fn}},document:{getElementById:node},location:{search},URLSearchParams,CredipassAuth:{guard:async()=>({user:{uid:'owner'},profile:{nome:'Pietro'}})},console};
+ const context={window:{CREDIPASS_FIREBASE:{db,functions:fn}},document:{getElementById:node},location:{search},URLSearchParams,CredipassStudioVisibility:require('../main/js/studio-visibility'),CredipassAuth:{guard:async()=>({user:{uid:'owner'},profile:{nome:'Pietro'}})},console};
  vm.runInNewContext(code,context);await new Promise(r=>setImmediate(r));return {nodes,node,calls,setDenied:()=>denied=true};
 }
 test('home queries only assigned practices, filters real records',async()=>{const x=await boot();assert.equal(x.calls[0].uid,'owner');assert.equal(x.calls[0].field,'consulente_uid');assert.match(x.node('rows').innerHTML,/Test Cliente/);x.node('search').value='missing';x.node('search').oninput();assert.match(x.node('rows').innerHTML,/Nessuna pratica/)});

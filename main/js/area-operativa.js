@@ -16,7 +16,7 @@ async function load(){if(busy)return;busy=true;$('refresh').disabled=true;$('mes
  $('account').textContent=[session.profile?.nome,session.profile?.cognome].filter(Boolean).join(' ')||session.user.email||'Consulente';
  const id=new URLSearchParams(location.search).get('id');
  if(id){const result=await fn.httpsCallable('leggiEmailTimeline')({practiceId:id});selected={...result.data.practice,id};thread=result.data.thread||[];threadNext=result.data.threadNext;renderPractice();}
- else{selected=null;const snap=await db.collection('pratiche_mutuo').where('consulente_uid','==',session.user.uid).get();practices=snap.docs.map(d=>({...d.data(),id:d.id}));renderHome();}
+ else{selected=null;practices=await CredipassStudioVisibility.load(db,session);renderHome();}
  }catch(e){$('view').innerHTML='';selected=null;thread=[];error(e);$('subtitle').textContent='I dati non sono stati caricati. Premi Aggiorna dati per riprovare.';}finally{busy=false;$('refresh').disabled=false}}
 function renderHome(){
  const requiring=practices.filter(p=>array(p.documenti_richiesti_portale).length),states={};
