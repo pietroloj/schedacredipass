@@ -88,7 +88,8 @@ function contactLead(mail = {}) {
   const raw = body.match(/(?:^|\n)[ \t]*(?:provenienza[ \t]+canale|canale(?:[ \t]+di[ \t]+provenienza)?|provenienza|fonte|sorgente)[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
   const subchannel = body.match(/(?:^|\n)[ \t]*sottocanale[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
   const partner = (body.match(/(?:^|\n)[ \t]*(?:conv\.?|convenzionato)[ \t]*[:\-][ \t]*([^\r\n]{1,160})/i)?.[1] || '').replace(/(?:\s*\(\s*\))+\s*$/, '').trim();
-  const name = assignment ? (body.match(/(?:^|\n)[ \t]*nome[ \t]+e[ \t]+cognome[ \t]*:[ \t]*([^\r\n]{1,160})/i)?.[1]?.trim() || '') : (subject.match(/\[\d{4,}\][ \t]*-[ \t]*(.+)$/)?.[1]?.trim() || '');
+  const nameCandidate = assignment ? (body.match(/(?:^|\n)[ \t]*nome[ \t]+e[ \t]+cognome[ \t]*:[ \t]*(?:\r?\n[ \t]*)?([^\r\n]{1,160})/i)?.[1]?.trim() || '') : (subject.match(/\[\d{4,}\][ \t]*-[ \t]*(.+)$/)?.[1]?.trim() || '');
+  const name = nameCandidate.includes(':') ? '' : nameCandidate;
   return {id, source:raw || 'Da verificare', subchannel, partner, name, sourceRank:assignment ? 2 : 1};
 }
 

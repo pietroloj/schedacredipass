@@ -17,6 +17,8 @@ assert.equal(policy.contactLead({...assignedLead,text:'Conv: ROTA PASQUALE (Mond
 assert.equal(policy.contactLead({...leadExample,text:'Provenienza Canale: PROFESSIONECASA\nSottocanale: Web'}).source,'PROFESSIONECASA');
 assert.equal(policy.contactLead({...assignedLead,subject:'Altra comunicazione 1083128'}),null);
 assert.equal(policy.contactLead(leadExample).name,'LUIGI BARONE');
+assert.equal(policy.contactLead({...assignedLead,text:'Nome e Cognome:\nLUIGI BARONE\nCanale: PROFESSIONECASA'}).name,'LUIGI BARONE');
+assert.equal(policy.contactLead({...assignedLead,text:'Nome e Cognome:\nProvincia: CE'}).name,'');
 const leadDisplay=require(root+'/functions/src/lead-display');
 assert.equal(leadDisplay.displaySource({source:'Santucci_TikTok',subchannel:'Santucci_Meta_Test'}),'Santucci Tik Tok');
 assert.equal(leadDisplay.displaySource({source:'PROFESSIONECASA',partner:'ROTA PASQUALE (Mondragone)'}),'Professionecasa Mondragone');
