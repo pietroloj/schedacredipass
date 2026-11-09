@@ -21,6 +21,7 @@ async function access(request,id,permission){
  const p=await staff(request,permission),d=s.data();
  const owner=d.consulente_uid||d.workspace_uid||d.owner_uid;
  if(p.ruolo==='admin'||owner===request.auth.uid)return s;
+ if(p.ruolo==='consulente'&&(p.collaboratori_visibili||[]).includes(owner))return s;
  if(!['responsabile','segreteria'].includes(p.ruolo))fail();
  if((p.collaboratori_visibili||[]).includes(owner))return s;
  if(owner){const o=(await db.collection('consulenti').doc(owner).get()).data()||{};

@@ -34,6 +34,9 @@ return {};
 (async()=>{
 const engine=load('mail-engine-imap-personal.js');
 records.set('consulenti/owner',{attivo:true,ruolo:'consulente'});
+records.set('consulenti/viewer',{attivo:true,ruolo:'consulente',collaboratori_visibili:['owner']});
+assert.equal(await engine.canReadTimelinePractice('viewer',molino),true);
+assert.equal(await engine.canReadTimelinePractice('viewer',{consulente_uid:'stranger'}),false);
 records.set('pratiche_mutuo/molino',{...molino,attivita_interne:[{id:'email_bad',meta:{email_doc_id:'bad'}},{id:'email_good',meta:{email_doc_id:'good'}},{id:'email_orphan',descrizione:'ROSSETTI EMANUELE'},{id:'note',tipo:'nota'}]});
 records.set('pratiche_mutuo/molino/email_timeline/bad',{oggetto:'ROSSETTI EMANUELE',mittente:['bank@example.com']});
 records.set('pratiche_mutuo/molino/email_timeline/good',{oggetto:'Giuseppe Molino',mittente:['bank@example.com']});

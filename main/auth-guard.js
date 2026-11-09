@@ -1363,10 +1363,10 @@ async function practiceIsAccessible(data = {}) {
     const ownerUid =
         consultantUid || legacyOwnerUid;
 
-    // CONSULENTE: esclusivamente le proprie pratiche.
+    // CONSULENTE: proprie pratiche e collaboratori assegnati dall'amministratore.
     // collega_segnalato_uid NON concede accesso.
     if (session.isConsulente) {
-        return !!ownerUid && ownerUid === myUid;
+        return !!ownerUid && (ownerUid === myUid || (Array.isArray(session.profile?.collaboratori_visibili) && session.profile.collaboratori_visibili.includes(ownerUid)));
     }
 
     // Tutti gli altri ruoli vedono sempre le proprie pratiche.

@@ -172,10 +172,11 @@ function inheritedSecretaryNames(responsabileUid){
 function visibilityText(u){
  const role=String(u.ruolo||"consulente").toLowerCase();
  if(role==="consulente"){
+   const count=Array.isArray(u.collaboratori_visibili)?u.collaboratori_visibili.length:0;
    const managerUid=String(u.responsabile_uid||u.gestito_da_uid||"");
-   if(!managerUid)return '<span class="muted">Autonomo / nessun responsabile</span>';
+   if(!managerUid)return `<span class="muted">Autonomo / nessun responsabile · ${count} collaboratori visibili</span>`;
    const manager=getUser(managerUid),secs=inheritedSecretaryNames(managerUid);
-   return `<div class="managed">Gestito da <strong>${esc(nameOf(manager))}</strong>${secs.length?`<div class="muted">Backoffice ereditato: ${esc(secs.join(", "))}</div>`:""}</div>`;
+   return `<div class="managed">Gestito da <strong>${esc(nameOf(manager))}</strong><div class="muted">${count} collaboratori visibili</div>${secs.length?`<div class="muted">Backoffice ereditato: ${esc(secs.join(", "))}</div>`:""}</div>`;
  }
  if(role==="responsabile"){
    const team=allUsers.filter(x=>String(x.responsabile_uid||x.gestito_da_uid||"")===u.uid);
@@ -203,7 +204,7 @@ function renderUsers(){
  <td><span class="badge ${role}">${esc(roleLabel(role).toUpperCase())}</span></td>
  <td>${visibilityText(u)}</td><td>${u.attivo===false?'<span style="color:#b42318">● Disattivo</span>':'<span style="color:#138a55">● Attivo</span>'}</td>
  <td><div class="role-actions">
-   ${role==="responsabile"||role==="segreteria"?`<button class="btn gold" onclick="openVisibilityModal('${esc(u.uid)}')"><i class="fas fa-users"></i> GESTISCI VISIBILITÀ</button>`:""}
+   ${["responsabile","segreteria","consulente"].includes(role)?`<button class="btn gold" onclick="openVisibilityModal('${esc(u.uid)}')"><i class="fas fa-users"></i> GESTISCI VISIBILITÀ</button>`:""}
    ${role==="consulente"?`<button class="btn gold" onclick="openManagerModal('${esc(u.uid)}')"><i class="fas fa-user-tie"></i> GESTITO DA</button>`:""}
    <button class="icon-btn" onclick="openPermissionsModal('${esc(u.uid)}')"><i class="fas fa-key"></i> PERMESSI</button>
    <button class="icon-btn" onclick="openRoleModal('${esc(u.uid)}')"><i class="fas fa-pen"></i> MODIFICA RUOLO</button>

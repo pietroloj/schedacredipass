@@ -431,13 +431,13 @@ exports.updateConsultantVisibility = onCall(
       targetSnap.data() || {};
 
     if (
-      !["segreteria", "responsabile"].includes(
+      !["segreteria", "responsabile", "consulente"].includes(
         clean(target.ruolo).toLowerCase()
       )
     ) {
       throw new HttpsError(
         "failed-precondition",
-        "La visibilità collaboratori può essere configurata solo per Segreteria o Responsabile."
+        "La visibilità collaboratori può essere configurata solo per Segreteria, Responsabile o Consulente."
       );
     }
 
@@ -448,7 +448,7 @@ exports.updateConsultantVisibility = onCall(
 
     const targetRole = clean(target.ruolo).toLowerCase();
 
-    if (targetRole === "responsabile") {
+    if (targetRole === "responsabile" || targetRole === "consulente") {
       visibility.dettagli = visibility.dettagli.filter(
         x => clean(
           (targetSnap.exists && x.uid)
@@ -545,7 +545,7 @@ exports.updateConsultantPermissions = onCall(
       payload.permessi_aggiornati_da = request.auth.uid;
     }
 
-    if (requestedRole && !["segreteria", "responsabile"].includes(requestedRole)) {
+    if (requestedRole && (!["segreteria", "responsabile", "consulente"].includes(requestedRole) || (requestedRole === "consulente" && currentRole !== "consulente"))) {
       payload.collaboratori_visibili = [];
       payload.collaboratori_visibili_dettagli = [];
     }
