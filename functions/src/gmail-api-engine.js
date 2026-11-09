@@ -2030,6 +2030,10 @@ async function syncAllConnections() {
       ),
     };
 
+    // IMAP connections have their own scheduled synchronizer. Passing them
+    // through the OAuth engine would overwrite their status with a token error.
+    if (connection.provider === "imap_app_password") continue;
+
     try {
 
       const result =
