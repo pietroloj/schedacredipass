@@ -510,26 +510,21 @@ async function saveUnmatched({
   consultantUid,
 }) {
   const id =
-    messageKey(
+    `${consultantUid}_${messageKey(
       folderName,
       uid,
       mail.messageId
-    );
+    )}`;
 
-  await db
-    .collection(
-      "mail_da_associare"
-    )
-    .doc(id)
-    .set(
+  const pendingRef = db.collection("mail_da_associare").doc(id);
+  const existing = await pendingRef.get();
+  if (existing.exists && ["associated", "ignored"].includes(existing.data()?.stato)) return;
+  await pendingRef.set(
       {
         messageId:
           mail.messageId
           ||
           null,
-
-        consultantUid:
-          consultantUid || null,
 
         consultantUid:
           consultantUid
@@ -722,7 +717,7 @@ async function saveMatchedMail({
       ),
 
     html: String(mail.html || "").slice(0,600000),
-    autoAssociata: true,
+    autoAssociata: match?.best?.method !== "manual",
     testo:
       bodyText,
 
@@ -1192,6 +1187,10 @@ async function syncFolder({
       const diagnosticNumbers =
         extractLabeledPracticeNumbersFromSubject(mail.subject || "");
 
+      if (!match.matched && diagnosticNumbers.length) {
+        match.extractedNumbers = diagnosticNumbers;
+      }
+
       messageDiagnostics.push({
         uid: msg.uid,
         direction,
@@ -1249,6 +1248,7 @@ async function syncFolder({
               msg.uid,
             bankDetection,
             match,
+            consultantUid,
           });
         }
 
@@ -1948,6 +1948,8 @@ const associaEmailAPratica =
     {
       region:
         "us-central1",
+      secrets: [GMAIL_TOKEN_ENCRYPTION_KEY],
+      timeoutSeconds: 120,
     },
 
     async request => {
@@ -2012,6 +2014,10 @@ const associaEmailAPratica =
         ||
         {};
 
+      if (data.consultantUid !== request.auth.uid) {
+        throw new HttpsError("permission-denied", "Email non disponibile.");
+      }
+
       const practiceRef =
         db
           .collection(
@@ -2020,6 +2026,42 @@ const associaEmailAPratica =
           .doc(
             practiceId
           );
+
+      const practice = await practiceRef.get();
+      if (!practice.exists || !(await canReadTimelinePractice(request.auth.uid, practice.data()))) {
+        throw new HttpsError("permission-denied", "Pratica non accessibile.");
+      }
+
+      const connectionSnap = await db.collection("gmail_connections").doc(request.auth.uid).get();
+      const connection = connectionSnap.data() || {};
+      if (!connection.connected || connection.provider !== "imap_app_password") {
+        throw new HttpsError("failed-precondition", "Collegamento IMAP non disponibile.");
+      }
+      const mailboxUser = String(connection.email || "").trim();
+      const password = decryptRefreshToken(imapCredentialPayload(connection)).token;
+      const client = new ImapFlow({host:"imap.gmail.com", port:993, secure:true,
+        auth:{user:mailboxUser, pass:String(password).replace(/\s+/g, "")}, logger:false});
+      let lock;
+      try {
+        await client.connect();
+        lock = await client.getMailboxLock(String(data.folder || "INBOX"), {readOnly:true});
+        const original = await client.fetchOne(Number(data.uid), {source:true, uid:true}, {uid:true});
+        if (!original?.source) throw new Error("Messaggio originale non trovato nella casella.");
+        const mail = await simpleParser(original.source, {skipImageLinks:true});
+        if (data.messageId && normalizeMessageId(mail.messageId) !== normalizeMessageId(data.messageId)) {
+          throw new Error("Il messaggio originale non corrisponde: associazione annullata.");
+        }
+        await saveMatchedMail({practiceRef, practiceId, folderName:String(data.folder || "INBOX"),
+          uid:original.uid, mail, mailboxUser, consultantUid:request.auth.uid,
+          bankDetection:{verified:data.dominioVerificato === true, domain:data.dominio || "",
+            bank:data.bancaSuggerita ? {bancaNome:data.bancaSuggerita} : null},
+          match:{best:{data:practice.data() || {}, method:"manual"}, extractedNumbers:[]}});
+      } catch (error) {
+        throw new HttpsError("failed-precondition", String(error?.message || error));
+      } finally {
+        lock?.release();
+        await client.logout().catch(() => {});
+      }
 
       const number =
         Array.isArray(
@@ -2422,6 +2464,7 @@ const segnaEmailGestita = onCall({region:"us-central1"}, async request=>{
 });
 
 module.exports = {
+  saveUnmatched,
   resolveTimelineEmail,
   imapCredentialPayload,
   riparaNumeriPraticaDaEmail,
