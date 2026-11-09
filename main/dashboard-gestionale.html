@@ -161,7 +161,7 @@ td strong{color:var(--navy)}
 .modal-empty{padding:35px;text-align:center;color:var(--muted);font-size:12px}
 
 </style>
-<script src="/main/js/practice-states.js"></script><script src="/main/js/management-report.js"></script></head>
+<script src="/main/js/practice-states.js"></script><script src="/main/js/management-report.js"></script><script src="/main/js/dashboard-date-filters.js"></script></head>
 <body>
 
 <div class="topbar">
@@ -176,7 +176,7 @@ td strong{color:var(--navy)}
   </div>
 </div>
 
-<dialog id="periodDialog" style="border:0;border-radius:14px;padding:24px;max-width:480px;width:calc(100% - 32px);color:#0b2a5b;box-shadow:0 15px 60px #001c4680"><form id="periodForm"><h2 style="margin-top:0">Periodo delle consulenze</h2><p>Le statistiche mostrano lo stato attuale delle pratiche con data di consulenza nel periodo. Se assente si usa la data di creazione.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin:15px 0"><button class="btn light" type="button" id="weekCurrent">Questa settimana</button><button class="btn light" type="button" id="weekPrevious">Settimana precedente</button></div><div style="display:flex;gap:12px"><label>Dal <input type="date" name="start" required></label><label>Al <input type="date" name="end" required></label></div><p id="periodError" role="status"></p><div style="display:flex;gap:10px;margin-top:16px"><button class="btn gold" type="submit">Applica</button><button class="btn light" type="button" id="periodAll">Tutte le date</button><button class="btn light" type="button" onclick="document.getElementById('periodDialog').close()">Chiudi</button></div></form></dialog>
+<dialog id="periodDialog" style="border:0;border-radius:14px;padding:24px;max-width:480px;width:calc(100% - 32px);color:#0b2a5b;box-shadow:0 15px 60px #001c4680"><form id="periodForm"><h2 style="margin-top:0">Periodo della dashboard</h2><p>Il periodo filtra le consulenze e la data di ricezione dei lead. Le pratiche mostrano lo stato attuale.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin:15px 0"><button class="btn light" type="button" id="weekCurrent">Questa settimana</button><button class="btn light" type="button" id="weekPrevious">Settimana precedente</button><button class="btn light" type="button" id="monthCurrent">Questo mese</button><button class="btn light" type="button" id="monthPrevious">Mese precedente</button></div><div style="display:flex;gap:12px;flex-wrap:wrap"><label>Dal <input type="date" name="start" required></label><label>Al <input type="date" name="end" required></label></div><p id="periodError" role="status"></p><div style="display:flex;gap:10px;margin-top:16px"><button class="btn gold" type="submit">Applica</button><button class="btn light" type="button" id="periodAll">Tutte le date</button><button class="btn light" type="button" onclick="document.getElementById('periodDialog').close()">Chiudi</button></div></form></dialog>
 <dialog id="reportDialog" style="border:0;border-radius:14px;padding:24px;max-width:480px;width:calc(100% - 32px);color:#0b2a5b;box-shadow:0 15px 60px #001c4680"><form id="reportForm"><h2 style="margin-top:0">Esporta report</h2><p>Scegli le sezioni e includi i grafici che ti servono.</p><div style="display:grid;gap:12px;margin:20px 0"><label><input type="checkbox" name="summary" checked> Quadro generale</label><label><input type="checkbox" name="states" checked> Stati delle pratiche</label><label><input type="checkbox" name="sources" checked> Provenienza</label><label><input type="checkbox" name="consultants" checked> Collaboratori</label><label><input type="checkbox" name="agencies" checked> Agenzie immobiliari</label><label><input type="checkbox" name="quality" checked> Qualità operativa e tempi</label><label><input type="checkbox" name="charts" checked> Includi i grafici nelle sezioni selezionate</label></div><p id="reportError" role="status"></p><div style="display:flex;gap:10px"><button type="submit" class="btn gold">Apri report / Salva PDF</button><button type="button" class="btn light" onclick="document.getElementById('reportDialog').close()">Annulla</button></div></form></dialog>
 <div class="wrap"><p id="periodLabel" style="color:#53677b;font-size:12px"></p>
 
@@ -314,7 +314,7 @@ td strong{color:var(--navy)}
 </div>
 
 
-<dialog id="leadDialog" style="border:0;border-radius:14px;padding:24px;width:min(900px,calc(100% - 32px));max-height:85vh;color:#0b2a5b"><h2>Elenco lead</h2><label>Collega <select id="leadConsultant"><option value="">Tutti i colleghi</option></select></label><label style="margin-left:16px">Provenienza <select id="leadSource"><option value="">Tutte le provenienze</option></select></label><div id="leadList" class="table-wrap" style="margin-top:18px"></div><button type="button" class="btn light" onclick="document.getElementById('leadDialog').close()">Chiudi</button></dialog>
+<dialog id="leadDialog" style="border:0;border-radius:14px;padding:24px;width:min(900px,calc(100% - 32px));max-height:85vh;color:#0b2a5b"><h2>Elenco lead</h2><p id="leadPeriod" class="empty"></p><button type="button" class="btn light" onclick="document.getElementById('leadDialog').close();document.getElementById('periodDialog').showModal()">Cambia periodo</button><div style="margin-top:14px"><label>Collega <select id="leadConsultant"><option value="">Tutti i colleghi</option></select></label><label style="margin-left:16px">Provenienza <select id="leadSource"><option value="">Tutte le provenienze</option></select></label></div><div id="leadList" class="table-wrap" style="margin-top:18px"></div><button type="button" class="btn light" onclick="document.getElementById('leadDialog').close()">Chiudi</button></dialog>
 <div id="attentionModal" class="attention-modal" onclick="if(event.target===this) closeAttentionModal()">
   <div class="attention-panel">
     <div class="attention-head">
@@ -346,7 +346,7 @@ const fn =
 
 let dashboardData =
   null;
-let dashboardPeriod = null;
+let dashboardPeriod = CredipassDateFilters.week();
 
 
 function pct(
@@ -1063,6 +1063,8 @@ function renderDashboard() {
 
 function openLeadDialog(source='') {
   const items=dashboardData?.leadAcquisition?.items || [];
+  const period=dashboardData?.period;
+  document.getElementById('leadPeriod').textContent=period ? `Lead ricevuti dal ${period.start} al ${period.end}` : 'Lead ricevuti in tutte le date';
   const consultant=document.getElementById('leadConsultant'), sourceSelect=document.getElementById('leadSource');
   consultant.replaceChildren(new Option('Tutti i colleghi',''));
   sourceSelect.replaceChildren(new Option('Tutte le provenienze',''));
@@ -1094,7 +1096,7 @@ async function loadDashboard() {
 
     renderDashboard();
     const period=dashboardData.period;
-    document.getElementById('periodLabel').textContent=period ? `Consulenze dal ${period.start} al ${period.end} · Stato attuale · ${period.excludedUndated} pratiche senza data escluse` : 'Tutte le date · Stato attuale delle pratiche';
+    document.getElementById('periodLabel').textContent=period ? `Consulenze e lead dal ${period.start} al ${period.end} · Stato attuale delle pratiche · ${period.excludedUndated} pratiche senza data escluse` : 'Tutte le date · Stato attuale delle pratiche';
 
   }
   catch(error) {
@@ -1115,9 +1117,11 @@ async function loadDashboard() {
 
 
 const periodForm=document.getElementById('periodForm');
-function isoLocal(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
-function chooseWeek(offset){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7+offset*7);const end=new Date(d);end.setDate(d.getDate()+6);periodForm.elements.start.value=isoLocal(d);periodForm.elements.end.value=isoLocal(end);}
+function setPeriodInputs(period){periodForm.elements.start.value=period.periodStart;periodForm.elements.end.value=period.periodEnd;document.getElementById('periodError').textContent='';}
+function chooseWeek(offset){setPeriodInputs(CredipassDateFilters.week(new Date(),offset));}
 document.getElementById('weekCurrent').onclick=()=>chooseWeek(0);document.getElementById('weekPrevious').onclick=()=>chooseWeek(-1);
+document.getElementById('monthCurrent').onclick=()=>setPeriodInputs(CredipassDateFilters.month());document.getElementById('monthPrevious').onclick=()=>setPeriodInputs(CredipassDateFilters.month(new Date(),-1));
+setPeriodInputs(dashboardPeriod);
 periodForm.onsubmit=event=>{event.preventDefault();const start=periodForm.elements.start.value,end=periodForm.elements.end.value;if(!start||!end||start>end){document.getElementById('periodError').textContent='Controlla le date del periodo.';return;}dashboardPeriod={periodStart:start,periodEnd:end};document.getElementById('periodDialog').close();loadDashboard();};
 document.getElementById('periodAll').onclick=()=>{dashboardPeriod=null;document.getElementById('periodDialog').close();loadDashboard();};
 document.getElementById('reportForm').addEventListener('submit', event => {

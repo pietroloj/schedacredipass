@@ -1,0 +1,3 @@
+const test=require('node:test');const assert=require('node:assert/strict');const {week,month}=require('../main/js/dashboard-date-filters');
+test('la settimana va da lunedì a domenica anche tra anni diversi',()=>{assert.deepEqual(week(new Date(2027,0,1,12)),{periodStart:'2026-12-28',periodEnd:'2027-01-03'});assert.deepEqual(week(new Date(2026,10,9,12),-1),{periodStart:'2026-11-02',periodEnd:'2026-11-08'});});
+test('il mese corrente e precedente rispettano anno e giorni del mese',()=>{assert.deepEqual(month(new Date(2024,2,12,12),-1),{periodStart:'2024-02-01',periodEnd:'2024-02-29'});assert.deepEqual(month(new Date(2026,0,1,12),-1),{periodStart:'2025-12-01',periodEnd:'2025-12-31'});});
