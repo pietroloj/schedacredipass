@@ -190,6 +190,13 @@ td strong{color:var(--navy)}
     <div class="kpi clickable" onclick="openAttentionModal('incomplete')"><small>Doc. incomplete</small><strong id="kIncomplete">—</strong><div class="delta" style="color:var(--amber)">Clicca per vedere le integrazioni</div></div>
   </div>
 
+  <div class="card" style="margin:16px 0">
+    <h2>Acquisizione lead</h2>
+    <p class="empty">Richieste di contatto ricevute nel periodo selezionato, distinte dalle pratiche di consulenza.</p>
+    <strong id="leadTotal">—</strong> <span class="empty">lead ricevuti</span>
+    <div id="leadSources" class="agency-bars" style="margin-top:14px"><span class="empty">Caricamento...</span></div>
+  </div>
+
   <div class="grid">
     <div class="card">
       <h2>Pratiche per stato</h2>
@@ -951,6 +958,13 @@ function renderDashboard() {
 
   const d =
     dashboardData;
+
+  const leads = d.leadAcquisition || {total:0,sources:{}};
+  document.getElementById('leadTotal').textContent = Number(leads.total || 0).toLocaleString('it-IT');
+  const leadSources = Object.entries(leads.sources || {}).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('leadSources').innerHTML = leadSources.length
+    ? leadSources.map(([name,count])=>`<div class="status-row"><span>${safe(name)}</span><b>${Number(count)||0}</b></div>`).join('')
+    : '<span class="empty">Nessuna richiesta di contatto rilevata nel periodo.</span>';
 
   const total =
     Number(

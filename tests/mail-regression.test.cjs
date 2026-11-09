@@ -2,6 +2,17 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'); const vm=require('node:vm'); const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const policy=require(root+'/functions/src/mail-policy');
+const leadExample={from:{value:[{address:'richieste.online@credipass.it'}]},subject:'Richiesta di contatto - Credipass - MUT - [1083128] - LUIGI BARONE',text:'Canale di provenienza: Minisito'};
+assert.equal(policy.contactLead(leadExample).source,'Minisito');
+assert.equal(policy.contactLead(leadExample).id,'1083128');
+assert.equal(policy.contactLead({...leadExample,text:'Nessuna fonte indicata'}).source,'Da verificare');
+assert.equal(policy.contactLead({...leadExample,from:{value:[{address:'altro@example.com'}]}}),null);
+assert.equal(policy.contactLead({...leadExample,subject:'Pratica 1083128'}),null);
+const assignedLead={from:{value:[{address:'servizio.clienti@credipass.it'}]},subject:'Associazione LEAD 1083128 a Pietro Lo Iacono',text:'Nome e Cognome: LUIGI BARONE\nCanale di Provenienza: PROFESSIONECASA\nConv: ROTA PASQUALE'};
+assert.equal(policy.contactLead(assignedLead).id,policy.contactLead(leadExample).id);
+assert.equal(policy.contactLead(assignedLead).source,'PROFESSIONECASA');
+assert.equal(policy.contactLead({...leadExample,text:'Provenienza Canale: PROFESSIONECASA\nSottocanale: Web'}).source,'PROFESSIONECASA');
+assert.equal(policy.contactLead({...assignedLead,subject:'Altra comunicazione 1083128'}),null);
 let count=0;function check(name,fn){fn();count++;console.log('PASS '+name);}
 const molino={consulente_uid:'owner',cliente_nome:'Giuseppe',cliente_cognome:'Molino',cliente2_nome:'Anna',cliente2_cognome:'Della Monica'};
 for(const name of ['Giuseppe Molino','MOLINO GIUSEPPE','Molino G.','G. MOLINO','Della Monica Anna'])check(name,()=>assert.equal(policy.strictSubject('Re: '+name,molino).matched,true));

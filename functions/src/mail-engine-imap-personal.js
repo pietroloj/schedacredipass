@@ -902,7 +902,7 @@ function mailReferenceIds(mail) {
 
 
 
-const {strictSubject, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender} = require("./mail-policy");
+const {strictSubject, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender, contactLead} = require("./mail-policy");
 
 async function learnPracticeNumberAfterNameMatch({practiceRef,practiceData,subject,method}) {
   if(method!=="subject_full_name"&&method!=="subject_surname_initial")return [];
@@ -1146,6 +1146,25 @@ async function syncFolder({
         continue;
       }
 
+      const lead = contactLead({...mail, text:cleanBody(mail)});
+      if (lead) {
+        const leadKey = `${consultantUid}_${lead.id || messageKey(folderName, msg.uid, mail.messageId)}`;
+        const ref = db.collection('acquisizione_lead').doc(leadKey);
+        await db.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          const old = snap.data() || {};
+          const known = lead.source !== 'Da verificare';
+          const replaceSource = known && (!old.source || old.source === 'Da verificare' || lead.sourceRank >= Number(old.sourceRank || 0));
+          const date = mail.date && !Number.isNaN(new Date(mail.date).getTime()) ? admin.firestore.Timestamp.fromDate(new Date(mail.date)) : null;
+          const oldDate = old.receivedAt?.toDate?.();
+          const receivedAt = date && (!oldDate || new Date(mail.date) < oldDate) ? date : (old.receivedAt || admin.firestore.FieldValue.serverTimestamp());
+          tx.set(ref, {consultantUid, leadId:lead.id || null, receivedAt,
+            ...(replaceSource ? {source:lead.source, sourceRank:lead.sourceRank} : (!old.source ? {source:'Da verificare'} : {})),
+            ...(lead.subchannel ? {subchannel:lead.subchannel} : {}),
+            updatedAt:admin.firestore.FieldValue.serverTimestamp()}, {merge:true});
+        });
+        continue;
+      }
       if (excludedSender(mail.from)) {
         messageDiagnostics.push({subject:mail.subject,from:safeArrayAddress(mail.from),matched:false,reason:"mittente escluso"});
         continue;
@@ -1380,6 +1399,18 @@ async function runMailSyncForConsultant(
   { manualBackfill = false, backfillPage = 0 } = {}
 ) {
   await ensureBankSeed();
+
+  // Recover previously queued contact requests without guessing their source.
+  const queued = await db.collection('mail_da_associare').where('consultantUid','==',consultantUid).where('stato','==','pending').get();
+  for (const item of queued.docs) {
+    const data = item.data() || {};
+    const lead = contactLead({from:data.mittente, subject:data.oggetto});
+    if (!lead) continue;
+    const key = `${consultantUid}_${lead.id || messageKey(data.folder, data.uid, data.messageId)}`;
+    const ref = db.collection('acquisizione_lead').doc(key);
+    const existing = await ref.get();
+    if (!existing.exists) await ref.set({consultantUid, leadId:lead.id || null, source:'Da verificare', receivedAt:data.data || admin.firestore.FieldValue.serverTimestamp(), updatedAt:admin.firestore.FieldValue.serverTimestamp()});
+  }
 
   const connectionRef =
     db.collection("gmail_connections").doc(consultantUid);

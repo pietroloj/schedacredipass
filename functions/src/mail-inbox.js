@@ -5,6 +5,7 @@ const {
 
 const admin =
   require("firebase-admin");
+const {contactLead} = require('./mail-policy');
 
 
 if (!admin.apps.length) {
@@ -54,6 +55,7 @@ const listaEmailDaAssociare =
 
       const items =
         snap.docs
+          .filter(doc => { const d = doc.data() || {}; return !contactLead({from:d.mittente,subject:d.oggetto}); })
           .map(doc => {
             const d = doc.data() || {};
 

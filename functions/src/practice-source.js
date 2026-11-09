@@ -841,6 +841,7 @@ const dashboardGestionaleDati =
           );
 
       let practices = [];
+      let leadOwnerUids = new Set([uid]);
 
       if (role === "admin") {
         practices =
@@ -913,6 +914,7 @@ const dashboardGestionaleDati =
               .map(x => cleanText(x))
               .filter(Boolean)
           );
+        leadOwnerUids = managedUids;
 
         practices =
           allPractices.filter(
@@ -1003,6 +1005,7 @@ const dashboardGestionaleDati =
               )
           );
         }
+        leadOwnerUids = visibleUids;
 
         practices =
           allPractices.filter(
@@ -1049,6 +1052,22 @@ const dashboardGestionaleDati =
 
       const now =
         Date.now();
+
+      const leadSnap = await db.collection('acquisizione_lead').get();
+      const leadCounts = {};
+      let leadTotal = 0;
+      for (const doc of leadSnap.docs) {
+        const lead = doc.data() || {};
+        if (role !== 'admin' && !leadOwnerUids.has(cleanText(lead.consultantUid))) continue;
+        const received = lead.receivedAt?.toDate?.();
+        const day = received ? new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome'}).format(received) : '';
+        if (periodStart && (!day || day < periodStart || day > periodEnd)) continue;
+        const baseSource = cleanText(lead.source, 120) || 'Da verificare';
+        const subchannel = cleanText(lead.subchannel, 120);
+        const source = subchannel ? `${baseSource} / ${subchannel}` : baseSource;
+        leadCounts[source] = (leadCounts[source] || 0) + 1;
+        leadTotal++;
+      }
 
       const sevenDays =
         7
@@ -1548,6 +1567,7 @@ const dashboardGestionaleDati =
       return {
         ok:
           true,
+        leadAcquisition:{total:leadTotal, sources:leadCounts},
 
         /*
          * Utile anche per verificare dal browser quale perimetro

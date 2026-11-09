@@ -77,4 +77,17 @@ function extractLabeledPracticeNumbersFromSubject(subject = "") {
   return out;
 }
 
-module.exports = {strictSubject, subjects, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender, addresses};
+function contactLead(mail = {}) {
+  const subject = String(mail.subject || '').trim();
+  const senders = addresses(mail.from);
+  const online = senders.includes('richieste.online@credipass.it') && /^richiesta di contatto\s*-\s*credipass\b/i.test(subject);
+  const assignment = senders.includes('servizio.clienti@credipass.it') && /^associazione\s+lead\s+\d{4,}\b/i.test(subject);
+  if (!online && !assignment) return null;
+  const id = subject.match(/\[(\d{4,})\]/)?.[1] || subject.match(/^associazione\s+lead\s+(\d{4,})\b/i)?.[1] || '';
+  const body = String(mail.text || '').slice(0, 50000);
+  const raw = body.match(/(?:^|\n)[ \t]*(?:provenienza[ \t]+canale|canale(?:[ \t]+di[ \t]+provenienza)?|provenienza|fonte|sorgente)[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
+  const subchannel = body.match(/(?:^|\n)[ \t]*sottocanale[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
+  return {id, source:raw || 'Da verificare', subchannel, sourceRank:assignment ? 2 : 1};
+}
+
+module.exports = {strictSubject, subjects, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender, addresses, contactLead};
