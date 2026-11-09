@@ -2,287 +2,64 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pietro Lo Iacono | Credipass</title>
+  <title>Generatore QR Credipass</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'credipass-blue': '#0A2A5E',
-            'credipass-yellow': '#FFC627',
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    /* Sfondo animato */
-    body {
-      background: linear-gradient(-45deg, #0A2A5E, #1a4a9c, #0A2A5E, #041430);
-      background-size: 400% 400%;
-      animation: gradientBG 15s ease infinite;
-      min-height: 100vh;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    
-    /* Effetto Vetro (Glassmorphism) */
-    .glass-card {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    }
-    
-    /* Hover effetti bottoni */
-    .link-btn {
-      transition: all 0.3s ease;
-    }
-    .link-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-  </style>
 </head>
-<body class="flex items-center justify-center p-4 sm:p-8">
-
-  <div class="glass-card w-full max-w-md rounded-3xl overflow-hidden relative text-gray-800 pb-8">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6 font-sans">
+  
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-t-4 border-[#0A2A5E]">
+    <h2 class="text-2xl font-bold text-[#0A2A5E] mb-2">QR Code Ufficiale</h2>
+    <p class="text-gray-500 mb-6 text-sm">Inserisci il link a cui puntava il tuo QR in bianco e nero per generare la versione a colori ad alta risoluzione.</p>
     
-    <!-- Watermark Logo Sfondo (Google Drive corretto) -->
-    <img src="https://drive.google.com/uc?export=view&id=1_eMVpzO46cYroK7aVAQ8UfBcDAD83nwB" alt="Watermark" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/4 opacity-[0.03] pointer-events-none z-0">
-
-    <div class="relative z-10 px-6 pt-8 pb-4 flex flex-col items-center">
-      
-      <!-- Logo Aziendale (Google Drive corretto) -->
-      <img src="https://drive.google.com/uc?export=view&id=1_eMVpzO46cYroK7aVAQ8UfBcDAD83nwB" alt="Credipass Logo" class="h-10 mb-6 object-contain" onerror="this.src='https://via.placeholder.com/200x50?text=Logo+Credipass'">
-
-      <!-- Foto Profilo con QR Badge (Google Drive fornito) -->
-      <div class="relative mb-4">
-        <div class="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-credipass-yellow to-credipass-blue shadow-lg">
-          <img src="https://drive.google.com/uc?export=view&id=1ZmPOA7H9SFZGp_bCVMf2jqdSu540d6db" alt="Pietro Lo Iacono" class="w-full h-full rounded-full object-cover border-4 border-white" onerror="this.src='https://ui-avatars.com/api/?name=Pietro+Lo+Iacono&background=0A2A5E&color=fff&size=128'">
-        </div>
-        <!-- Pulsante QR Code -->
-        <button onclick="showQRCode()" class="absolute bottom-0 right-0 bg-credipass-blue text-white p-2.5 rounded-full shadow-lg border-2 border-white hover:bg-blue-900 transition-colors" title="Mostra QR Code">
-          <i class="fa-solid fa-qrcode"></i>
-        </button>
-      </div>
-
-      <!-- Info Personali -->
-      <h1 class="text-2xl font-bold text-credipass-blue mb-1">Pietro Lo Iacono</h1>
-      <h2 class="text-md font-semibold text-gray-600 mb-1">Promotore Creditizio</h2>
-      <p class="text-sm text-gray-500 mb-4 text-center">Credipass Aversa</p>
-
-      <!-- Descrizione centrata -->
-      <div class="text-center text-sm font-medium text-gray-700 space-y-2 mb-6 w-full px-2">
-        <p>🏡 Il tuo mutuo e prestito senza pensieri.</p>
-        <p>💡 Consulenza creditizia gratuita e su misura.</p>
-        <p>📍 Fissa il tuo appuntamento.</p>
-      </div>
-
-      <!-- Quick Action Buttons -->
-      <div class="flex justify-center gap-4 mb-8 w-full">
-        <a href="tel:+393925701385" class="w-12 h-12 rounded-full bg-gray-100 text-credipass-blue flex items-center justify-center text-xl shadow hover:bg-credipass-yellow transition-colors">
-          <i class="fa-solid fa-phone"></i>
-        </a>
-        <a href="https://wa.me/393925701385" target="_blank" class="w-12 h-12 rounded-full bg-[#25D366] text-white flex items-center justify-center text-2xl shadow hover:bg-green-600 transition-colors">
-          <i class="fa-brands fa-whatsapp"></i>
-        </a>
-        <a href="mailto:pietro.loiacono@credipass.it" class="w-12 h-12 rounded-full bg-gray-100 text-credipass-blue flex items-center justify-center text-xl shadow hover:bg-credipass-yellow transition-colors">
-          <i class="fa-solid fa-envelope"></i>
-        </a>
-        <button onclick="downloadVCard()" class="w-12 h-12 rounded-full bg-credipass-blue text-white flex items-center justify-center text-xl shadow hover:bg-blue-800 transition-colors" title="Salva in Rubrica">
-          <i class="fa-solid fa-user-plus"></i>
-        </button>
-      </div>
-
-      <!-- Elenco Link / Social -->
-      <div class="w-full flex flex-col gap-3">
-        
-        <!-- Recensione Google -->
-        <a href="https://g.page/r/TUO-LINK-RECENSIONE" target="_blank" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3">
-            <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-              <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-                <path fill="#4285F4" d="M -3.264,51.509 C -3.264,50.719 -3.334,49.969 -3.454,49.239 L -14.754,49.239 L -14.754,53.749 L -8.284,53.749 C -8.574,55.229 -9.424,56.479 -10.684,57.329 L -10.684,60.329 L -6.824,60.329 C -4.564,58.239 -3.264,55.159 -3.264,51.509 Z"/>
-                <path fill="#34A853" d="M -14.754,63.239 C -11.514,63.239 -8.804,62.159 -6.824,60.329 L -10.684,57.329 C -11.764,58.049 -13.134,58.489 -14.754,58.489 C -17.884,58.489 -20.534,56.379 -21.484,53.529 L -25.464,53.529 L -25.464,56.619 C -23.494,60.539 -19.444,63.239 -14.754,63.239 Z"/>
-                <path fill="#FBBC05" d="M -21.484,53.529 C -21.734,52.809 -21.864,52.039 -21.864,51.239 C -21.864,50.439 -21.724,49.669 -21.484,48.949 L -21.484,45.859 L -25.464,45.859 C -26.284,47.479 -26.754,49.299 -26.754,51.239 C -26.754,53.179 -26.284,54.999 -25.464,56.619 L -21.484,53.529 Z"/>
-                <path fill="#EA4335" d="M -14.754,43.989 C -12.984,43.989 -11.404,44.599 -10.154,45.789 L -6.734,42.369 C -8.804,40.429 -11.514,39.239 -14.754,39.239 C -19.444,39.239 -23.494,41.939 -25.464,45.859 L -21.484,48.949 C -20.534,46.099 -17.884,43.989 -14.754,43.989 Z"/>
-              </g>
-            </svg>
-          </div>
-          Lasciami una recensione
-        </a>
-
-        <!-- Instagram Personale -->
-        <a href="https://www.instagram.com/pietro.lo.iacono/" target="_blank" data-social="true" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3 text-pink-600 text-xl"><i class="fa-brands fa-instagram"></i></div>
-          Instagram Pietro Lo Iacono
-        </a>
-
-        <!-- Facebook Personale -->
-        <a href="https://www.facebook.com/pietroloiaconomutui?locale=it_IT" target="_blank" data-social="true" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3 text-blue-600 text-xl"><i class="fa-brands fa-facebook"></i></div>
-          Facebook Pietro Lo Iacono
-        </a>
-
-        <!-- LinkedIn Personale -->
-        <a href="https://www.linkedin.com/in/lo-iacono-pietro/" target="_blank" data-social="true" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3 text-blue-700 text-xl"><i class="fa-brands fa-linkedin"></i></div>
-          LinkedIn Pietro Lo Iacono
-        </a>
-
-        <!-- Instagram Agenzia -->
-        <a href="https://www.instagram.com/credipass.aversa/" target="_blank" data-social="true" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3 text-pink-600 text-xl"><i class="fa-brands fa-instagram"></i></div>
-          Instagram Credipass Aversa
-        </a>
-
-        <!-- Facebook Agenzia -->
-        <a href="https://www.facebook.com/p/Credipass-Aversa-61595395165258/" target="_blank" data-social="true" class="link-btn w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center shadow-sm">
-          <div class="w-8 flex justify-center mr-3 text-blue-600 text-xl"><i class="fa-brands fa-facebook"></i></div>
-          Facebook Credipass Aversa
-        </a>
-
-        <!-- Bottone Segui Tutti -->
-        <button onclick="followAll()" class="w-full mt-4 bg-gradient-to-r from-credipass-blue to-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex justify-center items-center">
-          <i class="fa-solid fa-users mr-2"></i> SEGUI TUTTI (5 Profili)
-        </button>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL QR CODE -->
-  <div id="qrModal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50 p-4 transition-opacity">
-    <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative shadow-2xl">
-      <button onclick="closeQRCode()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors">
-        <i class="fa-solid fa-xmark text-2xl"></i>
-      </button>
-      <h3 class="text-xl font-bold text-credipass-blue mb-2">Il mio contatto</h3>
-      <p class="text-sm text-gray-500 mb-6">Inquadra per aprire questa pagina</p>
-      
-      <div id="qrcode-container" class="flex justify-center bg-white p-2 rounded-xl border-2 border-gray-100"></div>
-    </div>
-  </div>
-
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full text-sm font-medium shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none z-50 flex items-center">
-    <i class="fa-solid fa-info-circle mr-2 text-credipass-yellow"></i>
-    <span id="toast-msg"></span>
+    <input type="text" id="qr-data" placeholder="es. https://www.credipass.it/..." class="w-full border-2 border-gray-200 p-3 rounded-xl mb-4 focus:outline-none focus:border-[#FFC627]">
+    
+    <button onclick="generateQR()" class="bg-[#0A2A5E] text-white px-6 py-3 rounded-xl font-bold mb-6 hover:bg-blue-900 w-full transition-colors shadow-md">
+      Genera Anteprima
+    </button>
+    
+    <!-- Qui appare il QR -->
+    <div id="qr-preview" class="flex justify-center mb-6 overflow-hidden rounded-xl border-2 border-gray-50 empty:border-none"></div>
+    
+    <button id="download-btn" onclick="downloadQR()" class="hidden bg-[#FFC627] text-[#0A2A5E] px-6 py-3 rounded-xl font-bold w-full hover:bg-yellow-400 transition-colors shadow-md">
+      Scarica Immagine (PNG)
+    </button>
   </div>
 
   <script>
-    // GENERAZIONE QR CODE AVANZATA
-    const qrCode = new QRCodeStyling({
-      width: 250,
-      height: 250,
-      data: window.location.href,
-      dotsOptions: {
-        color: "#FFC627", // Giallo Credipass per i punti interni
-        type: "rounded"
-      },
-      cornersSquareOptions: {
-        color: "#0A2A5E", // Blu Credipass per le cornici
-        type: "extra-rounded"
-      },
-      cornersDotOptions: {
-        color: "#0A2A5E", // Blu per i puntini degli angoli
-        type: "dot"
-      },
-      backgroundOptions: {
-        color: "#ffffff",
-      },
-      imageOptions: {
-        crossOrigin: "anonymous",
-        margin: 10
+    let qrCode;
+
+    function generateQR() {
+      const data = document.getElementById('qr-data').value;
+      if(!data) {
+        alert("Inserisci un link o un testo prima di generare!");
+        return;
       }
-    });
 
-    let isQrGenerated = false;
-
-    function showQRCode() {
-      document.getElementById('qrModal').classList.remove('hidden');
-      if(!isQrGenerated) {
-        // Appende il QR code al container
-        qrCode.append(document.getElementById("qrcode-container"));
-        isQrGenerated = true;
-      }
-    }
-
-    function closeQRCode() {
-      document.getElementById('qrModal').classList.add('hidden');
-    }
-
-    // Chiude il modal cliccando fuori
-    document.getElementById('qrModal').addEventListener('click', function(e) {
-      if (e.target === this) {
-        closeQRCode();
-      }
-    });
-
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').innerText = message;
-      toast.classList.remove('opacity-0');
-      setTimeout(() => {
-        toast.classList.add('opacity-0');
-      }, 4000);
-    }
-
-    function followAll() {
-      const links = document.querySelectorAll('a[data-social="true"]');
-      let opened = 0;
+      // Pulisce l'anteprima precedente
+      document.getElementById('qr-preview').innerHTML = "";
       
-      links.forEach(link => {
-        const newWindow = window.open(link.href, '_blank');
-        if(newWindow) opened++;
+      // Configurazione con i colori del brand
+      qrCode = new QRCodeStyling({
+        width: 300, // Dimensione per l'anteprima a schermo
+        height: 300,
+        data: data,
+        image: "https://drive.google.com/uc?export=view&id=1_eMVpzO46cYroK7aVAQ8UfBcDAD83nwB", // Logo Credipass
+        dotsOptions: { color: "#FFC627", type: "rounded" },
+        cornersSquareOptions: { color: "#0A2A5E", type: "extra-rounded" },
+        cornersDotOptions: { color: "#0A2A5E", type: "dot" },
+        imageOptions: { crossOrigin: "anonymous", margin: 10 }
       });
 
-      if (opened < links.length) {
-        showToast("Consenti i popup per aprire tutti i profili contemporaneamente.");
-      } else {
-        showToast("Sto aprendo tutti i profili!");
-      }
+      // Mostra a schermo
+      qrCode.append(document.getElementById("qr-preview"));
+      // Rivela il tasto di download
+      document.getElementById('download-btn').classList.remove('hidden');
     }
 
-    function downloadVCard() {
-      const vcard = `BEGIN:VCARD
-VERSION:3.0
-N:Lo Iacono;Pietro;;;
-FN:Pietro Lo Iacono
-ORG:Credipass
-TITLE:Promotore Creditizio
-TEL;TYPE=WORK,VOICE:+393925701385
-TEL;TYPE=CELL,VOICE:+393925701385
-EMAIL;TYPE=PREF,INTERNET:pietro.loiacono@credipass.it
-URL:${window.location.href}
-ADR;TYPE=WORK:;;Via M. De Chiara 8;Aversa;CE;81031;Italia
-END:VCARD`;
-
-      const blob = new Blob([vcard], { type: 'text/vcard' });
-      const url = window.URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'Pietro_Lo_Iacono_Credipass.vcf';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      
-      showToast("Contatto scaricato con successo!");
+    function downloadQR() {
+      // Scarica il file in altissima risoluzione (1000x1000) per la stampa
+      qrCode.download({ name: "QR_Code_Credipass", extension: "png" });
     }
   </script>
 </body>
