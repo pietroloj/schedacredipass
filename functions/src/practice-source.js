@@ -1064,7 +1064,8 @@ const dashboardGestionaleDati =
         if (periodStart && (!day || day < periodStart || day > periodEnd)) continue;
         const baseSource = cleanText(lead.source, 120) || 'Da verificare';
         const subchannel = cleanText(lead.subchannel, 120);
-        const source = subchannel ? `${baseSource} / ${subchannel}` : baseSource;
+        const partner = cleanText(lead.partner, 160);
+        const source = [baseSource, subchannel, partner].filter(Boolean).join(' / ');
         leadCounts[source] = (leadCounts[source] || 0) + 1;
         leadTotal++;
       }

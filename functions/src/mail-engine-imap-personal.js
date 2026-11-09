@@ -1161,6 +1161,7 @@ async function syncFolder({
           tx.set(ref, {consultantUid, leadId:lead.id || null, receivedAt,
             ...(replaceSource ? {source:lead.source, sourceRank:lead.sourceRank} : (!old.source ? {source:'Da verificare'} : {})),
             ...(lead.subchannel ? {subchannel:lead.subchannel} : {}),
+            ...(lead.partner ? {partner:lead.partner} : {}),
             updatedAt:admin.firestore.FieldValue.serverTimestamp()}, {merge:true});
         });
         continue;

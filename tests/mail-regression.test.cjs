@@ -11,6 +11,8 @@ assert.equal(policy.contactLead({...leadExample,subject:'Pratica 1083128'}),null
 const assignedLead={from:{value:[{address:'servizio.clienti@credipass.it'}]},subject:'Associazione LEAD 1083128 a Pietro Lo Iacono',text:'Nome e Cognome: LUIGI BARONE\nCanale di Provenienza: PROFESSIONECASA\nConv: ROTA PASQUALE'};
 assert.equal(policy.contactLead(assignedLead).id,policy.contactLead(leadExample).id);
 assert.equal(policy.contactLead(assignedLead).source,'PROFESSIONECASA');
+assert.equal(policy.contactLead(assignedLead).partner,'ROTA PASQUALE');
+assert.equal(policy.contactLead({...assignedLead,text:'Canale di Provenienza: PROFESSIONECASA\nConv: ROTA PASQUALE (Mondragone)'}).partner,'ROTA PASQUALE (Mondragone)');
 assert.equal(policy.contactLead({...leadExample,text:'Provenienza Canale: PROFESSIONECASA\nSottocanale: Web'}).source,'PROFESSIONECASA');
 assert.equal(policy.contactLead({...assignedLead,subject:'Altra comunicazione 1083128'}),null);
 let count=0;function check(name,fn){fn();count++;console.log('PASS '+name);}

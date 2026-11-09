@@ -87,7 +87,8 @@ function contactLead(mail = {}) {
   const body = String(mail.text || '').slice(0, 50000);
   const raw = body.match(/(?:^|\n)[ \t]*(?:provenienza[ \t]+canale|canale(?:[ \t]+di[ \t]+provenienza)?|provenienza|fonte|sorgente)[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
   const subchannel = body.match(/(?:^|\n)[ \t]*sottocanale[ \t]*[:\-][ \t]*([^\r\n]{1,120})/i)?.[1]?.trim() || '';
-  return {id, source:raw || 'Da verificare', subchannel, sourceRank:assignment ? 2 : 1};
+  const partner = body.match(/(?:^|\n)[ \t]*(?:conv\.?|convenzionato)[ \t]*[:\-][ \t]*([^\r\n]{1,160})/i)?.[1]?.trim() || '';
+  return {id, source:raw || 'Da verificare', subchannel, partner, sourceRank:assignment ? 2 : 1};
 }
 
 module.exports = {strictSubject, subjects, trustedNumbers, extractLabeledPracticeNumbersFromSubject, excludedSender, addresses, contactLead};
