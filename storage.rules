@@ -3,6 +3,7 @@ service firebase.storage {
  match /b/{bucket}/o {
   function profile(){return firestore.get(/databases/(default)/documents/consulenti/$(request.auth.uid)).data;}
   function staff(){return request.auth != null && firestore.exists(/databases/(default)/documents/consulenti/$(request.auth.uid)) && profile().get('attivo',true);}
+  function admin(){return staff() && profile().ruolo == 'admin';}
   function canonical(id){return firestore.exists(/databases/(default)/documents/pratiche_mutuo/$(id)) ? id : firestore.get(/databases/(default)/documents/practice_storage_aliases/$(id)).data.practiceId;}
   function assigned(id){
    let d=firestore.get(/databases/(default)/documents/pratiche_mutuo/$(canonical(id))).data;
@@ -13,12 +14,12 @@ service firebase.storage {
   function networkRead(id){let d=firestore.get(/databases/(default)/documents/pratiche_mutuo/$(canonical(id))).data;let owner=d.get('consulente_uid',d.get('workspace_uid',d.get('owner_uid','')));return staff() && profile().ruolo == 'consulente' && owner != '' && owner in profile().get('collaboratori_visibili',[]);}
   function allowedFile(){return request.resource.size < 25*1024*1024 && request.resource.contentType.matches('(application/pdf|image/.*)');}
   match /Fascicoli/{id}/{file=**} {
-   allow read: if assigned(id) || networkRead(id) || portal(id);
+   allow read: if admin() || portal(id) || assigned(id) || networkRead(id);
    allow create: if allowedFile() && (portal(id) || (assigned(id) && profile().get('permessi',{}).get('carica_documenti',true)));
    allow update,delete: if assigned(id) && (profile().ruolo == 'admin' || profile().get('permessi',{}).get('elimina_documenti',profile().ruolo != 'segreteria'));
   }
   match /SchedeConsulenza/{id}/{file} {
-   allow read: if assigned(id) || networkRead(id) || portal(id);
+   allow read: if admin() || portal(id) || assigned(id) || networkRead(id);
    allow create,update: if assigned(id) && allowedFile() && profile().get('permessi',{}).get('modifica_scheda_consulenza',profile().ruolo != 'segreteria');
    allow delete: if assigned(id) && profile().ruolo == 'admin';
   }
