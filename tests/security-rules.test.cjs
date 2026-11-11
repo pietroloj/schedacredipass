@@ -1,7 +1,7 @@
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
 const {doc,setDoc,getDoc,updateDoc,collection,query,where,getDocs}=require('firebase/firestore');
 const fs=require('fs');
-const {ref,uploadBytes,getBytes}=require('firebase/storage');
+const {ref,uploadBytes,getBytes,listAll}=require('firebase/storage');
 (async()=>{const env=await initializeTestEnvironment({projectId:'demo-credipass',firestore:{host:'127.0.0.1',port:8086,rules:fs.readFileSync('firestore.rules','utf8')},storage:{host:'127.0.0.1',port:9196,rules:fs.readFileSync('storage.rules','utf8')}});
 try{await env.withSecurityRulesDisabled(async c=>{const d=c.firestore();for(const [id,data]of Object.entries({admin:{ruolo:'admin',attivo:true},alice:{ruolo:'consulente',attivo:true,responsabile_uid:'manager'},manager:{ruolo:'responsabile',attivo:true},secretary2:{ruolo:'segreteria',attivo:true,collaboratori_visibili:['manager']},bob:{ruolo:'consulente',attivo:true},secretary:{ruolo:'segreteria',attivo:true,collaboratori_visibili:['alice']},disabled:{ruolo:'admin',attivo:false}}))await setDoc(doc(d,'consulenti',id),data);await setDoc(doc(d,'pratiche_mutuo','case'),{consulente_uid:'alice',stato_pratica:'attesa_documenti',cliente_email:'client@example.test'});});
 await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'consulenti','viewer'),{ruolo:'consulente',attivo:true,collaboratori_visibili:['alice']});await setDoc(doc(c.firestore(),'pratiche_mutuo','case','email_timeline','email'),{oggetto:'prova'});});
@@ -42,5 +42,11 @@ await assertSucceeds(uploadBytes(ref(env.authenticatedContext('viewer').storage(
 await assertFails(uploadBytes(ref(env.authenticatedContext('bob').storage(),'Fascicoli/case/unauthorized.pdf'),new Uint8Array([1]),{contentType:'application/pdf'}));
 await assertSucceeds(getBytes(ref(env.authenticatedContext('secretary2').storage(),'Fascicoli/case/doc_ci1_test.pdf')));
 await assertSucceeds(getBytes(ref(env.authenticatedContext('secretary').storage(),'Fascicoli/old-case/doc_ci1.pdf')));
+await assertSucceeds(listAll(ref(env.authenticatedContext('alice').storage(),'Fascicoli/case')));
+await assertSucceeds(listAll(ref(env.authenticatedContext('secretary').storage(),'Fascicoli/case')));
+await assertSucceeds(listAll(ref(env.authenticatedContext('admin').storage(),'Fascicoli/case')));
+await assertSucceeds(listAll(ref(env.authenticatedContext('secretary').storage(),'Fascicoli/old-case')));
+await assertSucceeds(listAll(ref(portalStorage,'Fascicoli/case')));
+await assertFails(listAll(ref(env.authenticatedContext('bob').storage(),'Fascicoli/case')));
 console.log('PASS: accesso anonimo, isolamento pratiche, segreteria, revoca, escalation, clienti e agenzie');
 }finally{await env.cleanup();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -7136,6 +7136,7 @@ Cordiali saluti`
         ];
 
         let files = [];
+        let errorePercorsoPrincipale = null;
 
         for (let v of varianti) {
             try {
@@ -7144,7 +7145,10 @@ Cordiali saluti`
                     files = res.items;
                     break;
                 }
-            } catch (e) {}
+            } catch (e) {
+                if (v === idCliente) errorePercorsoPrincipale = e;
+                console.warn('Lettura documenti non riuscita:', v, e);
+            }
         }
 
         if (loading) loading.style.display = 'none';
@@ -7157,7 +7161,9 @@ Cordiali saluti`
         richiesti.forEach(code => {const ok=(presenti.has(code)||praticaDati['doc_'+code]===true)&&!versioniRichieste.includes(code);const row=document.createElement('div');row.style.cssText=`margin-top:7px;padding:9px 12px;border-left:6px solid ${ok?'#16945b':'#d74646'};background:${ok?'#edf8f1':'#fff1f1'};border-radius:6px;display:flex;justify-content:space-between;gap:10px;font-size:12px`;const name=document.createElement('span');name.textContent=nomi[code]||TRADUZIONI[code]||code.replace(/_/g,' ');const status=document.createElement('strong');status.textContent=ok?'Presente':'Mancante';row.append(name,status);lista.appendChild(row);});
 
         if (files.length === 0) {
-            document.getElementById('documentiArea').innerHTML += '<p class="empty-state">Nessun documento caricato dal cliente.</p>';
+            document.getElementById('documentiArea').innerHTML += errorePercorsoPrincipale
+                ? '<p class="empty-state">Impossibile leggere i documenti. Verifica la connessione e i permessi, poi riprova.</p>'
+                : '<p class="empty-state">Nessun documento caricato dal cliente.</p>';
             return;
         }
 
@@ -7725,6 +7731,7 @@ Cordiali saluti`
             ];
 
             let items = [];
+            let errorePercorsoPrincipale = null;
 
             for (
                 const v of
@@ -7748,6 +7755,7 @@ Cordiali saluti`
                     }
                 }
                 catch (error) {
+                    if (v === idCliente) errorePercorsoPrincipale = error;
                     console.warn(
                         "Percorso fascicolo non disponibile:",
                         v,
@@ -7761,7 +7769,9 @@ Cordiali saluti`
                 0
             ) {
                 alert(
-                    "Nessun file presente."
+                    errorePercorsoPrincipale
+                        ? "Impossibile leggere i documenti. Verifica la connessione e i permessi, poi riprova."
+                        : "Nessun file presente."
                 );
 
                 btn.disabled =
