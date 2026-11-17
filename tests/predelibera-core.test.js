@@ -12,12 +12,21 @@ const {
 
 const { POLICY } = require("../functions/src/config/policy");
 
-const { calcolaDTI, calcolaLTV } = require("../functions/src/services/decisionEngine");
+const { calcolaDTI, calcolaLTV, reviewPolicy } = require("../functions/src/services/decisionEngine");
 
 assert.strictEqual(calcolaDTI(3000, 500.50, 200.25), 23.36);
 assert.strictEqual(calcolaDTI(3000, "500,50", "1.200,25"), 56.69);
 assert.strictEqual(calcolaDTI(3000, null, 200), null);
 assert.strictEqual(calcolaLTV(120000.50, 200000), 60);
+
+
+const estrazione = {
+  dati_estratti: { tipo_reddito: "dipendente", netto_mensile_rilevato_documento: "1850,50" },
+};
+const verificaBusta = reviewPolicy({ tipoDocumentoAtteso: "doc_bustepaga", estrazione });
+assert.deepStrictEqual(verificaBusta.motiviReview, []);
+const verificaCU = reviewPolicy({ tipoDocumentoAtteso: "doc_cud", estrazione });
+assert(verificaCU.motiviReview.includes("CU: campo necessario non estratto (reddito_lordo_annuo)"));
 
 
 assert.strictEqual(

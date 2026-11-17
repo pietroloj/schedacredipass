@@ -835,40 +835,13 @@ function reviewPolicy({
   }
 
   if (
-    DOC_GROUPS
-      .income
-      .includes(
-        tipoDocumentoAtteso
-      )
+    POLICY.requireManualReviewOnMissingIncomeCoreFields &&
+    tipoDocumentoAtteso === "doc_cud"
   ) {
-    const d =
-      estrazione
-        ?.dati_estratti ||
-      {};
-
-    if (
-      POLICY
-        .requireManualReviewOnMissingIncomeCoreFields &&
-      looksLikeCU(d)
-    ) {
-      const result =
-        calculateIncomeFromCU(
-          d
-        );
-
-      if (
-        !result.ok
-      ) {
-        for (
-          const campo of
-          result
-            .campiMancanti ||
-          []
-        ) {
-          reasons.push(
-            `CU: campo necessario non estratto (${campo})`
-          );
-        }
+    const result = calculateIncomeFromCU(estrazione?.dati_estratti || {});
+    if (!result.ok) {
+      for (const campo of result.campiMancanti || []) {
+        reasons.push(`CU: campo necessario non estratto (${campo})`);
       }
     }
   }
