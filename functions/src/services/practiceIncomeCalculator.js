@@ -12,8 +12,6 @@ const {
   calculateForfettarioCPBTwoYears,
   calculateOrdinaryCPBAnnual,
   calculateOrdinaryCPBTwoYears,
-  calculateIncomeFromBP,
-  calculateQuadroDirigente,
   isForfettario,
   isCPB,
 } = require("./incomeCalculator");
@@ -144,140 +142,13 @@ function calculateApplicantIncome(
     .toUpperCase();
   const requiresPF = ["AUTONOMO", "AGRARIO", "FORFETTARIO"].includes(employment);
 
-  const incomeDocs =
-    docs.filter(
-      (doc) => {
-        const base =
-          baseType(doc);
-
-        return (
-          base.includes(
-            "doc_cud"
-          ) ||
-          base.includes(
-            "doc_bustepaga"
-          ) ||
-          base.includes(
-            "doc_unici"
-          )
-        );
-      }
-    );
-
-  const cuDocs =
-    incomeDocs.filter(
-      (doc) =>
-        baseType(doc)
-          .includes(
-            "doc_cud"
-          )
-    );
-
-  const bpDocs =
-    incomeDocs.filter(
-      (doc) =>
-        baseType(doc)
-          .includes(
-            "doc_bustepaga"
-          )
-    );
-
-  const unicoDocs =
-    sortLatestFirst(
-      incomeDocs.filter(
-        (doc) =>
-          baseType(doc)
-            .includes(
-              "doc_unici"
-            )
-      )
-    );
+  const cuDocs = sortLatestFirst(docs.filter(doc => baseType(doc) === "doc_cud"));
+  const unicoDocs = sortLatestFirst(docs.filter(doc => baseType(doc) === "doc_unici"));
+  const cuData = cuDocs[0]?.estrazione?.dati_estratti || null;
 
   const criticita = [];
   const dettagli = [];
 
-
-  /*
-   * 1) QUADRI / DIRIGENTI:
-   * richiedono confronto CU + BP.
-   */
-  const latestCU =
-    sortLatestFirst(
-      cuDocs
-    )[0];
-
-  const latestBP =
-    sortLatestFirst(
-      bpDocs
-    )[0];
-
-  const cuData =
-    latestCU
-      ?.estrazione
-      ?.dati_estratti ||
-    null;
-
-  const bpData =
-    latestBP
-      ?.estrazione
-      ?.dati_estratti ||
-    null;
-
-  if (
-    !requiresPF &&
-    cuData &&
-    cuData
-      .qualifica_quadro_dirigente
-  ) {
-    const cuResult =
-      calculateIncomeFromCU(
-        cuData
-      );
-
-    const bpResult =
-      bpData
-        ? calculateIncomeFromBP(
-            bpData
-          )
-        : {
-            ok: false,
-          };
-
-    const quadro =
-      calculateQuadroDirigente(
-        cuResult,
-        bpResult
-      );
-
-    if (quadro.ok) {
-      return {
-        ok: true,
-        applicant,
-        metodo:
-          quadro.metodo,
-        fonte:
-          "CU + Busta Paga",
-        redditoNettoMensile:
-          quadro
-            .redditoNettoMensile,
-        dettagli: [
-          cuResult,
-          bpResult,
-          quadro,
-        ],
-        criticita: [],
-      };
-    }
-
-    criticita.push(
-      "Quadro/Dirigente: impossibile applicare la regola perché servono sia CU sia calcolo BP completo."
-    );
-  }
-
-
-  /*
-   * 2) CU - DIPENDENTI / PENSIONATI
-   */
   if (!requiresPF && cuData) {
     const cu =
       calculateIncomeFromCU(

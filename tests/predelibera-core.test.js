@@ -37,6 +37,17 @@ const fiscalDoc = (tipoDocumento, dati_estratti) => ({
 const cu = fiscalDoc("doc_cud1", {
   reddito_lordo_annuo: "36.000,00", irpef: "6.000,00", addizionale_regionale: "0", giorni_lavorati: "365",
 });
+const cuDirigente = fiscalDoc("doc_cud1", {
+  ...cu.estrazione.dati_estratti, giorni_lavorati: "300", qualifica_quadro_dirigente: true,
+});
+const cedolino = fiscalDoc("doc_bustepaga1", {
+  stipendio_lordo_mensile_ordinario: "2000", numero_mensilita: "13",
+  irpef_annua_calcolata_bp: "3000", addizionale_regionale_annua_bp: "0",
+  addizionale_comunale_annua_bp: "0",
+});
+assert.strictEqual(calculatePracticeIncome([cuDirigente, cedolino], {
+  lav1: "INDETERMINATO",
+}).redditoNettoMensile, 3041.67);
 const pf2024 = fiscalDoc("doc_unici1", { anno_fiscale: "2024", tipo_reddito: "forfettario", lm36: "24.000,00" });
 const pf2023 = fiscalDoc("doc_unici1", { anno_fiscale: "2023", tipo_reddito: "forfettario", lm36: "12.000,00" });
 assert.strictEqual(calculatePracticeIncome([cu, pf2024, pf2023], { lav1: "INDETERMINATO" }).redditoNettoMensile, 2500);
