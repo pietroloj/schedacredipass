@@ -3205,7 +3205,8 @@ exports.ricostruisciPraticaCompleta =
           .set(
             payload,
             {
-              merge: true,
+              // Sostituisce il report intero ed evita di conservare campi obsoleti.
+              mergeFields: ["aggiornatoIl", "pipelineVersion", "praticaCompleta"],
             }
           );
 
