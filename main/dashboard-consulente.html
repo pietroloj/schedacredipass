@@ -6558,7 +6558,7 @@ Cordiali saluti`
                 );
 
             field("editMutuoRata").value = formatoImportoInput(
-                d.rata_mutuo_stimata ?? first(d.rata_stimata, d.mutuo_rata, d.rata_nuovo_mutuo)
+                d.rata_mutuo_stimata ?? first(d.rata_stimata, d.mutuo_rata, d.rata_nuovo_mutuo, d.rrr?.mortgage)
             );
 
             field(
@@ -8632,7 +8632,8 @@ Cordiali saluti`
                 d.rata_mutuo_stimata ??
                 d.rata_stimata ??
                 d.mutuo_rata ??
-                d.rata_nuovo_mutuo
+                d.rata_nuovo_mutuo ??
+                d.rrr?.mortgage
             );
 
             const rateAltriFinanziamenti = numberForAI(

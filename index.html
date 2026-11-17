@@ -9399,6 +9399,11 @@ async function sincronizzaSchedaConDatabase() {
     };
 
     try {
+        const rataNuovoMutuo = window.consultationRatio?.getData()?.mortgage;
+        if (Number.isFinite(rataNuovoMutuo) && rataNuovoMutuo > 0) {
+            dati.rata_mutuo_stimata = rataNuovoMutuo;
+        }
+
         const existingPractice = await db.collection('pratiche_mutuo').doc(id).get();
         if (!existingPractice.exists) dati.stato_pratica = 'da_istruire';
         else { delete dati.consulente_uid; delete dati.workspace_uid; }

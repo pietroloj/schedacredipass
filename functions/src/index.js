@@ -2886,7 +2886,8 @@ exports.ricostruisciPraticaCompleta =
             practiceData.rata_mutuo_stimata ??
             practiceData.rata_stimata ??
             practiceData.mutuo_rata ??
-            practiceData.rata_nuovo_mutuo
+            practiceData.rata_nuovo_mutuo ??
+            practiceData.rrr?.mortgage
           );
 
         const resolvedRateAltriFinanziamenti =
