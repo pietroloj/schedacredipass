@@ -723,10 +723,11 @@ async function loadClientDocumentAnalyses(
         ?.toMillis?.() ||
       0;
 
-    const key =
-      String(
-        tipoDocumento
-      );
+    // Il Modello Redditi può essere caricato più volte per esercizi distinti.
+    const fiscalYear = tipoDocumentoBase === "doc_unici"
+      ? String(data.estrazione.dati_estratti?.anno_fiscale || "").match(/\d{4}/)?.[0]
+      : null;
+    const key = fiscalYear ? `${tipoDocumento}:${fiscalYear}` : String(tipoDocumento);
 
     const current =
       latestByDocType.get(
@@ -1284,7 +1285,7 @@ function buildPracticeSummary({
     mergedFinancials
       .dti !==
     null
-      ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%`
+      ? `DTI: ${formatNumberIT(mergedFinancials.dti)}%${mergedFinancials.fonteReddito === "documentazione_verificata" ? "" : " (provvisorio, reddito da verificare)"}`
       : "DTI: N/D",
 
     mergedFinancials
@@ -2406,6 +2407,8 @@ exports.analizzaDocumentoAI =
               tipoDocumento:
                 codiceBase,
 
+              tipoDocumentoBase: codiceBase,
+
               classificazione,
 
               estrazione,
@@ -2996,13 +2999,9 @@ exports.ricostruisciPraticaCompleta =
           extraReviewReasons.push("Importo mutuo o valore immobile mancante: rapporto mutuo/valore non calcolabile");
         }
 
-        if (
-          mergedFinancials
-            .fonteReddito ===
-          "scheda_consulenza_non_verificato"
-        ) {
+        if (mergedFinancials.fonteReddito !== "documentazione_verificata") {
           extraReviewReasons.push(
-            "Reddito utilizzato dalla scheda consulenza: da verificare con documentazione reddituale"
+            "Reddito da verificare con la Certificazione Unica o il Modello Redditi PF del richiedente"
           );
         }
 

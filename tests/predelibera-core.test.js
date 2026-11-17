@@ -29,6 +29,27 @@ const verificaCU = reviewPolicy({ tipoDocumentoAtteso: "doc_cud", estrazione });
 assert(verificaCU.motiviReview.includes("CU: campo necessario non estratto (reddito_lordo_annuo)"));
 
 
+const { calculatePracticeIncome } = require("../functions/src/services/practiceIncomeCalculator");
+const fiscalDoc = (tipoDocumento, dati_estratti) => ({
+  tipoDocumento,
+  estrazione: { dati_estratti },
+});
+const cu = fiscalDoc("doc_cud1", {
+  reddito_lordo_annuo: "36.000,00", irpef: "6.000,00", addizionale_regionale: "0", giorni_lavorati: "365",
+});
+const pf2024 = fiscalDoc("doc_unici1", { anno_fiscale: "2024", tipo_reddito: "forfettario", lm36: "24.000,00" });
+const pf2023 = fiscalDoc("doc_unici1", { anno_fiscale: "2023", tipo_reddito: "forfettario", lm36: "12.000,00" });
+assert.strictEqual(calculatePracticeIncome([cu, pf2024, pf2023], { lav1: "INDETERMINATO" }).redditoNettoMensile, 2500);
+assert.strictEqual(calculatePracticeIncome([cu, pf2024, pf2023], { lav1: "AUTONOMO" }).redditoNettoMensile, 1275);
+const pfDuplicato = calculatePracticeIncome([cu, pf2024, pf2024], { lav1: "AUTONOMO", reddito_richiedente_1: 1700 });
+assert.strictEqual(pfDuplicato.fonteReddito, "parzialmente_o_totalmente_non_verificato");
+assert(pfDuplicato.criticita.some(reason => reason.includes("Modello Redditi PF")));
+const senzaCU = calculatePracticeIncome([pf2024, pf2023], { lav1: "INDETERMINATO" });
+assert.strictEqual(senzaCU.redditoNettoMensile, null);
+const senzaCUSecondoRichiedente = calculatePracticeIncome([cu], { cliente2_nome: "Collaudo" });
+assert.strictEqual(senzaCUSecondoRichiedente.fonteReddito, "parzialmente_o_totalmente_non_verificato");
+
+
 assert.strictEqual(
   POLICY.classificationConfidenceReject,
   0.74

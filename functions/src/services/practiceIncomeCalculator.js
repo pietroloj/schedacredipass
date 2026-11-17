@@ -13,7 +13,6 @@ const {
   calculateOrdinaryCPBAnnual,
   calculateOrdinaryCPBTwoYears,
   calculateIncomeFromBP,
-  calculateIncomeWithTrasferta,
   calculateQuadroDirigente,
   isForfettario,
   isCPB,
@@ -140,6 +139,11 @@ function calculateApplicantIncome(
   practiceData = {},
   applicant = "r1"
 ) {
+  const employment = String(practiceData[applicant === "r2" ? "lav2" : "lav1"] || "")
+    .trim()
+    .toUpperCase();
+  const requiresPF = ["AUTONOMO", "AGRARIO", "FORFETTARIO"].includes(employment);
+
   const incomeDocs =
     docs.filter(
       (doc) => {
@@ -220,6 +224,7 @@ function calculateApplicantIncome(
     null;
 
   if (
+    !requiresPF &&
     cuData &&
     cuData
       .qualifica_quadro_dirigente
@@ -273,7 +278,7 @@ function calculateApplicantIncome(
   /*
    * 2) CU - DIPENDENTI / PENSIONATI
    */
-  if (cuData) {
+  if (!requiresPF && cuData) {
     const cu =
       calculateIncomeFromCU(
         cuData
@@ -307,15 +312,16 @@ function calculateApplicantIncome(
   /*
    * 3) MODELLO REDDITI / UNICO
    */
-  if (unicoDocs.length) {
-    const estratti =
-      unicoDocs.map(
-        (doc) =>
-          doc
-            .estrazione
-            ?.dati_estratti ||
-          {}
-      );
+  if ((requiresPF || !employment) && unicoDocs.length) {
+    const distinctYears = new Map();
+    for (const doc of unicoDocs) {
+      const data = doc.estrazione?.dati_estratti || {};
+      const year = yearOf(data);
+      if (year && !distinctYears.has(year)) distinctYears.set(year, data);
+    }
+    const estratti = distinctYears.size
+      ? Array.from(distinctYears.values())
+      : [unicoDocs[0].estrazione?.dati_estratti || {}];
 
     const latestData =
       estratti[0] ||
@@ -543,83 +549,11 @@ function calculateApplicantIncome(
   }
 
 
-  /*
-   * 4) BUSTA PAGA - SOLO QUANDO NON SI PUÒ PROCEDERE DA CU
-   */
-  if (bpData) {
-    const bp =
-      calculateIncomeFromBP(
-        bpData
-      );
+  const requiredDocument = requiresPF || (!employment && !cuData && unicoDocs.length)
+    ? "Modello Redditi PF"
+    : "Certificazione Unica";
+  criticita.push(`Reddito da verificare: serve ${requiredDocument} completa e utilizzabile.`);
 
-    dettagli.push(bp);
-
-    if (bp.ok) {
-      /*
-       * Trasferta: se presente, applica il 70% della media.
-       */
-      const hasTrasferta =
-        normalizeNumber(
-          bpData
-            .importo_trasferte_periodo
-        ) >
-        0;
-
-      if (hasTrasferta) {
-        const withTrasferta =
-          calculateIncomeWithTrasferta(
-            bp,
-            bpData
-          );
-
-        if (
-          withTrasferta.ok
-        ) {
-          return {
-            ok: true,
-            applicant,
-            metodo:
-              withTrasferta
-                .metodo,
-            fonte:
-              "Busta Paga + Trasferta",
-            redditoNettoMensile:
-              withTrasferta
-                .redditoNettoMensile,
-            dettagli: [
-              bp,
-              withTrasferta,
-            ],
-            criticita,
-          };
-        }
-      }
-
-      return {
-        ok: true,
-        applicant,
-        metodo:
-          bp.metodo,
-        fonte:
-          "Busta Paga",
-        redditoNettoMensile:
-          bp
-            .redditoNettoMensile,
-        dettagli,
-        criticita,
-      };
-    }
-
-    criticita.push(
-      bp.errore ||
-      `Busta paga non calcolabile: ${(bp.campiMancanti || []).join(", ")}`
-    );
-  }
-
-
-  /*
-   * 5) FALLBACK SCHEDA CONSULENZA
-   */
   const declared =
     applicant === "r2"
       ? normalizeNumber(
@@ -720,6 +654,7 @@ function calculatePracticeIncome(
       []
     ).length >
     0 ||
+    Boolean(practiceData.lav2 || practiceData.cliente2_nome || practiceData.cliente2_cognome) ||
     normalizeNumber(
       practiceData
         .reddito_richiedente_2 ??
@@ -762,11 +697,9 @@ function calculatePracticeIncome(
       0
     );
 
-  const anyUnverified =
-    valid.some(
-      (x) =>
-        x.nonVerificato
-    );
+  const anyUnverified = [r1, r2].some(
+    (item) => item && (!item.ok || item.nonVerificato)
+  );
 
   const criticita =
     Array.from(
@@ -792,11 +725,11 @@ function calculatePracticeIncome(
         : null,
 
     fonteReddito:
-      anyUnverified
+      !valid.length
+        ? "non_disponibile"
+        : anyUnverified
         ? "parzialmente_o_totalmente_non_verificato"
-        : valid.length
-        ? "documentazione_verificata"
-        : "non_disponibile",
+        : "documentazione_verificata",
 
     redditiPerRichiedente: {
       r1,

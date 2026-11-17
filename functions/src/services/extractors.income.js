@@ -144,7 +144,7 @@ Non inventare ripartizioni se il documento non consente di attribuire con certez
 F) BUSTA PAGA
 ============================================================
 
-La BP è fonte di calcolo solo quando non è possibile procedere tramite CU.
+La BP fornisce dati di riscontro per il confronto con la CU nei casi previsti.
 
 stipendio_lordo_mensile_ordinario:
 deve essere SOLO:
