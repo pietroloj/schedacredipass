@@ -12,6 +12,13 @@ const {
 
 const { POLICY } = require("../functions/src/config/policy");
 
+const { calcolaDTI, calcolaLTV } = require("../functions/src/services/decisionEngine");
+
+assert.strictEqual(calcolaDTI(3000, 500.50, 200.25), 23.36);
+assert.strictEqual(calcolaDTI(3000, "500,50", "1.200,25"), 56.69);
+assert.strictEqual(calcolaDTI(3000, null, 200), null);
+assert.strictEqual(calcolaLTV(120000.50, 200000), 60);
+
 
 assert.strictEqual(
   POLICY.classificationConfidenceReject,

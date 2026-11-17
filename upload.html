@@ -22,11 +22,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-</script>
-
 <style>
 body {
     font-family: 'Poppins', sans-serif;
@@ -2695,80 +2690,6 @@ function fileToBase64(file) {
     });
 }
 
-async function convertPdfToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.readAsArrayBuffer(file);
-
-        reader.onload = async function() {
-            try {
-                const typedarray = new Uint8Array(reader.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-
-                const maxPages = Math.min(pdf.numPages, 4);
-                const renderedPages = [];
-
-                let totalHeight = 0;
-                let maxWidth = 0;
-
-                for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-                    const page = await pdf.getPage(pageNum);
-                    const viewport = page.getViewport({ scale: 1.6 });
-
-                    const canvas = document.createElement("canvas");
-                    const ctx = canvas.getContext("2d");
-
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-
-                    await page.render({
-                        canvasContext: ctx,
-                        viewport: viewport
-                    }).promise;
-
-                    renderedPages.push(canvas);
-
-                    totalHeight += canvas.height;
-                    maxWidth = Math.max(maxWidth, canvas.width);
-                }
-
-                const finalCanvas = document.createElement("canvas");
-                const finalCtx = finalCanvas.getContext("2d");
-
-                finalCanvas.width = maxWidth;
-                finalCanvas.height = totalHeight;
-
-                let y = 0;
-
-                renderedPages.forEach(canvas => {
-                    finalCtx.fillStyle = "#ffffff";
-                    finalCtx.fillRect(0, y, maxWidth, canvas.height);
-                    finalCtx.drawImage(canvas, 0, y);
-                    y += canvas.height;
-                });
-
-                const base64Img = finalCanvas.toDataURL("image/jpeg", 0.85);
-                resolve(base64Img);
-
-            } catch (err) {
-                console.error("Errore conversione PDF:", err);
-                reject(err);
-            }
-        };
-
-        reader.onerror = error => reject(error);
-    });
-}
-
-async function preparaFilePerAI(file) {
-    if (file.type === "application/pdf") {
-        return await convertPdfToBase64(file);
-    }
-
-    return await fileToBase64(file);
-}
-
 let currentStream = null;
 let targetInputId = null;
 let aiTimeout = null;
@@ -3455,9 +3376,10 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
     };
 
     const codiciVersioneCaricati = [];
+    const documentiDaVerificare = new Set();
 
     try {
-        const analizzaDocumento = functionsFirebase.httpsCallable("analizzaDocumentoAI");
+        const analizzaDocumento = functionsFirebase.httpsCallable("analizzaDocumentoAI", { timeout: 300000 });
 
         for (let input of filesDaCaricare) {
             const fieldName = input.name;
@@ -3468,13 +3390,13 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
                 btn.innerHTML = `<i class="fas fa-robot fa-spin"></i> Controllo AI su ${escapeHtml(descrizioneDocumento)}...`;
 
-                console.log("Documento tecnico:", fieldName);
-                console.log("Documento atteso AI:", descrizioneDocumento);
-                console.log("File:", file.name, file.type, file.size);
-
-                let base64 = await preparaFilePerAI(file);
-
                 try {
+                    // La codifica Base64 aumenta la dimensione del file inviato alla funzione.
+                    if (file.size > 20 * 1024 * 1024) {
+                        throw new Error("File troppo grande per l’analisi automatica.");
+                    }
+                    const base64 = await fileToBase64(file);
+
                     let risultatoAI = await analizzaDocumento({
                         urlFileBase64Front: base64,
                         tipoDocumentoAtteso: descrizioneDocumento,
@@ -3487,7 +3409,9 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
                     let risposta = risultatoAI.data;
 
-                    console.log("Risposta AI:", risposta);
+                    if (!risposta || risposta.reviewManuale) {
+                        documentiDaVerificare.add(descrizioneDocumento);
+                    }
 
                     if (risposta && risposta.valido === false) {
                         alert(
@@ -3504,10 +3428,8 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
                     }
 
                 } catch (aiError) {
-                    console.warn(
-                        "L'AI ha riscontrato un problema, procedo comunque col salvataggio.",
-                        aiError
-                    );
+                    documentiDaVerificare.add(descrizioneDocumento);
+                    console.warn("Analisi automatica non completata.", aiError?.code || "unknown");
                 }
 
                 btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Salvataggio sicuro in corso...`;
@@ -3681,7 +3603,7 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
         btn.innerHTML = `<i class="fas fa-cogs fa-spin"></i> Generazione Dossier e Anomalie...`;
 
         try {
-            const ricostruisciPratica = functionsFirebase.httpsCallable("ricostruisciPraticaCompleta");
+            const ricostruisciPratica = functionsFirebase.httpsCallable("ricostruisciPraticaCompleta", { timeout: 300000 });
             await ricostruisciPratica({ idCliente: clienteId });
         } catch (err) {
             console.warn("Errore nella ricostruzione pratica:", err);
@@ -3689,6 +3611,11 @@ document.getElementById("uploadForm").addEventListener("submit", async function(
 
         try { await functionsFirebase.httpsCallable('notifyClientUpload')({practiceId:clienteId}); }
         catch(e) { console.warn('Documenti salvati; notifica al consulente non riuscita.',e); }
+
+        if (documentiDaVerificare.size) {
+            alert("Documenti salvati. Il consulente deve verificare: " +
+                Array.from(documentiDaVerificare).join(", ") + ".");
+        }
 
         btn.innerHTML = '<i class="fas fa-check"></i> Trasferimento Completato';
         btn.style.backgroundColor = "#28a745";

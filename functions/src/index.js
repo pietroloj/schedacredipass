@@ -70,6 +70,8 @@ const {
   getDecisionCode,
 } = require("./services/decisionEngine");
 
+const { calculateFinancialCommitments } = require("./services/practiceFinancialCalculator");
+
 const {
   calculatePracticeIncome,
 } = require("./services/practiceIncomeCalculator");
@@ -647,7 +649,8 @@ function stripDynamicSubjectSuffix(code = "") {
 
 function computeAnalysisKey({
   idCliente,
-  codiceBase,
+  codiceDocumento,
+  subjectId,
   files,
 }) {
   const fileHashComposite = files
@@ -659,7 +662,7 @@ function computeAnalysisKey({
     .join("|");
 
   return sha256String(
-    `${POLICY.pipelineVersion}|${idCliente}|${codiceBase}|${fileHashComposite}`
+    `${POLICY.pipelineVersion}|${idCliente}|${codiceDocumento}|${subjectId}|${fileHashComposite}`
   );
 }
 
@@ -705,7 +708,7 @@ async function loadClientDocumentAnalyses(
         .tipoDocumentoAtteso ||
       "";
 
-    if (!tipoDocumento) {
+    if (!tipoDocumento || !data.estrazione) {
       return;
     }
 
@@ -1117,13 +1120,17 @@ function mergePracticeFinancials({
   }
 
 
+  const { impegniFinanziariPost } = calculateFinancialCommitments(practiceData, {
+    fallbackOtherRates: rateAltriFinanziamenti,
+  });
+
   merged
     .dti =
     calcolaDTI(
       merged
         .redditoBancarioMensile,
       rataMutuoStimata,
-      rateAltriFinanziamenti
+      impegniFinanziariPost
     );
 
 
@@ -1269,6 +1276,10 @@ function buildPracticeSummary({
             .redditoBancarioMensile
         )} (${mergedFinancials.fonteReddito})`
       : "Reddito mensile considerato: N/D",
+
+    rataMutuoStimata > 0
+      ? `Rata mensile stimata del nuovo mutuo: € ${formatNumberIT(rataMutuoStimata)}`
+      : "Rata mensile stimata del nuovo mutuo: N/D",
 
     mergedFinancials
       .dti !==
@@ -1768,9 +1779,8 @@ exports.analizzaDocumentoAI =
         analysisKey =
           computeAnalysisKey({
             idCliente,
-
-            codiceBase,
-
+            codiceDocumento: codiceDocumentoNormalizzato,
+            subjectId: resolvedSubjectId,
             files:
               preparedFiles,
           });
@@ -2971,8 +2981,19 @@ exports.ricostruisciPraticaCompleta =
         |--------------------------------------------------------------------------
         */
 
-        const extraReviewReasons =
-          [];
+        const extraReviewReasons = [];
+
+        if (documentAnalyses.length === 0) {
+          extraReviewReasons.push("Nessun documento analizzato per i soggetti attivi");
+        }
+        if (!(resolvedRataMutuoStimata > 0)) {
+          extraReviewReasons.push("Rata del nuovo mutuo mancante: rapporto rata/reddito non calcolabile");
+        } else if (mergedFinancials.dti === null) {
+          extraReviewReasons.push("Reddito disponibile insufficiente per calcolare il rapporto rata/reddito");
+        }
+        if (mergedFinancials.ltv === null) {
+          extraReviewReasons.push("Importo mutuo o valore immobile mancante: rapporto mutuo/valore non calcolabile");
+        }
 
         if (
           mergedFinancials

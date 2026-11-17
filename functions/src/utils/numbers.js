@@ -1,4 +1,5 @@
 function normalizeNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (value === null || value === undefined || value === "") return null;
   const n = Number(
     String(value)

@@ -2308,7 +2308,7 @@ const db = firebase.firestore();
     function chiudiSoggettoPratica(){document.getElementById("practiceSubjectModal").style.display="none";}
 
     async function ricalcolaAIDopoSoggetti(){
-        const fn=functionsFirebase.httpsCallable("ricostruisciPraticaCompleta");
+        const fn=functionsFirebase.httpsCallable("ricostruisciPraticaCompleta", { timeout: 300000 });
         await fn({idCliente});
     }
 
@@ -6484,6 +6484,7 @@ Cordiali saluti`
             const requiredFields = [
                 "editMutuoFinalita",
                 "editMutuoImporto",
+                "editMutuoRata",
                 "editMutuoCompravendita",
                 "editMutuoValoreImmobile",
                 "editMutuoProdotto",
@@ -6555,6 +6556,10 @@ Cordiali saluti`
                         d.mutuo_importo
                     )
                 );
+
+            field("editMutuoRata").value = formatoImportoInput(
+                d.rata_mutuo_stimata ?? first(d.rata_stimata, d.mutuo_rata, d.rata_nuovo_mutuo)
+            );
 
             field(
                 "editMutuoCompravendita"
@@ -6630,6 +6635,7 @@ Cordiali saluti`
             "mutuoEditModal",
             "editMutuoFinalita",
             "editMutuoImporto",
+            "editMutuoRata",
             "editMutuoCompravendita",
             "editMutuoValoreImmobile",
             "editMutuoProdotto",
@@ -6680,6 +6686,13 @@ Cordiali saluti`
             parseImportoPratica(
                 document.getElementById("editMutuoImporto")?.value
             );
+
+        const rataInput = document.getElementById("editMutuoRata").value.trim();
+        const rataStimata = parseImportoPratica(rataInput);
+        if (rataInput && !(rataStimata > 0)) {
+            alert("Inserisci una rata mensile maggiore di zero oppure lascia il campo vuoto.");
+            return;
+        }
 
         const compravendita =
             parseImportoPratica(
@@ -6738,6 +6751,8 @@ Cordiali saluti`
 
                 importo_richiesto:
                     importo,
+
+                rata_mutuo_stimata: rataStimata ?? "",
 
                 valore_compravendita:
                     compravendita,
@@ -8324,7 +8339,7 @@ Cordiali saluti`
 
             const analizzaDocumento =
                 functionsFirebase.httpsCallable(
-                    "analizzaDocumentoAI"
+                    "analizzaDocumentoAI", { timeout: 300000 }
                 );
 
             for (
@@ -8447,7 +8462,7 @@ Cordiali saluti`
              */
             const ricostruisciPratica =
                 functionsFirebase.httpsCallable(
-                    "ricostruisciPraticaCompleta"
+                    "ricostruisciPraticaCompleta", { timeout: 300000 }
                 );
 
             await ricostruisciPratica({
@@ -8631,9 +8646,10 @@ Cordiali saluti`
                 null;
 
             const ricostruisciPratica =
-                functionsFirebase.httpsCallable("ricostruisciPraticaCompleta");
+                functionsFirebase.httpsCallable("ricostruisciPraticaCompleta", { timeout: 300000 });
 
             let callableResult;
+            let aggiornamentoFallito = false;
 
             try {
                 callableResult = await ricostruisciPratica({
@@ -8645,6 +8661,7 @@ Cordiali saluti`
                     finalitaMutuo
                 });
             } catch (functionError) {
+                aggiornamentoFallito = true;
                 console.warn("Ricostruzione live non riuscita, provo il report già salvato:", functionError);
             }
 
@@ -8674,8 +8691,8 @@ Cordiali saluti`
                 } else {
                     b.innerHTML = `
                         <div style="background:#fff9e8;border-left:4px solid #C99700;padding:18px;border-radius:8px;">
-                            <strong style="color:#002d72;">Report non ancora disponibile.</strong><br><br>
-                            La pratica esiste, ma non è ancora presente una ricostruzione AI completa.
+                            <strong style="color:#002d72;">${aggiornamentoFallito ? "Aggiornamento non riuscito." : "Report non ancora disponibile."}</strong><br><br>
+                            ${aggiornamentoFallito ? "Riprova ad aprire la pre-delibera." : "La pratica esiste, ma non è ancora presente una ricostruzione AI completa."}
                         </div>
                     `;
                 }
@@ -8719,8 +8736,8 @@ Cordiali saluti`
             const reportTestuale = summary.reportTestuale || "Report testuale non disponibile.";
 
             const decisionCode =
-                completa.decisionCode ||
                 callableResult?.data?.decisionCode ||
+                completa.decisionCode ||
                 "N/D";
 
             const esito = summary.esito || callableResult?.data?.stato || "N/D";
@@ -8729,6 +8746,10 @@ Cordiali saluti`
             const scoreBank = indicators.scoreBank ?? merged.scoreBank;
 
             b.innerHTML = `
+                ${aggiornamentoFallito ? `
+                    <div role="status" style="background:#fff9e8;border-left:4px solid #C99700;padding:14px;margin-bottom:12px;">
+                        Aggiornamento non riuscito. Stai visualizzando l’ultimo report salvato.
+                    </div>` : ""}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;">
                     <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
                         <div style="font-size:10px;color:#777;text-transform:uppercase;">Esito tecnico</div>
@@ -8962,6 +8983,11 @@ Cordiali saluti`
                         inputmode="decimal"
                         placeholder="Es. 180.000"
                     >
+                </div>
+
+                <div class="mutuo-edit-field">
+                    <label class="mutuo-edit-label" for="editMutuoRata">Rata stimata del nuovo mutuo (€ al mese)</label>
+                    <input id="editMutuoRata" class="mutuo-edit-input" type="text" inputmode="decimal" placeholder="Es. 750,50">
                 </div>
 
                 <div class="mutuo-edit-field">
