@@ -29,6 +29,9 @@ const incomeExtractionSchema = {
 
         data_assunzione: { type: "string" },
         tempo_indeterminato: { type: "boolean" },
+        cu_solo_punto_2: { type: "boolean" },
+        contratto_esplicito: { type: "string", enum: ["indeterminato", "determinato", "non_indicato"] },
+        mese_cedolino: { type: "string" },
         qualifica_quadro_dirigente: { type: "boolean" },
 
         /*
@@ -118,6 +121,9 @@ const incomeExtractionSchema = {
         "giorni_lavorati",
         "data_assunzione",
         "tempo_indeterminato",
+        "cu_solo_punto_2",
+        "contratto_esplicito",
+        "mese_cedolino",
         "qualifica_quadro_dirigente",
 
         "stipendio_lordo_mensile_ordinario",

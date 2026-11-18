@@ -8717,22 +8717,26 @@ Cordiali saluti`
                 ...(merged.puntiForzaFinanziari || [])
             ].filter(Boolean)));
 
-            // Recupera gli alert bancari direttamente dalle ultime analisi documentali salvate,
-            // se presenti nel dossier aggregato.
-            const bankAlerts = [];
-            const documentiConsiderati = completa.documentiConsiderati || [];
-
-            if (Array.isArray(documentiConsiderati)) {
-                documentiConsiderati.forEach(doc => {
-                    if (doc?.reviewManuale && Array.isArray(doc.motiviReview)) {
-                        doc.motiviReview.forEach(m => {
-                            if (/scommess|gioco|contant|scopert|saldo negativo|finanziament|rata|riscoss|crypto|straordinari/i.test(String(m))) {
-                                bankAlerts.push(String(m));
-                            }
-                        });
-                    }
-                });
-            }
+            const bank = merged.alertBancari || {};
+            const bankAlerts = [...new Set([
+                ...(bank.scommesse || []),
+                ...(bank.contanti || []),
+                ...(bank.rate || []),
+                ...(bank.riscossione || []),
+                ...(bank.crypto || []),
+                ...(bank.saldoNegativoOScoperti ? ["Saldo negativo, scoperto o insoluto rilevato."] : [])
+            ])];
+            const entrateStraordinarie = [...new Set(bank.entrateStraordinarie || [])];
+            const verificheContratto = (completa.contractVerification || []).map(check => check.reason);
+            const statiRichiesta = {
+                inviata: "Slot aperto e richiesta inviata al cliente",
+                invio_in_corso: "Invio in corso",
+                invio_non_riuscito: "Slot aperto, invio email non riuscito",
+                email_mancante: "Slot aperto, email cliente mancante",
+                slot_esistente: "Slot già presente nel portale"
+            };
+            const richiesteContratto = (callableResult?.data?.contractRequests || [])
+                .map(item => statiRichiesta[item.state]).filter(Boolean);
 
             const reportTestuale = summary.reportTestuale || "Report testuale non disponibile.";
 
@@ -8771,7 +8775,10 @@ Cordiali saluti`
                 </div>
 
                 ${listaReportAI("Criticità / anomalie da verificare", criticita, criticita.length ? "danger" : "success")}
-                ${listaReportAI("Alert comportamento bancario", Array.from(new Set(bankAlerts)), "warning")}
+                ${verificheContratto.length ? listaReportAI("Verifica contratto", [...new Set([...verificheContratto, ...richiesteContratto])], "warning") : ""}
+                ${completa.bankCoverageWarnings?.length ? listaReportAI("Copertura estratti conto e liste movimenti", completa.bankCoverageWarnings, "warning") : ""}
+                ${entrateStraordinarie.length ? listaReportAI("Entrate straordinarie · data, importo e causale", entrateStraordinarie, "warning") : ""}
+                ${bankAlerts.length ? listaReportAI("Alert comportamento bancario", bankAlerts, "warning") : ""}
                 ${listaReportAI("Punti di forza", puntiForza, "success")}
 
                 <div style="margin-top:16px;">

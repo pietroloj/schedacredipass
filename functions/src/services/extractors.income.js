@@ -51,7 +51,9 @@ Estrarre, quando presenti:
 - addizionale_comunale_saldo_anno.
 - addizionale_comunale_acconto_anno_successivo.
 
-I tre campi comunali devono restare SEPARATI.
+I tre campi comunali devono restare SEPARATI. Se l'acconto comunale è visibilmente vuoto restituisci stringa vuota senza inserire criticità. Segnala un dato non leggibile solo se non è possibile verificare la casella.
+Imposta cu_solo_punto_2 a true solo quando il punto 2 riporta il reddito e il punto 1 è visibilmente vuoto. Indica in anno_fiscale l'anno d'imposta cui si riferisce il reddito, non l'anno di rilascio.
+Escludi i compensi di anni precedenti a tassazione separata dal reddito ordinario e non segnalarli come criticità.
 
 - giorni_lavorati:
   giorni di lavoro/pensione indicati nella CU.
@@ -144,7 +146,7 @@ Non inventare ripartizioni se il documento non consente di attribuire con certez
 F) BUSTA PAGA
 ============================================================
 
-La BP fornisce dati di riscontro per il confronto con la CU nei casi previsti.
+La BP fornisce dati di riscontro per il confronto con la CU. In mese_cedolino riporta il periodo pagato in formato YYYY-MM; se non leggibile, lascia vuoto. Imposta contratto_esplicito a indeterminato o determinato solo se il cedolino lo indica chiaramente; altrimenti usa non_indicato. Non dedurre il contratto da anzianità, qualifica o ricorrenza degli accrediti.
 
 stipendio_lordo_mensile_ordinario:
 deve essere SOLO:

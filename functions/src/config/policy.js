@@ -1,5 +1,5 @@
 const POLICY = {
-  pipelineVersion: "v6.0.0-predelibera2",
+  pipelineVersion: "v6.1.0-predelibera",
   classificationConfidenceReject: 0.74,
   classificationConfidenceReview: 0.80,
   maxCriticitaPenalty: 24,

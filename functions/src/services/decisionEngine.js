@@ -1,3 +1,4 @@
+const { isInformational, extraordinaryCredits } = require("./practice-evidence");
 const { POLICY } = require("../config/policy");
 const {
   DECISION_CODES,
@@ -157,7 +158,7 @@ function scoreIncomeDecision({
   const criticita = [
     ...(
       estrazione
-        ?.criticita_documentali ||
+        ?.criticita_documentali?.filter(reason => !isInformational(reason)) ||
       []
     ),
   ];
@@ -522,23 +523,7 @@ function scoreBankDecision({
         )
     );
 
-  const extraordinaryMovements =
-    recurring.filter(
-      (x) =>
-        containsAnyKeyword(
-          x,
-          [
-            "entrata straordinaria",
-            "bonifico straordinario",
-            "vendita preziosi",
-            "vendita oro",
-            "vendita bene",
-            "prestito ricevuto",
-            "giroconto",
-            "trasferimento da altro conto",
-          ]
-        )
-    );
+  const extraordinaryMovements = extraordinaryCredits(bank, recurring);
 
   const collectionMovements =
     recurring.filter(
@@ -577,7 +562,7 @@ function scoreBankDecision({
   const criticita = [
     ...(
       bank
-        .criticita_documentali ||
+        .criticita_documentali?.filter(reason => !isInformational(reason)) ||
       []
     ),
   ];
@@ -628,7 +613,7 @@ function scoreBankDecision({
       .length > 0
   ) {
     criticita.push(
-      "Rilevate entrate o movimentazioni straordinarie da non assimilare automaticamente a risparmio ordinario"
+      ...extraordinaryMovements.map(movement => `Entrata straordinaria: ${movement}`)
     );
   }
 

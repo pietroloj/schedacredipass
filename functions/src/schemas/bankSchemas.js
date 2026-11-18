@@ -7,6 +7,19 @@ const bankExtractionSchema = {
     motivo_errore: { type: "string" },
     tipo_documento_rilevato: { type: "string" },
 
+    periodo_inizio: { type: "string" },
+    periodo_fine: { type: "string" },
+    conto_riferimento: { type: "string" },
+    entrate_straordinarie: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: { data: { type: "string" }, importo: { type: "number" }, causale: { type: "string" } },
+        required: ["data", "importo", "causale"]
+      }
+    },
+
     saldo_negativo_o_scoperti: { type: "boolean" },
 
     stipendi_rilevati: {
@@ -46,6 +59,10 @@ const bankExtractionSchema = {
     "valido",
     "motivo_errore",
     "tipo_documento_rilevato",
+    "periodo_inizio",
+    "periodo_fine",
+    "conto_riferimento",
+    "entrate_straordinarie",
     "saldo_negativo_o_scoperti",
     "stipendi_rilevati",
     "rate_rilevate",

@@ -3,6 +3,7 @@ const DOCS = {
   doc_ts: "Tessera Sanitaria / Codice Fiscale",
   doc_residenza: "Certificato Cumulativo / Residenza",
   doc_bustepaga: "Busta Paga",
+  doc_trasformazione_contratto: "Trasformazione del contratto a tempo indeterminato",
   doc_cud: "Certificazione Unica (CU/CUD)",
   doc_unici: "Modello Redditi / Unico",
   doc_visura: "Visura Catastale",

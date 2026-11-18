@@ -1,3 +1,5 @@
+const { bankCoverage, contractChecks, isInformational } = require("./services/practice-evidence");
+const { requestContractTransformation } = require("./services/contract-requests");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -727,7 +729,10 @@ async function loadClientDocumentAnalyses(
     const fiscalYear = tipoDocumentoBase === "doc_unici"
       ? String(data.estrazione.dati_estratti?.anno_fiscale || "").match(/\d{4}/)?.[0]
       : null;
-    const key = fiscalYear ? `${tipoDocumento}:${fiscalYear}` : String(tipoDocumento);
+    const bank = ["doc_ec", "doc_mov"].includes(tipoDocumentoBase) ? data.estrazione : null;
+    const bankAccount = /^\d{4}$/.test(bank?.conto_riferimento || "") ? bank.conto_riferimento : "";
+    const bankPeriod = bank && /^\d{4}-\d{2}-\d{2}$/.test(bank.periodo_inizio || "") ? bank.periodo_inizio : "";
+    const key = [tipoDocumento, fiscalYear, bankAccount, bankPeriod].filter(Boolean).join(":");
 
     const current =
       latestByDocType.get(
@@ -2922,11 +2927,30 @@ exports.ricostruisciPraticaCompleta =
          * La ricostruzione usa esclusivamente i soggetti attivi.
          * Gli audit dei soggetti esclusi restano conservati nello storico.
          */
-        const documentAnalyses =
-          filterAnalysesForActiveSubjects(
-            allDocumentAnalyses,
-            practiceData
-          );
+        const documentAnalyses = filterAnalysesForActiveSubjects(allDocumentAnalyses, practiceData)
+          .map(doc => {
+            const bank = ["doc_ec", "doc_mov", "doc_prestiti"].includes(doc.tipoDocumentoBase);
+            const decision = bank ? {
+              ...doc.decisioneBackend,
+              ...scoreBankDecision({ estrazione: doc.estrazione }),
+            } : doc.decisioneBackend;
+            const oldReasons = doc.review?.motiviReview || [];
+            const reasons = oldReasons.filter(reason => !isInformational(reason) &&
+              !(bank && /^Rilevate entrate o movimentazioni straordinarie/i.test(reason)));
+            if (bank) reasons.push(...decision.criticita);
+            const motiviReview = [...new Set(reasons)];
+            return {
+              ...doc,
+              decisioneBackend: decision,
+              review: {
+                ...doc.review,
+                reviewManuale: motiviReview.length > 0 || (doc.review?.reviewManuale === true && oldReasons.length === 0),
+                motiviReview,
+              },
+            };
+          });
+        const contractVerification = contractChecks(documentAnalyses, practiceData);
+        const bankCoverageWarnings = bankCoverage(documentAnalyses);
 
         /* Anche senza documenti continuiamo con i dati della scheda, marcandoli come non verificati. */
 /*
@@ -2985,7 +3009,10 @@ exports.ricostruisciPraticaCompleta =
         |--------------------------------------------------------------------------
         */
 
-        const extraReviewReasons = [];
+        const extraReviewReasons = [
+          ...contractVerification.map(check => check.reason),
+          ...bankCoverageWarnings,
+        ];
 
         if (documentAnalyses.length === 0) {
           extraReviewReasons.push("Nessun documento analizzato per i soggetti attivi");
@@ -3187,6 +3214,8 @@ exports.ricostruisciPraticaCompleta =
             practiceSummary,
 
             bankMatch,
+            bankCoverageWarnings,
+            contractVerification,
           },
         };
 
@@ -3267,6 +3296,19 @@ exports.ricostruisciPraticaCompleta =
         |--------------------------------------------------------------------------
         */
 
+        let contractRequests = [];
+        try {
+          contractRequests = await requestContractTransformation({
+            db: adminDb,
+            id: idCliente,
+            checks: contractVerification,
+            send: require("./operational-security").serviceMail,
+            serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch (error) {
+          console.error("Integrazione automatica contratto:", error.code || "errore");
+        }
+
         return {
           ok: true,
 
@@ -3285,6 +3327,7 @@ exports.ricostruisciPraticaCompleta =
 
           pratica:
             practiceSummary,
+          contractRequests,
 
           bancheConsigliate:
             bankMatch?.consigliate ||
