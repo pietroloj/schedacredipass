@@ -7927,26 +7927,6 @@ Cordiali saluti`
         }
     }
 
-    function numberForAI(value) {
-        if (value === null || value === undefined || value === "") return null;
-        if (typeof value === "number") return Number.isFinite(value) ? value : null;
-
-        let s = String(value).trim()
-            .replace(/€/g, "")
-            .replace(/\s/g, "");
-
-        if (!s) return null;
-
-        if (s.includes(",") && s.includes(".")) {
-            s = s.replace(/\./g, "").replace(",", ".");
-        } else if (s.includes(",")) {
-            s = s.replace(",", ".");
-        }
-
-        const n = Number(s.replace(/[^\d.-]/g, ""));
-        return Number.isFinite(n) ? n : null;
-    }
-
     function escapeHtmlAI(value) {
         return String(value ?? "")
             .replace(/&/g, "&amp;")
@@ -8625,12 +8605,12 @@ Cordiali saluti`
 
             const d = praticaSnap.data() || {};
 
-            const importoMutuo = numberForAI(d.importo_richiesto ?? d.mutuo_importo);
-            const valoreImmobile = numberForAI(d.valore_immobile ?? d.immobile_valore);
+            const importoMutuo = parseImportoPratica(d.importo_richiesto ?? d.mutuo_importo);
+            const valoreImmobile = parseImportoPratica(d.valore_immobile ?? d.immobile_valore);
 
             // Usa una rata futura solo se presente nel dossier.
             // Non confonde la rata del mutuo esistente (rata_mutuo_pre) con quella del nuovo mutuo.
-            const rataMutuoStimata = numberForAI(
+            const rataMutuoStimata = parseImportoPratica(
                 d.rata_mutuo_stimata ??
                 d.rata_stimata ??
                 d.mutuo_rata ??
@@ -8638,7 +8618,7 @@ Cordiali saluti`
                 d.rrr?.mortgage
             );
 
-            const rateAltriFinanziamenti = numberForAI(
+            const rateAltriFinanziamenti = parseImportoPratica(
                 d.totale_rate_finanziamenti ??
                 d.rata_fin_pre
             );
