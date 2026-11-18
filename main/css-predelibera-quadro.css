@@ -1,0 +1,28 @@
+.pd-board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;color:#162840;background:#f6f8fa;border:1px solid #d8e0e9;border-radius:14px;padding:16px;text-align:left}
+.pd-board *{box-sizing:border-box}
+.pd-board h3,.pd-board h4,.pd-board p{margin:0}
+.pd-hero,.pd-metrics,.pd-detail,.pd-stale{grid-column:1/-1}
+.pd-hero{background:#102b4f;border-radius:12px;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pd-hero h3{color:#fff;font-size:clamp(18px,2.5vw,24px);line-height:1.3}
+.pd-hero small{color:#d0dcec;font-weight:600}
+.pd-status{color:#144433;background:#e5f5ed;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:750}
+.pd-status-review{color:#8a2018;background:#ffe6e2}
+.pd-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pd-metrics div{background:#edf4fb;border-radius:8px;padding:10px 12px}
+.pd-metrics span{display:block;font-size:12px}
+.pd-metrics strong{display:block;color:#13375e;font-size:clamp(16px,2vw,21px)}
+.pd-panel{background:#fff;border:1px solid #dbe3ec;border-radius:12px;padding:14px;overflow-wrap:anywhere;min-width:0}
+.pd-panel h4{color:#1d4a78;font-size:15px;margin:0 0 7px}
+.pd-panel ul{margin:0;padding-left:19px}
+.pd-panel li+li{margin-top:5px}
+.pd-priority{grid-column:span 7}.pd-coverage{grid-column:span 5}.pd-income,.pd-bank{grid-column:span 6}
+.pd-danger{background:#fff3f1;border:1px solid #f0c4c0;border-left:4px solid #b42318;color:#77251f}
+.pd-danger h4{color:#8e251c}
+.pd-panel table{width:100%;border-collapse:collapse;font-size:13px}
+.pd-panel td,.pd-panel th{text-align:left;padding:5px;border-bottom:1px solid #dbe3ec;vertical-align:top}
+.pd-panel td:last-child,.pd-panel th:last-child{text-align:right;white-space:nowrap}
+.pd-panel .pd-note,.pd-label{font-size:12px;font-weight:650;margin-top:4px}
+.pd-detail summary{cursor:pointer;color:#234973;font-weight:700}
+.pd-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;margin:8px 0 0}
+.pd-stale{background:#fff0cc;border-left:4px solid #a77313;padding:8px 12px}
+@media(max-width:670px){.pd-board{padding:9px;gap:8px}.pd-priority,.pd-coverage,.pd-income,.pd-bank{grid-column:1/-1}.pd-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

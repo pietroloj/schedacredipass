@@ -1672,7 +1672,9 @@ document.addEventListener(
 
 </style>
 <script src="/main/js/practice-states.js"></script>
-<script src="/main/js/product-checklist.js"></script></head>
+<script src="/main/js/product-checklist.js"></script><link rel="stylesheet" href="/main/css-predelibera-quadro.css">
+<script defer src="/main/js/predelibera-quadro.js"></script>
+</head>
 <body>
 
             
@@ -8700,102 +8702,13 @@ Cordiali saluti`
                 return;
             }
 
-            const anomalies = completa.anomalies || summary.anomalie || {};
-            const indicators = summary.indicatori || {};
-            const merged = completa.mergedFinancials || {};
-            const bankMatch = completa.bankMatch || {};
-
-            const criticita = Array.from(new Set([
-                ...(indicators.criticitaFinanziarie || []),
-                ...(merged.criticitaFinanziarie || []),
-                ...(anomalies.anomalieBloccanti || []),
-                ...(anomalies.anomalieWarning || [])
-            ].filter(Boolean)));
-
-            const puntiForza = Array.from(new Set([
-                ...(indicators.puntiForzaFinanziari || []),
-                ...(merged.puntiForzaFinanziari || [])
-            ].filter(Boolean)));
-
-            const bank = merged.alertBancari || {};
-            const bankAlerts = [...new Set([
-                ...(bank.scommesse || []),
-                ...(bank.contanti || []),
-                ...(bank.rate || []),
-                ...(bank.riscossione || []),
-                ...(bank.crypto || []),
-                ...(bank.saldoNegativoOScoperti ? ["Saldo negativo, scoperto o insoluto rilevato."] : [])
-            ])];
-            const entrateStraordinarie = [...new Set(bank.entrateStraordinarie || [])];
-            const verificheContratto = (completa.contractVerification || []).map(check => check.reason);
-            const statiRichiesta = {
-                inviata: "Slot aperto e richiesta inviata al cliente",
-                invio_in_corso: "Invio in corso",
-                invio_non_riuscito: "Slot aperto, invio email non riuscito",
-                email_mancante: "Slot aperto, email cliente mancante",
-                slot_esistente: "Slot già presente nel portale"
-            };
-            const richiesteContratto = (callableResult?.data?.contractRequests || [])
-                .map(item => statiRichiesta[item.state]).filter(Boolean);
-
-            const reportTestuale = summary.reportTestuale || "Report testuale non disponibile.";
-
-            const decisionCode =
-                callableResult?.data?.decisionCode ||
-                completa.decisionCode ||
-                "N/D";
-
-            const esito = summary.esito || callableResult?.data?.stato || "N/D";
-
-            const scoreIncome = indicators.scoreIncome ?? merged.scoreIncome;
-            const scoreBank = indicators.scoreBank ?? merged.scoreBank;
-
-            b.innerHTML = `
-                ${aggiornamentoFallito ? `
-                    <div role="status" style="background:#fff9e8;border-left:4px solid #C99700;padding:14px;margin-bottom:12px;">
-                        Aggiornamento non riuscito. Stai visualizzando l’ultimo report salvato.
-                    </div>` : ""}
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;">
-                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
-                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Esito tecnico</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${escapeHtmlAI(esito)}</div>
-                    </div>
-                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
-                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Decision code</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${escapeHtmlAI(decisionCode)}</div>
-                    </div>
-                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
-                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Score reddito</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${scoreIncome ?? "N/D"}</div>
-                    </div>
-                    <div style="background:#f6f8fb;border:1px solid #e4e9ef;border-radius:9px;padding:12px;">
-                        <div style="font-size:10px;color:#777;text-transform:uppercase;">Score bancario</div>
-                        <div style="font-weight:800;color:#002d72;margin-top:4px;">${scoreBank ?? "N/D"}</div>
-                    </div>
-                </div>
-
-                ${listaReportAI("Criticità / anomalie da verificare", criticita, criticita.length ? "danger" : "success")}
-                ${verificheContratto.length ? listaReportAI("Verifica contratto", [...new Set([...verificheContratto, ...richiesteContratto])], "warning") : ""}
-                ${completa.bankCoverageWarnings?.length ? listaReportAI("Copertura estratti conto e liste movimenti", completa.bankCoverageWarnings, "warning") : ""}
-                ${entrateStraordinarie.length ? listaReportAI("Entrate straordinarie · data, importo e causale", entrateStraordinarie, "warning") : ""}
-                ${bankAlerts.length ? listaReportAI("Alert comportamento bancario", bankAlerts, "warning") : ""}
-                ${listaReportAI("Punti di forza", puntiForza, "success")}
-
-                <div style="margin-top:16px;">
-                    <div style="font-weight:800;color:#002d72;margin-bottom:8px;">Report pratica</div>
-                    <pre style="white-space:pre-wrap;background:#f8f9fa;padding:15px;border-radius:10px;font-family:inherit;font-size:13px;color:#444;border:1px solid #ddd;">${escapeHtmlAI(reportTestuale)}</pre>
-                </div>
-
-                ${
-                    Array.isArray(bankMatch?.consigliate) && bankMatch.consigliate.length
-                    ? listaReportAI("Banche / policy potenzialmente compatibili", bankMatch.consigliate.map(x => typeof x === "string" ? x : (x.nome || x.banca || JSON.stringify(x))), "success")
-                    : ""
-                }
-
-                <div style="font-size:11px;color:#888;margin-top:18px;line-height:1.5;">
-                    La pre-delibera IA è uno strumento istruttorio di supporto e non costituisce delibera bancaria definitiva.
-                </div>
-            `;
+            b.innerHTML = CredipassPredelibera.render({
+                report: completa,
+                summary,
+                stale: aggiornamentoFallito,
+                decision: callableResult?.data?.decisionCode || completa.decisionCode,
+                requests: callableResult?.data?.contractRequests || []
+            });
 
         } catch (e) {
             console.error("Errore report AI:", e);
